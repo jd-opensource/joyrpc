@@ -32,6 +32,7 @@ import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import org.apache.curator.framework.CuratorFramework;
@@ -245,6 +246,75 @@ public class ZKRegistry extends AbstractRegistry {
         return configManager.unSubscribe(url);
     }
 
+    protected static class ZKController extends RegistryController<ZKRegistry>{
+
+        /**
+         * 客户端
+         */
+        protected CuratorFramework client;
+
+        public ZKController(ZKRegistry registry) {
+            super(registry);
+        }
+    }
+
+    /**
+     * 配置订阅
+     */
+    protected static class ZKConfigBooking extends ConfigBooking {
+
+        /**
+         * 客户端
+         */
+        protected CuratorFramework client;
+        /**
+         * 路径函数
+         */
+        protected Function<URL, String> function;
+        /**
+         * zk节点监听cache
+         */
+        protected NodeCache nodeCache;
+
+        public ZKConfigBooking(final URLKey key, final Runnable dirty, final Publisher<ConfigEvent> publisher) {
+            super(key, dirty, publisher);
+        }
+
+        @Override
+        public void start() throws Exception {
+            status = Status.STARTING;
+            try {
+                String path = configFunction.apply(url);
+                Stat pathStat = asyncCurator.unwrap().checkExists().creatingParentsIfNeeded().forPath(path);
+                if (pathStat == null) {
+                    asyncCurator.unwrap().create().creatingParentsIfNeeded().forPath(path, new byte[0]);
+                }
+                nodeCache = new NodeCache(asyncCurator.unwrap(), path);
+                nodeCache.getListenable().addListener(() -> {
+                    ChildData childData = nodeCache.getCurrentData();
+                    Map<String, String> datum;
+                    if (childData == null) {
+                        //被删掉了
+                        datum = new HashMap<>();
+                    } else {
+                        byte[] data = childData.getData();
+                        if (data != null && data.length > 0) {
+                            datum = JSON.get().parseObject(new String(data, UTF_8), Map.class);
+                        } else {
+                            datum = new HashMap<>();
+                        }
+                    }
+                    handler.handle(new ConfigEvent(ZKRegistry.this, null, version.incrementAndGet(), datum));
+                });
+                nodeCache.start();
+                status = Status.STARTED;
+            } catch (Exception e) {
+                status = SubscriberExecutor.Status.CLOSED;
+                throw e;
+            }
+        }
+    }
+
     /**
      * 订阅事件管理器
      */
@@ -259,6 +329,7 @@ public class ZKRegistry extends AbstractRegistry {
          * 路径函数
          */
         protected Function<URL, String> function;
+
 
         /**
          * 构造方法

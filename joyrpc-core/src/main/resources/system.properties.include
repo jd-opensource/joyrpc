@@ -1,0 +1,14 @@
+user.language
+user.name
+user.home
+os.name
+os.arch
+os.version
+file.encoding
+user.timezone
+user.country
+java.io.tmpdir
+java.version
+java.vendor
+java.class.version
+java.specification.version

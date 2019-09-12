@@ -1,0 +1,2 @@
+io.joyrpc.cluster.discovery.registry.fix.FixRegistryFactory
+io.joyrpc.cluster.discovery.registry.memory.MemoryRegistryFactory

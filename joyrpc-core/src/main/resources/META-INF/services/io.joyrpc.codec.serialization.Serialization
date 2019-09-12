@@ -1,0 +1,2 @@
+io.joyrpc.codec.serialization.java.JavaSerialization
+io.joyrpc.codec.serialization.jaxb.JaxbSerialization

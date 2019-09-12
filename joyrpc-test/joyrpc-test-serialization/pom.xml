@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>joyrpc-test</artifactId>
+        <groupId>io.joyrpc</groupId>
+        <version>1.0.2-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>joyrpc-test-serialization</artifactId>
+
+    <properties>
+        <protobuf.input.directory>${project.basedir}/src/main/proto</protobuf.input.directory>
+        <protobuf.output.directory>src/main/java</protobuf.output.directory>
+        <protobuf.protoc.path>${settings.localRepository}/protoc</protobuf.protoc.path>
+        <protobuf.version>3.6.1</protobuf.version>
+        <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
+        <os-maven-plugin.version>1.6.2</os-maven-plugin.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-fst</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-hessian</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-fastjson</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-kryo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-protostuff</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-proxy-bytebuddy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-proxy-javassist</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+</project>

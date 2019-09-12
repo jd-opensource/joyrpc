@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>joyrpc-plugin</artifactId>
+        <groupId>io.joyrpc</groupId>
+        <version>1.0.2-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>joyrpc-transport-resteasy</artifactId>
+    <dependencies>
+        <dependency>
+            <artifactId>joyrpc-core</artifactId>
+            <groupId>io.joyrpc</groupId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <artifactId>joyrpc-transport-netty4</artifactId>
+            <groupId>io.joyrpc</groupId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-netty4</artifactId>
+            <version>3.0.8.Final</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+    </dependencies>
+
+
+</project>

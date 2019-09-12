@@ -1,0 +1,4 @@
+org.springframework.context.ApplicationContextInitializer=\
+io.joyrpc.spring.boot.RpcConfigurationApplicationContextInitializer
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+io.joyrpc.spring.boot.RpcAutoConfiguration

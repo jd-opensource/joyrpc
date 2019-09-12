@@ -1,0 +1,3 @@
+io.joyrpc.cluster.candidate.all.AllCandidature
+io.joyrpc.cluster.candidate.region.RegionCandidature
+io.joyrpc.cluster.candidate.single.SingleCandidature

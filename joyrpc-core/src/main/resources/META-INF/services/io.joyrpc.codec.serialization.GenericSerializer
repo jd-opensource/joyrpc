@@ -1,0 +1,2 @@
+io.joyrpc.codec.serialization.generic.JsonGenericSerializer
+io.joyrpc.codec.serialization.generic.StandardGenericSerializer

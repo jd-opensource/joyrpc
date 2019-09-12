@@ -1,0 +1,2 @@
+io.joyrpc.codec.compression.lz4.Lz4Compression
+io.joyrpc.codec.compression.lz4.Lz4FrameCompression

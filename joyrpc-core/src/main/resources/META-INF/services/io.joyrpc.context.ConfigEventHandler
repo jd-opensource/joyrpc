@@ -1,0 +1,9 @@
+io.joyrpc.context.adaptive.AdaptiveConfigHandler
+io.joyrpc.context.auth.IPPermissionConfigHandler
+io.joyrpc.context.circuitbreaker.BreakerConfigHandler
+io.joyrpc.context.global.GlobalConfigHandler
+io.joyrpc.context.limiter.LimiterConfigHandler
+io.joyrpc.context.mock.MockConfigHandler
+io.joyrpc.context.router.GroupRouterConfigHandler
+io.joyrpc.context.router.RouterConfigHandler
+io.joyrpc.context.global.IfaceConfigHandler

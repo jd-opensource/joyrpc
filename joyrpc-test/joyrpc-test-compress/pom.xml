@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>joyrpc-test</artifactId>
+        <groupId>io.joyrpc</groupId>
+        <version>1.0.2-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>joyrpc-test-compress</artifactId>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-compression-snappy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-compression-lzma</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-compression-lz4</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-transport-netty4</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

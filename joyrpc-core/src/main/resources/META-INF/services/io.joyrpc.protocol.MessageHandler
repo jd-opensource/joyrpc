@@ -1,0 +1,8 @@
+io.joyrpc.protocol.handler.AuthenticationReqHandler
+io.joyrpc.protocol.handler.CallbackReqHandler
+io.joyrpc.protocol.handler.HeartbeatReqHandler
+io.joyrpc.protocol.handler.NegotiationReqHandler
+io.joyrpc.protocol.handler.ShakeHandReqHandler
+io.joyrpc.protocol.handler.BizReqHandler
+io.joyrpc.protocol.handler.SessionbeatReqHandler
+io.joyrpc.protocol.handler.OfflineReqHandler

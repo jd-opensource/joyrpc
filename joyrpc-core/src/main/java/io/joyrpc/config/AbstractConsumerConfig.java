@@ -46,7 +46,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
@@ -226,7 +225,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      *
      * @return
      */
-    public CompletableFuture<T> asyncRefer() {
+    public CompletableFuture<T> refer() {
         CompletableFuture<T> result = new CompletableFuture<>();
         CompletableFuture<Void> future = new CompletableFuture<>();
         final T obj = refer(future);
@@ -241,19 +240,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     }
 
     /**
-     * 同步引用
-     *
-     * @return
-     */
-    public T refer() throws ExecutionException, InterruptedException {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        T result = refer(future);
-        future.get();
-        return result;
-    }
-
-    /**
-     * 引用一个远程服务
+     * 引用一个远程服务，用于Spring场景，优先返回代理对象
      *
      * @param future 操作结果消费者
      * @return 接口代理类

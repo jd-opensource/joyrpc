@@ -2,7 +2,7 @@
 
 ## 1.0.2-SNAPSHOT
 
-- ConsumerConfig增加同步和异步refer方法，方便api方式调用
+- ConsumerConfig增加无参异步refer方法，方便api方式调用
 
 ## 1.0.1-RELEASE(2019-09-11)
 

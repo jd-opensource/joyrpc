@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
@@ -218,6 +219,37 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                     " config with key " + name() + " !", ExceptionCode.CONSUMER_ALIAS_IS_NULL);
         }
         checkNormalWithColon("alias", alias);
+    }
+
+    /**
+     * 异步引用
+     *
+     * @return
+     */
+    public CompletableFuture<T> asyncRefer() {
+        CompletableFuture<T> result = new CompletableFuture<>();
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        final T obj = refer(future);
+        future.whenComplete((v, t) -> {
+            if (t != null) {
+                result.completeExceptionally(t);
+            } else {
+                result.complete(obj);
+            }
+        });
+        return result;
+    }
+
+    /**
+     * 同步引用
+     *
+     * @return
+     */
+    public T refer() throws ExecutionException, InterruptedException {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        T result = refer(future);
+        future.get();
+        return result;
     }
 
     /**

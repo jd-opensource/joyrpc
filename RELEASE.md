@@ -3,6 +3,7 @@
 ## 1.0.2-SNAPSHOT
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用
+- 把boot里面部分类挪到spring，为了支持spring annotation
 
 ## 1.0.1-RELEASE(2019-09-11)
 

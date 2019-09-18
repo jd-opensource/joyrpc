@@ -24,7 +24,7 @@ import io.joyrpc.GenericService;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.MethodOverloadException;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.session.DefaultSession;
@@ -380,7 +380,7 @@ public class Invocation implements Serializable {
     }
 
     public Parametric asParametric() {
-        return new MapParametic(attachments);
+        return new MapParametric(attachments);
     }
 
     /**
@@ -442,7 +442,7 @@ public class Invocation implements Serializable {
      */
     public static Invocation build(final URL url, final Map<CharSequence, Object> headers, final Supplier<LafException> supplier)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        Parametric parametric = new MapParametic(headers);
+        Parametric parametric = new MapParametric(headers);
         String path = url.getPath();
         String[] parts = path == null ? new String[0] : StringUtils.split(path, '/');
         String className;

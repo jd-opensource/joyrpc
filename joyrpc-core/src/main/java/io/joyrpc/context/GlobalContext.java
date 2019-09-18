@@ -22,9 +22,8 @@ package io.joyrpc.context;
 
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.extension.URLOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -253,7 +252,7 @@ public class GlobalContext {
      * @return
      */
     public static Parametric asParametric() {
-        return new MapParametic(getOrCreate());
+        return new MapParametric(getOrCreate());
     }
 
     /**
@@ -389,6 +388,6 @@ public class GlobalContext {
      * @return
      */
     public static Parametric asParametric(final String interfaceId) {
-        return new MapParametic(getInterfaceConfig(interfaceId));
+        return new MapParametric(getInterfaceConfig(interfaceId));
     }
 }

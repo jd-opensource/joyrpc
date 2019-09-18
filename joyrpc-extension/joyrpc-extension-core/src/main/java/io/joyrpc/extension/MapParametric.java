@@ -12,9 +12,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,13 +28,19 @@ import java.util.Date;
 import java.util.Map;
 
 /**
- *
+ * Map参数
  */
-public final class MapParametic implements Parametric {
-    // 参数，只读不能修改
+public final class MapParametric implements Parametric {
+    /**
+     * 参数
+     */
     protected final Map<? extends CharSequence, ? extends Object> parameters;
 
-    public MapParametic(Map<? extends CharSequence, ? extends Object> parameters) {
+    /**
+     * 构造函数
+     * @param parameters
+     */
+    public MapParametric(Map<? extends CharSequence, ? extends Object> parameters) {
         this.parameters = parameters;
     }
 

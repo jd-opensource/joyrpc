@@ -26,7 +26,7 @@ import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.LafException;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.AbstractHttpHandler;
@@ -142,7 +142,7 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
                                                  final long receiveTime) throws Exception {
         HttpHeaders httpHeaders = msg.headers();
         Map<CharSequence, Object> headerMap = httpHeaders.getAll();
-        Parametric parametric = new MapParametic(headerMap);
+        Parametric parametric = new MapParametric(headerMap);
         // 解析uri
         List<String> params = new LinkedList<>();
         //相对路径，确保以"/"开头

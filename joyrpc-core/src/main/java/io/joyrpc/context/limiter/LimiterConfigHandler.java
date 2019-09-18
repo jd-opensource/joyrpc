@@ -26,7 +26,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.cluster.distribution.RateLimiter;
 import io.joyrpc.cluster.distribution.limiter.RateLimiterConfig;
@@ -140,7 +140,7 @@ public class LimiterConfigHandler implements ConfigEventHandler {
         Parametric parametric;
         //遍历限流配置
         for (Map result : results) {
-            parametric = new MapParametic(result);
+            parametric = new MapParametric(result);
             String alias = parametric.getString("alias", "");
             String methodName = parametric.getString("method", "");
             String appId = parametric.getString("appId", "");

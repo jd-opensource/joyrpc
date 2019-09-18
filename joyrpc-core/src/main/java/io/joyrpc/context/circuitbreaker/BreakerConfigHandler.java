@@ -25,7 +25,7 @@ import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreakerConfig;
@@ -95,7 +95,7 @@ public class BreakerConfigHandler implements ConfigEventHandler {
      * @return
      */
     protected McCircuitBreakerConfig parse(final Map map, final String className) {
-        Parametric parametric = new MapParametic(map);
+        Parametric parametric = new MapParametric(map);
         String method = parametric.getString("method");
         boolean enabled = parametric.getBoolean("enabled", Boolean.TRUE);
         long period = parametric.getPositive("period", 0L);

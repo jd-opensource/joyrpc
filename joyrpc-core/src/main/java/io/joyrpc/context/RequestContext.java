@@ -22,7 +22,7 @@ package io.joyrpc.context;
 
 
 import io.joyrpc.constants.Constants;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 
 import java.net.InetSocketAddress;
@@ -361,7 +361,7 @@ public class RequestContext {
      * @return
      */
     public Parametric asParametric() {
-        return new MapParametic(attachments);
+        return new MapParametric(attachments);
     }
 
     /**

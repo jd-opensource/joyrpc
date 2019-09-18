@@ -30,7 +30,7 @@ import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.extension.MapParametic;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.AbstractHttpHandler;
@@ -132,7 +132,7 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         }
         Http2Headers httpHeaders = message.headers();
         Map<CharSequence, Object> headerMap = httpHeaders.getAll();
-        Parametric parametric = new MapParametic(headerMap);
+        Parametric parametric = new MapParametric(headerMap);
         // 解析uri
         String path = parametric.getString(Http2Headers.PseudoHeaderName.PATH.value(), "/");
         if (!path.startsWith("/")) {

@@ -9,9 +9,9 @@ package io.joyrpc.invoker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,7 +30,6 @@ import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.HeadKey;
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.NoAliveProviderException;
@@ -236,11 +235,11 @@ public class Refer<T> extends AbstractInvoker<T> {
         }
         //异步发起调用
         CompletableFuture<Message> msgFuture = client.async(request, header.getTimeout());
+
         //返回future
         return msgFuture.handle((msg, err) -> {
             Result result;
-            //结束，恢复用户线程变量
-            RequestContext.restore(request.getContext());
+            //线程恢复统一改在consumerInvokerHandler里面
             if (err != null) {
                 result = new Result(request.getContext(), err, msg);
             } else {
@@ -441,7 +440,7 @@ public class Refer<T> extends AbstractInvoker<T> {
         if (url.getBoolean(Constants.REGISTER_OPTION)) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
             //TODO 要确保各个注册中心实现在服务有问题的情况下，能快速的注销掉
-            registry.deregister(registerUrl).whenComplete((r,t)->future.complete(null));
+            registry.deregister(registerUrl).whenComplete((r, t) -> future.complete(null));
         } else {
             future.complete(null);
         }

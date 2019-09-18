@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,9 +32,9 @@ import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.*;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.network.Ipv4;
@@ -103,8 +103,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             InvokerManager.getProducerCallback().addCallback(request, transport);
             //执行调用，包括过滤器链
             CompletableFuture<Result> future = exporter.invoke(request);
-            //清理上下文
-            RequestContext.remove();
 
             final Exporter service = exporter;
             future.whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
@@ -117,6 +115,9 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             sendException(channel, e, request, exporter);
         } catch (Exception e) {
             sendException(channel, new RpcException(error(invocation, channel, e.getMessage()), e), request, exporter);
+        } finally {
+            //清理上下文
+            RequestContext.remove();
         }
     }
 

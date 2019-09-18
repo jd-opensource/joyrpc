@@ -9,9 +9,9 @@ package io.joyrpc.proxy;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -126,8 +126,9 @@ public class ConsumerInvokeHandler implements InvocationHandler {
         request.setCreateTime(SystemClock.now());
         //超时时间为0，Refer会自动修正，便于分组重试
         request.getHeader().setTimeout(0);
-        //当前线程上下文
+        //当前线程
         request.setThread(Thread.currentThread());
+        //当前线程上下文
         request.setContext(context);
         Object response = doInvoke(invoker, request, isAsync);
         if (isAsync) {
@@ -148,50 +149,59 @@ public class ConsumerInvokeHandler implements InvocationHandler {
     /**
      * 这个方法用来做 Trace 追踪的增强点，不要随便修改
      */
-    private Object doInvoke(Invoker invoker, RequestMessage<Invocation> request, boolean async) throws Throwable {
-        RequestContext context = request.getContext();
-        CompletableFuture<Result> future = invoker.invoke(request);
-        if (async) {
-            //方法返回值为 future
-            CompletableFuture<Object> response = new CompletableFuture<>();
-            future.whenComplete((res, err) -> {
-                Throwable throwable = err == null ? res.getException() : err;
-                if (throwable != null) {
-                    response.completeExceptionally(throwable);
-                } else {
-                    response.complete(res.getValue());
-                }
-            });
-            response.whenComplete((r, t) -> {
-                //业务逻辑执行完毕，进行异步线程清理清理
-                if (request.getThread() != Thread.currentThread()) {
-                    RequestContext.remove();
-                }
-            });
-
-            if (future.isDone()) {
-                //清理线程
-                context.clearAttachments();
-            } else {
-                //异步调用，需要复制一份数据，保留会话信息
-                Map<String, Object> session = context.getSession();
-                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
-            }
-            return response;
-        } else {
-            try {
-                //正常同步返回
-                Result result = future.get();
-                if (result.isException()) {
-                    throw result.getException();
-                }
-                return result.getValue();
-            } catch (ExecutionException e) {
-                throw e.getCause() != null ? e.getCause() : e;
-            } finally {
-                context.clearAttachments();
-            }
+    protected Object doInvoke(Invoker invoker, RequestMessage<Invocation> request, boolean async) throws Throwable {
+        try {
+            return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
+        } finally {
+            //调用结束，使用新的上下文
+            Map<String, Object> session = request.getContext().getSession();
+            RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
         }
+    }
+
+    /**
+     * 同步调用
+     *
+     * @param invoker
+     * @param request
+     * @return
+     * @throws Throwable
+     */
+    protected Object syncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
+        CompletableFuture<Result> future = invoker.invoke(request);
+        try {
+            //正常同步返回
+            Result result = future.get();
+            if (result.isException()) {
+                throw result.getException();
+            }
+            return result.getValue();
+        } catch (ExecutionException e) {
+            throw e.getCause() != null ? e.getCause() : e;
+        }
+    }
+
+    /**
+     * 异步调用
+     */
+    protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
+        //异步调用，业务逻辑执行完毕，不清理IO线程的上下文
+        CompletableFuture<Object> response = new CompletableFuture<>();
+        CompletableFuture<Result> future = invoker.invoke(request);
+        future.whenComplete((res, err) -> {
+            //需要在这里判断是否要进行恢复
+            if (request.getThread() != Thread.currentThread()) {
+                //确保在whenComplete执行的用户业务代码能拿到调用上下文
+                RequestContext.restore(request.getContext());
+            }
+            Throwable throwable = err == null ? res.getException() : err;
+            if (throwable != null) {
+                response.completeExceptionally(throwable);
+            } else {
+                response.complete(res.getValue());
+            }
+        });
+        return response;
     }
 
 }

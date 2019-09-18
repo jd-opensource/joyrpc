@@ -9,9 +9,9 @@ package io.joyrpc.context;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,12 +50,7 @@ public class RequestContext {
      * The constant LOCAL.
      */
     // todo InheritableThreadLocal 有问题
-    protected static final ThreadLocal<RequestContext> LOCAL = new ThreadLocal() {
-        @Override
-        protected RequestContext initialValue() {
-            return new RequestContext();
-        }
-    };
+    protected static final ThreadLocal<RequestContext> LOCAL = ThreadLocal.withInitial(() -> new RequestContext());
 
     public static final Predicate<String> NONE_INTERNAL_KEY = (o) -> o == null || o.charAt(0) != Constants.INTERNAL_KEY_PREFIX;
 
@@ -108,7 +103,7 @@ public class RequestContext {
     /**
      * The Attachments.
      */
-    protected final Map<String, Object> attachments = new HashMap<>();
+    protected Map<String, Object> attachments;
     /**
      * 会话
      */
@@ -266,7 +261,7 @@ public class RequestContext {
      * @return attachment attachment
      */
     public <T> T getAttachment(final String key) {
-        return key == null ? null : (T) attachments.get(key);
+        return attachments == null || key == null ? null : (T) attachments.get(key);
     }
 
     /**
@@ -293,10 +288,15 @@ public class RequestContext {
             return this;
         } else if (predicate != null && !predicate.test(key)) {
             throw new IllegalArgumentException("key is illegal, the key is " + key);
-        } else if (value == null) {
-            attachments.remove(key);
         } else {
-            attachments.put(key, value);
+            if (attachments == null) {
+                attachments = new HashMap<>();
+            }
+            if (value == null) {
+                attachments.remove(key);
+            } else {
+                attachments.put(key, value);
+            }
         }
         return this;
     }
@@ -308,7 +308,9 @@ public class RequestContext {
      * @return context rpc context
      */
     public RequestContext removeAttachment(final String key) {
-        attachments.remove(key);
+        if (attachments != null && key != null) {
+            attachments.remove(key);
+        }
         return this;
     }
 
@@ -334,21 +336,24 @@ public class RequestContext {
     /**
      * 设置扩展属性，过滤掉无效的属性
      *
-     * @param attachments the attachments
-     * @param predicate   验证key合法性
-     * @return context attachments
+     * @param context   上下文
+     * @param predicate 验证key合法性
+     * @return 上下文
      */
-    public <T extends Object> RequestContext setAttachments(final Map<String, T> attachments, final Predicate<String> predicate) {
-        if (attachments != null && !attachments.isEmpty()) {
-            Map<String, Object> session = (Map<String, Object>) attachments.remove(HIDDEN_KEY_SESSION);
+    public <T extends Object> RequestContext setAttachments(final Map<String, T> context, final Predicate<String> predicate) {
+        if (context != null && !context.isEmpty()) {
+            Map<String, Object> session = (Map<String, Object>) context.remove(HIDDEN_KEY_SESSION);
             if (session != null) {
                 setSession(session);
             }
             String key;
-            for (Map.Entry<String, T> entry : attachments.entrySet()) {
+            for (Map.Entry<String, T> entry : context.entrySet()) {
                 key = entry.getKey();
                 if (predicate == null || predicate.test(key)) {
-                    this.attachments.put(key, entry.getValue());
+                    if (attachments == null) {
+                        attachments = new HashMap<>();
+                    }
+                    attachments.put(key, entry.getValue());
                 }
             }
         }
@@ -375,10 +380,10 @@ public class RequestContext {
      * @see #clearSession()
      */
     public RequestContext setSession(final String key, final Object value) {
-        if (session == null) {
-            session = new HashMap<>();
-        }
         if (key != null) {
+            if (session == null) {
+                session = new HashMap<>();
+            }
             if (value == null) {
                 session.remove(key);
             } else {
@@ -398,7 +403,7 @@ public class RequestContext {
      * @see #clearSession()
      */
     public Object getSession(final String key) {
-        return session == null ? null : session.get(key);
+        return session == null || key == null ? null : session.get(key);
     }
 
     /**
@@ -441,8 +446,23 @@ public class RequestContext {
         remoteAddress = null;
         localAddress = null;
         future = null;
-        attachments.clear();
+        attachments = null;
         return this;
+    }
+
+    /**
+     * 拷贝一份
+     *
+     * @return
+     */
+    public RequestContext copy() {
+        RequestContext result = new RequestContext(session);
+        result.provider = provider;
+        result.remoteAddress = remoteAddress;
+        result.localAddress = localAddress;
+        result.future = future;
+        result.attachments = attachments == null ? null : new HashMap<>(attachments);
+        return result;
     }
 
     /**

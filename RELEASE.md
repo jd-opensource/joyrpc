@@ -6,6 +6,8 @@
 
 - 把boot里面部分类挪到spring，为了支持spring annotation
 
+- 重命名MapParametic为MapParametric
+
 ## 1.0.1-RELEASE(2019-09-11)
 
 - 网络建连成功才注册Future超时回调函数，防止在构造函数里面注册，存在内存泄漏问题。同时优化了无请求时候的判断效率

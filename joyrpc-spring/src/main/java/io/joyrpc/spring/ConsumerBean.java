@@ -22,9 +22,9 @@ package io.joyrpc.spring;
 
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.spring.event.ConsumerReferDoneEvent;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.spring.event.ConsumerReferDoneEvent;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,7 +120,13 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
 
     @Override
     public Class getObjectType() {
-        return getProxyClass();
+        // 如果spring注入在前，reference操作在后，则会提前走到此方法，此时interface为空
+        try {
+            getProxyClass();
+        } catch (Exception ex) {
+            interfaceClass = null;
+        }
+        return interfaceClass;
     }
 
     @Override

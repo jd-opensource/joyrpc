@@ -18,6 +18,11 @@
             <artifactId>joyrpc-proxy-bytebuddy</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-proxy-javassist</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
 

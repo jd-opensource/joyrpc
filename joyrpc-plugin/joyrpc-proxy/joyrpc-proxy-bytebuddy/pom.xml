@@ -12,7 +12,7 @@
     <artifactId>joyrpc-proxy-bytebuddy</artifactId>
 
     <properties>
-        <byte-buddy.version>1.9.10</byte-buddy.version>
+        <byte-buddy.version>1.10.1</byte-buddy.version>
     </properties>
 
     <dependencies>

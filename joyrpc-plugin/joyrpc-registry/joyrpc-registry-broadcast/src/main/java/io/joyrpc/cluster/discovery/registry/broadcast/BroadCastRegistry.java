@@ -1,6 +1,28 @@
 package io.joyrpc.cluster.discovery.registry.broadcast;
 
+/*-
+ * #%L
+ * joyrpc
+ * %%
+ * Copyright (C) 2019 joyrpc.io
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import com.hazelcast.config.Config;
+import com.hazelcast.config.GroupConfig;
+import com.hazelcast.config.MulticastConfig;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -43,6 +65,18 @@ public class BroadCastRegistry extends AbstractRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(BroadCastRegistry.class);
 
+    /**
+     * hazelcast集群分组名称
+     */
+    public static final URLOption<String> BROADCAST_GROUP_NAME = new URLOption<>("broadCastGroupName", "dev");
+    /**
+     * multicast分组
+     */
+    public static final URLOption<String> MULTICAST_GROUP = new URLOption<>("multicastGroup", "224.2.2.3");
+    /**
+     * multicast组播端口
+     */
+    public static final URLOption<Integer> MULTICAST_PORT = new URLOption<>("multicastPort", 64327);
     /**
      * 节点失效时间参数
      */
@@ -94,12 +128,17 @@ public class BroadCastRegistry extends AbstractRegistry {
 
     public BroadCastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
-        //TODO 根据url创建cfg
         this.cfg = new Config();
+        GroupConfig groupConfig = cfg.getGroupConfig();
+        groupConfig.setName(url.getString(BROADCAST_GROUP_NAME));
+        MulticastConfig multicastConfig = cfg.getNetworkConfig().getJoin().getMulticastConfig();
+        multicastConfig.setEnabled(true);
+        multicastConfig.setMulticastGroup(url.getString(MULTICAST_GROUP));
+        multicastConfig.setMulticastPort(url.getInteger(MULTICAST_PORT));
         this.nodeExpiredTime = url.getLong(NODE_EXPIRED_TIME);
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
-        if (root.charAt(0) != '/') {
-            root = "/" + root;
+        if (root.charAt(0) == '/') {
+            root = root.substring(1);
         }
         if (root.charAt(root.length() - 1) == '/') {
             root = root.substring(0, root.length() - 1);
@@ -152,7 +191,7 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             IMap<String, URL> serviceNodes = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
-            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), nodeExpiredTime, TimeUnit.MILLISECONDS);
+            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), 0, TimeUnit.MILLISECONDS, nodeExpiredTime, TimeUnit.MILLISECONDS);
             future.complete(null);
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do register of %s, caused by %s", url.getKey(), e.getMessage()), e);
@@ -375,7 +414,10 @@ public class BroadCastRegistry extends AbstractRegistry {
                         String serviceRootKey = serviceRootKeyFunc.apply(url);
                         String nodeKey = serviceNodeKeyFunc.apply(url);
                         IMap<String, URL> map = instance.getMap(serviceRootKey);
-                        map.get(nodeKey);
+                        Object v = map.get(nodeKey);
+                        if (v == null) {
+                            map.put(nodeKey, url, 0, TimeUnit.MILLISECONDS, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                        }
                     });
                 } catch (InterruptedException e) {
                 }

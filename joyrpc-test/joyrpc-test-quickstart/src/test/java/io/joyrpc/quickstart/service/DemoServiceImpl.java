@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.discovery.registry.broadcast;
+package io.joyrpc.quickstart.service;
 
 /*-
  * #%L
@@ -20,20 +20,16 @@ package io.joyrpc.cluster.discovery.registry.broadcast;
  * #L%
  */
 
-import io.joyrpc.cluster.discovery.backup.Backup;
-import io.joyrpc.cluster.discovery.registry.AbstractRegistryFactory;
-import io.joyrpc.cluster.discovery.registry.Registry;
-import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.URL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * hazelcast注册中心实现插件
- */
-@Extension(value = "broadcast")
-public class BroadCastRegistryFactory extends AbstractRegistryFactory {
+public class DemoServiceImpl implements DemoService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DemoServiceImpl.class);
 
     @Override
-    protected Registry createRegistry(String name, URL url, Backup backup) {
-        return new BroadCastRegistry(name, url, backup);
+    public String sayHello(String name) {
+        logger.info("receive name:" + name);
+        return "Hello~, " + name;
     }
 }

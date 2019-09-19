@@ -3,24 +3,19 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc-registry</artifactId>
+        <artifactId>joyrpc-test</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.0.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>joyrpc-registry-broadcast</artifactId>
-
-    <properties>
-        <hazelcast.version>3.12.2</hazelcast.version>
-    </properties>
-
+    <artifactId>joyrpc-test-quickstart</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast</artifactId>
-            <version>${hazelcast.version}</version>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-registry-broadcast</artifactId>
+            <version>${project.version}</version>
         </dependency>
     </dependencies>
 

@@ -69,7 +69,7 @@ public class ProxyFactoryTest {
                 endTime = System.nanoTime();
                 totalTime += endTime - startTime;
             }
-            System.out.println(String.format("%s tps %d", type, count * 1000000000L / totalTime));
+            System.out.println(String.format("%s time %d, tps %d", type, totalTime, (int) (1000000000.0 / totalTime * count)));
         }
     }
 

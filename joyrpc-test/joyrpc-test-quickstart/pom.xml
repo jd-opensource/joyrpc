@@ -3,27 +3,21 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc-plugin</artifactId>
+        <artifactId>joyrpc-test</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.0.2-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>joyrpc-registry</artifactId>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>joyrpc-registry-etcd</module>
-        <module>joyrpc-registry-zk</module>
-        <module>joyrpc-registry-broadcast</module>
-    </modules>
+    <artifactId>joyrpc-test-quickstart</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
+            <artifactId>joyrpc-registry-broadcast</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>
+
 
 </project>

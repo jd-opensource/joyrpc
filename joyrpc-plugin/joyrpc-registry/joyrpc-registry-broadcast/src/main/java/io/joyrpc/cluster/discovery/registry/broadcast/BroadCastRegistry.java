@@ -23,6 +23,7 @@ package io.joyrpc.cluster.discovery.registry.broadcast;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.GroupConfig;
 import com.hazelcast.config.MulticastConfig;
+import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
@@ -69,6 +70,14 @@ public class BroadCastRegistry extends AbstractRegistry {
      * hazelcast集群分组名称
      */
     public static final URLOption<String> BROADCAST_GROUP_NAME = new URLOption<>("broadCastGroupName", "dev");
+    /**
+     * 节点广播端口
+     */
+    public static final URLOption<Integer> NETWORK_PORT = new URLOption<>("networkPort", 6701);
+    /**
+     * 节点广播端口递增个数
+     */
+    public static final URLOption<Integer> NETWORK_PORT_COUNT = new URLOption<>("networkPortCount", 100);
     /**
      * multicast分组
      */
@@ -131,7 +140,10 @@ public class BroadCastRegistry extends AbstractRegistry {
         this.cfg = new Config();
         GroupConfig groupConfig = cfg.getGroupConfig();
         groupConfig.setName(url.getString(BROADCAST_GROUP_NAME));
-        MulticastConfig multicastConfig = cfg.getNetworkConfig().getJoin().getMulticastConfig();
+        NetworkConfig networkConfig = cfg.getNetworkConfig();
+        networkConfig.setPort(url.getInteger(NETWORK_PORT));
+        networkConfig.setPortCount(url.getInteger(NETWORK_PORT_COUNT));
+        MulticastConfig multicastConfig = networkConfig.getJoin().getMulticastConfig();
         multicastConfig.setEnabled(true);
         multicastConfig.setMulticastGroup(url.getString(MULTICAST_GROUP));
         multicastConfig.setMulticastPort(url.getInteger(MULTICAST_PORT));

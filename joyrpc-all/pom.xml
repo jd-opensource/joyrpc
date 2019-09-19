@@ -142,6 +142,12 @@
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-registry-broadcast</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-transport-netty4</artifactId>
             <version>${project.version}</version>
         </dependency>

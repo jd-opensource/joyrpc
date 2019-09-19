@@ -1,0 +1,64 @@
+package io.joyrpc.quickstart;
+
+import io.joyrpc.config.ConsumerConfig;
+import io.joyrpc.config.RegistryConfig;
+import io.joyrpc.quickstart.service.DemoService;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/*-
+ * #%L
+ * joyrpc
+ * %%
+ * Copyright (C) 2019 joyrpc.io
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+
+public class ConsumerStartTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(ConsumerStartTest.class);
+
+    @Test
+    public void referTest() throws ExecutionException, InterruptedException {
+        RegistryConfig registryConfig = new RegistryConfig();
+        registryConfig.setRegistry("broadcast");
+
+        ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>();
+        consumerConfig.setRegistry(registryConfig);
+        consumerConfig.setInterfaceClazz(DemoService.class.getName());
+        consumerConfig.setAlias("JOY-DEMO");
+        consumerConfig.setTimeout(500000);
+
+        CompletableFuture<Void> referFuture = new CompletableFuture<>();
+        DemoService demoService = consumerConfig.refer(referFuture);
+        referFuture.get();
+
+        while (true) {
+            try {
+                String res = demoService.sayHello("joyrpc");
+                logger.info("res==" + res);
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+            } finally {
+                Thread.sleep(2000);
+            }
+        }
+
+    }
+}

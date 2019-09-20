@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.registry;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -498,6 +498,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
                         if (switcher.isOpened() && registers.get(meta.getKey()) == meta) {
                             addRegisterTask(meta, SystemClock.now() + taskRetryInterval);
                         }
+                    } else {
+                        meta.setRegisterTime(SystemClock.now());
                     }
                 });
             }
@@ -1547,6 +1549,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * 计数器
          */
         protected AtomicLong counter = new AtomicLong(0);
+        /**
+         * 注册时间
+         */
+        protected long registerTime;
 
         public RegisterMeta(URL url, String key) {
             super(url, key);
@@ -1587,6 +1593,13 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return unregister;
         }
 
+        public long getRegisterTime() {
+            return registerTime;
+        }
+
+        public void setRegisterTime(long registerTime) {
+            this.registerTime = registerTime;
+        }
     }
 
 

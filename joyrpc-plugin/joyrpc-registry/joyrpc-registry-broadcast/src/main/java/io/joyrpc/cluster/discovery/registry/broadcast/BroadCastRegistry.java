@@ -44,6 +44,7 @@ import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -203,7 +204,7 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             IMap<String, URL> serviceNodes = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
-            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), 0, TimeUnit.MILLISECONDS, nodeExpiredTime, TimeUnit.MILLISECONDS);
+            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), nodeExpiredTime, TimeUnit.MILLISECONDS);
             future.complete(null);
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do register of %s, caused by %s", url.getKey(), e.getMessage()), e);
@@ -223,7 +224,6 @@ public class BroadCastRegistry extends AbstractRegistry {
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do deregister of %s, caused by %s", url.getKey(), e.getMessage()), e);
             future.completeExceptionally(e);
-
         }
         return future;
     }
@@ -466,9 +466,10 @@ public class BroadCastRegistry extends AbstractRegistry {
                         String serviceRootKey = serviceRootKeyFunc.apply(url);
                         String nodeKey = serviceNodeKeyFunc.apply(url);
                         IMap<String, URL> map = instance.getMap(serviceRootKey);
-                        Object v = map.get(nodeKey);
-                        if (v == null) {
-                            map.put(nodeKey, url, 0, TimeUnit.MILLISECONDS, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                        long newTtl = SystemClock.now() - meta.getRegisterTime() + nodeExpiredTime;
+                        boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
+                        if (!isNotExpired) {
+                            map.put(nodeKey, url, nodeExpiredTime, TimeUnit.MILLISECONDS);
                         }
                     });
                 } catch (InterruptedException e) {

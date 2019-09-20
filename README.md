@@ -4,8 +4,6 @@ JOYRPC
 ![GitHub](https://img.shields.io/github/license/joyrpc/joyrpc)
 
    JOYRPC是一款基于 Java 实现的 RPC 服务框架,是在总结内部服务框架经验的基础上，完全从新设计、支持全异步、微内核和插件化。
-    
-![JOYRPC Architecture](docs/cn/architect.png)
    
 ## 主要特性
 - 全插件化的RPC框架

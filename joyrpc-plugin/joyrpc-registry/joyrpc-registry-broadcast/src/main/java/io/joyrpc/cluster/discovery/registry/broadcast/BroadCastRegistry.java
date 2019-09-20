@@ -464,6 +464,9 @@ public class BroadCastRegistry extends AbstractRegistry {
             while (started.get()) {
                 try {
                     Thread.sleep(sleep);
+                    if (!started.get()) {
+                        break;
+                    }
                     registers.forEach((key, meta) -> {
                         //registerTime不为0，说明已经注册，执行续期
                         if (meta.getRegisterTime() != 0) {

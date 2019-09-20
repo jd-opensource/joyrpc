@@ -24,7 +24,7 @@ package io.joyrpc.spring;
  *
  */
 public abstract class Prefix {
-    public final static String CONFIG = "joyrpc";
+    public final static String CONFIG = "rpc";
     public final static String CONFIG_REGISTRY = CONFIG + ".registry";
     public final static String CONFIG_SERVER = CONFIG + ".server";
     public final static String CONFIG_REGISTRYS = CONFIG + ".registrys";

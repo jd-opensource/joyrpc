@@ -7,12 +7,11 @@
 
 默认所有provider及consumer均开启注册及订阅; 
 注册同订阅互相独立，不互斥，不依赖，任意一个设置为true，则同注册中心建立长连接。两个均是false时，同注册中心不创建长连接
-````
-<!-- 默认寻址服务地址：http://i.jsf.jd.com -->
-<joyrpc:registry id="jsfRegistry" address="http://i.jsf.jd.com" registry="joyrpc"/>
+````xml
+<joyrpc:registry id="jsfRegistry" registry="joyrpc"/>
 ````
 （不推荐）可以通过如下配置实现不注册和不订阅。
-````
+````xml
 <joyrpc:provider register="false" subscribe="false" />
 <joyrpc:consumer register="false" subscribe="false" />
 ````

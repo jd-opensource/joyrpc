@@ -17,7 +17,7 @@
 - 编写服务端实现
   - 1.创建接口
   
-      ```
+      ```java
       /**
        * Demo interface
        */
@@ -27,7 +27,8 @@
       ```
       
   - 2.创建接口实现
-      ```
+  
+      ```java
       public class DemoServiceImpl implements DemoService {
           public String sayHello(String name) {
           return "Hi " + name + ", response from provider. ";
@@ -35,7 +36,8 @@
       }
       ```
   - 3.编写服务端代码
-      ```
+  
+      ```java
       public class ServerMainAPI {
           public static void main(String[] args) throws Exception {
               //接口实现类
@@ -58,23 +60,27 @@
                 try {
                     ServerMainAPI.class.wait();
                 } catch (InterruptedException e) {
-              }
+                }
              }
          }
+       }    
+      }
       ```
 - 编写客户端实现
   - 1.拿到服务端接口
       通常以jar的形式将接口类提供给客户端。在此，先定义全路径相同的接口做演示。
-        ```
+      
+       ```java
         /**
          * Demo interface
          */
         public interface DemoService {
            String sayHello(String str);
         }
-        ```
+    
+       ```
   - 2.编写客户端代码
-      ```
+      ```java
       public class ClientMainAPI {
            public static void main(String[] args) throws Exception {
                //consumer设置

@@ -90,7 +90,7 @@ public class BroadCastRegistry extends AbstractRegistry {
     /**
      * 节点失效时间参数
      */
-    public static final URLOption<Long> NODE_EXPIRED_TIME = new URLOption<>("nodeExpiredTime", 30000L);
+    public static final URLOption<Long> NODE_EXPIRED_TIME = new URLOption<>("nodeExpiredTime", 45000L);
     /**
      * hazelcast实例配置
      */
@@ -104,7 +104,7 @@ public class BroadCastRegistry extends AbstractRegistry {
      */
     protected String root;
     /**
-     * 节点时效时间
+     * 节点时效时间, 至少 NODE_EXPIRED_TIME.getValue() ms
      */
     protected long nodeExpiredTime;
     /**
@@ -148,7 +148,7 @@ public class BroadCastRegistry extends AbstractRegistry {
         multicastConfig.setEnabled(true);
         multicastConfig.setMulticastGroup(url.getString(MULTICAST_GROUP));
         multicastConfig.setMulticastPort(url.getInteger(MULTICAST_PORT));
-        this.nodeExpiredTime = url.getLong(NODE_EXPIRED_TIME);
+        this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
         if (root.charAt(0) == '/') {
             root = root.substring(1);
@@ -457,7 +457,7 @@ public class BroadCastRegistry extends AbstractRegistry {
 
         @Override
         public void run() {
-            long sleep = nodeExpiredTime / 3;
+            long sleep = Math.max(15000, nodeExpiredTime / 3);
             while (started.get()) {
                 try {
                     Thread.sleep(sleep);

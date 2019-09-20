@@ -1,8 +1,9 @@
 快速开始
 ===
 
-#### 依赖
-   需要安装 JDK 8 及以上 和 Maven 3 以上
+##1. 依赖
+
+需要安装 JDK 8 及以上 和 Maven 3 以上
    
 ```xml
 <dependency>
@@ -11,10 +12,13 @@
   <version>最新版本</version>
 </dependency>
 ```
-#### 演示例子
-##### 一、API方式
-- 编写服务端实现
-  - 1.创建接口
+##2. 演示例子
+
+###2.1. API方式
+
+####2.1.1. 编写服务端实现
+
+  - 创建接口
   
       ```java
       /**
@@ -25,7 +29,7 @@
       }
       ```
       
-  - 2.创建接口实现
+  - 创建接口实现
   
       ```java
       public class DemoServiceImpl implements DemoService {
@@ -34,7 +38,7 @@
           }
       }
       ```
-  - 3.编写服务端代码
+  - 编写服务端代码
   
       ```java
       public class ServerMainAPI {
@@ -46,27 +50,29 @@
               //服务提供者设置
               ProviderConfig<DemoService> providerConfig = new ProviderConfig<>();
               providerConfig.setServerConfig(serverConfig);
-       providerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
+              providerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
               providerConfig.setRef(demoService);
               providerConfig.setAlias("joyrpc-demo");
               //发布服务
               providerConfig.export().whenComplete((v, t) -> {
                   providerConfig.open();
               });
-             //hold住本地服务
-             synchronized (ServerMainAPI.class) {
-             while (true) {
-                try {
-                    ServerMainAPI.class.wait();
-                } catch (InterruptedException e) {
-                }
-             }
-         }
-       }    
+              //hold住本地服务
+              synchronized (ServerMainAPI.class) {
+                  while (true) {
+                    try {
+                        ServerMainAPI.class.wait();
+                    } catch (InterruptedException e) {
+                    }
+                  }
+              }
+          }    
       }
       ```
-- 编写客户端实现
-  - 1.拿到服务端接口
+####2.1.2. 编写服务端实现
+
+  - 拿到服务端接口
+  
       通常以jar的形式将接口类提供给客户端。在此，先定义全路径相同的接口做演示。
       
        ```java
@@ -78,7 +84,8 @@
         }
     
        ```
-  - 2.编写客户端代码
+  - 编写客户端代码
+  
       ```java
       public class ClientMainAPI {
            public static void main(String[] args) throws Exception {
@@ -95,13 +102,13 @@
                 //发起服务调用
                 try {
                     String echo = service.sayHello("hello");
-                    } catch (Exception e) {
-                    }
+                } catch (Exception e) {
+                }
                 System.in.read();
               }
         }
       ```
 
-##### 二、Spring方式
+#####2.2 Spring方式
 
-##### 三、SpringBoot方式 
+#####2.3 SpringBoot方式 

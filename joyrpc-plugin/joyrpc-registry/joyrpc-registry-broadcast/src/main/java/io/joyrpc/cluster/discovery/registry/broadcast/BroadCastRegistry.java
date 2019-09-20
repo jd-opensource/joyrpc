@@ -448,6 +448,9 @@ public class BroadCastRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * 定时续期任务Runnable
+     */
     protected class HeartbeatTask implements Runnable {
 
         /**
@@ -462,14 +465,20 @@ public class BroadCastRegistry extends AbstractRegistry {
                 try {
                     Thread.sleep(sleep);
                     registers.forEach((key, meta) -> {
-                        URL url = meta.getUrl();
-                        String serviceRootKey = serviceRootKeyFunc.apply(url);
-                        String nodeKey = serviceNodeKeyFunc.apply(url);
-                        IMap<String, URL> map = instance.getMap(serviceRootKey);
-                        long newTtl = SystemClock.now() - meta.getRegisterTime() + nodeExpiredTime;
-                        boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
-                        if (!isNotExpired) {
-                            map.put(nodeKey, url, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                        //registerTime不为0，说明已经注册，执行续期
+                        if (meta.getRegisterTime() != 0) {
+                            URL url = meta.getUrl();
+                            String serviceRootKey = serviceRootKeyFunc.apply(url);
+                            String nodeKey = serviceNodeKeyFunc.apply(url);
+                            IMap<String, URL> map = instance.getMap(serviceRootKey);
+                            //计算新的ttl，并续期
+                            long newTtl = SystemClock.now() - meta.getRegisterTime() + nodeExpiredTime;
+                            boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
+                            //节点已经过期，重新添加回节点，并修改meta的registerTime
+                            if (!isNotExpired) {
+                                map.put(nodeKey, url, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                                meta.setRegisterTime(SystemClock.now());
+                            }
                         }
                     });
                 } catch (InterruptedException e) {

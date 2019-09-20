@@ -44,6 +44,7 @@ import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,7 +90,7 @@ public class BroadCastRegistry extends AbstractRegistry {
     /**
      * 节点失效时间参数
      */
-    public static final URLOption<Long> NODE_EXPIRED_TIME = new URLOption<>("nodeExpiredTime", 30000L);
+    public static final URLOption<Long> NODE_EXPIRED_TIME = new URLOption<>("nodeExpiredTime", 45000L);
     /**
      * hazelcast实例配置
      */
@@ -103,7 +104,7 @@ public class BroadCastRegistry extends AbstractRegistry {
      */
     protected String root;
     /**
-     * 节点时效时间
+     * 节点时效时间, 至少 NODE_EXPIRED_TIME.getValue() ms
      */
     protected long nodeExpiredTime;
     /**
@@ -147,7 +148,7 @@ public class BroadCastRegistry extends AbstractRegistry {
         multicastConfig.setEnabled(true);
         multicastConfig.setMulticastGroup(url.getString(MULTICAST_GROUP));
         multicastConfig.setMulticastPort(url.getInteger(MULTICAST_PORT));
-        this.nodeExpiredTime = url.getLong(NODE_EXPIRED_TIME);
+        this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
         if (root.charAt(0) == '/') {
             root = root.substring(1);
@@ -203,7 +204,7 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             IMap<String, URL> serviceNodes = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
-            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), 0, TimeUnit.MILLISECONDS, nodeExpiredTime, TimeUnit.MILLISECONDS);
+            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), nodeExpiredTime, TimeUnit.MILLISECONDS);
             future.complete(null);
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do register of %s, caused by %s", url.getKey(), e.getMessage()), e);
@@ -223,7 +224,6 @@ public class BroadCastRegistry extends AbstractRegistry {
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do deregister of %s, caused by %s", url.getKey(), e.getMessage()), e);
             future.completeExceptionally(e);
-
         }
         return future;
     }
@@ -448,6 +448,9 @@ public class BroadCastRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * 定时续期任务Runnable
+     */
     protected class HeartbeatTask implements Runnable {
 
         /**
@@ -457,21 +460,32 @@ public class BroadCastRegistry extends AbstractRegistry {
 
         @Override
         public void run() {
-            long sleep = nodeExpiredTime / 3;
+            long sleep = Math.max(15000, nodeExpiredTime / 3);
             while (started.get()) {
                 try {
                     Thread.sleep(sleep);
+                    if (!started.get()) {
+                        break;
+                    }
                     registers.forEach((key, meta) -> {
-                        URL url = meta.getUrl();
-                        String serviceRootKey = serviceRootKeyFunc.apply(url);
-                        String nodeKey = serviceNodeKeyFunc.apply(url);
-                        IMap<String, URL> map = instance.getMap(serviceRootKey);
-                        Object v = map.get(nodeKey);
-                        if (v == null) {
-                            map.put(nodeKey, url, 0, TimeUnit.MILLISECONDS, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                        //registerTime不为0，说明已经注册，执行续期
+                        if (meta.getRegisterTime() != 0) {
+                            URL url = meta.getUrl();
+                            String serviceRootKey = serviceRootKeyFunc.apply(url);
+                            String nodeKey = serviceNodeKeyFunc.apply(url);
+                            IMap<String, URL> map = instance.getMap(serviceRootKey);
+                            //计算新的ttl，并续期
+                            long newTtl = SystemClock.now() - meta.getRegisterTime() + nodeExpiredTime;
+                            boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
+                            //节点已经过期，重新添加回节点，并修改meta的registerTime
+                            if (!isNotExpired) {
+                                map.put(nodeKey, url, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                                meta.setRegisterTime(SystemClock.now());
+                            }
                         }
                     });
-                } catch (InterruptedException e) {
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
                 }
             }
         }

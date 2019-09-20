@@ -20,7 +20,7 @@ package io.joyrpc.spring.context;
  * #L%
  */
 
-import io.joyrpc.spring.annotation.EnableConfig;
+import io.joyrpc.spring.annotation.EnableRpc;
 import io.joyrpc.spring.util.BeanRegistrarUtils;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
@@ -33,7 +33,7 @@ public class ConfigConfigurationRegistrar implements ImportBeanDefinitionRegistr
     @Override
     public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
 
-        AnnotationAttributes attributes = AnnotationAttributes.fromMap(importingClassMetadata.getAnnotationAttributes(EnableConfig.class.getName()));
+        AnnotationAttributes attributes = AnnotationAttributes.fromMap(importingClassMetadata.getAnnotationAttributes(EnableRpc.class.getName()));
         boolean multiple = attributes.getBoolean("multiple");
 
         if (multiple) {

@@ -20,7 +20,7 @@ package io.joyrpc.spring.context;
  * #L%
  */
 
-import io.joyrpc.spring.annotation.ComponentScan;
+import io.joyrpc.spring.annotation.EnableRpc;
 import io.joyrpc.spring.factory.ConsumerAnnotationBeanPostProcessor;
 import io.joyrpc.spring.factory.ProviderAnnotationBeanPostProcessor;
 import io.joyrpc.spring.util.BeanRegistrarUtils;
@@ -73,8 +73,8 @@ public class ComponentScanRegistrar implements ImportBeanDefinitionRegistrar {
 
     private Set<String> getPackagesToScan(AnnotationMetadata metadata) {
         AnnotationAttributes attributes = AnnotationAttributes.fromMap(
-                metadata.getAnnotationAttributes(ComponentScan.class.getName()));
-        String[] value = attributes.getStringArray("value");
+                metadata.getAnnotationAttributes(EnableRpc.class.getName()));
+        String[] value = attributes.getStringArray("basePackages");
         // Appends value array attributes
         Set<String> packagesToScan = new LinkedHashSet<String>(Arrays.asList(value));
         if (packagesToScan.isEmpty()) {

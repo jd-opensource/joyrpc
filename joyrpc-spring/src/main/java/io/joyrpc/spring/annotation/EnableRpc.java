@@ -20,7 +20,9 @@ package io.joyrpc.spring.annotation;
  * #L%
  */
 
-import org.springframework.core.annotation.AliasFor;
+import io.joyrpc.spring.context.ComponentScanRegistrar;
+import io.joyrpc.spring.context.ConfigConfigurationRegistrar;
+import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.*;
 
@@ -28,14 +30,11 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@EnableConfig
-@ComponentScan
+@Import({ConfigConfigurationRegistrar.class, ComponentScanRegistrar.class})
 public @interface EnableRpc {
 
-    @AliasFor(annotation = ComponentScan.class, attribute = "value")
-    String[] scanBasePackages() default {};
+    String[] basePackages() default {};
 
-    @AliasFor(annotation = EnableConfig.class, attribute = "multiple")
-    boolean multipleConfig() default false;
+    boolean multiple() default false;
 
 }

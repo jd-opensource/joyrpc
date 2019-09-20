@@ -248,16 +248,36 @@ public class BroadCastRegistry extends AbstractRegistry {
         return configSubscriberManager.unSubscribe(url);
     }
 
+    /**
+     * 订阅管理器
+     */
     protected class SubscriberManager {
 
+        /**
+         * listener id列表
+         */
         protected Map<String, String> listenerIds = new ConcurrentHashMap<>();
-
+        /**
+         * 共享map路径函数
+         */
         protected Function<URL, String> function;
 
+        /**
+         * 构造方法
+         *
+         * @param function
+         */
         public SubscriberManager(Function<URL, String> function) {
             this.function = function;
         }
 
+        /**
+         * 订阅操作
+         *
+         * @param urlKey
+         * @param listener
+         * @return
+         */
         public CompletableFuture<Void> subscribe(URLKey urlKey, SubscribeListener listener) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
@@ -274,6 +294,12 @@ public class BroadCastRegistry extends AbstractRegistry {
             return future;
         }
 
+        /**
+         * 取消订阅操作
+         *
+         * @param urlKey
+         * @return
+         */
         public CompletableFuture<Void> unSubscribe(URLKey urlKey) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
@@ -290,12 +316,23 @@ public class BroadCastRegistry extends AbstractRegistry {
 
     }
 
+    /**
+     * 监听器接口
+     */
     protected interface SubscribeListener extends EntryAddedListener, EntryUpdatedListener, EntryRemovedListener, EntryExpiredListener {
 
+        /**
+         * 全量更新事件
+         *
+         * @param map
+         */
         void onFullEvent(IMap map);
 
     }
 
+    /**
+     * 集群事件监听
+     */
     protected class ClusterListener implements SubscribeListener {
 
         /**
@@ -354,6 +391,9 @@ public class BroadCastRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * 配置事件监听
+     */
     protected class ConfigListener implements SubscribeListener {
 
         /**

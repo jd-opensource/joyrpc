@@ -33,7 +33,7 @@ import io.joyrpc.extension.URL;
 public class BroadCastRegistryFactory extends AbstractRegistryFactory {
 
     @Override
-    protected Registry createRegistry(String name, URL url, Backup backup) {
+    protected Registry createRegistry(final String name, final URL url, final Backup backup) {
         return new BroadCastRegistry(name, url, backup);
     }
 }

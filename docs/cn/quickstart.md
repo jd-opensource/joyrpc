@@ -1,11 +1,10 @@
 快速开始
 ===
 
-[TOC]
-
 #### 依赖
    需要安装 JDK 8 及以上 和 Maven 3 以上
-```
+   
+```xml
 <dependency>
   <groupId>io.joyrpc</groupId>
   <artifactId>joyrpc-all</artifactId>

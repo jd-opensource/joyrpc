@@ -1,8 +1,6 @@
 配置参考手册
 ===
 
-[TOC]
-
 - 引入joyrpc的schema，参考如下
 ````xml
 <?xml version="1.0" encoding="UTF-8"?>

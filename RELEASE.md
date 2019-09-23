@@ -1,6 +1,10 @@
 # 版本说明
 
-## 1.0.2-SNAPSHOT
+## 1.0.3-SNAPSHOT
+
+- 升级Fastjson版本为1.2.61，防止autoType漏洞
+
+## 1.0.2(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用
 

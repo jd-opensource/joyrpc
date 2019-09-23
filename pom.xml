@@ -15,6 +15,7 @@
         <module>joyrpc-all</module>
         <module>joyrpc-extension</module>
         <module>joyrpc-springboot</module>
+        <module>joyrpc-example</module>
     </modules>
     <name>joyrpc</name>
     <properties>

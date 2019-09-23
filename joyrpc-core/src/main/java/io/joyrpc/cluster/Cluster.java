@@ -518,11 +518,7 @@ public class Cluster {
         node.getState().candidate(node::setState);
         //连接中状态
         if (node.getState().connecting(node::setState)) {
-            try {
-                node.open(n -> switcher.writer().run(() -> onConnect(n)));
-            } catch (Throwable ex) {
-                logger.error(String.format("node url:%s open error %s.", node.getUrl().toString(), ex.getMessage()), ex);
-            }
+            node.open(n -> switcher.writer().run(() -> onConnect(n)));
         }
     }
 

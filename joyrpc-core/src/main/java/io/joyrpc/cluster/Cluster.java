@@ -9,9 +9,9 @@ package io.joyrpc.cluster;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -520,7 +520,7 @@ public class Cluster {
         if (node.getState().connecting(node::setState)) {
             try {
                 node.open(n -> switcher.writer().run(() -> onConnect(n)));
-            } catch (Throwable ex){
+            } catch (Throwable ex) {
                 logger.error(String.format("node url:%s open error %s.", node.getUrl().toString(), ex.getMessage()), ex);
             }
         }
@@ -615,11 +615,11 @@ public class Cluster {
      * @param result
      */
     protected void onConnect(final AsyncResult<Node> result) {
+        Node owner = result.getResult();
         if (!isOpened()) {
+            logger.warn(String.format("OnConnect event of node %s is happened, but clusert was not opened.", owner != null ? owner.getName() : "null"));
             return;
         }
-
-        Node owner = result.getResult();
         if (nodes.get(owner.getName()) != owner) {
             //不存在了，或者变更成了其它实例
             owner.close();
@@ -629,16 +629,14 @@ public class Cluster {
             logger.info(String.format("Success connecting node %s.", owner.getName()));
         } else {
             Throwable throwable = result.getThrowable();
+            logger.warn(String.format("Failed connecting node %s. caused by %s.", owner.getName(), throwable == null ? "Unknown error." : StringUtils.toString(throwable)));
             if (throwable != null && (throwable instanceof ProtocolException || throwable instanceof AuthenticationException)) {
-                logger.warn(String.format("Failed connecting node %s. caused by %s.", owner.getName(), throwable.getMessage()));
                 //协商失败或认证失败，最少20秒重连
                 onDisconnect(result.getResult(), SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000));
             } else if (detectDead(throwable)) {
                 //目标节点不存在了，最少20秒重连
-                logger.warn(String.format("Failed connecting node %s. caused by %s.", owner.getName(), throwable.getMessage()));
                 onDisconnect(result.getResult(), SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000));
             } else {
-                logger.warn(String.format("Failed connecting node %s. caused by %s.", owner.getName(), throwable == null ? "Unknown error." : StringUtils.toString(throwable)));
                 onDisconnect(result.getResult());
             }
         }

@@ -57,6 +57,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
+import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
 
 /**
  * 集群
@@ -161,7 +162,7 @@ public class Cluster {
         this.url = url;
         this.registar = registar == null ? REGISTAR.get(url.getString("registar", url.getProtocol())) : registar;
         Objects.requireNonNull(this.registar, "registar can not be null.");
-        this.candidature = candidature != null ? candidature : CANDIDATURE.get(url.getString(Constants.CANDIDATURE_OPTION), "region");
+        this.candidature = candidature != null ? candidature : CANDIDATURE.get(url.getString(CANDIDATURE_OPTION), CANDIDATURE_OPTION.getValue());
         this.factory = factory != null ? factory : ENDPOINT_FACTORY.getOrDefault(url.getString("endpointFactory"));
         this.authorization = authorization;
         this.initSize = url.getInteger(Constants.INIT_SIZE_OPTION);

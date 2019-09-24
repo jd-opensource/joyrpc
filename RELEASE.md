@@ -3,6 +3,7 @@
 ## 1.0.3-SNAPSHOT
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞
+- ChanelManager优化poolchannle关闭逻辑
 
 ## 1.0.2(2019-09-20)
 

@@ -9,9 +9,9 @@ package io.joyrpc.transport.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,6 +33,8 @@ import io.joyrpc.transport.heartbeat.HeartbeatManager;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.transport.ClientTransport;
 import io.joyrpc.util.Shutdown;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.*;
@@ -46,6 +48,8 @@ import static io.joyrpc.Plugin.HEARTBEAT_MANAGER_FACTORY;
  * @date: 2019/3/7
  */
 public abstract class AbstractChannelManager implements ChannelManager {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractChannelManager.class);
 
     protected static final Queue<ChannelCloser> CLOSERS = new ConcurrentLinkedQueue<>();
     /**
@@ -243,7 +247,15 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public boolean isActive() {
-            return super.isActive() && status.get() == Endpoint.Status.OPENED;
+            boolean isActive = super.isActive();
+            boolean isOpened = status.get() == Endpoint.Status.OPENED;
+            if (isActive && isOpened) {
+                return true;
+            }
+            if (isActive != isOpened) {
+                logger.warn(String.format("Channel status is error, channel active status is %b, but the open status is %b.", isActive, isOpened));
+            }
+            return false;
         }
 
         @Override
@@ -271,8 +283,8 @@ public abstract class AbstractChannelManager implements ChannelManager {
         @Override
         public void close(final Consumer<AsyncResult<Channel>> consumer) {
             if (status.compareAndSet(Endpoint.Status.OPENED, Endpoint.Status.CLOSING)) {
-                if (channel.getFutureManager().isEmpty()) {
-                    //没有请求，立即关闭
+                if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
+                    //没有请求，或者channel已经不可以，立即关闭
                     doClose(consumer);
                 } else {
                     //异步关闭
@@ -356,8 +368,8 @@ public abstract class AbstractChannelManager implements ChannelManager {
             if (poolChannel.status.get() == Endpoint.Status.OPENED) {
                 //重新打开了，不需要关闭，直接remove
                 return true;
-            } else if (poolChannel.getFutureManager().isEmpty()) {
-                //没有请求了
+            } else if (poolChannel.getFutureManager().isEmpty() || !poolChannel.channel.isActive()) {
+                //没有请求了,或channl已经不可用
                 poolChannel.doClose(consumer);
                 return true;
             }

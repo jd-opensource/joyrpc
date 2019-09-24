@@ -14,9 +14,9 @@
 ```
 ## 2. 演示例子
 
-### 2.1. API方式
+### 2.1 API方式
 
-#### 2.1.1. 编写服务端实现
+#### 2.1.1 编写服务端实现
 
   - 创建接口
   
@@ -41,35 +41,29 @@
   - 编写服务端代码
   
       ```java
-      public class ServerMainAPI {
+      public class ServerAPI {
+      
           public static void main(String[] args) throws Exception {
-              //接口实现类
-              DemoService demoService = new DemoServiceImpl();
-               //服务端设置
-              ServerConfig serverConfig = new ServerConfig();
-              //服务提供者设置
+              RegistryConfig registryConfig = new RegistryConfig();
+              registryConfig.setRegistry("memory");//内存注册中心
+      
+              DemoService demoService = new DemoServiceImpl(); //服务提供者设置
               ProviderConfig<DemoService> providerConfig = new ProviderConfig<>();
-              providerConfig.setServerConfig(serverConfig);
+              providerConfig.setServerConfig(new ServerConfig());
+      
               providerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
               providerConfig.setRef(demoService);
               providerConfig.setAlias("joyrpc-demo");
-              //发布服务
-              providerConfig.export().whenComplete((v, t) -> {
+              providerConfig.setRegistry(registryConfig);
+      
+              providerConfig.export().whenComplete((v, t) -> {//发布服务
                   providerConfig.open();
               });
-              //hold住本地服务
-              synchronized (ServerMainAPI.class) {
-                  while (true) {
-                    try {
-                        ServerMainAPI.class.wait();
-                    } catch (InterruptedException e) {
-                    }
-                  }
-              }
-          }    
+              System.in.read();
+          }
       }
       ```
-#### 2.1.2. 编写服务端实现
+#### 2.1.2 编写服务端实现
 
   - 拿到服务端接口
   
@@ -87,26 +81,27 @@
   - 编写客户端代码
   
       ```java
-      public class ClientMainAPI {
-           public static void main(String[] args) throws Exception {
-               //consumer设置
-                ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>();
-                //直连,默认22000端口
-                consumerConfig.setUrl("joyrpc://127.0.0.1:22000");
-                consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
-                consumerConfig.setAlias("joyrpc-demo");
-                //异步启动
-                CompletableFuture<Void> future = new CompletableFuture<Void>();
-                DemoService service = consumerConfig.refer(future);
-                future.get();
-                //发起服务调用
-                try {
-                    String echo = service.sayHello("hello");
-                } catch (Exception e) {
-                }
-                System.in.read();
+      public class ClientAPI {
+      
+          public static void main(String[] args) {
+              RegistryConfig registryConfig = new RegistryConfig();
+              registryConfig.setRegistry("memory");//内存注册中心
+      
+              ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>();//consumer设置
+              consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
+              consumerConfig.setAlias("joyrpc-demo");
+              consumerConfig.setRegistry(registryConfig);
+              try {
+                  CompletableFuture<Void> future = new CompletableFuture<Void>();
+                  DemoService service = consumerConfig.refer(future);
+                  future.get();
+                  String echo = service.sayHello("hello");//发起服务调用
+      
+                  System.in.read();
+              } catch (Exception e) {
               }
-        }
+          }
+      }
       ```
 
 ### 2.2 Spring方式

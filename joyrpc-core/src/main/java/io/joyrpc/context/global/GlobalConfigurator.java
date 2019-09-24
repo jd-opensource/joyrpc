@@ -45,7 +45,6 @@ public class GlobalConfigurator implements Configurator {
         update(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), parameters);
         //本地接口静态配置
         update(url.getParameters(), parameters);
-        parameters.putAll(url.getParameters());
         //注册中心下发的接口动态配置
         update(GlobalContext.getInterfaceConfig(url.getPath()), parameters);
 

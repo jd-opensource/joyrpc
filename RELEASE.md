@@ -7,6 +7,7 @@
 - 去掉joyrpc-extension-core中的Predicate，使用Java8原生的Predicate
 
 - ChanelManager优化poolchannle关闭逻辑
+
 - Region常量dataCenter改为datacenter
 
 ## 1.0.2(2019-09-20)

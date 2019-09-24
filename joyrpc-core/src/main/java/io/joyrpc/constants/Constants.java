@@ -460,7 +460,7 @@ public class Constants {
     public static final URLOption<String> ROUTER_OPTION = new URLOption<>("router", (String) null);
     //默认不压缩
     public static final URLOption<String> COMPRESS_OPTION = new URLOption<>("compress", (String) null);
-    public static final URLOption<String> CANDIDATURE_OPTION = new URLOption<>("candidature", "all");
+    public static final URLOption<String> CANDIDATURE_OPTION = new URLOption<>("candidature", "region");
 
     /*------------------------ consumer group配置 ------------------------*/
     public static final URLOption<String> ALIAS_ADAPTIVE_OPTION = new URLOption<>("aliasAdaptive", "");

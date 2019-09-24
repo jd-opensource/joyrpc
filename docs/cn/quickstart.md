@@ -87,7 +87,7 @@
               RegistryConfig registryConfig = new RegistryConfig();
               registryConfig.setRegistry("memory");//内存注册中心
       
-              ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>(); //consumer设置
+              ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>();//consumer设置
               consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
               consumerConfig.setAlias("joyrpc-demo");
               consumerConfig.setRegistry(registryConfig);
@@ -95,7 +95,7 @@
                   CompletableFuture<Void> future = new CompletableFuture<Void>();
                   DemoService service = consumerConfig.refer(future);
                   future.get();
-                  String echo = service.sayHello("hello"); //发起服务调用
+                  String echo = service.sayHello("hello");//发起服务调用
       
                   System.in.read();
               } catch (Exception e) {

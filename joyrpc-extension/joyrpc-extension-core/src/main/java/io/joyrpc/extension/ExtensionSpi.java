@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 
 /**
  * 指定接口的扩展点
@@ -63,10 +64,10 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
     public ExtensionSpi(final Name<T, String> name, final List<ExtensionMeta<T, M>> metas,
                         final Comparator<ExtensionMeta<T, M>> comparator, final Classify<T, M> classify) {
         this.name = name;
-        this.metas = new LinkedList<ExtensionMeta<T, M>>();
-        this.names = new ConcurrentHashMap<M, ExtensionMeta<T, M>>(metas.size());
-        this.multiNames = new ConcurrentHashMap<M, List<ExtensionMeta<T, M>>>(metas.size());
-        this.providers = new ConcurrentHashMap<String, ExtensionMeta<T, M>>(metas.size());
+        this.metas = new LinkedList<>();
+        this.names = new ConcurrentHashMap<>(metas.size());
+        this.multiNames = new ConcurrentHashMap<>(metas.size());
+        this.providers = new ConcurrentHashMap<>(metas.size());
         this.comparator = comparator;
         this.classify = classify;
         for (ExtensionMeta<T, M> meta : metas) {
@@ -87,13 +88,7 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
             //防止被覆盖
             names.putIfAbsent(name, meta);
             //相同名称，不同供应商的插件集合
-            List<ExtensionMeta<T, M>> metas = Maps.computeIfAbsent(multiNames, name,
-                    new Maps.Function<M, List<ExtensionMeta<T, M>>>() {
-                        @Override
-                        public List<ExtensionMeta<T, M>> apply(M t) {
-                            return new CopyOnWriteArrayList<ExtensionMeta<T, M>>();
-                        }
-                    });
+            List<ExtensionMeta<T, M>> metas = Maps.computeIfAbsent(multiNames, name, t -> new CopyOnWriteArrayList<>());
             metas.add(meta);
 
             if (name instanceof String && meta.getProvider() != null && !meta.getProvider().isEmpty()) {

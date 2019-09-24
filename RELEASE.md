@@ -4,6 +4,7 @@
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞
 - ChanelManager优化poolchannle关闭逻辑
+- Region常量dataCenter改为datacenter
 
 ## 1.0.2(2019-09-20)
 

@@ -32,7 +32,7 @@ public interface Region {
     /**
      * 数据中心
      */
-    String DATA_CENTER = "dataCenter";
+    String DATA_CENTER = "datacenter";
 
     /**
      * 区域

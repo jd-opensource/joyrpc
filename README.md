@@ -23,7 +23,7 @@ JOYRPC
 查看[快速开始](./docs/cn/quickstart.md)。
 
 ## 配置参考手册
-查看[配置参考手册](docs/cn/config.md)。
+查看[配置参考手册](./docs/cn/config.md)。
 
 ## 使用示例
 查看[使用示例](./docs/cn/example.md)。

@@ -106,6 +106,19 @@
       ```
 
 ### 2.2 Spring方式
+   
+  > spring配置文件中需引入XSD文件
+
+   ```xml
+         <?xml version="1.0" encoding="UTF-8"?>
+         <beans xmlns="http://www.springframework.org/schema/beans"
+                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+                xmlns:joyrpc="http://joyrpc.io/schema/joyrpc" 
+                xsi:schemaLocation="http://www.springframework.org/schema/beans 
+                http://www.springframework.org/schema/beans/spring-beans.xsd http://joyrpc.io/schema/joyrpc http://joyrpc.io/schema/joyrpc/joyprc.xsd">
+         </beans>         
+   ```
+   
 
 #### 2.2.1 编写服务端实现
 
@@ -147,8 +160,7 @@
           <joyrpc:server id="joyRpcServer"/>
       
           <!-- 发布服务 alias可修改 -->
-          <joyrpc:provider id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo"
-                           ref="demoServiceImpl" server="joyRpcServer">
+          <joyrpc:provider id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo" ref="demoServiceImpl" server="joyRpcServer">
           </joyrpc:provider>
       </beans>
       ```
@@ -196,4 +208,20 @@
 
 ### 2.3 SpringBoot方式 
 
-待补充
+   待补充
+
+### 运行
+
+   分别启动服务端和客户端，观察运行效果。
+
+   服务端将打印：
+
+   >Hi hello, request from consumer.
+
+   客户端将打印：
+
+   >Hi hello, response from provider
+
+### 更多
+
+   更多示例请参考：[example](../../joyrpc-example)

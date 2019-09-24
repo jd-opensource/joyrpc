@@ -26,6 +26,7 @@ public class DemoServiceImpl implements DemoService {
 
     @Override
     public String sayHello(String str) {
+        System.out.println("Hi " + str + ", request from consumer.");
         return "Hi " + str + ", response from provider. ";
     }
 }

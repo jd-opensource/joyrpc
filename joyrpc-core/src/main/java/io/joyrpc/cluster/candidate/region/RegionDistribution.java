@@ -9,9 +9,9 @@ package io.joyrpc.cluster.candidate.region;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -177,11 +177,13 @@ public class RegionDistribution {
                 //从本区域无机房补充
                 remain -= emptyDc.candidate(candidates, otherBackups, remain);
                 //从无区域无机房补充
-                if (remain > 0) {
-                    //多余的丢弃
-                    emptyRegionDc.candidate(candidates, discards, remain);
-                }
-            } else if (!dcExclusive) {
+                emptyRegionDc.candidate(candidates, discards, remain);
+            } else if (candidates.isEmpty() && emptyDc.getSize() > 0) {
+                //没有识别出机房的情况，看看是否识别出来了区域，尝试连接本区域所有节点
+                remain = emptyDc.candidate(candidates, otherBackups, minSize > 0 ? minSize : 50);
+                //从无区域无机房补充
+                emptyRegionDc.candidate(candidates, discards, remain);
+            } else {
                 //只有本地机房，不限定机房，则从其它机房补充热备
                 otherDc.values().forEach(v -> v.candidate(standbys, otherBackups, standbyPerDc));
                 //本区域没有机房的作为冷备

@@ -9,9 +9,9 @@ package io.joyrpc.cluster.candidate.region;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,9 @@ import java.util.function.Consumer;
  * 数据中心分布
  */
 public class DataCenterDistribution {
+    //区域
+    protected String region;
+    //机房
     protected String dataCenter;
     //本机房分片数量
     protected int size;
@@ -44,9 +47,11 @@ public class DataCenterDistribution {
     /**
      * 构造函数
      *
+     * @param region
      * @param dataCenter
      */
-    public DataCenterDistribution(String dataCenter) {
+    public DataCenterDistribution(String region, String dataCenter) {
+        this.region = region;
         this.dataCenter = dataCenter;
     }
 
@@ -57,18 +62,25 @@ public class DataCenterDistribution {
      * @return
      */
     public boolean add(Node node) {
-        size++;
+        boolean result;
         switch (node.getState()) {
             case CONNECTED:
             case CONNECTING:
             case WEAK:
             case CANDIDATE:
-                return high.add(node);
+                result = high.add(node);
+                break;
             case INITIAL:
-                return normal.add(node);
+                result = normal.add(node);
+                break;
             default:
-                return low.add(node);
+                result = low.add(node);
+                break;
         }
+        if (result) {
+            size++;
+        }
+        return result;
     }
 
     /**
@@ -115,6 +127,14 @@ public class DataCenterDistribution {
         remain -= candidate(candidates, backups, normal, remain, o -> Collections.shuffle(o));
         remain -= candidate(candidates, backups, low, remain, o -> Collections.shuffle(o));
         return count - remain;
+    }
+
+    public String getRegion() {
+        return region;
+    }
+
+    public String getDataCenter() {
+        return dataCenter;
     }
 
     public int getSize() {

@@ -7,3 +7,4 @@ io.joyrpc.context.mock.MockConfigHandler
 io.joyrpc.context.router.GroupRouterConfigHandler
 io.joyrpc.context.router.RouterConfigHandler
 io.joyrpc.context.global.IfaceConfigHandler
+io.joyrpc.context.circuit.CircuitConfigHandler

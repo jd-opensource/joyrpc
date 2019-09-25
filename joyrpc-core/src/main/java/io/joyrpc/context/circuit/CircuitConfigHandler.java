@@ -1,4 +1,4 @@
-package io.joyrpc.context.global;
+package io.joyrpc.context.circuit;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.context.global;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,27 +20,34 @@ package io.joyrpc.context.global;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 
+import java.util.List;
 import java.util.Map;
 
-import static io.joyrpc.context.ConfigEventHandler.IFACE_ORDER;
+import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.context.ConfigEventHandler.CIRCUIT_ORDER;
 
 /**
- * 注册中心接口级配置参数处理handler
+ * 跨机房访问首选的机房
  *
  * @date: 2019/8/2
  */
-@Extension(value = "iface", order = IFACE_ORDER)
-public class IfaceConfigHandler implements ConfigEventHandler {
+@Extension(value = "circuit", order = CIRCUIT_ORDER)
+public class CircuitConfigHandler implements ConfigEventHandler {
 
     @Override
-    public void handle(String className, Map<String, String> attrs) {
+    public void handle(final String className, final Map<String, String> attrs) {
         if (!Constants.GLOBAL_SETTING.equals(className)) {
-            GlobalContext.put(className, attrs);
+            String value = attrs.remove(Constants.CIRCUIT_KEY);
+            if (value != null && !value.isEmpty()) {
+                Map<String, List<String>> results = JSON.get().parseObject(value, new TypeReference<Map<String, List<String>>>() {
+                });
+                CircuitConfiguration.INSTANCE.update(results);
+            }
         }
     }
 }

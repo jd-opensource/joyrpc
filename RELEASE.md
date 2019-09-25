@@ -12,6 +12,8 @@
 
 - 优化心跳逻辑，如果channel为Inactive状态，直接推送Inactive事件
 
+- 优化channel发送消息的异常处理
+
 ## 1.0.2(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用

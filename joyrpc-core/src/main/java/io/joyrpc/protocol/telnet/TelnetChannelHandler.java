@@ -9,9 +9,9 @@ package io.joyrpc.protocol.telnet;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -104,9 +104,10 @@ public class TelnetChannelHandler implements ChannelHandler {
         logger.error("Error occurs while handling telnet command.", throwable);
         channel.send(throwable.getMessage(), r -> {
             if (!r.isSuccess()) {
-                logger.error("Error occurs while sending throwable message", throwable.getMessage());
+                logger.error(String.format("Error occurs while sending telnet command throwable message -- %s", throwable.getMessage()));
             }
         });
+        context.end();
     }
 
 

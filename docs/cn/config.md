@@ -93,8 +93,8 @@
 |provider|interfaceValidator|string|否|standard|接口验证器插件名称，同validation参数配合使用|
 |provider|warmup|string|否|standard|预热插件名称|
 
->1一级元素，下面可以有method或者parameter节点。对应io.rpc.config.ProviderConfig
-发布joyrpc服务Provider使用。 
+>一级元素，下面可以有method或者parameter节点。对应io.rpc.config.ProviderConfig
+>发布joyrpc服务Provider使用。 
 
 ```xml
 <!-- 注册中心 -->
@@ -150,8 +150,8 @@
 |consumer|failoverPredication|string|否||重试异常判断接口插件|
 
 >作为一级元素，下面可以有method或者parameter节点。对应io.joyrpc.config.ConsumerConfig
-作为二级元素，ConsumerGroup下的元素。
-发布joyrpc服务Consumer使用。
+>作为二级元素，ConsumerGroup下的元素。
+>发布joyrpc服务Consumer使用。
 
 ```xml
 <!-- 注册中心 -->

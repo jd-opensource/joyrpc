@@ -9,9 +9,9 @@ package io.joyrpc.context.global;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ package io.joyrpc.context.global;
 
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.Configurator;
+import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
@@ -44,8 +45,11 @@ public class GlobalConfigurator implements Configurator {
         //注册中心下发的全局动态配置，主要是一些开关
         update(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), parameters);
         //本地接口静态配置
-        update(url.getParameters(), parameters);
-        parameters.putAll(url.getParameters());
+        Map<String, String> map = url.getParameters();
+        //数据中心和区域在注册中心里面会动态更新到全局上下文里面
+        map.remove(Environment.DATA_CENTER);
+        map.remove(Environment.REGION);
+        update(map, parameters);
         //注册中心下发的接口动态配置
         update(GlobalContext.getInterfaceConfig(url.getPath()), parameters);
 

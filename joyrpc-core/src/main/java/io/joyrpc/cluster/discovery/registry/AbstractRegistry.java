@@ -349,12 +349,12 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
     @Override
     public String getRegion() {
-        return region;
+        return (region == null || region.isEmpty()) ? GlobalContext.getString(REGION) : region;
     }
 
     @Override
     public String getDataCenter() {
-        return dataCenter;
+        return (dataCenter == null || dataCenter.isEmpty()) ? GlobalContext.getString(DATA_CENTER) : dataCenter;
     }
 
     @Override

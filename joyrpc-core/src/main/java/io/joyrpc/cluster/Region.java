@@ -30,9 +30,9 @@ public interface Region {
      */
     String REGION = "region";
     /**
-     * 数据中心
+     * 数据中心（key值大小写敏感）
      */
-    String DATA_CENTER = "dataCenter";
+    String DATA_CENTER = "datacenter";
 
     /**
      * 区域

@@ -10,4 +10,31 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>joyrpc-example-spring</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-example-interface</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <!-- spring -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <!-- slf4j -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+        </dependency>
+    </dependencies>
+
 </project>

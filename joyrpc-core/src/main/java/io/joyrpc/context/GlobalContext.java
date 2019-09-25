@@ -9,9 +9,9 @@ package io.joyrpc.context;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -82,6 +82,13 @@ public class GlobalContext {
                     loadResource(map, "META-INF/system_context.properties");
                     //读取用户的配置
                     loadResource(map, environment.getString(CONTEXT_RESOURCE, "global_context.properties"));
+                    //打印默认的上下文
+                    if (logger.isInfoEnabled()) {
+                        String line = System.getProperty("line.separator");
+                        StringBuilder builder = new StringBuilder(1000).append("default context:").append(line);
+                        map.forEach((k, v) -> builder.append(k).append('=').append(v.toString()).append(line));
+                        logger.info(builder.toString());
+                    }
                     context = map;
                 }
             }

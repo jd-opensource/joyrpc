@@ -4,6 +4,12 @@
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞
 
+- 去掉joyrpc-extension-core中的Predicate，使用Java8原生的Predicate
+
+- ChanelManager优化poolchannle关闭逻辑
+
+- 修复机房信息获取错误
+
 ## 1.0.2(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用

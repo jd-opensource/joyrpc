@@ -834,7 +834,16 @@ public class Cluster {
             return false;
         }
 
-        logger.info(String.format("add shard %s when cluster event for %s", shard.getName(), name));
+        if (logger.isInfoEnabled()) {
+            logger.info(String.format("add shard %s (region=%s,dataCenter=%s,protocol=%s,version=%s,weight=%d) when cluster event for %s",
+                    shard.getName(),
+                    shard.getRegion(),
+                    shard.getDataCenter(),
+                    shard.getProtocol(),
+                    shard.getUrl().getString("version", ""),
+                    shard.getWeight(),
+                    name));
+        }
         //新增节点都进行覆盖，防止分片数量发生了变化
         Node node = createNode(shard);
         previous = nodes.put(shard.getName(), node);

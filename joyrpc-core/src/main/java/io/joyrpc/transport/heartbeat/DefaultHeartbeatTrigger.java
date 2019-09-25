@@ -9,9 +9,9 @@ package io.joyrpc.transport.heartbeat;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.FutureManager;
 import io.joyrpc.transport.event.HeartbeatEvent;
+import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
 import org.slf4j.Logger;
@@ -88,21 +89,25 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
     public void trigger() {
         Message hbMsg;
         Supplier<Message> heartbeat = strategy.getHeartbeat();
-        if (heartbeat != null && channel.isActive() && (hbMsg = heartbeat.get()) != null) {
-            FutureManager<Integer, Message> futureManager = channel.getFutureManager();
-            //设置id
-            hbMsg.setMsgId(futureManager.generateId());
-            //创建future
-            CompletableFuture<Message> future = futureManager.create(hbMsg.getMsgId(), strategy.getTimeout()).whenComplete(heartbeatAction);
-            //发送消息
-            channel.send(hbMsg, r -> {
-                //心跳有应答消息，会触发future的complete
-                if (!r.isSuccess()) {
-                    futureManager.remove(hbMsg.getMsgId());
-                    future.completeExceptionally(r.getThrowable());
-                    logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:", Channel.toString(channel.getRemoteAddress())), r.getThrowable());
-                }
-            });
+        if (heartbeat != null && (hbMsg = heartbeat.get()) != null) {
+            if (channel.isActive()) {
+                FutureManager<Integer, Message> futureManager = channel.getFutureManager();
+                //设置id
+                hbMsg.setMsgId(futureManager.generateId());
+                //创建future
+                CompletableFuture<Message> future = futureManager.create(hbMsg.getMsgId(), strategy.getTimeout()).whenComplete(heartbeatAction);
+                //发送消息
+                channel.send(hbMsg, r -> {
+                    //心跳有应答消息，会触发future的complete
+                    if (!r.isSuccess()) {
+                        futureManager.remove(hbMsg.getMsgId());
+                        future.completeExceptionally(r.getThrowable());
+                        logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:", Channel.toString(channel.getRemoteAddress())), r.getThrowable());
+                    }
+                });
+            } else {
+                publisher.offer(new InactiveEvent(channel));
+            }
         }
     }
 

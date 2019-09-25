@@ -10,6 +10,8 @@
 
 - 修复机房信息获取错误
 
+- 优化心跳逻辑，如果channel为Inactive状态，直接推送Inactive事件
+
 ## 1.0.2(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用

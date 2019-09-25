@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,8 @@ package io.joyrpc.transport.netty4.channel;
  */
 
 import io.joyrpc.event.AsyncResult;
+import io.joyrpc.exception.ChannelClosedException;
+import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
@@ -80,26 +82,33 @@ public class NettyChannel implements Channel {
      */
     protected void sendObject(final Object object, final Consumer<SendResult> consumer) {
         if (!this.isWritable()) {
-            OverloadException throwable = new OverloadException(
-                    String.format("Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s",
-                            Channel.toString(this), object.toString())
-                    , 0, isServer);
+            LafException throwable;
+            if (channel.isActive()) {
+                throwable = new OverloadException(
+                        String.format("Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s",
+                                Channel.toString(this), object.toString())
+                        , 0, isServer);
+            } else {
+                throwable = new ChannelClosedException(String.format("Send request exception, causing channel is not active. at  %s : %s",
+                        Channel.toString(this), object.toString()));
+            }
             if (consumer != null) {
                 consumer.accept(new SendResult(throwable, this));
             } else {
                 throw throwable;
             }
-        }
-        if (consumer != null) {
-            channel.writeAndFlush(object).addListener((future) -> {
-                if (future.isSuccess()) {
-                    consumer.accept(new SendResult(true, this, object));
-                } else {
-                    consumer.accept(new SendResult(future.cause(), this, object));
-                }
-            });
         } else {
-            channel.writeAndFlush(object, channel.voidPromise());
+            if (consumer != null) {
+                channel.writeAndFlush(object).addListener((future) -> {
+                    if (future.isSuccess()) {
+                        consumer.accept(new SendResult(true, this, object));
+                    } else {
+                        consumer.accept(new SendResult(future.cause(), this, object));
+                    }
+                });
+            } else {
+                channel.writeAndFlush(object, channel.voidPromise());
+            }
         }
     }
 

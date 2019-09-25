@@ -28,6 +28,7 @@ import io.joyrpc.transport.event.ActiveEvent;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.util.network.Ipv4;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
@@ -73,10 +74,14 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        Map<Integer, EnhanceCompletableFuture<Integer, Message>> futures = channel.getFutureManager().close();
-        futures.forEach((id, future) ->
-                future.completeExceptionally(new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress())));
-        futures.clear();
+        try {
+            Map<Integer, EnhanceCompletableFuture<Integer, Message>> futures = channel.getFutureManager().close();
+            futures.forEach((id, future) ->
+                    future.completeExceptionally(new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress())));
+            futures.clear();
+        } catch (Throwable ex) {
+            logger.error(String.format("Channel Inactive address %s", Ipv4.toAddress(channel.getRemoteAddress())), ex);
+        }
         eventPublisher.offer(new InactiveEvent(channel));
         ctx.fireChannelInactive();
     }

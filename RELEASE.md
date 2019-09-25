@@ -8,7 +8,7 @@
 
 - ChanelManager优化poolchannle关闭逻辑
 
-- Region常量dataCenter改为datacenter
+- 修复机房信息获取错误
 
 ## 1.0.2(2019-09-20)
 

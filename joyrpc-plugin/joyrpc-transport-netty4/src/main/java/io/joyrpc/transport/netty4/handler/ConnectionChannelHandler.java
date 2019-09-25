@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,7 +28,6 @@ import io.joyrpc.transport.event.ActiveEvent;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
-import io.joyrpc.util.network.Ipv4;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
@@ -79,11 +78,10 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
             futures.forEach((id, future) ->
                     future.completeExceptionally(new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress())));
             futures.clear();
-        } catch (Throwable ex) {
-            logger.error(String.format("Channel Inactive address %s", Ipv4.toAddress(channel.getRemoteAddress())), ex);
+        } finally {
+            eventPublisher.offer(new InactiveEvent(channel));
+            ctx.fireChannelInactive();
         }
-        eventPublisher.offer(new InactiveEvent(channel));
-        ctx.fireChannelInactive();
     }
 
     @Override

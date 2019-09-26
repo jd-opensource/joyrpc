@@ -27,6 +27,8 @@ import io.joyrpc.extension.URL;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * 区域分布
@@ -135,30 +137,30 @@ public class RegionDistribution {
         if (!dcExclusive) {
             if (remain > 0 || candidates.isEmpty()) {
                 //数量不够，或者本地机房没有，则尝试获取其它机房的节点
-                LinkedHashSet<DataCenterDistribution> prefers = preferredDc(local);
-                AtomicInteger count = new AtomicInteger();
-                prefers.forEach(o -> count.addAndGet(o.getSize()));
-                if (remain == 0 && candidates.isEmpty()) {
-                    remain = count.get() / prefers.size();
-                }
-                int mount = remain;
-                for (DataCenterDistribution v : prefers) {
-                    remain -= v.candidate(candidates, otherBackups,
-                            Math.max(standbyPerDc, (int) Math.ceil(mount * v.getSize() * 1.0 / count.get())));
-                }
-                regions.forEach((rg, v) -> v.forEach((dc, o) -> {
-                    if (!prefers.contains(o)) {
-                        //丢弃其它机房
-                        o.candidate(candidates, discards, 0);
+                //跨机房，首选或同区域的或最多节点机房所在区域的
+                LinkedHashSet<DataCenterDistribution> prefers = preferredOrNeighbourOrMaxDc(local);
+                if (!prefers.isEmpty()) {
+                    AtomicInteger count = new AtomicInteger();
+                    prefers.forEach(o -> count.addAndGet(o.getSize()));
+                    if (remain == 0 && candidates.isEmpty()) {
+                        remain = count.get() / prefers.size();
                     }
-                }));
+                    int mount = remain;
+                    for (DataCenterDistribution v : prefers) {
+                        remain -= v.candidate(candidates, otherBackups,
+                                Math.max(standbyPerDc, (int) Math.ceil(mount * v.getSize() * 1.0 / count.get())));
+                    }
+                }
+                //丢弃其它机房
+                foreach(o -> !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
             } else {
-                regions.forEach((rg, v) -> v.forEach((dc, o) -> {
-                    if (!region.isEmpty() && region.equals(rg) && o != local) {
-                        //同区域，其它机房热备
-                        o.candidate(standbys, otherBackups, standbyPerDc);
-                    }
-                }));
+                //跨机房，首选的或同区域的机房进行热备
+                LinkedHashSet<DataCenterDistribution> prefers = preferredOrNeighbourDc(local);
+                if (!prefers.isEmpty()) {
+                    //热备
+                    prefers.forEach(o -> o.candidate(standbys, otherBackups, standbyPerDc));
+                }
+                foreach(o -> o != local && !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
             }
             //保持本地机房的优先级
             if (!otherBackups.isEmpty()) {
@@ -168,51 +170,111 @@ public class RegionDistribution {
             }
         } else {
             //其它机房都丢弃
-            regions.forEach((rg, v) -> v.forEach((dc, o) -> {
-                if (o != local) {
-                    o.candidate(candidates, discards, 0);
-                }
-            }));
+            foreach(o -> o != local, o -> o.candidate(candidates, discards, 0));
         }
         return new Candidature.Result(candidates, standbys, localBackups, discards);
+    }
+
+    /**
+     * 迭代机房分布
+     *
+     * @param predicate
+     * @param consumer
+     */
+    protected void foreach(final Predicate<DataCenterDistribution> predicate,
+                           final Consumer<DataCenterDistribution> consumer) {
+        if (consumer == null) {
+            return;
+        }
+        regions.forEach((rg, v) -> v.forEach((dc, o) -> {
+            if (predicate == null || predicate.test(o)) {
+                consumer.accept(o);
+            }
+        }));
+    }
+
+    /**
+     * 跨机房，首选或同区域的机房
+     *
+     * @param local 当前机房
+     */
+    protected LinkedHashSet<DataCenterDistribution> preferredOrNeighbourDc(final DataCenterDistribution local) {
+        LinkedHashSet<DataCenterDistribution> result = new LinkedHashSet<>();
+        preferredDc(local, result);
+        if (result.isEmpty()) {
+            neighbourDc(local, result);
+        }
+        return result;
+    }
+
+    /**
+     * 跨机房，首选或同区域或最多节点机房所在区域的机房
+     *
+     * @param local 当前机房
+     */
+    protected LinkedHashSet<DataCenterDistribution> preferredOrNeighbourOrMaxDc(final DataCenterDistribution local) {
+        LinkedHashSet<DataCenterDistribution> result = new LinkedHashSet<>();
+        preferredDc(local, result);
+        if (result.isEmpty()) {
+            neighbourDc(local, result);
+        }
+        if (result.isEmpty()) {
+            maxDc(local, result);
+        }
+        return result;
     }
 
     /**
      * 跨机房，首选连接的机房
      *
      * @param local 当前机房
+     * @param dcds  列表
      */
-    protected LinkedHashSet<DataCenterDistribution> preferredDc(final DataCenterDistribution local) {
-        LinkedHashSet<DataCenterDistribution> result = new LinkedHashSet<>();
-        DataCenterDistribution distribution;
-        Map<String, DataCenterDistribution> dataCenters = this.dataCenters;
+    protected void preferredDc(final DataCenterDistribution local, final LinkedHashSet<DataCenterDistribution> dcds) {
         if (!dataCenter.isEmpty()) {
             //判断当前机房的跨机房首选连接机房配置
             List<String> prefers = CircuitConfiguration.INSTANCE.get(dataCenter);
             if (prefers != null && !prefers.isEmpty()) {
+                DataCenterDistribution distribution;
                 for (String prefer : prefers) {
                     distribution = dataCenters.get(prefer);
                     if (distribution != null && distribution != local) {
-                        result.add(distribution);
+                        dcds.add(distribution);
                     }
-                }
-                if (!result.isEmpty()) {
-                    return result;
                 }
             }
         }
+    }
+
+    /**
+     * 跨机房，同区域的机房
+     *
+     * @param local 当前机房
+     * @param dcds
+     */
+    protected void neighbourDc(final DataCenterDistribution local, final LinkedHashSet<DataCenterDistribution> dcds) {
         if (!region.isEmpty()) {
             //连接本区域其它机房
-            dataCenters = regions.get(region);
+            Map<String, DataCenterDistribution> dataCenters = regions.get(region);
             if (dataCenters != null && !dataCenters.isEmpty()) {
                 dataCenters.forEach((dc, v) -> {
                     if (local != v) {
-                        result.add(v);
+                        dcds.add(v);
                     }
                 });
-                return result;
             }
         }
+    }
+
+    /**
+     * 跨机房，最大节点机房所在区域的机房
+     *
+     * @param local 当前机房
+     * @param dcds
+     */
+    protected void maxDc(final DataCenterDistribution local, final LinkedHashSet<DataCenterDistribution> dcds) {
+        DataCenterDistribution distribution;
+        Map<String, DataCenterDistribution> dataCenters;
         //连接最大节点机房所在区域的机房
         DataCenterDistribution max = null;
         for (Map.Entry<String, Map<String, DataCenterDistribution>> entry : regions.entrySet()) {
@@ -226,21 +288,19 @@ public class RegionDistribution {
         }
         if (max != null) {
             if (max != local) {
-                result.add(max);
+                dcds.add(max);
             }
             if (!max.getRegion().isEmpty()) {
                 dataCenters = regions.get(max.getRegion());
                 if (dataCenters != null && !dataCenters.isEmpty()) {
                     dataCenters.forEach((dc, v) -> {
                         if (local != v) {
-                            result.add(v);
+                            dcds.add(v);
                         }
                     });
-                    return result;
                 }
             }
         }
-        return result;
     }
 
     public int getSize() {

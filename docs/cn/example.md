@@ -2,7 +2,7 @@
 ==
 
 #### [注册及订阅](./example/register.md)
-#### 多注册中心
+#### [多注册中心](./example/multiRegistry.md)
 #### 指定发布IP
 #### 指定端口
 #### 集群策略

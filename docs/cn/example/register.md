@@ -9,7 +9,7 @@
 >默认所有provider及consumer均开启注册及订阅; 
 
 ````xml
-<joyrpc:registry id="jsfRegistry" registry="joyrpc"/>
+<joyrpc:registry id="joyrpcRegistry" registry="joyrpc"/>
 <joyrpc:provider />
 <joyrpc:consumer />
 ````
@@ -19,7 +19,7 @@
 >（不推荐）可以通过如下配置实现不注册和不订阅。通常用于直连场景或线下调试。
 
 ````xml
-<joyrpc:registry id="jsfRegistry" registry="joyrpc"/>
+<joyrpc:registry id="joyrpcRegistry" registry="joyrpc"/>
 <joyrpc:provider register="false" subscribe="false" />
 <joyrpc:consumer register="false" subscribe="false" />
 ````

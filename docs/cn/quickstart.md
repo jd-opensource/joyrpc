@@ -110,15 +110,15 @@
   > spring配置文件中需引入XSD文件
 
    ```xml
-         <?xml version="1.0" encoding="UTF-8"?>
-         <beans xmlns="http://www.springframework.org/schema/beans"
+       <?xml version="1.0" encoding="UTF-8"?>
+       <beans xmlns="http://www.springframework.org/schema/beans"
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
                 xmlns:joyrpc="http://joyrpc.io/schema/joyrpc" 
                 xsi:schemaLocation="http://www.springframework.org/schema/beans 
                 http://www.springframework.org/schema/beans/spring-beans.xsd http://joyrpc.io/schema/joyrpc http://joyrpc.io/schema/joyrpc/joyprc.xsd">
-         </beans>         
+       </beans>         
    ```
-   
+   >上面是完整的schema描述，下面示例中采用  **<beans />** 标签 代表此schema。
 
 #### 2.2.1 编写服务端实现
 
@@ -127,7 +127,6 @@
       ```java
       public class ServerMain {
           private static final Logger LOGGER = LoggerFactory.getLogger(ClientMain.class);
-      
       
           public static void main(String[] args) throws Exception {
               ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/joyrpc-provider.xml");
@@ -144,12 +143,8 @@
       resources目录下定义配置文件：joyrpc-provider.xml
   
        ```xml
-          <?xml version="1.0" encoding="UTF-8"?>
-      <beans xmlns="http://www.springframework.org/schema/beans"
-             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:joyrpc="http://joyrpc.io/schema/joyrpc"
-             xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-          http://joyrpc.io/schema/joyrpc  http://joyrpc.io/schema/joyrpc/joyprc.xsd">
-      
+        <beans>
+   
           <!-- 实现类 -->
           <bean id="demoServiceImpl" class="io.joyrpc.service.impl.DemoServiceImpl"/>
       
@@ -160,8 +155,8 @@
           <joyrpc:server id="joyRpcServer"/>
       
           <!-- 发布服务 alias可修改 -->
-          <joyrpc:provider id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo" ref="demoServiceImpl" server="joyRpcServer">
-          </joyrpc:provider>
+          <joyrpc:provider id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo" ref="demoServiceImpl" server="joyRpcServer"></joyrpc:provider>
+     
       </beans>
       ```
 
@@ -182,7 +177,7 @@
                         LOGGER.info("response msg from server :{}", result);
                     } catch (Exception e) {
                     }
-            
+               
                     System.in.read();//终端输入任意字符，shutdown进程
                 }
             }
@@ -192,17 +187,13 @@
         resources目录下定义配置文件：joyrpc-consumer.xml
         
         ```xml
-           <?xml version="1.0" encoding="UTF-8"?>
-           <beans xmlns="http://www.springframework.org/schema/beans"
-                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:joyrpc="http://joyrpc.io/schema/joyrpc"
-                  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-               http://joyrpc.io/schema/joyrpc  http://joyrpc.io/schema/joyrpc/joyprc.xsd">
-           
-               <!-- 注册中心 -->
-               <joyrpc:registry id="joyprpcRegistry" address="memory://127.0.0.1" registry="memory"/>
-           
-               <!-- 调用者配置 -->
-               <joyrpc:consumer id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo"></joyrpc:consumer>
+           <beans>
+      
+             <!-- 注册中心 -->
+             <joyrpc:registry id="joyprpcRegistry" address="memory://127.0.0.1" registry="memory"/>
+         
+             <!-- 调用者配置 -->
+             <joyrpc:consumer id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo"></joyrpc:consumer>
            </beans>
         ```
 

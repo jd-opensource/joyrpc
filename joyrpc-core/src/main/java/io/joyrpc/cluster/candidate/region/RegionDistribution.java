@@ -138,7 +138,8 @@ public class RegionDistribution {
             if (remain > 0 || candidates.isEmpty()) {
                 //数量不够，或者本地机房没有，则尝试获取其它机房的节点
                 //跨机房，首选或同区域的或最多节点机房所在区域的
-                LinkedHashSet<DataCenterDistribution> prefers = preferredOrNeighbourOrMaxDc(local);
+                LinkedHashSet<DataCenterDistribution> prefers = !candidates.isEmpty() ?
+                        preferredOrNeighbourDc(local) : preferredOrNeighbourOrMaxDc(local);
                 if (!prefers.isEmpty()) {
                     AtomicInteger count = new AtomicInteger();
                     prefers.forEach(o -> count.addAndGet(o.getSize()));
@@ -152,7 +153,7 @@ public class RegionDistribution {
                     }
                 }
                 //丢弃其它机房
-                foreach(o -> !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
+                foreach(o -> o != local && !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
             } else {
                 //跨机房，首选的或同区域的机房进行热备
                 LinkedHashSet<DataCenterDistribution> prefers = preferredOrNeighbourDc(local);

@@ -70,6 +70,7 @@ public class RegionCandidatureTest {
         Assert.assertEquals(result.getCandidates().size(), 10);
         Assert.assertEquals(result.getStandbys().size(), 1);
         Assert.assertEquals(result.getBackups().size(), 4);
+        Assert.assertEquals(result.getDiscards().size(), 7);
         Assert.assertEquals(result.getCandidates().get(0).getName(), "shard5");
         Assert.assertEquals(result.getCandidates().get(1).getName(), "shard6");
         Assert.assertEquals(result.getStandbys().get(0).getName(), "shard15");
@@ -166,7 +167,7 @@ public class RegionCandidatureTest {
 
         RegionCandidature candidature = new RegionCandidature();
 
-        Map<String,List<String>> map=new HashMap<>();
+        Map<String, List<String>> map = new HashMap<>();
         map.put("lf1", Arrays.asList("lf"));
         CircuitConfiguration.INSTANCE.update(map);
         Candidate.Builder builder = Candidate.builder().region(new Region.DefaultRegion("huabei1", "lf1")).nodes(nodes);

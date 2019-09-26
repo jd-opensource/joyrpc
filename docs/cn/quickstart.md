@@ -109,16 +109,18 @@
    
   > spring配置文件中需引入XSD文件
 
-   ```xml
-       <?xml version="1.0" encoding="UTF-8"?>
-       <beans xmlns="http://www.springframework.org/schema/beans"
-                xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-                xmlns:joyrpc="http://joyrpc.io/schema/joyrpc" 
-                xsi:schemaLocation="http://www.springframework.org/schema/beans 
-                http://www.springframework.org/schema/beans/spring-beans.xsd http://joyrpc.io/schema/joyrpc http://joyrpc.io/schema/joyrpc/joyprc.xsd">
-       </beans>         
-   ```
-   >说明：上面是完整的schema描述，下面示例中采用  **<beans />** 标签 代表此schema。
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <beans xmlns="http://www.springframework.org/schema/beans"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns:joyrpc="http://joyrpc.io/schema/joyrpc"
+         xsi:schemaLocation=
+         "http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd
+         http://joyrpc.io/schema/joyrpc  
+         http://joyrpc.io/schema/joyrpc/joyrpc.xsd">
+  </beans>
+  ```
+   >说明：上面是完整的schema描述，下面示例中采用  **`<beans/>`** 标签 代表此schema。
 
 #### 2.2.1 编写服务端实现
 

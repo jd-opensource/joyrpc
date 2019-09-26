@@ -3,8 +3,7 @@
 
 #### [注册及订阅](./example/register.md)
 #### [多注册中心](./example/multiRegistry.md)
-#### 指定发布IP
-#### 指定端口
+#### [直连调用](./example/directInvoke.md)
 #### 集群策略
 #### 负载均衡
 #### 路由配置

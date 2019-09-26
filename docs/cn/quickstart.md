@@ -118,7 +118,7 @@
                 http://www.springframework.org/schema/beans/spring-beans.xsd http://joyrpc.io/schema/joyrpc http://joyrpc.io/schema/joyrpc/joyprc.xsd">
        </beans>         
    ```
-   >上面是完整的schema描述，下面示例中采用  **<beans />** 标签 代表此schema。
+   >说明：上面是完整的schema描述，下面示例中采用  **<beans />** 标签 代表此schema。
 
 #### 2.2.1 编写服务端实现
 

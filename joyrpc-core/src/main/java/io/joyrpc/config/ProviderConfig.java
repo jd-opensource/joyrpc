@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -121,7 +121,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected void validate() {
         super.validate();
         //验证接口
-        if(enableValidator){
+        if (enableValidator) {
             validateInterface(getProxyClass());
         }
         checkFilterConfig(name(), filter, PROVIDER_FILTER);
@@ -309,8 +309,12 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
             name = registryURL.getProtocol();
             factory = REGISTRY.get(name);
             if (factory == null) {
-                future.completeExceptionally(new InitializationException(String.format("Registry factory is not found. %s", name)));
-                return;
+                if (!register && !subscribe) {
+                    factory = REGISTRY.get("memory");
+                } else {
+                    future.completeExceptionally(new InitializationException(String.format("Registry factory is not found. %s", name)));
+                    return;
+                }
             }
             //获取注册中心
             registry = factory.getRegistry(registryURL);

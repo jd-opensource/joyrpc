@@ -9,9 +9,9 @@ package io.joyrpc.event.jbus;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,6 +59,10 @@ public class JEventBus implements EventBus {
         protected volatile Dispatcher polling;
         //处理器
         protected final Set<EventHandler<E>> handlers = new CopyOnWriteArraySet<>();
+        /**
+         * 消费者
+         */
+        protected Consumer<E> consumer = this::publish;
 
         /**
          * 构造函数
@@ -130,12 +134,12 @@ public class JEventBus implements EventBus {
 
         @Override
         public boolean offer(final E event) {
-            return event == null || polling == null ? false : polling.offer(new Message<E>(event, this::publish));
+            return event == null || polling == null ? false : polling.offer(new Message<>(event, consumer));
         }
 
         @Override
         public boolean offer(final E event, final long timeout, final TimeUnit timeUnit) {
-            return event == null || polling == null ? false : polling.offer(new Message<E>(event, this::publish), timeout, timeUnit);
+            return event == null || polling == null ? false : polling.offer(new Message<>(event, consumer), timeout, timeUnit);
         }
     }
 

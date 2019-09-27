@@ -2,7 +2,7 @@
 ==
 1. JOYRPC 支持同一服务向多个注册中心同时注册，同时支持注册中心自定义扩展。
 
-2. 已默认提供ZK、ETCD、Hazelcast等开源注册中心的扩展，用户简单设置参数即可连接使用。
+2. 已默认提供ZK、ETCD、广播和内存注册中心等扩展，用户简单设置参数即可连接使用。
 
 3. 同时为方便用户使用，提供自定义memory内存注册中心，使用户无需启动第三方注册中心即可使用。
 
@@ -15,18 +15,18 @@
    ```xml
      <beans>
       <!-- 注册中心A -->
-      <joyrpc:registry id="joyrpcRegistryA" address="192.168.1.100:2181" registry="zk"/>
+      <joyrpc:registry id="zk1" address="192.168.1.100:2181" registry="zk"/>
        
       <!-- 注册中心B -->
-      <joyrpc:registry id="joyrpcRegistryB" address="192.168.1.101:2181" registry="zk"/>
+      <joyrpc:registry id="zk2" address="192.168.1.101:2181" registry="zk"/>
        
       <joyrpc:server id="myJoy"/>
        
       <!-- 发布到指定注册中心，多个注册中心用逗号分隔 -->
-      <joyrpc:provider  id="demoProvider" interface="io.joyrpc.service.demoService" alias="joyrpc-demo" ref="demoServiceImpl" server="myJoy" registry="joyrpcRegistryA,joyrpcRegistryB"></joyrpc:provider>
+      <joyrpc:provider  id="demoProvider" interface="io.joyrpc.service.demoService" alias="joyrpc-demo" ref="demoServiceImpl" server="myJoy" registry="zk1,zk2"></joyrpc:provider>
       
       <!-- 调用者配置  -->
-      <joyrpc:consumer id="demoConsumer" interface="io.joyrpc.service.demoService" alias="joyrpc-demo" registry="joyrpcRegistryA"></joyrpc:consumer>
+      <joyrpc:consumer id="demoConsumer" interface="io.joyrpc.service.demoService" alias="joyrpc-demo" registry="zk1"></joyrpc:consumer>
      </beans>
    ```
       
@@ -44,11 +44,11 @@
                 /**
                  * 服务发布到A、B两个注册中心
                  */
-                RegistryConfig joyrpcRegistryA = new RegistryConfig("zk", "192.168.1.100:2181");// 注册中心A
-                RegistryConfig joyrpcRegistryB = new RegistryConfig("zk", "192.168.1.101:2181");// 注册中心B
+                RegistryConfig zk1 = new RegistryConfig("zk", "192.168.1.100:2181");// 注册中心A
+                RegistryConfig zk2 = new RegistryConfig("zk", "192.168.1.101:2181");// 注册中心B
                 List<RegistryConfig> list = new ArrayList<>();
-                list.add(joyrpcRegistryA);
-                list.add(joyrpcRegistryB);
+                list.add(zk1);
+                list.add(zk2);
                 ProviderConfig<DemoService> providerConfig = new ProviderConfig<DemoService>();
                 providerConfig.setRegistry(list);
         
@@ -74,11 +74,11 @@
                  /**
                   * 服务发布到A、B两个注册中心
                   */
-                 RegistryConfig joyrpcRegistryA = new RegistryConfig("zk", "192.168.1.100:2181");// 注册中心A
-                 RegistryConfig joyrpcRegistryB = new RegistryConfig("zk", "192.168.1.101:2181");// 注册中心B
+                 RegistryConfig zk1 = new RegistryConfig("zk", "192.168.1.100:2181");// 注册中心A
+                 RegistryConfig zk2 = new RegistryConfig("zk", "192.168.1.101:2181");// 注册中心B
                  List<RegistryConfig> list = new ArrayList<>();
-                 list.add(joyrpcRegistryA);
-                 list.add(joyrpcRegistryB);
+                 list.add(zk1);
+                 list.add(zk2);
                  ProviderConfig<DemoService> providerConfig = new ProviderConfig<DemoService>();
                  providerConfig.setRegistry(list);
          
@@ -101,4 +101,4 @@
   | ZooKeeper| zk | 2181 ||
   | ETCD| etcd | 2379 ||
   | 广播模式| broadcast | 5700 |组播|
-  | 内存注册中心| momory | ||
+  | 内存注册中心| memory | ||

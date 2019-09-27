@@ -591,17 +591,10 @@ public class Cluster {
             }
         }
         if (first != null) {
-            Node.Retry retry = first.getRetry();
-            if (retry.expire()) {
-                //需要重连，增加重连次数
-                retry.incrementTimes();
-                connect(first);
-            } else {
-                //放入到重连队列队尾
-                reconnects.add(first);
-                if (reconnects.size() == 1) {
-                    this.retry = first.retry;
-                }
+            //放入到重连队列队尾
+            reconnects.add(first);
+            if (reconnects.size() == 1) {
+                this.retry = first.retry;
             }
         }
     }
@@ -887,14 +880,12 @@ public class Cluster {
         NodeEvent.EventType type = event.getType();
         logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
         //确保不在选举和关闭中
-        switcher.writer().run(() -> {
-            switch (type) {
-                case DISCONNECT:
-                    //连接成功并且放在connects中，后续才会触发disconnect。
-                    onDisconnect(node);
-                    break;
-            }
-        });
+        switch (type) {
+            case DISCONNECT:
+                //连接成功并且放在connects中，后续才会触发disconnect。
+                switcher.writer().run(() -> onDisconnect(node));
+                break;
+        }
         clusterPublisher.offer(event);
     }
 

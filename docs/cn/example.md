@@ -5,7 +5,7 @@
 #### [多注册中心](./example/multiRegistry.md)
 #### [直连调用](./example/directInvoke.md)
 #### [集群策略](./example/cluster.md)
-#### 负载均衡
+#### [负载均衡](./example/loadbalance.md)
 #### 路由配置
 #### 直连调用
 #### 泛化调用

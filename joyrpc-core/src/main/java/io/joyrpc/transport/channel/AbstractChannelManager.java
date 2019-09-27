@@ -247,15 +247,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public boolean isActive() {
-            boolean isActive = super.isActive();
-            boolean isOpened = status.get() == Endpoint.Status.OPENED;
-            if (isActive && isOpened) {
-                return true;
-            }
-            if (isActive != isOpened) {
-                logger.warn(String.format("Channel status is error, channel active status is %b, but the open status is %b.", isActive, isOpened));
-            }
-            return false;
+            return super.isActive() && status.get() == Endpoint.Status.OPENED;
         }
 
         @Override

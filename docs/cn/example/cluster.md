@@ -1,9 +1,14 @@
 集群策略
 ==
+>说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+
 Consumer调用时，可以设置调用集群策略，配置如下：
+
   ````xml
     <beans>
+    
     <joyrpc:consumer cluster="failfast" />
+    
     </beans>
   ````
 目前支持如下几种集群策略：

@@ -100,5 +100,5 @@
   | :----: | :----: | :----: | :----: |
   | ZooKeeper| zk | 2181 ||
   | ETCD| etcd | 2379 ||
-  | Hazelcast| broadcast | 5700 |组播|
+  | 广播模式| broadcast | 5700 |组播|
   | 内存注册中心| momory | ||

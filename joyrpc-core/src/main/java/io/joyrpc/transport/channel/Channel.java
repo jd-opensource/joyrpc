@@ -9,9 +9,9 @@ package io.joyrpc.transport.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -89,7 +89,9 @@ public interface Channel {
      *
      * @param object
      */
-    void send(Object object);
+    default void send(Object object) {
+        send(object, null);
+    }
 
     /**
      * 发送一个object信息
@@ -98,13 +100,6 @@ public interface Channel {
      * @param consumer
      */
     void send(Object object, Consumer<SendResult> consumer);
-
-    /**
-     * 批量发送消息
-     *
-     * @param objects 消息列表
-     */
-    void sendList(List<Object> objects);
 
     /**
      * 关闭channel

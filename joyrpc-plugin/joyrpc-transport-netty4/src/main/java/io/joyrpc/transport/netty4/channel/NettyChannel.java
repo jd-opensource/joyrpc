@@ -36,7 +36,6 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -65,65 +64,18 @@ public class NettyChannel implements Channel {
     }
 
     @Override
-    public void send(final Object object) {
-        sendObject(object, null);
-    }
-
-    @Override
     public void send(final Object object, final Consumer<SendResult> consumer) {
-        sendObject(object, consumer);
-    }
-
-    /**
-     * 发送数据
-     *
-     * @param object
-     * @param consumer
-     */
-    protected void sendObject(final Object object, final Consumer<SendResult> consumer) {
-        if (!this.isWritable()) {
-            LafException throwable;
-            if (channel.isActive()) {
-                throwable = new OverloadException(
-                        String.format("Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s",
-                                Channel.toString(this), object.toString())
-                        , 0, isServer);
-            } else {
-                throwable = new ChannelClosedException(String.format("Send request exception, causing channel is not active. at  %s : %s",
-                        Channel.toString(this), object.toString()));
-            }
-            if (consumer != null) {
-                consumer.accept(new SendResult(throwable, this));
-            } else {
-                throw throwable;
-            }
-        } else {
-            if (consumer != null) {
-                channel.writeAndFlush(object).addListener((future) -> {
-                    if (future.isSuccess()) {
-                        consumer.accept(new SendResult(true, this, object));
-                    } else {
-                        consumer.accept(new SendResult(future.cause(), this, object));
-                    }
-                });
-            } else {
-                channel.writeAndFlush(object, channel.voidPromise());
-            }
-        }
-    }
-
-    @Override
-    public void sendList(final List<Object> objects) {
-        if (objects != null) {
-            for (Object obj : objects) {
-                if (obj != null) {
-                    channel.write(obj, channel.voidPromise());
+        if (consumer != null) {
+            channel.writeAndFlush(object).addListener((future) -> {
+                if (future.isSuccess()) {
+                    consumer.accept(new SendResult(true, this, object));
+                } else {
+                    consumer.accept(new SendResult(future.cause(), this, object));
                 }
-            }
-            channel.flush();
+            });
+        } else {
+            channel.writeAndFlush(object, channel.voidPromise());
         }
-
-
     }
 
     @Override

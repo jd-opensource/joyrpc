@@ -22,8 +22,7 @@ package io.joyrpc.transport.channel;
 
 import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.Publisher;
-import io.joyrpc.exception.ConnectionException;
-import io.joyrpc.exception.TransportException;
+import io.joyrpc.exception.*;
 import io.joyrpc.extension.URL;
 import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.transport.Endpoint;
@@ -243,6 +242,29 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected long addRef() {
             return counter.incrementAndGet();
+        }
+
+        @Override
+        public void send(Object object, Consumer<SendResult> consumer) {
+            if (!this.isWritable()) {
+                LafException throwable;
+                if (this.isActive()) {
+                    throwable = new OverloadException(
+                            String.format("Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s",
+                                    Channel.toString(this), object.toString())
+                            , 0, isServer());
+                } else {
+                    throwable = new ChannelClosedException(String.format("Send request exception, causing channel is not active. at  %s : %s",
+                            Channel.toString(this), object.toString()));
+                }
+                if (consumer != null) {
+                    consumer.accept(new SendResult(throwable, this));
+                } else {
+                    throw throwable;
+                }
+            } else {
+                super.send(object, consumer);
+            }
         }
 
         @Override

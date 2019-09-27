@@ -65,7 +65,23 @@ public class NettyChannel implements Channel {
 
     @Override
     public void send(final Object object, final Consumer<SendResult> consumer) {
-        if (consumer != null) {
+        if (!this.isWritable()) {
+            LafException throwable;
+            if (this.isActive()) {
+                throwable = new OverloadException(
+                        String.format("Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s",
+                                Channel.toString(this), object.toString())
+                        , 0, isServer());
+            } else {
+                throwable = new ChannelClosedException(String.format("Send request exception, causing channel is not active. at  %s : %s",
+                        Channel.toString(this), object.toString()));
+            }
+            if (consumer != null) {
+                consumer.accept(new SendResult(throwable, this));
+            } else {
+                throw throwable;
+            }
+        } else if (consumer != null) {
             channel.writeAndFlush(object).addListener((future) -> {
                 if (future.isSuccess()) {
                     consumer.accept(new SendResult(true, this, object));

@@ -591,17 +591,10 @@ public class Cluster {
             }
         }
         if (first != null) {
-            Node.Retry retry = first.getRetry();
-            if (retry.expire()) {
-                //需要重连，增加重连次数
-                retry.incrementTimes();
-                connect(first);
-            } else {
-                //放入到重连队列队尾
-                reconnects.add(first);
-                if (reconnects.size() == 1) {
-                    this.retry = first.retry;
-                }
+            //放入到重连队列队尾
+            reconnects.add(first);
+            if (reconnects.size() == 1) {
+                this.retry = first.retry;
             }
         }
     }

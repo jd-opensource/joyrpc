@@ -887,14 +887,12 @@ public class Cluster {
         NodeEvent.EventType type = event.getType();
         logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
         //确保不在选举和关闭中
-        switcher.writer().run(() -> {
-            switch (type) {
-                case DISCONNECT:
-                    //连接成功并且放在connects中，后续才会触发disconnect。
-                    onDisconnect(node);
-                    break;
-            }
-        });
+        switch (type) {
+            case DISCONNECT:
+                //连接成功并且放在connects中，后续才会触发disconnect。
+                switcher.writer().run(() -> onDisconnect(node));
+                break;
+        }
         clusterPublisher.offer(event);
     }
 

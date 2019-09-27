@@ -9,7 +9,7 @@
   ```xml
   <beans>
   <!-- 超时时间1秒 -->
-    <joyrpc:consumer id="demoService"  interface="io.joyrpc.service.DemoService" alias="joyrpc-demo" timeout="1000"></jsf:consumer>
+    <joyrpc:consumer id="demoService"  interface="io.joyrpc.service.DemoService" alias="joyrpc-demo" timeout="1000"></joyrpc:consumer>
   </beans>
   ```
 

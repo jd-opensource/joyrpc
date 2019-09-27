@@ -24,7 +24,7 @@
 ### API方式
 - Consumer端
 ```
-RequestContext.getContext().setAttachment("user", "jsf2.0");
+RequestContext.getContext().setAttachment("user", "joyrpc");
 RequestContext.getContext().setAttachment(".password", "111222");// "."开头的对应上面的hide=true
 ```
 - Server端

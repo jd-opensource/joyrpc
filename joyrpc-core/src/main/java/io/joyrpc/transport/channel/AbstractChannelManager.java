@@ -319,10 +319,9 @@ public abstract class AbstractChannelManager implements ChannelManager {
         @Override
         public void disconnect(final Consumer<AsyncResult<Channel>> consumer) {
             if (counter.decrementAndGet() == 0) {
-                channel.close(r -> {
-                    heartbeatManager.remove(this);
-                    channels.remove(channel.getAttribute(CHANNEL_KEY));
-                    publisher.close();
+                heartbeatManager.remove(this);
+                channels.remove(channel.getAttribute(CHANNEL_KEY));
+                close(r -> {
                     if (r.isSuccess()) {
                         consumer.accept(new AsyncResult<>(this));
                     } else {

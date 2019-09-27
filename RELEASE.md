@@ -16,6 +16,8 @@
 
 - 优化channel发送消息的异常处理
 
+- 删除Cluster中的supply方法中的同步connect调用，在节点disconnect事件里面可能造成死锁
+
 ## 1.0.2(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用

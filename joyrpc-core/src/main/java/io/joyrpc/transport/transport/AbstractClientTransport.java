@@ -285,7 +285,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
             }
         } else {
             status.set(Status.CLOSING);
-            //共享Transport关闭不关闭Channel，只是计数器减1，所以调用disconnect方法
+            //共享Transport不直接关闭Channel，只是计数器减1，所以调用disconnect方法
             channel.disconnect(e -> {
                 status.set(Status.CLOSED);
                 this.channel.removeSession(this.transportId);

@@ -52,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
@@ -241,7 +242,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
     protected TelnetResponse authenticate(final String interfaceId, final String password, final boolean isGlobal, final Channel channel) {
         InetSocketAddress address = channel.getRemoteAddress();
         String remoteIp = Ipv4.toIp(address);
-        Parametric parametric = GlobalContext.asParametric();
+        Parametric parametric = GlobalContext.asParametric(GLOBAL_SETTING);
         // 注册中心配的密码
         String invokePassword = !isGlobal ? GlobalContext.asParametric(interfaceId).getString(Constants.SETTING_INVOKE_TOKEN, "")
                 : parametric.getString(Constants.SETTING_SERVER_SUDO_PASSWD, "");

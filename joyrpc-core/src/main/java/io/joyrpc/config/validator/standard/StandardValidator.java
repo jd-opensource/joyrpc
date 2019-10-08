@@ -236,7 +236,7 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onCustomAbstract(final Class clazz, final Scope scope) {
-            throw new IllegalInterfaceException(String.format("The type is abstract. %s", scope.getName(), clazz.getName()));
+            throw new IllegalInterfaceException(String.format("The type is abstract. scope is %s, class is %s.", scope.getName(), clazz.getName()));
         }
 
         /**

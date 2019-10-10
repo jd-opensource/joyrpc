@@ -250,8 +250,10 @@ public class Node implements Shard {
         //获取事件中的client，若事件中client为空，取事件中的channel，判断当前node中channl是否与事件中channel相同
         Client client = event.getClient();
         Client current = this.client;
+
         if (client == null && event.getChannel() != null && current != null
-                && event.getChannel() == current.getChannel()) {
+                && event.getChannel().getLocalAddress() == current.getChannel().getLocalAddress()
+                && event.getChannel().getRemoteAddress() == current.getChannel().getRemoteAddress()) {
             client = current;
         }
         //优雅下线

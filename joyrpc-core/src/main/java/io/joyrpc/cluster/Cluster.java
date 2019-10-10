@@ -48,6 +48,7 @@ import java.net.NoRouteToHostException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -112,6 +113,8 @@ public class Cluster {
     protected LinkedList<Node> backups;
     //重连节点
     protected LinkedList<Node> reconnects;
+    //断开连接的节点
+    protected Queue<Node> disconnects = new ConcurrentLinkedQueue<>();
     //重连节点队列第一条的重试信息
     protected Node.Retry retry;
     //集群监听器
@@ -264,6 +267,7 @@ public class Cluster {
         reconnects = new LinkedList<>();
         backups = new LinkedList<>();
         retry = null;
+        disconnects.clear();
         connects.clear();
         readys = new ArrayList<>(0);
         Map<String, Node> copys = new HashMap<>(nodes);
@@ -351,6 +355,9 @@ public class Cluster {
             }
             if (reconnectable()) {
                 runnables.add(this::reconnect);
+            }
+            if (!disconnects.isEmpty()) {
+                runnables.add(this::disconnect);
             }
             if (dashboard != null && dashboard.isExpired()) {
                 runnables.add(dashboard::snapshot);
@@ -532,6 +539,19 @@ public class Cluster {
             switcher.writer().run(() -> openFuture.complete(
                     new AsyncResult<>(Cluster.this,
                             new InitializationException("initialization timeout."))));
+        }
+    }
+
+    /**
+     * 处理断开连接的节点
+     */
+    protected void disconnect() {
+        if (!disconnects.isEmpty()) {
+            switcher.writer().tryRun(() -> {
+                while (!disconnects.isEmpty()) {
+                    onDisconnect(disconnects.poll());
+                }
+            });
         }
     }
 
@@ -882,8 +902,8 @@ public class Cluster {
         //确保不在选举和关闭中
         switch (type) {
             case DISCONNECT:
-                //连接成功并且放在connects中，后续才会触发disconnect。
-                switcher.writer().run(() -> onDisconnect(node));
+                //放到断开连接的队列里面，由supervise线程去进行处理，防止死锁
+                disconnects.add(node);
                 break;
         }
         clusterPublisher.offer(event);

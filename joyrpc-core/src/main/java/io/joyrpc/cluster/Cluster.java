@@ -129,6 +129,8 @@ public class Cluster {
     protected AtomicBoolean first = new AtomicBoolean();
     //是否正在处理重连，防止集群管理器多次调度，进入锁等待
     protected AtomicBoolean reconnecting = new AtomicBoolean();
+    //是否正在处理断链，防止集群管理器多次调度，进入锁等待
+    protected AtomicBoolean disconnecting = new AtomicBoolean();
     //通知触发的连接数量
     protected int triggerWhen;
     //打开的时间，用于判断是否超时
@@ -546,12 +548,14 @@ public class Cluster {
      * 处理断开连接的节点
      */
     protected void disconnect() {
-        if (!disconnects.isEmpty()) {
+        //防止集群管理器并发调度，进入锁等待
+        if (!disconnects.isEmpty() && disconnecting.compareAndSet(false, true)) {
             switcher.writer().tryRun(() -> {
                 while (!disconnects.isEmpty()) {
                     onDisconnect(disconnects.poll());
                 }
             });
+            disconnecting.set(false);
         }
     }
 

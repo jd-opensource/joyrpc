@@ -113,7 +113,7 @@ public class Node implements Shard {
     //状态
     protected volatile ShardState state;
     //客户端
-    protected Client client;
+    protected volatile Client client;
     //上次会话心跳时间
     protected long lastSessionbeat;
     //会话心跳间隔
@@ -248,18 +248,16 @@ public class Node implements Shard {
     protected void onOffline(final OfflineEvent event) {
         //传入调用时候的client防止并发。
         //获取事件中的client，若事件中client为空，取事件中的channel，判断当前node中channl是否与事件中channel相同
-        Client offlineClient = event.getClient();
-        Client client = this.client;
-        if (offlineClient == null && event.getChannel() != null && client != null
-                && event.getChannel() == client.getChannel()) {
-            offlineClient = client;
+        Client client = event.getClient();
+        Client current = this.client;
+        if (client == null && event.getChannel() != null && current != null
+                && event.getChannel() == current.getChannel()) {
+            client = current;
         }
         //优雅下线
-        if (offlineClient != null) {
-            if (disconnect(offlineClient, false)) {
-                //5秒后优雅关闭
-                offlines.add(new OfflineClient(offlineClient, 5000L));
-            }
+        if (disconnect(client, false)) {
+            //5秒后优雅关闭
+            offlines.add(new OfflineClient(client, 5000L));
         }
     }
 
@@ -715,23 +713,23 @@ public class Node implements Shard {
      * @param autoClose 是否关闭
      */
     protected boolean disconnect(final Client client, final Consumer<AsyncResult<Node>> consumer, final boolean autoClose) {
-        //client为空是服务端主动发出的下线事件，否则是客户端调用请求返回异常发出的事件
-        if (client != null && client != this.client) {
+        if (client == null || client != this.client) {
             return false;
         }
         //switcher的机制确保节点被关闭后不会执行重连
         return switcher.writer().quiet(() -> {
-            if (client != null && client != this.client) {
+            if (client != this.client) {
                 return false;
             }
             //合法的状态，Connecting,Connected,Weak,Disconnect
             if (state.disconnect(this::setState)) {
-                if (autoClose) {
-                    close(client, null);
-                } else if (client != null) {
+                if (client != null) {
                     //优雅下线不会立即关闭当前client，会暂存起来等到channel关闭或超时关闭。
                     //优雅下线，需要注销监听器，否则连接断开又触发Inactive事件
                     client.removeEventHandler(clientHandler);
+                    if (autoClose) {
+                        client.close(null);
+                    }
                 }
                 this.client = null;
                 consumer.accept(new AsyncResult<>(this, new ReconnectException()));

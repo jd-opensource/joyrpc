@@ -6,7 +6,7 @@
     <groupId>io.joyrpc</groupId>
     <artifactId>joyrpc</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.3-RELEASE</version>
+    <version>1.0.4-SNAPSHOT</version>
     <modules>
         <module>joyrpc-spring</module>
         <module>joyrpc-test</module>

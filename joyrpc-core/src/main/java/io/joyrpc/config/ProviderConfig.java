@@ -179,7 +179,24 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     }
 
     /**
-     * 发布服务，有延迟加载
+     * 创建服务并且开启
+     *
+     * @return
+     */
+    public CompletableFuture<Void> exportAndOpen() {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        export().whenComplete((v, t) -> {
+            if (t != null) {
+                future.completeExceptionally(t);
+            } else {
+                Futures.chain(open(), future);
+            }
+        });
+        return future;
+    }
+
+    /**
+     * 订阅全局配置并创建服务，不开启服务
      */
     public CompletableFuture<Void> export() {
         //验证
@@ -225,9 +242,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         });
     }
 
-
     /**
-     * 开启Provider
+     * 开启服务
      */
     public CompletableFuture<Void> open() {
         CompletableFuture<Void> future = new CompletableFuture<>();

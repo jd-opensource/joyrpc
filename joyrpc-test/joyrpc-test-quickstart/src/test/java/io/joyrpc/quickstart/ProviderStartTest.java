@@ -27,12 +27,10 @@ import io.joyrpc.quickstart.service.DemoService;
 import io.joyrpc.quickstart.service.DemoServiceImpl;
 import org.junit.Test;
 
-import java.util.concurrent.ExecutionException;
-
 public class ProviderStartTest {
 
     @Test
-    public void exportTest() throws ExecutionException, InterruptedException {
+    public void exportTest() {
         ServerConfig serverConfig = new ServerConfig();
         serverConfig.setPort(22000);
 
@@ -47,9 +45,16 @@ public class ProviderStartTest {
         providerConfig.setInterfaceClazz(DemoService.class.getName());
         providerConfig.setRef(demoService);
         providerConfig.setAlias("JOY-DEMO");
-        providerConfig.export().whenComplete((v, t) -> {
-            providerConfig.open();
-        }).get();
-        Thread.currentThread().join();
+        providerConfig.exportAndOpen().whenComplete((v, t) -> {
+            if (t == null) {
+                try {
+                    Thread.currentThread().join();
+                } catch (InterruptedException e) {
+                }
+            } else {
+                t.printStackTrace();
+            }
+        });
+
     }
 }

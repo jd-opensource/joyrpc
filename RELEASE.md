@@ -2,6 +2,10 @@
 
 ## 1.0.3-SNAPSHOT
 
+- ProviderConfig增加exportAndOpen方法，便于API调用
+
+## 1.0.3(2019-10-12)
+
 - 升级Fastjson版本为1.2.61，防止autoType漏洞
 
 - 去掉joyrpc-extension-core中的Predicate，使用Java8原生的Predicate

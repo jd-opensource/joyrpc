@@ -7,6 +7,8 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ExecutionException;
+
 /*-
  * #%L
  * joyrpc
@@ -27,9 +29,6 @@ import org.slf4j.LoggerFactory;
  * #L%
  */
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-
 public class ConsumerStartTest {
 
     private static final Logger logger = LoggerFactory.getLogger(ConsumerStartTest.class);
@@ -44,10 +43,7 @@ public class ConsumerStartTest {
         consumerConfig.setInterfaceClazz(DemoService.class.getName());
         consumerConfig.setAlias("JOY-DEMO");
         consumerConfig.setTimeout(500000);
-
-        CompletableFuture<Void> referFuture = new CompletableFuture<>();
-        DemoService demoService = consumerConfig.refer(referFuture);
-        referFuture.get();
+        DemoService demoService = consumerConfig.refer().get();
 
         while (true) {
             try {

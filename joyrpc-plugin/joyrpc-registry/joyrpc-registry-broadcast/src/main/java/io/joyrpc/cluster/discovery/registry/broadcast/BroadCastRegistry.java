@@ -24,10 +24,7 @@ import com.hazelcast.config.Config;
 import com.hazelcast.config.GroupConfig;
 import com.hazelcast.config.MulticastConfig;
 import com.hazelcast.config.NetworkConfig;
-import com.hazelcast.core.EntryEvent;
-import com.hazelcast.core.Hazelcast;
-import com.hazelcast.core.HazelcastInstance;
-import com.hazelcast.core.IMap;
+import com.hazelcast.core.*;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryExpiredListener;
 import com.hazelcast.map.listener.EntryRemovedListener;
@@ -39,7 +36,8 @@ import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
-import io.joyrpc.cluster.event.ClusterEvent.*;
+import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
+import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
@@ -221,6 +219,8 @@ public class BroadCastRegistry extends AbstractRegistry {
             IMap<String, URL> serviceNodes = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
             serviceNodes.remove(serviceNodeKeyFunc.apply(url.getUrl()));
             future.complete(null);
+        } catch (HazelcastInstanceNotActiveException e) {
+            future.completeExceptionally(e);
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do deregister of %s, caused by %s", url.getKey(), e.getMessage()), e);
             future.completeExceptionally(e);

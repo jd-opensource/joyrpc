@@ -30,7 +30,7 @@ import org.junit.Test;
 public class ProviderStartTest {
 
     @Test
-    public void exportTest() {
+    public void exportTest() throws InterruptedException {
         ServerConfig serverConfig = new ServerConfig();
         serverConfig.setPort(22000);
 
@@ -46,15 +46,12 @@ public class ProviderStartTest {
         providerConfig.setRef(demoService);
         providerConfig.setAlias("JOY-DEMO");
         providerConfig.exportAndOpen().whenComplete((v, t) -> {
-            if (t == null) {
-                try {
-                    Thread.currentThread().join();
-                } catch (InterruptedException e) {
-                }
-            } else {
+            if (t != null) {
+                Thread.currentThread().interrupt();
                 t.printStackTrace();
             }
         });
 
+        Thread.currentThread().join();
     }
 }

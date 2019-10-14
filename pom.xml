@@ -33,9 +33,8 @@
         <maven-surefire-plugin.argLine>-Xms512m -Xmx512m</maven-surefire-plugin.argLine>
         <maven-surefire-plugin.skipTests>true</maven-surefire-plugin.skipTests>
 
-        <grpc.version>1.20.0</grpc.version>
-        <netty.version>4.1.36.Final</netty.version>
-
+        <!-- Build args -->
+        <argline>-Xms512m -Xmx512m</argline>
         <!-- Common libs -->
         <spring.version>4.2.4.RELEASE</spring.version>
         <spring-boot.version>2.1.1.RELEASE</spring-boot.version>
@@ -43,21 +42,26 @@
         <!-- Log libs -->
         <slf4j.version>1.7.25</slf4j.version>
         <log4j.version>1.2.17</log4j.version>
-        <!-- Build args -->
-        <argline>-Xms512m -Xmx512m</argline>
-
         <validation-api.version>2.0.1.Final</validation-api.version>
-        <hibernate-validator.version>6.0.9.Final</hibernate-validator.version>
+        <hibernate-validator.version>6.0.13.Final</hibernate-validator.version>
         <javax.el.version>3.0.1-b11</javax.el.version>
         <jmh.version>1.20</jmh.version>
         <guava.version>28.0-jre</guava.version>
         <jackson.version>2.9.9</jackson.version>
         <javassist.version>3.24.1-GA</javassist.version>
         <commons-compress.version>1.18</commons-compress.version>
+        <byte-buddy.version>1.10.1</byte-buddy.version>
+        <grpc.version>1.20.0</grpc.version>
+        <netty.version>4.1.36.Final</netty.version>
+        <hazelcast.version>3.12.2</hazelcast.version>
+        <protobuf.version>3.7.1</protobuf.version>
 
         <license.inceptionYear>2019</license.inceptionYear>
         <license.organizationName>joyrpc.io</license.organizationName>
         <license.path>license_config</license.path>
+        <checker-qual.version>2.8.1</checker-qual.version>
+        <objenesis.version>2.6</objenesis.version>
+        <caffeine.version>2.7.0</caffeine.version>
     </properties>
 
     <dependencyManagement>
@@ -82,9 +86,64 @@
                 <version>2.3.3</version>
             </dependency>
             <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${validation-api.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.hibernate.validator</groupId>
+                <artifactId>hibernate-validator</artifactId>
+                <version>${hibernate-validator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hazelcast</groupId>
+                <artifactId>hazelcast</artifactId>
+                <version>${hazelcast.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>${protobuf.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.javassist</groupId>
                 <artifactId>javassist</artifactId>
                 <version>${javassist.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.checkerframework</groupId>
+                <artifactId>checker-qual</artifactId>
+                <version>${checker-qual.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish</groupId>
+                <artifactId>javax.el</artifactId>
+                <version>${javax.el.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.objenesis</groupId>
+                <artifactId>objenesis</artifactId>
+                <version>${objenesis.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.netty</groupId>

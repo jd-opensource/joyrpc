@@ -15,7 +15,6 @@
         <protobuf.input.directory>${project.basedir}/src/main/proto</protobuf.input.directory>
         <protobuf.output.directory>src/main/java</protobuf.output.directory>
         <protobuf.protoc.path>${settings.localRepository}/protoc</protobuf.protoc.path>
-        <protobuf.version>3.6.1</protobuf.version>
         <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
         <os-maven-plugin.version>1.6.2</os-maven-plugin.version>
     </properties>
@@ -24,7 +23,6 @@
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
-            <version>${protobuf.version}</version>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>

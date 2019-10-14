@@ -11,15 +11,10 @@
 
     <artifactId>joyrpc-proxy-bytebuddy</artifactId>
 
-    <properties>
-        <byte-buddy.version>1.10.1</byte-buddy.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
-            <version>${byte-buddy.version}</version>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>

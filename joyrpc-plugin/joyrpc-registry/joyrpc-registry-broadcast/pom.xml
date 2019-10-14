@@ -11,11 +11,6 @@
 
     <artifactId>joyrpc-registry-broadcast</artifactId>
 
-    <properties>
-        <hazelcast.version>3.12.2</hazelcast.version>
-    </properties>
-
-
     <dependencies>
         <dependency>
             <groupId>com.hazelcast</groupId>

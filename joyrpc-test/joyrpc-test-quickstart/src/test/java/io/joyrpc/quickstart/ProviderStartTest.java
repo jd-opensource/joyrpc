@@ -47,8 +47,8 @@ public class ProviderStartTest {
         providerConfig.setAlias("JOY-DEMO");
         providerConfig.exportAndOpen().whenComplete((v, t) -> {
             if (t != null) {
-                Thread.currentThread().interrupt();
                 t.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         });
 

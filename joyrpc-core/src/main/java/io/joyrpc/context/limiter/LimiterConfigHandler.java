@@ -9,9 +9,9 @@ package io.joyrpc.context.limiter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,8 @@ package io.joyrpc.context.limiter;
  */
 
 
+import io.joyrpc.cluster.distribution.RateLimiter;
+import io.joyrpc.cluster.distribution.limiter.RateLimiterConfig;
 import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.ConfigEventHandler;
@@ -28,8 +30,6 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.cluster.distribution.RateLimiter;
-import io.joyrpc.cluster.distribution.limiter.RateLimiterConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,10 +56,14 @@ public class LimiterConfigHandler implements ConfigEventHandler {
     @Override
     public void handle(final String className, final Map<String, String> attrs) {
         if (GlobalContext.update(className, attrs, Constants.SETTING_INVOKE_PROVIDER_LIMIT, null)) {
-            Map<String, RateLimiterConfig> configs = parse(GlobalContext.asParametric(className).getString(Constants.SETTING_INVOKE_PROVIDER_LIMIT));
-            Map<String, RateLimiter> limiters = load(configs, LimiterConfiguration.LIMITERS.get(className));
-            //全量更新
-            LimiterConfiguration.LIMITERS.update(className, limiters);
+            try {
+                Map<String, RateLimiterConfig> configs = parse(GlobalContext.asParametric(className).getString(Constants.SETTING_INVOKE_PROVIDER_LIMIT));
+                Map<String, RateLimiter> limiters = load(configs, LimiterConfiguration.LIMITERS.get(className));
+                //全量更新
+                LimiterConfiguration.LIMITERS.update(className, limiters);
+            } catch (Exception e) {
+                logger.error("Error occurs while parsing limiter config. caused by " + e.getMessage(), e);
+            }
         }
     }
 

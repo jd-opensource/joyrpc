@@ -1,8 +1,12 @@
 # 版本说明
 
-## 1.0.3-SNAPSHOT
+## 1.0.4-SNAPSHOT
 
 - ProviderConfig增加exportAndOpen方法，便于API调用
+
+- 配置动态更新JSON解析异常捕获
+
+- 首选机房配置放在全局配置里面
 
 ## 1.0.3(2019-10-12)
 

@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.registry.etcd;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,7 +29,6 @@ import io.etcd.jetcd.options.PutOption;
 import io.etcd.jetcd.options.WatchOption;
 import io.etcd.jetcd.watch.WatchEvent;
 import io.etcd.jetcd.watch.WatchResponse;
-import io.joyrpc.Plugin;
 import io.joyrpc.cluster.Shard.DefaultShard;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
@@ -61,6 +60,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static io.etcd.jetcd.watch.WatchEvent.EventType.PUT;
+import static io.joyrpc.Plugin.CONFIG_EVENT_HANDLER;
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.event.UpdateEvent.UpdateType;
@@ -346,7 +346,7 @@ public class EtcdRegistry extends AbstractRegistry {
          */
         public void publish(final long revision, final Map<String, String> datum) {
             //全局配置
-            Plugin.CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(url.getUrl().getPath(), datum));
+            CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(url.getUrl().getPath(), datum));
             //TODO 是否需要实例配置
             handler.handle(new ConfigEvent(EtcdRegistry.this, null, FULL, revision, new HashMap<>()));
         }

@@ -9,9 +9,9 @@ package io.joyrpc.context.circuitbreaker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,14 +21,14 @@ package io.joyrpc.context.circuitbreaker;
  */
 
 
+import io.joyrpc.cluster.distribution.CircuitBreaker;
+import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreakerConfig;
 import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.cluster.distribution.CircuitBreaker;
-import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreakerConfig;
 import io.joyrpc.util.ClassUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,34 +56,42 @@ public class BreakerConfigHandler implements ConfigEventHandler {
     @Override
     public void handle(final String className, final Map<String, String> attrs) {
         if (update(className, attrs, SETTING_INVOKE_CONSUMER_CIRCUITBREAKER, null)) {
-            Class clazz = forNameQuiet(className);
-            List<Map> results = JSON.get().parseObject(GlobalContext.asParametric(className).getString(SETTING_INVOKE_CONSUMER_CIRCUITBREAKER), new TypeReference<List<Map>>() {
-            });
+            try {
+                doUpdate(className);
+            } catch (Exception e) {
+                logger.error("Error occurs while parsing circuitBreaker config. caused by " + e.getMessage(), e);
+            }
+        }
+    }
 
-            Map<String, McCircuitBreakerConfig> configs = new HashMap<>(results.size());
-            McCircuitBreakerConfig defConfig = null;
-            McCircuitBreakerConfig config;
-            //遍历配置
-            for (Map result : results) {
-                //构造熔断配置
-                config = parse(result, className);
-                configs.put(config.getName(), config);
-                if ("*".equals(config.getName())) {
-                    //默认配置
-                    defConfig = config;
-                }
+    protected void doUpdate(final String className) {
+        Class clazz = forNameQuiet(className);
+        List<Map> results = JSON.get().parseObject(GlobalContext.asParametric(className).getString(SETTING_INVOKE_CONSUMER_CIRCUITBREAKER), new TypeReference<List<Map>>() {
+        });
+
+        Map<String, McCircuitBreakerConfig> configs = new HashMap<>(results.size());
+        McCircuitBreakerConfig defConfig = null;
+        McCircuitBreakerConfig config;
+        //遍历配置
+        for (Map result : results) {
+            //构造熔断配置
+            config = parse(result, className);
+            configs.put(config.getName(), config);
+            if ("*".equals(config.getName())) {
+                //默认配置
+                defConfig = config;
             }
-            //遍历方法，获取熔断配置
-            if (clazz != null) {
-                List<Method> methods = getPublicMethod(clazz);
-                Map<String, Optional<CircuitBreaker>> breakers = new ConcurrentHashMap<>(methods.size());
-                for (Method method : methods) {
-                    BreakerConfiguration.build(defConfig, configs, breakers, method.getName());
-                }
-                BreakerConfiguration.BREAKER.update(className, new BreakerConfiguration.MethodBreaker(breakers));
-            } else {
-                BreakerConfiguration.BREAKER.update(className, new BreakerConfiguration.MethodBreaker(defConfig, configs));
+        }
+        //遍历方法，获取熔断配置
+        if (clazz != null) {
+            List<Method> methods = getPublicMethod(clazz);
+            Map<String, Optional<CircuitBreaker>> breakers = new ConcurrentHashMap<>(methods.size());
+            for (Method method : methods) {
+                BreakerConfiguration.build(defConfig, configs, breakers, method.getName());
             }
+            BreakerConfiguration.BREAKER.update(className, new BreakerConfiguration.MethodBreaker(breakers));
+        } else {
+            BreakerConfiguration.BREAKER.update(className, new BreakerConfiguration.MethodBreaker(defConfig, configs));
         }
     }
 

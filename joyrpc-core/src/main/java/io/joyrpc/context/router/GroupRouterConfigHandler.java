@@ -9,9 +9,9 @@ package io.joyrpc.context.router;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,6 @@ package io.joyrpc.context.router;
 
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,8 +66,8 @@ public class GroupRouterConfigHandler implements ConfigEventHandler {
                         }
                     }
                     GROUP_ROUTER_CONF.update(className, methodCfg);
-                } catch (SerializerException e) {
-                    logger.error(String.format("Error occurs while parsing group router of %s.", className));
+                } catch (Exception e) {
+                    logger.error(String.format("Error occurs while parsing group router of %s. caused by %s", className, e.getMessage()), e);
                     //如果异常，则忽略掉本次更新
                 }
             } else {

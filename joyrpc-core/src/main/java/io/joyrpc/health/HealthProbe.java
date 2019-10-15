@@ -9,9 +9,9 @@ package io.joyrpc.health;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,8 +20,8 @@ package io.joyrpc.health;
  * #L%
  */
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static io.joyrpc.Plugin.DOCTOR;
 
@@ -30,6 +30,7 @@ import static io.joyrpc.Plugin.DOCTOR;
  */
 public class HealthProbe {
 
+    protected static final Logger logger = LoggerFactory.getLogger(HealthProbe.class);
     protected static volatile HealthProbe INSTANCE;
 
     /**
@@ -45,13 +46,14 @@ public class HealthProbe {
          * 启动一个线程定期检查
          */
         Thread thread = new Thread(() -> {
-            CountDownLatch lath = new CountDownLatch(1);
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    lath.await(5000, TimeUnit.MILLISECONDS);
+                    Thread.sleep(5000);
                     state = diagnose();
                 } catch (InterruptedException e) {
                     break;
+                } catch (Throwable e) {
+                    logger.error("Error occurs while diagnose,caused by " + e.getMessage(), e);
                 }
             }
         }, "doctor");

@@ -200,12 +200,19 @@ public class RegionDistribution {
      * @param local 当前机房
      */
     protected LinkedHashSet<DataCenterDistribution> preferredOrNeighbourDc(final DataCenterDistribution local) {
-        LinkedHashSet<DataCenterDistribution> result = new LinkedHashSet<>();
-        preferredDc(local, result);
-        if (result.isEmpty()) {
-            neighbourDc(local, result);
+        LinkedHashSet<DataCenterDistribution> neighbours = new LinkedHashSet<>(8);
+        LinkedHashSet<DataCenterDistribution> others = new LinkedHashSet<>(8);
+        //首选
+        preferredDc(local, neighbours, others);
+        if (neighbours.isEmpty()) {
+            //首选里面没有本区域的，则从新计算本区域
+            neighbourDc(local, neighbours);
         }
-        return result;
+        if (!neighbours.isEmpty()) {
+            return neighbours;
+        } else {
+            return others;
+        }
     }
 
     /**
@@ -214,12 +221,10 @@ public class RegionDistribution {
      * @param local 当前机房
      */
     protected LinkedHashSet<DataCenterDistribution> preferredOrNeighbourOrMaxDc(final DataCenterDistribution local) {
-        LinkedHashSet<DataCenterDistribution> result = new LinkedHashSet<>();
-        preferredDc(local, result);
+        //跨机房，首选或同区域的机房
+        LinkedHashSet<DataCenterDistribution> result = preferredOrNeighbourDc(local);
         if (result.isEmpty()) {
-            neighbourDc(local, result);
-        }
-        if (result.isEmpty()) {
+            //最多节点机房所在区域的机房
             maxDc(local, result);
         }
         return result;
@@ -228,10 +233,12 @@ public class RegionDistribution {
     /**
      * 跨机房，首选连接的机房
      *
-     * @param local 当前机房
-     * @param dcds  列表
+     * @param local      当前机房
+     * @param neighbours 本区域首选集合
+     * @param others     其它区域首选集合
      */
-    protected void preferredDc(final DataCenterDistribution local, final LinkedHashSet<DataCenterDistribution> dcds) {
+    protected void preferredDc(final DataCenterDistribution local, final LinkedHashSet<DataCenterDistribution> neighbours,
+                               final LinkedHashSet<DataCenterDistribution> others) {
         if (!dataCenter.isEmpty()) {
             //判断当前机房的跨机房首选连接机房配置
             List<String> prefers = CircuitConfiguration.INSTANCE.get(dataCenter);
@@ -240,7 +247,14 @@ public class RegionDistribution {
                 for (String prefer : prefers) {
                     distribution = dataCenters.get(prefer);
                     if (distribution != null && distribution != local) {
-                        dcds.add(distribution);
+                        //同区域
+                        if (!region.isEmpty() && region.equals(distribution.getRegion())) {
+                            //首选的同区域机房
+                            neighbours.add(distribution);
+                        } else {
+                            //首选的其它区域机房
+                            others.add(distribution);
+                        }
                     }
                 }
             }

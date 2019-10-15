@@ -904,7 +904,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 //备份集群数据
                 Map<String, List<BackupShard>> backupClusters = new HashMap<>(this.clusters.size());
                 this.clusters.forEach((k, v) -> {
-                    if (v.full && !v.datum.isEmpty()) {
+                    if (v.persistable()) {
                         List<BackupShard> backupShards = new LinkedList<>();
                         v.datum.forEach((name, shard) -> backupShards.add(new BackupShard(shard)));
                         backupClusters.put(k, backupShards);
@@ -914,7 +914,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 //备份配置数据
                 Map<String, Map<String, String>> configs = new HashMap<>(this.configs.size());
                 this.configs.forEach((k, v) -> {
-                    if (v.full && v.datum != null) {
+                    if (v.persistable()) {
                         configs.put(k, v.datum);
                     }
                 });
@@ -1334,6 +1334,15 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
         /**
+         * 可持久化的
+         *
+         * @return
+         */
+        public boolean persistable() {
+            return full && datum != null && !datum.isEmpty();
+        }
+
+        /**
          * 添加监听器
          *
          * @param handler
@@ -1470,6 +1479,15 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected boolean ready() {
             return true;
+        }
+
+        /**
+         * 可持久化的
+         *
+         * @return
+         */
+        public boolean persistable() {
+            return full && datum != null;
         }
 
         /**

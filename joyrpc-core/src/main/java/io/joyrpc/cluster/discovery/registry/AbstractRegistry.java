@@ -1405,11 +1405,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 //更新，设置最新集群数据
                 update(cluster, event.getDatum(), protectNullDatum);
                 //TODO 初始化 version不一定为0，这里需要优化下
-                if (datum != null && cluster.isEmpty() && protectNullDatum && version > 0) {
-                    //是否已经有全量数据
-                    if (fullDatum && !old) {
-                        full = true;
-                    }
+                if (full && cluster.isEmpty() && protectNullDatum && version > 0) {
                     //最新集群数据为空，且空保护，且版本号大于0（非初始化），不更新
                     logger.warn("the datum of cluster event can not be null, version is " + version);
                 } else {

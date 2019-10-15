@@ -1188,7 +1188,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 全量数据
          */
-        protected boolean full;
+        protected volatile boolean full;
         /**
          * 通知器
          */
@@ -1310,7 +1310,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 分片信息
          */
-        protected Map<String, Shard> datum;
+        protected volatile Map<String, Shard> datum;
 
         /**
          * 构造函数

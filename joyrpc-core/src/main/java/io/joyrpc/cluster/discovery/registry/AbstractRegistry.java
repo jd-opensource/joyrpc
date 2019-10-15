@@ -1398,11 +1398,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 if (version > 0 && version >= event.getVersion()) {
                     return;
                 }
-                //是否已经有全量数据
-                if (fullDatum && !old) {
-                    full = true;
-                }
-
                 //设置版本
                 version = event.getVersion();
                 //如果是增量数据，则复制一份原来的数据
@@ -1411,10 +1406,18 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 update(cluster, event.getDatum(), protectNullDatum);
                 //TODO 初始化 version不一定为0，这里需要优化下
                 if (datum != null && cluster.isEmpty() && protectNullDatum && version > 0) {
+                    //是否已经有全量数据
+                    if (fullDatum && !old) {
+                        full = true;
+                    }
                     //最新集群数据为空，且空保护，且版本号大于0（非初始化），不更新
                     logger.warn("the datum of cluster event can not be null, version is " + version);
                 } else {
                     datum = cluster;
+                    //是否已经有全量数据
+                    if (fullDatum && !old) {
+                        full = true;
+                    }
                     //如果存在全量数据，通知事件
                     if (full) {
                         if (event.getType() == UpdateEvent.UpdateType.CLEAR) {

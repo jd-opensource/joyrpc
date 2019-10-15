@@ -1392,28 +1392,31 @@ public abstract class AbstractRegistry implements Registry, Configure {
         @Override
         public synchronized void handle(final ClusterEvent event) {
             lastEventTime = SystemClock.now();
-            boolean old = full;
-            event.getType().update(url, (full, protectNullDatum) -> {
+            final boolean old = full;
+            event.getType().update(url, (fullDatum, protectNullDatum) -> {
                 //过期数据，不处理
                 if (version > 0 && version >= event.getVersion()) {
                     return;
                 }
                 //是否已经有全量数据
-                this.full = full ? true : this.full;
+                if (fullDatum && !old) {
+                    full = true;
+                }
+
                 //设置版本
                 version = event.getVersion();
-                //创建集群原数据,如果为全量数据，原数据为空map
-                Map<String, Shard> cluster = !full && datum != null ? new HashMap<>(datum) : new HashMap<>();
+                //如果是增量数据，则复制一份原来的数据
+                Map<String, Shard> cluster = !fullDatum && datum != null ? new HashMap<>(datum) : new HashMap<>();
                 //更新，设置最新集群数据
                 update(cluster, event.getDatum(), protectNullDatum);
                 //TODO 初始化 version不一定为0，这里需要优化下
-                //最新集群数据为空，且空保护，且版本号大于0（非初始化），不更新
-                if (cluster.isEmpty() && protectNullDatum && version > 0) {
+                if (datum != null && cluster.isEmpty() && protectNullDatum && version > 0) {
+                    //最新集群数据为空，且空保护，且版本号大于0（非初始化），不更新
                     logger.warn("the datum of cluster event can not be null, version is " + version);
                 } else {
                     datum = cluster;
                     //如果存在全量数据，通知事件
-                    if (this.full) {
+                    if (full) {
                         if (event.getType() == UpdateEvent.UpdateType.CLEAR) {
                             publisher.offer(new ClusterEvent(this, null, UpdateEvent.UpdateType.CLEAR, version, event.getDatum()));
                         } else if (!old) {

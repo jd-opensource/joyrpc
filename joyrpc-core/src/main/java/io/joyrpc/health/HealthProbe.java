@@ -44,8 +44,8 @@ public class HealthProbe {
      */
     protected HealthProbe() {
         //启动一个线程定期检查
-        Daemon daemon = new Daemon("doctor", () -> state = diagnose(),
-                e -> logger.error("Error occurs while diagnose,caused by " + e.getMessage(), e), 5000);
+        Daemon daemon = new Daemon("doctor", () -> state = diagnose(), 5000,
+                e -> logger.error("Error occurs while diagnose,caused by " + e.getMessage(), e));
         daemon.start();
     }
 

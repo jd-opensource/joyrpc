@@ -169,8 +169,8 @@ public class BroadCastRegistry extends AbstractRegistry {
             instance = Hazelcast.newHazelcastInstance(cfg);
             daemon = new Daemon("BroadCastRegistry-" + registryId + "-heartbeat-task",
                     () -> registers.forEach((key, meta) -> lease(meta)),
-                    e -> logger.error("Error occurs while leasing, caused by " + e.getMessage(), e),
-                    Math.max(15000, nodeExpiredTime / 3));
+                    Math.max(15000, nodeExpiredTime / 3),
+                    e -> logger.error("Error occurs while leasing, caused by " + e.getMessage(), e));
             daemon.start();
             future.complete(null);
         } catch (Exception e) {

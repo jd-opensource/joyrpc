@@ -1,5 +1,6 @@
 package io.joyrpc.util;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -17,19 +18,19 @@ public class Daemon {
     /**
      * 执行块
      */
-    protected Runnable runnable;
+    protected Callable<Long> callable;
     /**
      * 执行块
      */
     protected Consumer<Throwable> error;
     /**
-     * 时间间隔
-     */
-    protected long interval;
-    /**
      * 延迟执行时间
      */
     protected long delay;
+    /**
+     * 容错时间
+     */
+    protected long fault;
     /**
      * 判断是否要继续
      */
@@ -55,7 +56,19 @@ public class Daemon {
      * @param interval 时间间隔
      */
     public Daemon(final String name, final Runnable runnable, final long interval) {
-        this(name, runnable, null, interval, interval, null, null);
+        this(name, runnable, interval, interval, null, interval, null, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name     名称
+     * @param callable 执行块，返回下一次等到时间
+     * @param delay    延迟执行的时间
+     * @param fault    异常等待时间
+     */
+    public Daemon(final String name, final Callable<Long> callable, final long delay, final long fault) {
+        this(name, callable, delay, null, fault, null, null);
     }
 
     /**
@@ -63,11 +76,24 @@ public class Daemon {
      *
      * @param name     名称
      * @param runnable 执行块
-     * @param error    异常消费者
      * @param interval 时间间隔
+     * @param error    异常消费者
      */
-    public Daemon(final String name, final Runnable runnable, final Consumer<Throwable> error, final long interval) {
-        this(name, runnable, error, interval, interval, null, null);
+    public Daemon(final String name, final Runnable runnable, final long interval, final Consumer<Throwable> error) {
+        this(name, runnable, interval, interval, error, interval, null, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name     名称
+     * @param callable 执行块，返回下一次等到时间
+     * @param delay    延迟执行的时间
+     * @param error    异常消费者
+     * @param fault    异常等待时间
+     */
+    public Daemon(final String name, final Callable<Long> callable, final long delay, final Consumer<Throwable> error, final long fault) {
+        this(name, callable, delay, error, fault, null, null);
     }
 
     /**
@@ -79,7 +105,19 @@ public class Daemon {
      * @param condition 判断是否要继续
      */
     public Daemon(final String name, final Runnable runnable, final long interval, final Supplier<Boolean> condition) {
-        this(name, runnable, null, interval, interval, condition, null);
+        this(name, runnable, interval, interval, null, interval, condition, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name      名称
+     * @param callable  执行块，返回下一次等到时间
+     * @param fault     异常等待时间
+     * @param condition 判断是否要继续
+     */
+    public Daemon(final String name, final Callable<Long> callable, final long delay, final long fault, final Supplier<Boolean> condition) {
+        this(name, callable, delay, null, fault, condition, null);
     }
 
     /**
@@ -87,13 +125,29 @@ public class Daemon {
      *
      * @param name      名称
      * @param runnable  执行块
-     * @param error     异常消费者
      * @param interval  时间间隔
+     * @param error     异常消费者
      * @param condition 判断是否要继续
      */
-    public Daemon(final String name, final Runnable runnable, final Consumer<Throwable> error, final long interval,
+    public Daemon(final String name, final Runnable runnable, final long interval, final Consumer<Throwable> error,
                   final Supplier<Boolean> condition) {
-        this(name, runnable, error, interval, interval, condition, null);
+        this(name, runnable, interval, interval, error, interval, condition, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name      名称
+     * @param callable  执行块，返回下一次等到时间
+     * @param delay     延迟执行的时间
+     * @param error     异常消费者
+     * @param fault     异常等待时间
+     * @param condition 判断是否要继续
+     */
+    public Daemon(final String name, final Callable<Long> callable, final long delay,
+                  final Consumer<Throwable> error, final long fault,
+                  final Supplier<Boolean> condition) {
+        this(name, callable, delay, error, fault, condition, null);
     }
 
     /**
@@ -105,8 +159,24 @@ public class Daemon {
      * @param condition 判断是否要继续
      * @param waiter    等到时间
      */
-    public Daemon(final String name, final Runnable runnable, final long interval, final Supplier<Boolean> condition, final Waiter waiter) {
-        this(name, runnable, null, interval, interval, condition, waiter);
+    public Daemon(final String name, final Runnable runnable, final long interval,
+                  final Supplier<Boolean> condition, final Waiter waiter) {
+        this(name, runnable, interval, interval, null, interval, condition, waiter);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name      名称
+     * @param callable  执行块，返回下一次等到时间
+     * @param delay     延迟执行的时间
+     * @param fault     异常等待时间
+     * @param condition 判断是否要继续
+     * @param waiter    等到时间
+     */
+    public Daemon(final String name, final Callable<Long> callable, final long delay, final long fault,
+                  final Supplier<Boolean> condition, final Waiter waiter) {
+        this(name, callable, delay, null, fault, condition, waiter);
     }
 
     /**
@@ -114,34 +184,60 @@ public class Daemon {
      *
      * @param name      名称
      * @param runnable  执行块
-     * @param error     异常消费者
      * @param interval  时间间隔
      * @param delay     延迟执行的时间
+     * @param error     异常消费者
+     * @param fault     异常等待时间
      * @param condition 判断是否要继续
+     * @param waiter    等待对象
      */
-    public Daemon(final String name, final Runnable runnable, final Consumer<Throwable> error, final long interval,
-                  final long delay, final Supplier<Boolean> condition, final Waiter waiter) {
+    public Daemon(final String name, final Runnable runnable, final long interval, final long delay,
+                  final Consumer<Throwable> error, final long fault,
+                  final Supplier<Boolean> condition, final Waiter waiter) {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("name can not be empty");
         } else if (runnable == null) {
-            throw new IllegalArgumentException("runnable can not be empty");
+            throw new IllegalArgumentException("runnable can not be null");
         }
         this.name = name;
-        this.runnable = runnable;
+        this.callable = () -> {
+            runnable.run();
+            return interval;
+        };
         this.error = error;
-        this.interval = interval;
         this.delay = delay;
+        this.fault = fault;
         this.condition = condition;
         this.waiter = waiter == null ? new Waiter.SleepWaiter() : waiter;
     }
 
-
-    public void setDelay(long delay) {
+    /**
+     * 构造函数
+     *
+     * @param name      名称
+     * @param callable  执行块，返回下一次等到时间
+     * @param delay     延迟执行的时间
+     * @param error     异常消费者
+     * @param fault     异常等待时间
+     * @param condition 判断是否要继续
+     * @param waiter    等待对象
+     */
+    public Daemon(final String name, final Callable<Long> callable, final long delay,
+                  final Consumer<Throwable> error, final long fault,
+                  final Supplier<Boolean> condition,
+                  final Waiter waiter) {
+        if (name == null || name.isEmpty()) {
+            throw new IllegalArgumentException("name can not be empty");
+        } else if (callable == null) {
+            throw new IllegalArgumentException("callable can not be null");
+        }
+        this.name = name;
+        this.callable = callable;
+        this.error = error;
         this.delay = delay;
-    }
-
-    public void setInterval(long interval) {
-        this.interval = interval;
+        this.fault = fault;
+        this.condition = condition;
+        this.waiter = waiter == null ? new Waiter.SleepWaiter() : waiter;
     }
 
     /**
@@ -160,25 +256,23 @@ public class Daemon {
         if (started.compareAndSet(false, true)) {
             thread = new Thread(() -> {
                 boolean first = true;
-                long time;
+                long time = 0;
                 while (continuous()) {
                     try {
                         //第一次运行
                         if (first) {
                             first = false;
                             time = delay;
-                        } else {
-                            time = interval;
                         }
                         if (time > 0) {
                             //等待一段时间
                             waiter.await(time, TimeUnit.MILLISECONDS);
                             //再次判断是否继续
                             if (continuous()) {
-                                runnable.run();
+                                time = callable.call();
                             }
                         } else {
-                            runnable.run();
+                            time = callable.call();
                         }
                     } catch (InterruptedException e) {
                         break;
@@ -186,6 +280,7 @@ public class Daemon {
                         if (error != null) {
                             error.accept(e);
                         }
+                        time = fault;
                     }
                 }
             }, name);

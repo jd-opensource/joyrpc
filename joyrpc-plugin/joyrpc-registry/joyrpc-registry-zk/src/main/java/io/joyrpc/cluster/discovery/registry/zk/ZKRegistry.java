@@ -155,6 +155,7 @@ public class ZKRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             asyncCurator.unwrap().close();
+            future.complete(null);
         } catch (Exception e) {
             future.completeExceptionally(e);
         } finally {

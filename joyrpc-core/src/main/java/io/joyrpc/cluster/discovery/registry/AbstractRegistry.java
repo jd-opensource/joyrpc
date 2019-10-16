@@ -38,10 +38,7 @@ import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent;
 import io.joyrpc.extension.URL;
-import io.joyrpc.util.Close;
-import io.joyrpc.util.StringUtils;
-import io.joyrpc.util.Switcher;
-import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,7 +121,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 任务派发
      */
-    protected Dispatcher dispatcher;
+    protected Daemon daemon;
+    /**
+     * 等待
+     */
+    protected Waiter waiter;
     /**
      * 数据是否做了修改
      */
@@ -229,9 +230,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
         return switcher.open(f -> {
             dirty.set(false);
             connected.set(false);
+            waiter = new Waiter.MutexWaiter();
             //任务执行线程
-            dispatcher = new Dispatcher();
-            dispatcher.start();
+            daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
+                    .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
+            daemon.start();
             doOpen(f);
             return f.whenComplete((v, t) -> {
                 if (t != null) {
@@ -249,8 +252,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
         return switcher.close(f -> {
             doClose(f);
             return f.handle((u, t) -> {
-                if (dispatcher != null) {
-                    dispatcher.close();
+                if (daemon != null) {
+                    daemon.stop();
                 }
                 return null;
             });
@@ -391,8 +394,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected void addNewTask(final Task task) {
         tasks.offerFirst(task);
-        if (dispatcher != null) {
-            dispatcher.wakeup();
+        if (waiter != null) {
+            waiter.wakeup();
         }
     }
 
@@ -670,6 +673,74 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
+     * 任务调度
+     *
+     * @return
+     */
+    protected long dispatch() {
+        if (!connected.get() && switcher.isOpened()) {
+            //当前还没有连接上，则判断是否有重连任务
+            ReconnectTask task = reconnectTask;
+            if (task != null && task.isExpire()) {
+                reconnectTask = null;
+                //重连
+                task.run();
+            }
+            //等到连接通知
+            return 1000L;
+        } else {
+            long waitTime = executeTask();
+            if (waitTime > 0) {
+                if (backup != null && dirty.compareAndSet(true, false)) {
+                    //备份数据
+                    backup();
+                }
+            }
+            return waitTime;
+        }
+    }
+
+    /**
+     * 执行任务队列中的任务
+     *
+     * @return
+     */
+    protected long executeTask() {
+        long waitTime;
+        //取到第一个任务
+        Task task = tasks.peekFirst();
+        if (task != null) {
+            //判断是否超时
+            waitTime = task.retryTime - SystemClock.now();
+        } else {
+            //没有任务则等待10秒
+            waitTime = 10000L;
+        }
+        //有任务执行
+        if (waitTime <= 0) {
+            //有其它线程并发插入头部，pollFirst可能拿到其它对象
+            task = tasks.pollFirst();
+            boolean result;
+            try {
+                //执行任务
+                result = task.call();
+            } catch (Exception e) {
+                //执行出错，则重试
+                logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
+                result = false;
+            }
+            if (!result && switcher.isOpened()) {
+                //关闭状态只运行一次，运行状态一致重试
+                task.setRetryTime(SystemClock.now() + taskRetryInterval);
+                tasks.addLast(task);
+            } else {
+                task.complete();
+            }
+        }
+        return waitTime;
+    }
+
+    /**
      * 建连，如果失败进行重试
      *
      * @param result        结果
@@ -698,7 +769,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 logger.info(String.format("Success connecting to %s.", url.toString(false, false)));
                 //连接成功
                 connected.set(true);
-                dispatcher.wakeup();
+                waiter.wakeup();
                 //恢复注册
                 recover();
                 result.complete(null);
@@ -888,8 +959,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     protected void dirty() {
         if (backup != null) {
             dirty.set(true);
-            if (dispatcher != null) {
-                dispatcher.wakeup();
+            if (waiter != null) {
+                waiter.wakeup();
             }
         }
     }
@@ -1042,137 +1113,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
         public boolean isExpire() {
             return retryTime <= SystemClock.now();
         }
-    }
-
-    /**
-     * 任务派发器
-     */
-    protected class Dispatcher extends Thread {
-        /**
-         * 启动标识
-         */
-        protected AtomicBoolean started = new AtomicBoolean(true);
-        /**
-         * 锁
-         */
-        protected Object mutex;
-
-        public Dispatcher() {
-            setDaemon(true);
-            setName("registry-dispatcher");
-            this.mutex = new Object();
-        }
-
-        /**
-         * 停止
-         */
-        public void close() {
-            started.set(false);
-            Thread.interrupted();
-        }
-
-        /**
-         * 唤醒
-         */
-        public void wakeup() {
-            synchronized (mutex) {
-                mutex.notifyAll();
-            }
-        }
-
-        /**
-         * 等到指定时间
-         *
-         * @param waitTime 时间
-         */
-        protected void await(final long waitTime) {
-            synchronized (mutex) {
-                try {
-                    mutex.wait(waitTime);
-                } catch (InterruptedException e) {
-                }
-            }
-        }
-
-        @Override
-        public void run() {
-
-            long waitTime;
-            //恢复数据
-            restore();
-            while (started.get()) {
-                if (!connected.get() && switcher.isOpened()) {
-                    //当前还没有连接上，则判断是否有重连任务
-                    reconnect();
-                    //等到连接通知
-                    await(1000L);
-                } else {
-                    waitTime = execute();
-                    if (waitTime > 0) {
-                        if (backup != null && dirty.compareAndSet(true, false)) {
-                            //备份数据
-                            backup();
-                        }
-                        await(waitTime);
-                    }
-                }
-            }
-
-        }
-
-        /**
-         * 执行任务
-         *
-         * @return
-         */
-        protected long execute() {
-            long waitTime;
-            //取到第一个任务
-            Task task = tasks.peekFirst();
-            if (task != null) {
-                //判断是否超时
-                waitTime = task.retryTime - SystemClock.now();
-            } else {
-                //没有任务则等待10秒
-                waitTime = 10000L;
-            }
-            //有任务执行
-            if (waitTime <= 0) {
-                //有其它线程并发插入头部，pollFirst可能拿到其它对象
-                task = tasks.pollFirst();
-                boolean result;
-                try {
-                    //执行任务
-                    result = task.call();
-                } catch (Exception e) {
-                    //执行出错，则重试
-                    logger.error(e.getMessage(), e);
-                    result = false;
-                }
-                if (!result && switcher.isOpened()) {
-                    //关闭状态只运行一次，运行状态一致重试
-                    task.setRetryTime(SystemClock.now() + taskRetryInterval);
-                    tasks.addLast(task);
-                } else {
-                    task.complete();
-                }
-            }
-            return waitTime;
-        }
-
-        /**
-         * 进行重连
-         */
-        protected void reconnect() {
-            ReconnectTask task = reconnectTask;
-            if (task != null && task.isExpire()) {
-                reconnectTask = null;
-                //重连
-                task.run();
-            }
-        }
-
-
     }
 
     /**

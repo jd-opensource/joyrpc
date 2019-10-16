@@ -19,7 +19,7 @@ public interface Waiter {
     /**
      * 唤醒
      */
-    void wake();
+    void wakeup();
 
     /**
      * 采用对象的await等待
@@ -52,7 +52,7 @@ public interface Waiter {
         }
 
         @Override
-        public void wake() {
+        public void wakeup() {
             synchronized (mutex) {
                 mutex.notifyAll();
             }
@@ -71,7 +71,7 @@ public interface Waiter {
         }
 
         @Override
-        public void wake() {
+        public void wakeup() {
 
         }
 

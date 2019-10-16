@@ -178,7 +178,7 @@ public class Daemon {
     public void stop() {
         if (started.compareAndSet(true, false)) {
             //唤醒等待线程
-            waiter.wake();
+            waiter.wakeup();
             if (thread != null) {
                 //线程终止
                 thread.interrupt();
@@ -224,15 +224,15 @@ public class Daemon {
         /**
          * 延迟执行时间
          */
-        protected long delay;
+        protected Long delay;
         /**
          * 执行间隔
          */
-        protected long interval;
+        protected Long interval;
         /**
          * 容错时间
          */
-        protected long fault;
+        protected Long fault;
         /**
          * 判断是否要继续
          */
@@ -277,6 +277,12 @@ public class Daemon {
 
         public Builder interval(long val) {
             interval = val;
+            if (fault == null) {
+                fault = val;
+            }
+            if (delay == null) {
+                delay = fault;
+            }
             return this;
         }
 
@@ -296,8 +302,8 @@ public class Daemon {
         }
 
         public Daemon build() {
-            return callable != null ? new Daemon(name, prepare, callable, delay, error, fault, condition, waiter) :
-                    new Daemon(name, prepare, runnable, interval, delay, error, fault, condition, waiter);
+            return callable != null ? new Daemon(name, prepare, callable, delay == null ? 0 : delay, error, fault == null ? 0 : delay, condition, waiter) :
+                    new Daemon(name, prepare, runnable, interval == null ? 0 : interval, delay == null ? 0 : delay, error, fault == null ? 0 : fault, condition, waiter);
         }
 
     }

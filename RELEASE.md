@@ -32,6 +32,8 @@
 
 - 优化StandardValidator.MyConsumer.onCustomAbstract方法返回异常的message
 
+- 修改ETCD续约成功，连续续约失败次数没有重置的问题
+
 ## 1.0.2(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用

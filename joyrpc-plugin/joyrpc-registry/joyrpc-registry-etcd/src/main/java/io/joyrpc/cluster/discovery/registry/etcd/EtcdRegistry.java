@@ -162,7 +162,8 @@ public class EtcdRegistry extends AbstractRegistry {
 
         serviceFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
         clusterFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
-        configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + "/" + GlobalContext.getString(KEY_APPNAME);
+        String appName = GlobalContext.getString(KEY_APPNAME);
+        configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + "/" + (StringUtils.isEmpty(appName) ? "no_app" : appName);
         cluster = new WatcherManager(clusterFunction);
         config = new WatcherManager(configFunction);
     }
@@ -343,16 +344,20 @@ public class EtcdRegistry extends AbstractRegistry {
 
         @Override
         public void onUpdate(List<WatchEvent> events, long version, UpdateType updateType) {
-            events.forEach(e -> {
-                switch (e.getEventType()) {
-                    case PUT:
-                        publish(version, e.getKeyValue().getValue().toString(UTF_8));
-                        break;
-                    case DELETE:
-                        publish(version, new HashMap<>());
-                        break;
-                }
-            });
+            if (events != null && !events.isEmpty()) {
+                events.forEach(e -> {
+                    switch (e.getEventType()) {
+                        case PUT:
+                            publish(version, e.getKeyValue().getValue().toString(UTF_8));
+                            break;
+                        case DELETE:
+                            publish(version, new HashMap<>());
+                            break;
+                    }
+                });
+            } else {
+                publish(version, new HashMap<>());
+            }
         }
 
         /**
@@ -527,9 +532,7 @@ public class EtcdRegistry extends AbstractRegistry {
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
                     res.getKvs().forEach(kv -> events.add(new WatchEvent(kv, null, PUT)));
-                    if (!events.isEmpty()) {
-                        listener.onUpdate(events, res.getHeader().getRevision(), FULL);
-                    }
+                    listener.onUpdate(events, res.getHeader().getRevision(), FULL);
                     //添加watch
                     try {
                         WatchOption watchOption = WatchOption.newBuilder().withPrefix(key).build();

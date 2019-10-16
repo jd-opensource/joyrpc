@@ -12,6 +12,8 @@
 
 - 注册中心在持久化数据的时候潜在的空指针问题
 
+- 修改ETCD续约成功，连续续约失败次数没有重置的问题
+
 ## 1.0.3(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞
@@ -31,8 +33,6 @@
 - 删除Cluster中的supply方法中的同步connect调用，在节点disconnect事件里面可能造成死锁
 
 - 优化StandardValidator.MyConsumer.onCustomAbstract方法返回异常的message
-
-- 修改ETCD续约成功，连续续约失败次数没有重置的问题
 
 ## 1.0.2(2019-09-20)
 

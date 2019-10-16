@@ -43,7 +43,9 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.Daemon;
 import io.joyrpc.util.StringUtils;
+import io.joyrpc.util.Waiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +55,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -133,7 +134,11 @@ public class EtcdRegistry extends AbstractRegistry {
     /**
      * 注册provider的统一续约task
      */
-    protected KeepAliveLeaseTask keepAliveLeaseTask;
+    protected Daemon daemon;
+    /**
+     * 连续续约失败次数
+     */
+    protected AtomicInteger leaseErr = new AtomicInteger();
 
     /**
      * 构造函数
@@ -162,6 +167,26 @@ public class EtcdRegistry extends AbstractRegistry {
         config = new WatcherManager(configFunction);
     }
 
+    /**
+     * 续约
+     */
+    protected void lease() {
+        client.getLeaseClient().keepAliveOnce(leaseId).whenComplete((res, err) -> {
+            if (err != null) {
+                //连续续约三次失败
+                if (leaseErr.incrementAndGet() >= 3) {
+                    logger.error(String.format("Error occurs while lease than 3 times, caused by %s. reconnect....", err.getMessage()));
+                    //先关闭连接，再重连
+                    disconnect().whenComplete((v, t) -> reconnect(new CompletableFuture<>(), 0, maxConnectRetryTimes));
+                } else {
+                    logger.error(String.format("Error occurs while lease, caused by %s.", err.getMessage()));
+                }
+            } else {
+                leaseErr.set(0);
+            }
+        });
+    }
+
     @Override
     protected CompletableFuture<Void> connect() {
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -173,11 +198,10 @@ public class EtcdRegistry extends AbstractRegistry {
                 future.completeExceptionally(err);
             } else {
                 leaseId = res.getID();
-                keepAliveLeaseTask = new KeepAliveLeaseTask();
-                Thread keepAliveThread = new Thread(keepAliveLeaseTask);
-                keepAliveThread.setName("EtcdRegistry-" + registryId + "-lease-task");
-                keepAliveThread.setDaemon(true);
-                keepAliveThread.start();
+                leaseErr.set(0);
+                daemon = new Daemon("EtcdRegistry-" + registryId + "-lease-task", () -> lease(),
+                        Math.max(timeToLive / 5, 10000), () -> switcher.isOpened(), new Waiter.MutexWaiter());
+                daemon.start();
                 future.complete(null);
             }
         });
@@ -186,9 +210,9 @@ public class EtcdRegistry extends AbstractRegistry {
 
     @Override
     protected CompletableFuture<Void> disconnect() {
-        if (keepAliveLeaseTask != null) {
-            keepAliveLeaseTask.close();
-            keepAliveLeaseTask = null;
+        if (daemon != null) {
+            daemon.stop();
+            daemon = null;
         }
         if (client != null) {
             client.close();
@@ -609,95 +633,6 @@ public class EtcdRegistry extends AbstractRegistry {
                     consumer.accept(t);
                 }
                 future.complete(null);
-            }
-        }
-    }
-
-    /**
-     * 统一续约task
-     */
-    protected class KeepAliveLeaseTask implements Runnable {
-
-        /**
-         * 启动标识
-         */
-        protected AtomicBoolean started = new AtomicBoolean(true);
-        /**
-         * 锁对象
-         */
-        protected Object mutex = new Object();
-
-        protected AtomicInteger leaseErr = new AtomicInteger();
-
-        /**
-         * 等等事件，毫秒
-         *
-         * @param time
-         * @throws InterruptedException
-         */
-        protected void await(final long time) throws InterruptedException {
-            synchronized (mutex) {
-                mutex.wait(time);
-            }
-        }
-
-        /**
-         * 唤醒
-         */
-        public void wake() {
-            synchronized (mutex) {
-                mutex.notifyAll();
-            }
-        }
-
-        @Override
-        public void run() {
-            long sleepTime = Math.max(timeToLive / 5, 10000);
-            while (continuous()) {
-                try {
-                    await(sleepTime);
-                    if (continuous()) {
-                        lease();
-                    }
-                } catch (InterruptedException e) {
-                    //被中断了
-                }
-            }
-        }
-
-        /**
-         * 续约
-         */
-        protected void lease() {
-            client.getLeaseClient().keepAliveOnce(leaseId).whenComplete((res, err) -> {
-                if (err != null) {
-                    logger.error(String.format("Error occurs while lease, caused by %s.", err.getMessage()));
-                    if (leaseErr.incrementAndGet() >= 3) {
-                        logger.warn(String.format("Error occurs while lease than 3 times, caused by %s. reconnect....", err.getMessage()));
-                        started.set(false);
-                        CompletableFuture<Void> future = new CompletableFuture<>();
-                        future.whenComplete((v, t) -> reconnect(new CompletableFuture<>(), 0, maxConnectRetryTimes));
-                        doClose(future);
-                    }
-                }
-            });
-        }
-
-        /**
-         * 是否继续
-         *
-         * @return
-         */
-        protected boolean continuous() {
-            return switcher.isOpened() && started.get();
-        }
-
-        /**
-         * 关闭
-         */
-        public void close() {
-            if (started.compareAndSet(true, false)) {
-                wake();
             }
         }
     }

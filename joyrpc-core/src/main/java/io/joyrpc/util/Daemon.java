@@ -1,5 +1,6 @@
 package io.joyrpc.util;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -34,6 +35,10 @@ public class Daemon {
      */
     protected Supplier<Boolean> condition;
     /**
+     * 时间等待
+     */
+    protected Waiter waiter;
+    /**
      * 线程
      */
     protected Thread thread;
@@ -50,7 +55,7 @@ public class Daemon {
      * @param interval 时间间隔
      */
     public Daemon(final String name, final Runnable runnable, final long interval) {
-        this(name, runnable, null, interval, interval, null);
+        this(name, runnable, null, interval, interval, null, null);
     }
 
     /**
@@ -62,7 +67,7 @@ public class Daemon {
      * @param interval 时间间隔
      */
     public Daemon(final String name, final Runnable runnable, final Consumer<Throwable> error, final long interval) {
-        this(name, runnable, error, interval, interval, null);
+        this(name, runnable, error, interval, interval, null, null);
     }
 
     /**
@@ -74,7 +79,7 @@ public class Daemon {
      * @param condition 判断是否要继续
      */
     public Daemon(final String name, final Runnable runnable, final long interval, final Supplier<Boolean> condition) {
-        this(name, runnable, null, interval, interval, condition);
+        this(name, runnable, null, interval, interval, condition, null);
     }
 
     /**
@@ -88,7 +93,20 @@ public class Daemon {
      */
     public Daemon(final String name, final Runnable runnable, final Consumer<Throwable> error, final long interval,
                   final Supplier<Boolean> condition) {
-        this(name, runnable, error, interval, interval, condition);
+        this(name, runnable, error, interval, interval, condition, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name      名称
+     * @param runnable  执行块
+     * @param interval  时间间隔
+     * @param condition 判断是否要继续
+     * @param waiter    等到时间
+     */
+    public Daemon(final String name, final Runnable runnable, final long interval, final Supplier<Boolean> condition, final Waiter waiter) {
+        this(name, runnable, null, interval, interval, condition, waiter);
     }
 
     /**
@@ -102,7 +120,7 @@ public class Daemon {
      * @param condition 判断是否要继续
      */
     public Daemon(final String name, final Runnable runnable, final Consumer<Throwable> error, final long interval,
-                  final long delay, final Supplier<Boolean> condition) {
+                  final long delay, final Supplier<Boolean> condition, final Waiter waiter) {
         if (name == null || name.isEmpty()) {
             throw new IllegalArgumentException("name can not be empty");
         } else if (runnable == null) {
@@ -114,6 +132,7 @@ public class Daemon {
         this.interval = interval;
         this.delay = delay;
         this.condition = condition;
+        this.waiter = waiter == null ? new Waiter.SleepWaiter() : waiter;
     }
 
 
@@ -153,7 +172,7 @@ public class Daemon {
                         }
                         if (time > 0) {
                             //等待一段时间
-                            await(time);
+                            waiter.await(time, TimeUnit.MILLISECONDS);
                             //再次判断是否继续
                             if (continuous()) {
                                 runnable.run();
@@ -176,16 +195,6 @@ public class Daemon {
     }
 
     /**
-     * 等待时间
-     *
-     * @param time
-     * @throws InterruptedException
-     */
-    protected void await(long time) throws InterruptedException {
-        Thread.sleep(time);
-    }
-
-    /**
      * 是否要继续
      *
      * @return
@@ -199,7 +208,10 @@ public class Daemon {
      */
     public void stop() {
         if (started.compareAndSet(true, false)) {
+            //唤醒等待线程
+            waiter.wake();
             if (thread != null) {
+                //线程终止
                 thread.interrupt();
                 thread = null;
             }

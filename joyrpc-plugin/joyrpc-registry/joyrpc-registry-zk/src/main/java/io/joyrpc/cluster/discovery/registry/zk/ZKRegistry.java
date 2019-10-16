@@ -39,6 +39,9 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.state.ConnectionState;
+import org.apache.curator.framework.state.ConnectionStateListener;
+import org.apache.curator.framework.state.ConnectionStateListenerDecorator;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.x.async.AsyncCuratorFramework;
 import org.apache.curator.x.async.api.CreateOption;
@@ -142,6 +145,14 @@ public class ZKRegistry extends AbstractRegistry {
                     .retryPolicy(new ExponentialBackoffRetry(1000, 3))
                     .build();
             curatorFramework.start();
+            curatorFramework.getConnectionStateListenable().addListener((curator, connState) -> {
+                if (connState.isConnected()) {
+                    logger.warn("zk connection state is changed to " + connState + ", ZKRegistry while be recover.");
+                    ZKRegistry.this.recover();
+                } else {
+                    logger.warn("zk connection state is changed to " + connState + ".");
+                }
+            });
             asyncCurator = AsyncCuratorFramework.wrap(curatorFramework);
             future.complete(null);
         } catch (Exception e) {

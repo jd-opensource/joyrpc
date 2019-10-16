@@ -18,6 +18,8 @@
 
 - 升级netty为4.1.42.Final版本
 
+- ZK注册中心添加连接监听，与ZK重连成功，触发recover
+
 ## 1.0.3(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

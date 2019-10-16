@@ -52,7 +52,7 @@
         <commons-compress.version>1.18</commons-compress.version>
         <byte-buddy.version>1.10.1</byte-buddy.version>
         <grpc.version>1.20.0</grpc.version>
-        <netty.version>4.1.36.Final</netty.version>
+        <netty.version>4.1.42.Final</netty.version>
         <hazelcast.version>3.12.3</hazelcast.version>
         <protobuf.version>3.7.1</protobuf.version>
 

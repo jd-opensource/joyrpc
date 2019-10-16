@@ -225,6 +225,7 @@ public class EtcdRegistry extends AbstractRegistry {
         cluster.close();
         config.close();
         leaseId = 0;
+        connected.set(false);
         return CompletableFuture.completedFuture(null);
     }
 

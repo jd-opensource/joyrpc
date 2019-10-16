@@ -217,6 +217,9 @@ public class BroadCastRegistry extends AbstractRegistry {
         } catch (Exception e) {
             logger.error(String.format("Error occurs while disconnect, caused by %s", e.getMessage()), e);
             future.completeExceptionally(e);
+        } finally {
+            connected.set(false);
+
         }
         return future;
     }

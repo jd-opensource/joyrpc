@@ -22,6 +22,7 @@ package io.joyrpc.event.jbus;
 
 import io.joyrpc.event.*;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.util.Daemon;
 
 import java.util.Map;
 import java.util.Set;
@@ -168,10 +169,21 @@ public class JEventBus implements EventBus {
      * 发布线程
      */
     protected static class Dispatcher<E extends Event> {
-
+        /**
+         * 名称
+         */
         protected String name;
+        /**
+         * 队列
+         */
         protected BlockingQueue<Message<E>> queue;
-        protected Thread thread;
+        /**
+         * 分发线程
+         */
+        protected Daemon daemon;
+        /**
+         * 状态
+         */
         protected AtomicBoolean started = new AtomicBoolean();
 
         public Dispatcher(String name, BlockingQueue<Message<E>> queue) {
@@ -179,10 +191,24 @@ public class JEventBus implements EventBus {
             this.queue = queue;
         }
 
+        /**
+         * 提供消息
+         *
+         * @param message
+         * @return
+         */
         public boolean offer(final Message<E> message) {
             return message == null ? false : queue.offer(message);
         }
 
+        /**
+         * 提供消息
+         *
+         * @param message
+         * @param timeout
+         * @param timeUnit
+         * @return
+         */
         public boolean offer(final Message<E> message, final long timeout, final TimeUnit timeUnit) {
             if (message != null) {
                 try {
@@ -193,32 +219,38 @@ public class JEventBus implements EventBus {
             return false;
         }
 
+        /**
+         * 开启
+         */
         public void start() {
             if (started.compareAndSet(false, true)) {
-                thread = new Thread(() -> {
-                    Message message;
-                    while (started.get() && !Thread.currentThread().isInterrupted()) {
-                        try {
-                            message = queue.poll(5000, TimeUnit.MILLISECONDS);
-                            if (message != null) {
-                                message.publish();
-                            }
-                        } catch (InterruptedException e) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
-                });
-                thread.setDaemon(true);
-                thread.setName(name);
-                thread.start();
+                daemon = new Daemon(name, () -> publish(), 0, () -> started.get());
+                daemon.start();
             }
         }
 
+        /**
+         * 获取消息并分发
+         */
+        protected void publish() {
+            try {
+                Message message = queue.poll(5000, TimeUnit.MILLISECONDS);
+                if (message != null) {
+                    message.publish();
+                }
+            } catch (InterruptedException e) {
+            }
+        }
+
+
+        /**
+         * 停止
+         */
         public void stop() {
             if (started.compareAndSet(true, false)) {
-                if (thread != null) {
-                    thread.interrupt();
-                    thread = null;
+                if (daemon != null) {
+                    daemon.stop();
+                    daemon = null;
                 }
             }
         }

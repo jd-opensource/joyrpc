@@ -161,7 +161,6 @@ public class Daemon {
                         } else {
                             runnable.run();
                         }
-
                     } catch (InterruptedException e) {
                         break;
                     } catch (Throwable e) {

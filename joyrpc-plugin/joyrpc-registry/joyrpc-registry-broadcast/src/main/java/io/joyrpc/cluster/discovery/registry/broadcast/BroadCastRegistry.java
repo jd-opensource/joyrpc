@@ -42,6 +42,7 @@ import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.Daemon;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -132,7 +132,7 @@ public class BroadCastRegistry extends AbstractRegistry {
     /**
      * consuner与provider与注册中心心跳task
      */
-    protected HeartbeatTask heartbeatTask;
+    protected Daemon daemon;
 
     public BroadCastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
@@ -167,11 +167,11 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             instance = Hazelcast.newHazelcastInstance(cfg);
-            heartbeatTask = new HeartbeatTask();
-            Thread heartbeatThread = new Thread(heartbeatTask);
-            heartbeatThread.setName("BroadCastRegistry-" + registryId + "-heartbeat-task");
-            heartbeatThread.setDaemon(true);
-            heartbeatThread.start();
+            daemon = new Daemon("BroadCastRegistry-" + registryId + "-heartbeat-task",
+                    () -> registers.forEach((key, meta) -> lease(meta)),
+                    e -> logger.error("Error occurs while leasing, caused by " + e.getMessage(), e),
+                    Math.max(15000, nodeExpiredTime / 3));
+            daemon.start();
             future.complete(null);
         } catch (Exception e) {
             logger.error(String.format("Error occurs while connect, caused by %s", e.getMessage()), e);
@@ -180,13 +180,36 @@ public class BroadCastRegistry extends AbstractRegistry {
         return future;
     }
 
+    /**
+     * 续约
+     *
+     * @param meta
+     */
+    protected void lease(final RegisterMeta meta) {
+        //registerTime不为0，说明已经注册，执行续期
+        if (meta.getRegisterTime() != 0) {
+            URL url = meta.getUrl();
+            String serviceRootKey = serviceRootKeyFunc.apply(url);
+            String nodeKey = serviceNodeKeyFunc.apply(url);
+            IMap<String, URL> map = instance.getMap(serviceRootKey);
+            //计算新的ttl，并续期
+            long newTtl = SystemClock.now() - meta.getRegisterTime() + nodeExpiredTime;
+            boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
+            //节点已经过期，重新添加回节点，并修改meta的registerTime
+            if (!isNotExpired) {
+                map.put(nodeKey, url, nodeExpiredTime, TimeUnit.MILLISECONDS);
+                meta.setRegisterTime(SystemClock.now());
+            }
+        }
+    }
+
     @Override
     protected CompletableFuture<Void> disconnect() {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
-            if (heartbeatTask != null) {
-                heartbeatTask.close();
-                heartbeatTask = null;
+            if (daemon != null) {
+                daemon.stop();
+                daemon = null;
             }
             instance.shutdown();
             future.complete(null);
@@ -445,56 +468,6 @@ public class BroadCastRegistry extends AbstractRegistry {
                 datum = new HashMap<>();
             }
             handler.handle(new ConfigEvent(BroadCastRegistry.this, null, FULL, version.incrementAndGet(), datum));
-        }
-    }
-
-    /**
-     * 定时续期任务Runnable
-     */
-    protected class HeartbeatTask implements Runnable {
-
-        /**
-         * 启动标识
-         */
-        protected AtomicBoolean started = new AtomicBoolean(true);
-
-        @Override
-        public void run() {
-            long sleep = Math.max(15000, nodeExpiredTime / 3);
-            while (started.get()) {
-                try {
-                    Thread.sleep(sleep);
-                    if (!started.get()) {
-                        break;
-                    }
-                    registers.forEach((key, meta) -> {
-                        //registerTime不为0，说明已经注册，执行续期
-                        if (meta.getRegisterTime() != 0) {
-                            URL url = meta.getUrl();
-                            String serviceRootKey = serviceRootKeyFunc.apply(url);
-                            String nodeKey = serviceNodeKeyFunc.apply(url);
-                            IMap<String, URL> map = instance.getMap(serviceRootKey);
-                            //计算新的ttl，并续期
-                            long newTtl = SystemClock.now() - meta.getRegisterTime() + nodeExpiredTime;
-                            boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
-                            //节点已经过期，重新添加回节点，并修改meta的registerTime
-                            if (!isNotExpired) {
-                                map.put(nodeKey, url, nodeExpiredTime, TimeUnit.MILLISECONDS);
-                                meta.setRegisterTime(SystemClock.now());
-                            }
-                        }
-                    });
-                } catch (Exception e) {
-                    logger.error(e.getMessage(), e);
-                }
-            }
-        }
-
-        /**
-         * 关闭
-         */
-        public void close() {
-            started.set(false);
         }
     }
 

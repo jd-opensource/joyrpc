@@ -9,9 +9,9 @@ package io.joyrpc.transport.heartbeat.simple;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,12 +26,16 @@ import io.joyrpc.transport.heartbeat.HeartbeatManager;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy.HeartbeatMode;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
+import io.joyrpc.util.Daemon;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.SystemClock;
 
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 /**
@@ -45,7 +49,7 @@ public class SimpleHeartbeatManager implements HeartbeatManager {
     /**
      * 检查现场
      */
-    protected Thread thread;
+    protected Daemon daemon;
     /**
      * 线程池
      */
@@ -66,21 +70,8 @@ public class SimpleHeartbeatManager implements HeartbeatManager {
         //多线程执行触发器
         executorService = Executors.newFixedThreadPool(3, new NamedThreadFactory("heartbeat-" + name, true));
         //单线程检查超时
-        thread = new Thread(() -> {
-            while (!Shutdown.isShutdown()) {
-                try {
-                    Thread.sleep(100L);
-                    if (!Shutdown.isShutdown()) {
-                        trigger();
-                    }
-                } catch (InterruptedException e) {
-                    break;
-                }
-            }
-        });
-        thread.setName("heartbeat-" + name);
-        thread.setDaemon(true);
-        thread.start();
+        daemon = new Daemon("heartbeat-" + name, () -> trigger(), 100L, () -> !Shutdown.isShutdown());
+        daemon.start();
         Shutdown.addHook(executorService::shutdown);
     }
 

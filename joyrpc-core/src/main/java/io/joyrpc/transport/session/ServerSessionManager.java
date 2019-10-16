@@ -47,9 +47,10 @@ public class ServerSessionManager {
      * 服务端会话管理器
      */
     protected ServerSessionManager() {
-        Daemon daemon = new Daemon("session-checker",
-                () -> channels.forEach(sch -> sch.getChannels().forEach(ch -> ch.getSessionManager().clearExpires())),
-                interval, () -> !Shutdown.isShutdown());
+        Daemon daemon = Daemon.builder().name("session-checker").interval(interval)
+                .condition(() -> !Shutdown.isShutdown())
+                .runnable(() -> channels.forEach(sch -> sch.getChannels().forEach(ch -> ch.getSessionManager().clearExpires())))
+                .build();
         // 启动会话管理器线程
         daemon.start();
     }

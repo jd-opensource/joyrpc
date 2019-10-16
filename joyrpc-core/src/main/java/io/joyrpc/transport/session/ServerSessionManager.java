@@ -9,9 +9,9 @@ package io.joyrpc.transport.session;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,54 +22,58 @@ package io.joyrpc.transport.session;
 
 
 import io.joyrpc.transport.channel.ServerChannel;
+import io.joyrpc.util.Daemon;
 import io.joyrpc.util.Shutdown;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
  * 服务端会话管理器
  */
 public class ServerSessionManager {
 
-    private final static Logger logger = LoggerFactory.getLogger(ServerSessionManager.class);
-
     /**
      * 会话检测周期
      */
-    protected final long checkScheduleTime = 10000;
+    protected long interval = 10000;
 
-    protected Set<ServerChannel> serverChannels = new HashSet<>();
+    /**
+     * 对应服务端的ServerTransport
+     */
+    protected Set<ServerChannel> channels = new CopyOnWriteArraySet<>();
 
-    private ServerSessionManager() {
+    /**
+     * 服务端会话管理器
+     */
+    protected ServerSessionManager() {
+        Daemon daemon = new Daemon("session-checker",
+                () -> channels.forEach(sch -> sch.getChannels().forEach(ch -> ch.getSessionManager().clearExpires())),
+                interval, () -> !Shutdown.isShutdown());
         // 启动会话管理器线程
-        Thread thread = new Thread(() -> {
-            while (!Shutdown.isShutdown()) {
-                try {
-                    Thread.sleep(checkScheduleTime);
-                    if (!Shutdown.isShutdown()) {
-                        serverChannels.forEach(sch -> sch.getChannels().forEach(ch -> ch.getSessionManager().clearExpires()));
-                    }
-                } catch (InterruptedException e) {
-                    logger.info("session checker is interrupted");
-                    break;
-                }
-            }
-        }, "session-checker");
-        thread.setDaemon(true);
-        thread.start();
+        daemon.start();
     }
 
-    public void add(ServerChannel serverChannel) {
-        serverChannels.add(serverChannel);
+    /**
+     * 添加通道
+     *
+     * @param channel
+     */
+    public void add(final ServerChannel channel) {
+        if (channel != null) {
+            channels.add(channel);
+        }
     }
 
-    public void remove(ServerChannel serverChannel) {
-        serverChannels.remove(serverChannel);
+    /**
+     * 移除通道
+     *
+     * @param channel
+     */
+    public void remove(final ServerChannel channel) {
+        if (channel != null) {
+            channels.remove(channel);
+        }
     }
 
     /**

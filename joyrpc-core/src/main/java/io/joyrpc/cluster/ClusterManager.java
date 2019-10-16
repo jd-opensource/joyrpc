@@ -9,9 +9,9 @@ package io.joyrpc.cluster;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ package io.joyrpc.cluster;
  */
 
 import io.joyrpc.thread.NamedThreadFactory;
+import io.joyrpc.util.Daemon;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.Switcher;
 
@@ -45,7 +46,7 @@ public class ClusterManager implements Closeable {
     /**
      * 检测线程
      */
-    protected Thread checker;
+    protected Daemon checker;
     /**
      * 执行线程池
      */
@@ -130,30 +131,23 @@ public class ClusterManager implements Closeable {
             executorService = new ThreadPoolExecutor(threads, threads, 5000L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<>(),
                     new NamedThreadFactory("clusterManager", true));
-            checker = new Thread(() -> {
-                //单线程检查
-                while (switcher.isOpened()) {
-                    try {
-                        Thread.sleep(interval);
-                        if (switcher.isOpened()) {
-                            clusters.values().forEach(v -> {
-                                //监管操作
-                                List<Runnable> runnables = v.supervise();
-                                if (runnables != null) {
-                                    for (Runnable runnable : runnables) {
-                                        executorService.submit(runnable);
-                                    }
-                                }
-                            });
-                        }
-                    } catch (InterruptedException e) {
-                    }
-                }
-            });
-            checker.setName("clusterManager");
-            checker.setDaemon(true);
+            checker = new Daemon("clusterManager", () -> clusters.values().forEach(v -> supervise(v)), interval, () -> switcher.isOpened());
             checker.start();
         });
+    }
+
+    /**
+     * 监管
+     *
+     * @param cluster
+     */
+    protected void supervise(final Cluster cluster) {
+        List<Runnable> runnables = cluster.supervise();
+        if (runnables != null) {
+            for (Runnable runnable : runnables) {
+                executorService.submit(runnable);
+            }
+        }
     }
 
     @Override

@@ -20,6 +20,7 @@ package io.joyrpc.health;
  * #L%
  */
 
+import io.joyrpc.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,23 +43,10 @@ public class HealthProbe {
      * 构造函数
      */
     protected HealthProbe() {
-        /**
-         * 启动一个线程定期检查
-         */
-        Thread thread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
-                    Thread.sleep(5000);
-                    state = diagnose();
-                } catch (InterruptedException e) {
-                    break;
-                } catch (Throwable e) {
-                    logger.error("Error occurs while diagnose,caused by " + e.getMessage(), e);
-                }
-            }
-        }, "doctor");
-        thread.setDaemon(true);
-        thread.start();
+        //启动一个线程定期检查
+        Daemon daemon = new Daemon("doctor", () -> state = diagnose(),
+                e -> logger.error("Error occurs while diagnose,caused by " + e.getMessage(), e), 5000);
+        daemon.start();
     }
 
     public HealthState getState() {

@@ -131,7 +131,10 @@ public class ClusterManager implements Closeable {
             executorService = new ThreadPoolExecutor(threads, threads, 5000L, TimeUnit.MILLISECONDS,
                     new LinkedBlockingQueue<>(),
                     new NamedThreadFactory("clusterManager", true));
-            checker = new Daemon("clusterManager", () -> clusters.values().forEach(v -> supervise(v)), interval, () -> switcher.isOpened());
+            checker = Daemon.builder().name("clusterManager").interval(interval)
+                    .condition(switcher::isOpened)
+                    .runnable(() -> clusters.values().forEach(v -> supervise(v)))
+                    .build();
             checker.start();
         });
     }

@@ -200,8 +200,12 @@ public class EtcdRegistry extends AbstractRegistry {
             } else {
                 leaseId = res.getID();
                 leaseErr.set(0);
-                daemon = new Daemon("EtcdRegistry-" + registryId + "-lease-task", () -> lease(),
-                        Math.max(timeToLive / 5, 10000), () -> switcher.isOpened(), new Waiter.MutexWaiter());
+                daemon = Daemon.builder().name("EtcdRegistry-" + registryId + "-lease-task")
+                        .interval(Math.max(timeToLive / 5, 10000))
+                        .condition(switcher::isOpened)
+                        .runnable(this::lease)
+                        .waiter(new Waiter.MutexWaiter())
+                        .build();
                 daemon.start();
                 future.complete(null);
             }

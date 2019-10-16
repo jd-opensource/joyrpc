@@ -70,7 +70,10 @@ public class SimpleHeartbeatManager implements HeartbeatManager {
         //多线程执行触发器
         executorService = Executors.newFixedThreadPool(3, new NamedThreadFactory("heartbeat-" + name, true));
         //单线程检查超时
-        daemon = new Daemon("heartbeat-" + name, () -> trigger(), 100L, () -> !Shutdown.isShutdown());
+        daemon = Daemon.builder().name("heartbeat-" + name).interval(100L)
+                .condition(() -> !Shutdown.isShutdown())
+                .runnable(this::trigger)
+                .build();
         daemon.start();
         Shutdown.addHook(executorService::shutdown);
     }

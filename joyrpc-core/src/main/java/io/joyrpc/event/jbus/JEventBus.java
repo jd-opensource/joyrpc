@@ -224,7 +224,7 @@ public class JEventBus implements EventBus {
          */
         public void start() {
             if (started.compareAndSet(false, true)) {
-                daemon = new Daemon(name, () -> publish(), 0, () -> started.get());
+                daemon = Daemon.builder().name(name).condition(started::get).runnable(this::publish).build();
                 daemon.start();
             }
         }

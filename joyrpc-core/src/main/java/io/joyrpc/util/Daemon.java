@@ -67,21 +67,12 @@ public class Daemon {
     public Daemon(final String name, final Runnable prepare, final Runnable runnable, final long interval, final long delay,
                   final Consumer<Throwable> error, final long fault,
                   final Supplier<Boolean> condition, final Waiter waiter) {
-        if (name == null || name.isEmpty()) {
-            throw new IllegalArgumentException("name can not be empty");
-        } else if (runnable == null) {
-            throw new IllegalArgumentException("runnable can not be null");
-        }
-        this.name = name;
-        this.callable = () -> {
-            runnable.run();
-            return interval;
-        };
-        this.error = error;
-        this.delay = delay;
-        this.fault = fault;
-        this.condition = condition;
-        this.waiter = waiter == null ? new Waiter.SleepWaiter() : waiter;
+        this(name, prepare,
+                () -> {
+                    runnable.run();
+                    return interval;
+                },
+                delay, error, fault, condition, waiter);
     }
 
     /**

@@ -280,14 +280,21 @@ public class ZKRegistry extends AbstractRegistry {
             CompletableFuture<Void> future = new CompletableFuture<>();
             SubscriberExecutor old = subscribers.putIfAbsent(function.apply(urlKey.getUrl()), subscriber);
             try {
-                if (old == null || old.getStatus() == SubscriberExecutor.Status.CLOSED) {
+                //old不存在，说明是第一次注册，或者之前反注册过，启动入参subscriber
+                //old存在，且状态为CLOSED，说明之前注册过，但没有启动成功，这里启动old
+                //old存在，且状态不是CLOSED，这里防止重复操作，直接返回
+                if (old == null) {
                     subscriber.start();
+                } else if (old.getStatus() == SubscriberExecutor.Status.CLOSED) {
+                    old.start();
                 }
                 future.complete(null);
             } catch (Exception e) {
                 try {
                     if (old == null) {
                         subscriber.close();
+                    } else {
+                        old.close();
                     }
                 } catch (Exception ex) {
                 }
@@ -308,7 +315,10 @@ public class ZKRegistry extends AbstractRegistry {
             try {
                 SubscriberExecutor subscriber = subscribers.remove(function.apply(urlKey.getUrl()));
                 if (subscriber != null) {
-                    subscriber.close();
+                    try {
+                        subscriber.close();
+                    } catch (Exception e) {
+                    }
                 }
                 future.complete(null);
             } catch (Exception e) {

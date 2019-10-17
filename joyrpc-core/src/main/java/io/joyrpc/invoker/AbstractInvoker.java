@@ -23,6 +23,8 @@ package io.joyrpc.invoker;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
+import io.joyrpc.constants.Constants;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -155,7 +157,7 @@ public abstract class AbstractInvoker<T> implements Invoker {
 
     @Override
     public synchronized CompletableFuture<Void> close() {
-        return close(ENVIRONMENT.get().getBoolean(Shutdown.GRACEFULLY_SHUTDOWN, Boolean.TRUE));
+        return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**

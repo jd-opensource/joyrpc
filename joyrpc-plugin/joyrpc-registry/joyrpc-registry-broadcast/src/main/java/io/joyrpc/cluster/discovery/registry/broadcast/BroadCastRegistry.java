@@ -22,7 +22,10 @@ package io.joyrpc.cluster.discovery.registry.broadcast;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.*;
-import com.hazelcast.map.listener.*;
+import com.hazelcast.map.listener.EntryAddedListener;
+import com.hazelcast.map.listener.EntryExpiredListener;
+import com.hazelcast.map.listener.EntryRemovedListener;
+import com.hazelcast.map.listener.EntryUpdatedListener;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
@@ -45,7 +48,6 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -171,13 +173,13 @@ public class BroadCastRegistry extends AbstractRegistry {
                     logger.warn("hazelcast instance is shutting down now, while be deregistry services.");
                     List<CompletableFuture<URL>> futures = new ArrayList<>();
                     registers.forEach((k, meta) -> {
-                        logger.warn("BroadCastRegistry deregistry " + k);
+                        logger.info("deregister " + k);
                         futures.add(deregister(meta.getUrl()));
                     });
                     try {
                         Futures.allOf(futures).get();
                     } catch (Exception e) {
-                        logger.error("Error occurs while deregistry services, caused by " + e.getMessage(), e);
+                        //忽略掉关闭的异常
                     }
                 }
             });

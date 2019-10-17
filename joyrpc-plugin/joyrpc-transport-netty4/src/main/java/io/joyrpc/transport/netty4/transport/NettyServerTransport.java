@@ -131,7 +131,7 @@ public class NettyServerTransport extends AbstractServerTransport {
 
     @Override
     public void closeChannel(final Consumer<AsyncResult<Channel>> consumer) {
-        logger.info("destroy the server at port:{} now...", url.getPort());
+        logger.info(String.format("destroy the server at port:%d now...", url.getPort()));
         status.set(Status.CLOSING);
         List<Future> futures = new LinkedList<>();
         if (bossGroup != null) {

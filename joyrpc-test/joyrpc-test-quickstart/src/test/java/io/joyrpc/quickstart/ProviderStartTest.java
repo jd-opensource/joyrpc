@@ -54,4 +54,30 @@ public class ProviderStartTest {
 
         Thread.currentThread().join();
     }
+
+    @Test
+    public void exportTest1() throws InterruptedException {
+        ServerConfig serverConfig = new ServerConfig();
+        serverConfig.setPort(22001);
+
+        RegistryConfig registryConfig = new RegistryConfig();
+        registryConfig.setRegistry("broadcast");
+
+        DemoService demoService = new DemoServiceImpl();
+
+        ProviderConfig<DemoService> providerConfig = new ProviderConfig<DemoService>();
+        providerConfig.setServerConfig(serverConfig);
+        providerConfig.setRegistry(registryConfig);
+        providerConfig.setInterfaceClazz(DemoService.class.getName());
+        providerConfig.setRef(demoService);
+        providerConfig.setAlias("JOY-DEMO");
+        providerConfig.exportAndOpen().whenComplete((v, t) -> {
+            if (t != null) {
+                t.printStackTrace();
+                Thread.currentThread().interrupt();
+            }
+        });
+
+        Thread.currentThread().join();
+    }
 }

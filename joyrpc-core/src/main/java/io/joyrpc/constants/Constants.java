@@ -48,10 +48,6 @@ public class Constants {
      * 默认超时时间
      */
     public static final int DEFAULT_TIMEOUT = 5000;
-    /**
-     * 优雅停机
-     */
-    public static final String GRACEFULLY_SHUTDOWN = "gracefullyShutdown";
 
     /**
      * 默认高水位值
@@ -440,6 +436,19 @@ public class Constants {
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
     public static final URLOption<String> CHANNEL_FACTORY_OPTION = new URLOption<>("channelFactory", "shared");
     public static final URLOption<String> AUTHENTICATION_OPTION = new URLOption<>("authentication", "");
+
+    /**
+     * 优雅下线
+     */
+    public static final URLOption<Boolean> GRACEFULLY_SHUTDOWN_OPTION = new URLOption<>("gracefullyShutdown", Boolean.TRUE);
+    /**
+     * 通知客户端下线超时时间
+     */
+    public static final URLOption<Long> OFFLINE_TIMEOUT_OPTION = new URLOption<>("offlineTimeout", 5000L);
+    /**
+     * 关闭的超时时间
+     */
+    public static final URLOption<Long> SHUTDOWN_TIMEOUT_OPTION = new URLOption<>("shutdownTimeout", 15000L);
 
     /**
      * 失败重试次数

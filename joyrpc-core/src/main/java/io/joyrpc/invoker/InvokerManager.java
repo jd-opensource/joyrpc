@@ -9,9 +9,9 @@ package io.joyrpc.invoker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -92,11 +92,6 @@ public class InvokerManager {
     public static final InvokerManager INSTANCE = new InvokerManager();
 
     /**
-     * 广播下线超时时间
-     */
-    public static long offlineTimeout = 5000L;
-
-    /**
      * 业务服务引用
      */
     protected Map<String, Refer> refers = new ConcurrentHashMap<>();
@@ -129,7 +124,7 @@ public class InvokerManager {
     protected Map<Long, String> interfaceIds = new ConcurrentHashMap<>();
 
     protected InvokerManager() {
-        Shutdown.addHook(new Shutdown.HookAdapter(this::close, 0));
+        Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
     }
 
     /**
@@ -641,7 +636,7 @@ public class InvokerManager {
      * @return
      */
     public CompletableFuture<Void> close() {
-        return close(ENVIRONMENT.get().getBoolean(Shutdown.GRACEFULLY_SHUTDOWN, Boolean.TRUE));
+        return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
@@ -654,7 +649,7 @@ public class InvokerManager {
         CompletableFuture<Void> result = new CompletableFuture<>();
         //保存所有的注册中心
         Set<Registry> registries = new HashSet<>(5);
-        long timeout = ENVIRONMENT.get().getNatural(Shutdown.OFFLINE_TIMEOUT, offlineTimeout);
+        long timeout = GlobalContext.asParametric().getPositiveLong(OFFLINE_TIMEOUT_OPTION);
         //广播下线消息
         offline(timeout, gracefully).whenComplete((k, s) ->
                 //关闭服务

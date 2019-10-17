@@ -22,7 +22,9 @@
 
 - 修复ZK注册中心初始化时未成功连接到集群，后续连接到集群，却不重新发起服务订阅与注册的问题
 
-- 优化BroadCast注册中心，添加map备份设置
+- 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
+
+- 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点
 
 ## 1.0.3(2019-10-12)
 

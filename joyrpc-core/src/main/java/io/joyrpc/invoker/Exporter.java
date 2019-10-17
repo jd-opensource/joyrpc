@@ -54,7 +54,6 @@ import static io.joyrpc.util.ClassUtils.isReturnFuture;
  * @date: 15/1/2019
  */
 public class Exporter<T> extends AbstractInvoker<T> {
-    private static final Logger logger = LoggerFactory.getLogger(Exporter.class);
     /**
      * 配置
      */
@@ -173,11 +172,11 @@ public class Exporter<T> extends AbstractInvoker<T> {
 
     @Override
     protected CompletableFuture<Void> doClose() {
+
         CompletableFuture<Void> result = new CompletableFuture<>();
         if (closing != null) {
             closing.accept(this);
         }
-
         //关闭服务
         if (server != null) {
             server.close(o -> {

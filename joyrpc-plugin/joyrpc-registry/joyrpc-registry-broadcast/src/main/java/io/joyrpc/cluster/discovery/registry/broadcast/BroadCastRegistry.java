@@ -304,6 +304,9 @@ public class BroadCastRegistry extends AbstractRegistry {
                     return map.addEntryListener(listener, true);
                 });
                 future.complete(null);
+            } catch (HazelcastInstanceNotActiveException e) {
+                logger.error(String.format("Error occurs while subscribe of %s, caused by %s", urlKey.getKey(), e.getMessage()));
+                future.completeExceptionally(e);
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while subscribe of %s, caused by %s", urlKey.getKey(), e.getMessage()), e);
                 future.completeExceptionally(e);
@@ -324,6 +327,9 @@ public class BroadCastRegistry extends AbstractRegistry {
                 IMap map = instance.getMap(function.apply(urlKey.getUrl()));
                 map.removeEntryListener(listenerId);
                 future.complete(null);
+            } catch (HazelcastInstanceNotActiveException e) {
+                logger.error(String.format("Error occurs while unsubscribe of %s, caused by %s", urlKey.getKey(), e.getMessage()));
+                future.completeExceptionally(e);
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while unsubscribe of %s, caused by %s", urlKey.getKey(), e.getMessage()), e);
                 future.completeExceptionally(e);

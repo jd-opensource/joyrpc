@@ -290,13 +290,10 @@ public class ZKRegistry extends AbstractRegistry {
                 }
                 future.complete(null);
             } catch (Exception e) {
-                try {
-                    if (old == null) {
-                        subscriber.close();
-                    } else {
-                        old.close();
-                    }
-                } catch (Exception ex) {
+                if (old == null) {
+                    subscriber.close();
+                } else {
+                    old.close();
                 }
                 logger.error(e.getMessage(), e);
                 future.completeExceptionally(e);
@@ -315,10 +312,7 @@ public class ZKRegistry extends AbstractRegistry {
             try {
                 SubscriberExecutor subscriber = subscribers.remove(function.apply(urlKey.getUrl()));
                 if (subscriber != null) {
-                    try {
-                        subscriber.close();
-                    } catch (Exception e) {
-                    }
+                    subscriber.close();
                 }
                 future.complete(null);
             } catch (Exception e) {
@@ -344,10 +338,8 @@ public class ZKRegistry extends AbstractRegistry {
 
         /**
          * 终止订阅
-         *
-         * @throws Exception
          */
-        void close() throws Exception;
+        void close();
 
         /**
          * 获取SubscriberExecutor启动状态
@@ -487,10 +479,14 @@ public class ZKRegistry extends AbstractRegistry {
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             status = Status.CLOSED;
             //终止监听
-            pathChildrenCache.close();
+            try {
+                pathChildrenCache.close();
+            } catch (Throwable e) {
+                //内部实现不抛异常，忽略
+            }
         }
 
         @Override
@@ -575,9 +571,13 @@ public class ZKRegistry extends AbstractRegistry {
         }
 
         @Override
-        public void close() throws Exception {
+        public void close() {
             status = Status.CLOSED;
-            nodeCache.close();
+            try {
+                nodeCache.close();
+            } catch (Throwable e) {
+                //内部实现不抛异常，忽略
+            }
         }
 
         @Override

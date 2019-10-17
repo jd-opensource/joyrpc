@@ -36,11 +36,11 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
+import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.util.Daemon;
-import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,7 +53,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static com.hazelcast.core.LifecycleEvent.LifecycleState.SHUTTING_DOWN;
+import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.event.UpdateEvent.UpdateType.UPDATE;
@@ -141,6 +141,17 @@ public class BroadCastRegistry extends AbstractRegistry {
     public BroadCastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.cfg = new Config();
+        int cpus = ENVIRONMENT.get().getInteger(Environment.CPU_CORES) * 2;
+        Properties properties = cfg.getProperties();
+        properties.setProperty("hazelcast.operation.thread.count", String.valueOf(cpus));
+        properties.setProperty("hazelcast.operation.generic.thread.count", String.valueOf(cpus));
+        properties.setProperty("hazelcast.memcache.enabled", "false");
+        properties.setProperty("hazelcast.rest.enabled", "false");
+        //从url里面获取hazelcast参数
+        properties.putAll(url.startsWith("hazelcast."));
+        //不创建关闭钩子
+        properties.setProperty("hazelcast.shutdownhook.enabled", "false");
+
         //同步复制，可以读取从
         cfg.getMapConfig("default").setBackupCount(url.getInteger(BACKUP_COUNT)).setReadBackupData(true);
         cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
@@ -168,9 +179,9 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             instance = Hazelcast.newHazelcastInstance(cfg);
-            instance.getLifecycleService().addLifecycleListener(event -> {
+            /*instance.getLifecycleService().addLifecycleListener(event -> {
                 if (event.getState() == SHUTTING_DOWN) {
-                    logger.warn("hazelcast instance is shutting down now, while be deregistry services.");
+                    logger.warn("hazelcast instance is shutting down now.");
                     List<CompletableFuture<URL>> futures = new ArrayList<>();
                     registers.forEach((k, meta) -> {
                         logger.info("deregister " + k);
@@ -182,7 +193,7 @@ public class BroadCastRegistry extends AbstractRegistry {
                         //忽略掉关闭的异常
                     }
                 }
-            });
+            });*/
             daemon = Daemon.builder().name("BroadCastRegistry-" + registryId + "-heartbeat-task")
                     .interval(Math.max(15000, nodeExpiredTime / 3))
                     .runnable(() -> registers.forEach((key, meta) -> lease(meta)))

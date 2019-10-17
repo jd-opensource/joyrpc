@@ -324,8 +324,10 @@ public class BroadCastRegistry extends AbstractRegistry {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
                 String listenerId = listenerIds.remove(urlKey.getKey());
-                IMap map = instance.getMap(function.apply(urlKey.getUrl()));
-                map.removeEntryListener(listenerId);
+                if (listenerId != null) {
+                    IMap map = instance.getMap(function.apply(urlKey.getUrl()));
+                    map.removeEntryListener(listenerId);
+                }
                 future.complete(null);
             } catch (HazelcastInstanceNotActiveException e) {
                 logger.error(String.format("Error occurs while unsubscribe of %s, caused by %s", urlKey.getKey(), e.getMessage()));

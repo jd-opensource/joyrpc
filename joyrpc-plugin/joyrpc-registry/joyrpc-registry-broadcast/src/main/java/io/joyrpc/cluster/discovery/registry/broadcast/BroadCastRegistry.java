@@ -49,6 +49,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static io.joyrpc.constants.Constants.*;
@@ -213,9 +214,11 @@ public class BroadCastRegistry extends AbstractRegistry {
     protected CompletableFuture<Void> doRegister(URLKey url) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
-            IMap<String, URL> serviceNodes = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
-            serviceNodes.put(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), nodeExpiredTime, TimeUnit.MILLISECONDS);
-            future.complete(null);
+            IMap<String, URL> iMap = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
+            iMap.putAsync(serviceNodeKeyFunc.apply(url.getUrl()), url.getUrl(), nodeExpiredTime, TimeUnit.MILLISECONDS)
+                    .andThen(new AsyncCallback<>(future,
+                            e -> logger.error(String.format("Error occurs while do register of %s, caused by %s",
+                                    url.getKey(), e.getMessage()), e)));
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do register of %s, caused by %s", url.getKey(), e.getMessage()), e);
             future.completeExceptionally(e);
@@ -227,9 +230,12 @@ public class BroadCastRegistry extends AbstractRegistry {
     protected CompletableFuture<Void> doDeregister(URLKey url) {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
-            IMap<String, URL> serviceNodes = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
-            serviceNodes.remove(serviceNodeKeyFunc.apply(url.getUrl()));
-            future.complete(null);
+            IMap<String, URL> iMap = instance.getMap(serviceRootKeyFunc.apply(url.getUrl()));
+            iMap.removeAsync(serviceNodeKeyFunc.apply(url.getUrl())).andThen(
+                    new AsyncCallback<>(future,
+                            e -> logger.error(String.format("Error occurs while do deregister of %s, caused by %s",
+                                    url.getKey(), e.getMessage()), e)));
+
         } catch (HazelcastInstanceNotActiveException e) {
             future.completeExceptionally(e);
         } catch (Exception e) {
@@ -456,6 +462,50 @@ public class BroadCastRegistry extends AbstractRegistry {
                 datum = new HashMap<>();
             }
             handler.handle(new ConfigEvent(BroadCastRegistry.this, null, FULL, version.incrementAndGet(), datum));
+        }
+    }
+
+    /**
+     * Hazelcast的异步回调
+     *
+     * @param <V>
+     */
+    protected static class AsyncCallback<V> implements ExecutionCallback<V> {
+
+        protected CompletableFuture<Void> future;
+        protected Consumer<Throwable> error;
+
+        /**
+         * 构造函数
+         *
+         * @param future
+         */
+        public AsyncCallback(CompletableFuture<Void> future) {
+            this.future = future;
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param future
+         * @param error
+         */
+        public AsyncCallback(CompletableFuture<Void> future, Consumer<Throwable> error) {
+            this.future = future;
+            this.error = error;
+        }
+
+        @Override
+        public void onResponse(V v) {
+            future.complete(null);
+        }
+
+        @Override
+        public void onFailure(Throwable e) {
+            if (error != null) {
+                error.accept(e);
+            }
+            future.completeExceptionally(e);
         }
     }
 

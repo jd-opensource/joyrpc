@@ -37,6 +37,7 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.util.Daemon;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,11 +45,13 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static com.hazelcast.core.LifecycleEvent.LifecycleState.SHUTTING_DOWN;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.event.UpdateEvent.UpdateType.UPDATE;
@@ -163,6 +166,21 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             instance = Hazelcast.newHazelcastInstance(cfg);
+            instance.getLifecycleService().addLifecycleListener(event -> {
+                if (event.getState() == SHUTTING_DOWN) {
+                    logger.warn("hazelcast instance is shutting down now, while be deregistry services.");
+                    List<CompletableFuture<Void>> futures = new ArrayList<>();
+                    registers.forEach((k, meta) -> {
+                        logger.warn("BroadCastRegistry deregistry " + k);
+                        futures.add(doDeregister(meta));
+                    });
+                    try {
+                        Futures.allOf(futures).get();
+                    } catch (Exception e) {
+                        logger.error("Error occurs while deregistry services, caused by " + e.getMessage(), e);
+                    }
+                }
+            });
             daemon = Daemon.builder().name("BroadCastRegistry-" + registryId + "-heartbeat-task")
                     .interval(Math.max(15000, nodeExpiredTime / 3))
                     .runnable(() -> registers.forEach((key, meta) -> lease(meta)))

@@ -280,7 +280,7 @@ public class ZKRegistry extends AbstractRegistry {
             CompletableFuture<Void> future = new CompletableFuture<>();
             SubscriberExecutor old = subscribers.putIfAbsent(function.apply(urlKey.getUrl()), subscriber);
             try {
-                if (old == null) {
+                if (old == null || old.getStatus() == SubscriberExecutor.Status.CLOSED) {
                     subscriber.start();
                 }
                 future.complete(null);
@@ -338,6 +338,20 @@ public class ZKRegistry extends AbstractRegistry {
          * @throws Exception
          */
         void close() throws Exception;
+
+        /**
+         * 获取SubscriberExecutor启动状态
+         *
+         * @return
+         */
+        Status getStatus();
+
+        /**
+         * SubscriberExecutor启动状态
+         */
+        enum Status {
+            CLOSED, STARTING, STARTED, CLOSING
+        }
     }
 
     /**
@@ -370,6 +384,10 @@ public class ZKRegistry extends AbstractRegistry {
          * 是否已经初始化
          */
         protected AtomicBoolean initialized = new AtomicBoolean();
+        /**
+         * 启动状态
+         */
+        protected Status status;
 
         /**
          * 构造方法
@@ -384,27 +402,34 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         public void start() throws Exception {
+            status = Status.STARTING;
             path = clusterFunction.apply(url);
-            //添加监听
-            pathChildrenCache = new PathChildrenCache(asyncCurator.unwrap(), path, true);
-            pathChildrenCache.getListenable().addListener((curatorFramework, curatorEvent) -> {
-                switch (curatorEvent.getType()) {
-                    case CHILD_ADDED:
-                        onUpdateShardEvent(ShardEventType.ADD, curatorEvent.getData());
-                        break;
-                    case CHILD_UPDATED:
-                        onUpdateShardEvent(ShardEventType.UPDATE, curatorEvent.getData());
-                        break;
-                    case CHILD_REMOVED:
-                        onUpdateShardEvent(ShardEventType.DELETE, curatorEvent.getData());
-                        break;
-                    case INITIALIZED:
-                        onInitShardsEvent(curatorEvent.getInitialData());
-                        break;
-                }
-            });
-            //启动监听
-            pathChildrenCache.start(POST_INITIALIZED_EVENT);
+            try {
+                //添加监听
+                pathChildrenCache = new PathChildrenCache(asyncCurator.unwrap(), path, true);
+                pathChildrenCache.getListenable().addListener((curatorFramework, curatorEvent) -> {
+                    switch (curatorEvent.getType()) {
+                        case CHILD_ADDED:
+                            onUpdateShardEvent(ShardEventType.ADD, curatorEvent.getData());
+                            break;
+                        case CHILD_UPDATED:
+                            onUpdateShardEvent(ShardEventType.UPDATE, curatorEvent.getData());
+                            break;
+                        case CHILD_REMOVED:
+                            onUpdateShardEvent(ShardEventType.DELETE, curatorEvent.getData());
+                            break;
+                        case INITIALIZED:
+                            onInitShardsEvent(curatorEvent.getInitialData());
+                            break;
+                    }
+                });
+                //启动监听
+                pathChildrenCache.start(POST_INITIALIZED_EVENT);
+                status = Status.STARTED;
+            } catch (Exception e) {
+                status = Status.CLOSED;
+                throw e;
+            }
         }
 
         /**
@@ -453,8 +478,14 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         public void close() throws Exception {
+            status = Status.CLOSED;
             //终止监听
             pathChildrenCache.close();
+        }
+
+        @Override
+        public Status getStatus() {
+            return status;
         }
     }
 
@@ -484,6 +515,11 @@ public class ZKRegistry extends AbstractRegistry {
         protected AtomicLong version = new AtomicLong();
 
         /**
+         * 启动状态
+         */
+        protected Status status;
+
+        /**
          * 构造方法
          *
          * @param url
@@ -496,34 +532,47 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         public void start() throws Exception {
-            String path = configFunction.apply(url);
-            Stat pathStat = asyncCurator.unwrap().checkExists().creatingParentsIfNeeded().forPath(path);
-            if (pathStat == null) {
-                asyncCurator.unwrap().create().creatingParentsIfNeeded().forPath(path, new byte[0]);
-            }
-            nodeCache = new NodeCache(asyncCurator.unwrap(), path);
-            nodeCache.getListenable().addListener(() -> {
-                ChildData childData = nodeCache.getCurrentData();
-                Map<String, String> datum;
-                if (childData == null) {
-                    //被删掉了
-                    datum = new HashMap<>();
-                } else {
-                    byte[] data = childData.getData();
-                    if (data != null && data.length > 0) {
-                        datum = JSON.get().parseObject(new String(data, UTF_8), Map.class);
-                    } else {
-                        datum = new HashMap<>();
-                    }
+            status = Status.STARTING;
+            try {
+                String path = configFunction.apply(url);
+                Stat pathStat = asyncCurator.unwrap().checkExists().creatingParentsIfNeeded().forPath(path);
+                if (pathStat == null) {
+                    asyncCurator.unwrap().create().creatingParentsIfNeeded().forPath(path, new byte[0]);
                 }
-                handler.handle(new ConfigEvent(ZKRegistry.this, null, FULL, version.incrementAndGet(), datum));
-            });
-            nodeCache.start();
+                nodeCache = new NodeCache(asyncCurator.unwrap(), path);
+                nodeCache.getListenable().addListener(() -> {
+                    ChildData childData = nodeCache.getCurrentData();
+                    Map<String, String> datum;
+                    if (childData == null) {
+                        //被删掉了
+                        datum = new HashMap<>();
+                    } else {
+                        byte[] data = childData.getData();
+                        if (data != null && data.length > 0) {
+                            datum = JSON.get().parseObject(new String(data, UTF_8), Map.class);
+                        } else {
+                            datum = new HashMap<>();
+                        }
+                    }
+                    handler.handle(new ConfigEvent(ZKRegistry.this, null, FULL, version.incrementAndGet(), datum));
+                });
+                nodeCache.start();
+                status = Status.STARTED;
+            } catch (Exception e) {
+                status = Status.CLOSED;
+                throw e;
+            }
         }
 
         @Override
         public void close() throws Exception {
+            status = Status.CLOSED;
             nodeCache.close();
+        }
+
+        @Override
+        public Status getStatus() {
+            return status;
         }
     }
 }

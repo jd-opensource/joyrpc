@@ -169,10 +169,10 @@ public class BroadCastRegistry extends AbstractRegistry {
             instance.getLifecycleService().addLifecycleListener(event -> {
                 if (event.getState() == SHUTTING_DOWN) {
                     logger.warn("hazelcast instance is shutting down now, while be deregistry services.");
-                    List<CompletableFuture<Void>> futures = new ArrayList<>();
+                    List<CompletableFuture<URL>> futures = new ArrayList<>();
                     registers.forEach((k, meta) -> {
                         logger.warn("BroadCastRegistry deregistry " + k);
-                        futures.add(doDeregister(meta));
+                        futures.add(deregister(meta.getUrl()));
                     });
                     try {
                         Futures.allOf(futures).get();

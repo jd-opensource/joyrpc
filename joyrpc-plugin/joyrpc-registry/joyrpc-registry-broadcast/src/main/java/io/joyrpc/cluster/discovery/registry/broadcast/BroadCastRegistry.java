@@ -21,9 +21,6 @@ package io.joyrpc.cluster.discovery.registry.broadcast;
  */
 
 import com.hazelcast.config.Config;
-import com.hazelcast.config.GroupConfig;
-import com.hazelcast.config.MulticastConfig;
-import com.hazelcast.config.NetworkConfig;
 import com.hazelcast.core.*;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryExpiredListener;
@@ -137,15 +134,10 @@ public class BroadCastRegistry extends AbstractRegistry {
     public BroadCastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.cfg = new Config();
-        GroupConfig groupConfig = cfg.getGroupConfig();
-        groupConfig.setName(url.getString(BROADCAST_GROUP_NAME));
-        NetworkConfig networkConfig = cfg.getNetworkConfig();
-        networkConfig.setPort(url.getInteger(NETWORK_PORT));
-        networkConfig.setPortCount(url.getInteger(NETWORK_PORT_COUNT));
-        MulticastConfig multicastConfig = networkConfig.getJoin().getMulticastConfig();
-        multicastConfig.setEnabled(true);
-        multicastConfig.setMulticastGroup(url.getString(MULTICAST_GROUP));
-        multicastConfig.setMulticastPort(url.getInteger(MULTICAST_PORT));
+        cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
+        cfg.getNetworkConfig().setPort(url.getInteger(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
+        cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)
+                .setMulticastGroup(url.getString(MULTICAST_GROUP)).setMulticastPort(url.getInteger(MULTICAST_PORT));
         this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
         if (root.charAt(0) == '/') {
@@ -206,22 +198,15 @@ public class BroadCastRegistry extends AbstractRegistry {
 
     @Override
     protected CompletableFuture<Void> disconnect() {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        try {
-            if (daemon != null) {
-                daemon.stop();
-                daemon = null;
-            }
-            instance.shutdown();
-            future.complete(null);
-        } catch (Exception e) {
-            logger.error(String.format("Error occurs while disconnect, caused by %s", e.getMessage()), e);
-            future.completeExceptionally(e);
-        } finally {
-            connected.set(false);
-
+        if (daemon != null) {
+            daemon.stop();
+            daemon = null;
         }
-        return future;
+        if (instance != null) {
+            instance.shutdown();
+        }
+        connected.set(false);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override
@@ -234,7 +219,6 @@ public class BroadCastRegistry extends AbstractRegistry {
         } catch (Exception e) {
             logger.error(String.format("Error occurs while do register of %s, caused by %s", url.getKey(), e.getMessage()), e);
             future.completeExceptionally(e);
-
         }
         return future;
     }

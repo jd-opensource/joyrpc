@@ -160,16 +160,11 @@ public class ZKRegistry extends AbstractRegistry {
 
     @Override
     protected CompletableFuture<Void> disconnect() {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        try {
+        if (asyncCurator != null) {
             asyncCurator.unwrap().close();
-            future.complete(null);
-        } catch (Exception e) {
-            future.completeExceptionally(e);
-        } finally {
-            connected.set(false);
         }
-        return future;
+        connected.set(false);
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

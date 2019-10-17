@@ -22,10 +22,7 @@ package io.joyrpc.cluster.discovery.registry.broadcast;
 
 import com.hazelcast.config.Config;
 import com.hazelcast.core.*;
-import com.hazelcast.map.listener.EntryAddedListener;
-import com.hazelcast.map.listener.EntryExpiredListener;
-import com.hazelcast.map.listener.EntryRemovedListener;
-import com.hazelcast.map.listener.EntryUpdatedListener;
+import com.hazelcast.map.listener.*;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
@@ -63,6 +60,10 @@ public class BroadCastRegistry extends AbstractRegistry {
 
     private static final Logger logger = LoggerFactory.getLogger(BroadCastRegistry.class);
 
+    /**
+     * map备份个数
+     */
+    public static final URLOption<Integer> MAP_BACKUP_COUNT = new URLOption<>("mapBackupCount", 3);
     /**
      * hazelcast集群分组名称
      */
@@ -135,6 +136,7 @@ public class BroadCastRegistry extends AbstractRegistry {
     public BroadCastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.cfg = new Config();
+        cfg.getMapConfig("default").setBackupCount(url.getInteger(MAP_BACKUP_COUNT)).setReadBackupData(true);
         cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
         cfg.getNetworkConfig().setPort(url.getInteger(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)

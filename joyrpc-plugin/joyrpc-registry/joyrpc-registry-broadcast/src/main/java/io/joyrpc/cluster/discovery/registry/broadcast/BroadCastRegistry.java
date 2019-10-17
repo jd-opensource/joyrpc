@@ -87,7 +87,7 @@ public class BroadCastRegistry extends AbstractRegistry {
     /**
      * 节点失效时间参数
      */
-    public static final URLOption<Long> NODE_EXPIRED_TIME = new URLOption<>("nodeExpiredTime", 45000L);
+    public static final URLOption<Long> NODE_EXPIRED_TIME = new URLOption<>("nodeExpiredTime", 30000L);
     /**
      * hazelcast实例配置
      */

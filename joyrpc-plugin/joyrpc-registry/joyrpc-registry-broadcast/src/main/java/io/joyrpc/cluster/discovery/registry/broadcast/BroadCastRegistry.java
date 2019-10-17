@@ -61,9 +61,9 @@ public class BroadCastRegistry extends AbstractRegistry {
     private static final Logger logger = LoggerFactory.getLogger(BroadCastRegistry.class);
 
     /**
-     * map备份个数
+     * 备份个数
      */
-    public static final URLOption<Integer> MAP_BACKUP_COUNT = new URLOption<>("mapBackupCount", 3);
+    public static final URLOption<Integer> BACKUP_COUNT = new URLOption<>("backupCount", 2);
     /**
      * hazelcast集群分组名称
      */
@@ -136,7 +136,8 @@ public class BroadCastRegistry extends AbstractRegistry {
     public BroadCastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.cfg = new Config();
-        cfg.getMapConfig("default").setBackupCount(url.getInteger(MAP_BACKUP_COUNT)).setReadBackupData(true);
+        //同步复制，可以读取从
+        cfg.getMapConfig("default").setBackupCount(url.getInteger(BACKUP_COUNT)).setReadBackupData(true);
         cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
         cfg.getNetworkConfig().setPort(url.getInteger(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)

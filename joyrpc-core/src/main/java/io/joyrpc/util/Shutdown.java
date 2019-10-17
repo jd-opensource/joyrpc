@@ -205,10 +205,6 @@ public class Shutdown {
          * 优先级
          */
         protected int priority;
-        /**
-         * 异步执行
-         */
-        protected boolean async;
 
         public HookAdapter(Runnable runnable) {
             this(runnable, DEFAULT_PRIORITY, false);
@@ -224,13 +220,11 @@ public class Shutdown {
                 return CompletableFuture.completedFuture(null);
             } : () -> CompletableFuture.runAsync(runnable);
             this.priority = priority;
-            this.async = async;
         }
 
         public HookAdapter(Hook hook, int priority) {
             this.hook = hook;
             this.priority = priority;
-            this.async = false;
         }
 
         @Override

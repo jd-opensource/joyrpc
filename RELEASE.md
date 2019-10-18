@@ -12,6 +12,8 @@
 
 - 升级netty为4.1.42.Final版本
 
+- 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
+
 - 注册中心在持久化数据的时候潜在的空指针问题
 
 - 修改ETCD续约成功，连续续约失败次数没有重置的问题
@@ -21,8 +23,6 @@
 - ZK注册中心添加连接监听，与ZK重连成功，触发recover
 
 - 修复ZK注册中心初始化时未成功连接到集群，后续连接到集群，却不重新发起服务订阅与注册的问题
-
-- 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
 
 - 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点
 

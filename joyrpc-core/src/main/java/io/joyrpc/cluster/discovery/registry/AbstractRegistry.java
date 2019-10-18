@@ -1187,6 +1187,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
             this.lastEventTime = lastEventTime;
         }
 
+        public boolean isFull() {
+            return full;
+        }
+
         /**
          * 新建Future
          *

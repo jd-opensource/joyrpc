@@ -37,6 +37,7 @@ import io.joyrpc.event.Event;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent;
+import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.*;
 import org.slf4j.Logger;
@@ -1122,9 +1123,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected abstract class SubscribeMeta<T extends UpdateEvent> extends URLKey implements EventHandler<T>, Closeable {
         /**
-         * 当前数据版本
+         * 当前数据版本，-1表示还没有初始化
          */
-        protected long version;
+        protected long version = -1;
         /**
          * 全量数据
          */
@@ -1255,6 +1256,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * 分片信息
          */
         protected volatile Map<String, Shard> datum;
+        /**
+         * 没有全量数据的时候，合并的增量信息
+         */
+        protected Map<String, ClusterEvent.ShardEvent> events;
 
         /**
          * 构造函数
@@ -1297,7 +1302,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             if (publisher.addHandler(handler)) {
                 //有全量数据
                 if (full) {
-                    publisher.offer(new ClusterEvent(this, handler, UpdateEvent.UpdateType.FULL, version, full()));
+                    publisher.offer(new ClusterEvent(this, handler, UpdateType.FULL, version, full()));
                 }
                 return true;
             }
@@ -1320,9 +1325,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @param cluster
          * @param events
+         * @param protectNullDatum
          * @return
          */
-        protected void update(final Map<String, Shard> cluster, final List<ClusterEvent.ShardEvent> events, boolean protectNullDatum) {
+        protected void update(final Map<String, Shard> cluster, final Collection<ClusterEvent.ShardEvent> events,
+                              final boolean protectNullDatum) {
             if (events != null) {
                 Shard shard;
                 for (ClusterEvent.ShardEvent e : events) {
@@ -1342,38 +1349,75 @@ public abstract class AbstractRegistry implements Registry, Configure {
             }
         }
 
+        /**
+         * 合并增量事件
+         *
+         * @param events
+         * @param shards
+         * @return
+         */
+        protected Map<String, ClusterEvent.ShardEvent> update(final Map<String, ClusterEvent.ShardEvent> events,
+                                                              final List<ClusterEvent.ShardEvent> shards) {
+            Map<String, ClusterEvent.ShardEvent> result = events;
+            if (result == null) {
+                result = new HashMap<>();
+            }
+            if (shards != null) {
+                for (ClusterEvent.ShardEvent event : shards) {
+                    result.put(event.getShard().getName(), event);
+                }
+            }
+            return result;
+        }
+
         @Override
         public synchronized void handle(final ClusterEvent event) {
             lastEventTime = SystemClock.now();
-            final boolean old = full;
             event.getType().update(url, (fullDatum, protectNullDatum) -> {
-                //过期数据，不处理
-                if (version > 0 && version >= event.getVersion()) {
+                if (!full && !fullDatum) {
+                    //没有全量数据
+                    if (event.getVersion() > version) {
+                        //合并最新的增量数据
+                        events = update(events, event.getDatum());
+                        version = event.getVersion();
+                    }
+                    return;
+                } else if (full && version >= event.getVersion()) {
+                    //有全量数据了，丢弃过期数据
                     return;
                 }
-                //设置版本
-                version = event.getVersion();
                 //如果是增量数据，则复制一份原来的数据
                 Map<String, Shard> cluster = !fullDatum && datum != null ? new HashMap<>(datum) : new HashMap<>();
                 //更新，设置最新集群数据
                 update(cluster, event.getDatum(), protectNullDatum);
-                //TODO 初始化 version不一定为0，这里需要优化下
-                if (full && cluster.isEmpty() && protectNullDatum && version > 0) {
-                    //最新集群数据为空，且空保护，且版本号大于0（非初始化），不更新
-                    logger.warn("the datum of cluster event can not be null, version is " + version);
+                if (full && cluster.isEmpty() && protectNullDatum) {
+                    //有全量数据了，最新集群数据为空，且空保护，不更新
+                    logger.warn("the datum of cluster event can not be null, version is " + event.getVersion());
+                    //设置版本
+                    version = Math.max(version, event.getVersion());
                 } else {
+                    if (fullDatum && !full && events != null) {
+                        //当前数据是全量数据，以前有增量数据
+                        if (version > event.getVersion()) {
+                            //全量数据版本更老，则合并
+                            update(cluster, events.values(), protectNullDatum);
+                        }
+                        events = null;
+                    }
+                    boolean old = full;
                     datum = cluster;
-                    //是否已经有全量数据
-                    if (fullDatum && !old) {
+                    version = Math.max(version, event.getVersion());
+                    if (fullDatum && !full) {
+                        //设置全量数据，确保前面datum已经设置，防止并发线程读取
                         full = true;
                     }
                     //如果存在全量数据，通知事件
                     if (full) {
-                        if (event.getType() == UpdateEvent.UpdateType.CLEAR) {
-                            publisher.offer(new ClusterEvent(this, null, UpdateEvent.UpdateType.CLEAR, version, event.getDatum()));
+                        if (event.getType() == UpdateType.CLEAR) {
+                            publisher.offer(new ClusterEvent(this, null, UpdateType.CLEAR, version, event.getDatum()));
                         } else if (!old) {
                             //如果以前不是全量数据，收到了全量数据事件，则广播合并完的全量数据
-                            publisher.offer(new ClusterEvent(this, null, UpdateEvent.UpdateType.FULL, version, full()));
+                            publisher.offer(new ClusterEvent(this, null, UpdateType.FULL, version, full()));
                         } else {
                             //以前是全量数据，则直接广播本次更新数据
                             publisher.offer(new ClusterEvent(this, null, event.getType(), version, event.getDatum()));
@@ -1445,7 +1489,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             if (publisher.addHandler(handler)) {
                 //有全量数据
                 if (full) {
-                    publisher.offer(new ConfigEvent(this, handler, UpdateEvent.UpdateType.FULL, version, datum));
+                    publisher.offer(new ConfigEvent(this, handler, UpdateType.FULL, version, datum));
                 }
                 return true;
             }
@@ -1459,10 +1503,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
             if (datum == null) {
                 datum = event.getDatum();
                 version = event.getVersion();
-                full = event.getType() == UpdateEvent.UpdateType.FULL;
+                full = event.getType() == UpdateType.FULL;
             } else if (version >= event.getVersion()) {
                 //版本低，如果是全量数据，考虑进行合并
-                if (event.getType() == UpdateEvent.UpdateType.FULL && !full) {
+                if (event.getType() == UpdateType.FULL && !full) {
                     Map<String, String> map = new HashMap<>(event.getDatum());
                     map.putAll(datum);
                     datum = map;
@@ -1471,7 +1515,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     //丢掉过期数据
                     return;
                 }
-            } else if (event.getType() == UpdateEvent.UpdateType.FULL) {
+            } else if (event.getType() == UpdateType.FULL) {
                 datum = event.getDatum();
                 full = true;
                 version = event.getVersion();
@@ -1488,7 +1532,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 if (ready()) {
                     //判断是全量数据初始化还是增量更新
                     publisher.offer(new ConfigEvent(this, null,
-                            !old ? UpdateEvent.UpdateType.FULL : UpdateEvent.UpdateType.UPDATE, version, !old ? datum : event.getDatum()));
+                            !old ? UpdateType.FULL : UpdateType.UPDATE, version, !old ? datum : event.getDatum()));
                 }
                 //保存数据
                 dirty();

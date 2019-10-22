@@ -1,2 +1,0 @@
-org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-  io.joyrpc.extension.spring.boot.SpringLoaderAutoConfiguration

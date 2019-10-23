@@ -25,7 +25,6 @@ import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.codec.compression.Compression;
-import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;

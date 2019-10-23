@@ -36,8 +36,6 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.Server;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.MethodOption;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;

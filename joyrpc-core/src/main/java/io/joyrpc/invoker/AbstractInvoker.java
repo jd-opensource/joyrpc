@@ -34,8 +34,6 @@ import io.joyrpc.util.Shutdown;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static io.joyrpc.Plugin.ENVIRONMENT;
-
 /**
  * 抽象调用器
  */

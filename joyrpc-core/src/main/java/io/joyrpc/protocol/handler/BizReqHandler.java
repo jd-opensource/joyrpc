@@ -88,6 +88,12 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                     + "Discard request cause by timeout after receive the msg: {}", request.getHeader());
             return;
         }
+        //channel不可写，丢弃消息
+        if (!channel.isWritable()) {
+            logger.error(String.format("Discard request, because client is sending too fast, causing channel is not writable. at %s : %s",
+                    Channel.toString(channel), request.getHeader()));
+            return;
+        }
 
         Exporter exporter = null;
         try {

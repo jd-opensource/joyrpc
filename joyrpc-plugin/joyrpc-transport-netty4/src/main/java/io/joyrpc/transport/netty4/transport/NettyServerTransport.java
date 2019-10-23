@@ -28,7 +28,6 @@ import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.AdapterContext;
-import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.netty4.channel.NettyChannel;
 import io.joyrpc.transport.netty4.channel.NettyServerChannel;
 import io.joyrpc.transport.netty4.codec.ProtocolAdapterContext;
@@ -207,16 +206,6 @@ public class NettyServerTransport extends AbstractServerTransport {
             }
 
             ch.pipeline().addLast("connection", new ConnectionChannelHandler(channel, eventPublisher) {
-
-                @Override
-                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                    if (!ctx.channel().isWritable() && msg instanceof Message && ((Message) msg).isRequest()) {
-                        logger.error(String.format("Discard request, because client is sending too fast, causing channel is not writable. at %s : %s",
-                                Channel.toString(channel), msg.toString()));
-                    } else {
-                        super.channelRead(ctx, msg);
-                    }
-                }
 
                 @Override
                 public void channelInactive(final ChannelHandlerContext ctx) throws Exception {

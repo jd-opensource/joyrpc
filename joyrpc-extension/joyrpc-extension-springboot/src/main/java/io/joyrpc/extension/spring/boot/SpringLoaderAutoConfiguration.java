@@ -20,6 +20,7 @@ package io.joyrpc.extension.spring.boot;
  * #L%
  */
 
+import io.joyrpc.extension.Plugin;
 import io.joyrpc.extension.spring.SpringLoader;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -27,6 +28,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+
+import java.util.ArrayList;
+import java.util.Collection;
 
 @Configuration
 @ConditionalOnMissingBean(SpringLoader.class)
@@ -37,8 +41,11 @@ public class SpringLoaderAutoConfiguration {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     public SpringLoader springLoader() {
-        return new SpringLoader();
+        return new SpringLoader(){
+            @Override
+            public <T> Collection<Plugin<T>> load(Class<T> extensible) {
+                return new ArrayList<>();
+            }
+        };
     }
-
-
 }

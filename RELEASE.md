@@ -32,6 +32,8 @@
 
 - 修改SpringBoot方式时SpiLoader及SpringLoader共用引起的加载插件时无响应问题，只使用SpiLoader
 
+- 修复SpringBoot方式consumer调用refer为null的问题
+
 ## 1.0.3(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

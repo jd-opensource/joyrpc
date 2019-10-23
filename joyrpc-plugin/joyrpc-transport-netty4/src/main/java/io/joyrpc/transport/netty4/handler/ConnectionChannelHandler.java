@@ -62,16 +62,6 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (!ctx.channel().isWritable()) {
-            logger.error(String.format("Discard request, because client is sending too fast, causing channel is not writable. at %s : %s",
-                    Channel.toString(channel), msg.toString()));
-        } else {
-            super.channelRead(ctx, msg);
-        }
-    }
-
-    @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         try {
             Map<Integer, EnhanceCompletableFuture<Integer, Message>> futures = channel.getFutureManager().close();

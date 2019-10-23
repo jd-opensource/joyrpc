@@ -9,9 +9,9 @@ package io.joyrpc.spring.factory;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,10 +24,8 @@ import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.annotation.Consumer;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.InjectionMetadata;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ApplicationEvent;
-import org.springframework.context.ApplicationListener;
+import org.springframework.context.*;
+import org.springframework.context.event.ContextRefreshedEvent;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -40,7 +38,7 @@ import java.util.concurrent.ConcurrentMap;
  * Consumer注解解析器
  */
 public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanPostProcessor<Consumer>
-        implements ApplicationContextAware, ApplicationListener {
+        implements ApplicationContextAware, ApplicationListener, ApplicationEventPublisherAware {
 
     public static final String BEAN_NAME = "consumerAnnotationBeanPostProcessor";
 
@@ -58,6 +56,11 @@ public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanP
     private final ConcurrentMap<InjectionMetadata.InjectedElement, ConsumerBean<?>> injectedMethodReferenceBeanCache = new ConcurrentHashMap<InjectionMetadata.InjectedElement, ConsumerBean<?>>(CACHE_SIZE);
 
     private ApplicationContext applicationContext;
+
+    /**
+     * 事件发布器
+     */
+    protected transient ApplicationEventPublisher applicationEventPublisher;
 
 
     @Override
@@ -133,6 +136,7 @@ public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanP
                     .create(consumer, classLoader, applicationContext)
                     .interfaceClass(referencedType);
             referenceBean = beanBuilder.build();
+            referenceBean.setApplicationEventPublisher(applicationEventPublisher);
             referenceBeanCache.put(consumerBeanName, referenceBean);
         }
 
@@ -155,7 +159,16 @@ public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanP
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
+        if (event instanceof ContextRefreshedEvent) {
+            referenceBeanCache.forEach((beanName, comsumerBean) -> {
+                comsumerBean.onApplicationEvent((ContextRefreshedEvent) event);
+            });
+        }
+    }
 
+    @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Override

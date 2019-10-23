@@ -28,6 +28,8 @@
 
 - 修改注册中心，集群事件增量数据先到达，全量数据后到达需要正确合并的问题
 
+- 修改SpringBoot方式时SpiLoader及SpringLoader共用引起的加载插件时无响应问题，只使用SpiLoader
+
 ## 1.0.3(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

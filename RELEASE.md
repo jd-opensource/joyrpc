@@ -30,6 +30,8 @@
 
 - 修改GrpcClientProtocol，每次build chain的时候都重新创建，防止内部逻辑发生StreamId冲突
 
+- 修改SpringBoot方式时SpiLoader及SpringLoader共用引起的加载插件时无响应问题，只使用SpiLoader
+
 ## 1.0.3(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

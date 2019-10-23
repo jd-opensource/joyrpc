@@ -82,14 +82,13 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         Invocation invocation = request.getPayLoad();
         Channel channel = context.getChannel();
 
-        // 客户端已经超时的请求
         if (request.isTimeout(request::getReceiveTime)) {
+            // 客户端已经超时的请求
             logger.warn(ExceptionCode.format(ExceptionCode.PROVIDER_DISCARD_TIMEOUT_MESSAGE)
                     + "Discard request cause by timeout after receive the msg: {}", request.getHeader());
             return;
-        }
-        //channel不可写，丢弃消息
-        if (!channel.isWritable()) {
+        } else if (!channel.isWritable()) {
+            //channel不可写，丢弃消息
             logger.error(String.format("Discard request, because client is sending too fast, causing channel is not writable. at %s : %s",
                     Channel.toString(channel), request.getHeader()));
             return;

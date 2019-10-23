@@ -83,7 +83,7 @@ public abstract class ExceptionCode {
     public static final String PROVIDER_SERVER_OPEN_EXCEPTION = PROVIDER_PREFIX + SYS_LEVEL + "006";
     public static final String PROVIDER_THREAD_EXHAUSTED = PROVIDER_PREFIX + BIZ_LEVEL + "007";
     public static final String PROVIDER_INVALID_TOKEN = PROVIDER_PREFIX + BIZ_LEVEL + "008";
-    public static final String PROVIDER_OFFINE = PROVIDER_PREFIX + SYS_LEVEL + "009";
+    public static final String PROVIDER_OFFLINE = PROVIDER_PREFIX + SYS_LEVEL + "009";
     public static final String PROVIDER_METHOD_OVERLOADING = PROVIDER_PREFIX + CONFIG_LEVEL + "010";
     //限流配置异常
     public static final String PROVIDER_LIMITER_CONF = PROVIDER_PREFIX + CONFIG_LEVEL + "011";

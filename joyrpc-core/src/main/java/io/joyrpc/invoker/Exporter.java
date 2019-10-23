@@ -192,7 +192,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
 
     @Override
     protected Throwable shutdownException() {
-        return new ShutdownExecption("provider is shutdown", ExceptionCode.PROVIDER_OFFINE, true);
+        return new ShutdownExecption("provider is shutdown", ExceptionCode.PROVIDER_OFFLINE, true);
     }
 
     @Override

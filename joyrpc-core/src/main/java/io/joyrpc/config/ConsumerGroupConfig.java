@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -111,7 +111,8 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         route.setConfigFunction(this::createGroupConfig);
         route.setup();
         //创建桩
-        stub = getProxyFactory().getProxy((Class<T>) getProxyClass(), new ConsumerInvokeHandler(route, interfaceClass));
+        invokeHandler = new ConsumerInvokeHandler(route, interfaceClass);
+        proxy();
         //创建消费者
         route.refer().whenComplete((v, t) -> {
             if (t == null) {
@@ -137,10 +138,10 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
 
     @Override
     protected void doUnRefer(final CompletableFuture<Void> future) {
-        if (stub == null) {
+        if (invokeHandler == null) {
             future.complete(null);
         }
-        stub = null;
+        invokeHandler = null;
         route.close().whenComplete((v, t) -> {
             if (t == null) {
                 future.complete(null);

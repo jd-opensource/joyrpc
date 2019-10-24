@@ -565,13 +565,12 @@ public class Constants {
     public static final String IO_THREADS_KEY = "ioThreads";
     public static final String BOSS_THREADS_KEY = "bossThreads";
 
-    public static final String BUFFER_POOLED_KEY = "buffer.pooled";
     public static final String BUFFER_PREFER_DIRECT_KEY = "buffer.preferDirect";
 
     public static final URLOption<Boolean> TCP_NODELAY = new URLOption<>("tcpNoDelay", Boolean.TRUE);
     public static final String USE_EPOLL_KEY = "useEpoll";
 
-
+    public static final URLOption<Boolean> BUFFER_POOLED_OPTION = new URLOption<>("buffer.pooled", false);
     public static final URLOption<Integer> INIT_SIZE_OPTION = new URLOption<>("initSize", 5);
     public static final URLOption<Integer> MIN_SIZE_OPTION = new URLOption<>("minSize", 0);
     public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 30000L);

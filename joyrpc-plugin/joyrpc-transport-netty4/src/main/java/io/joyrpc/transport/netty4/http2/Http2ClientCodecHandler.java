@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.http2;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,9 +20,9 @@ package io.joyrpc.transport.netty4.http2;
  * #L%
  */
 
+import io.joyrpc.exception.CodecException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.DecodeContext;
-import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
 import io.joyrpc.transport.http2.Http2RequestMessage;
@@ -111,34 +111,38 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg instanceof Http2RequestMessage) {
-            int streamId = connection().local().incrementAndGetNextStreamId();
-            //request 对象
-            Http2RequestMessage request = (Http2RequestMessage) msg;
-            request.setStreamId(streamId);
-            //write header
-            if (request.headers() != null && !request.headers().isEmpty()) {
-                //构建http2响应header
-                Http2Headers http2Headers = new DefaultHttp2Headers(false);
-                request.headers().getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
-                //write header
-                encoder().writeHeaders(ctx, streamId, http2Headers, 0, false, promise).addListener(
-                        f -> {
-                            Http2Stream http2Stream = connection().stream(streamId);
-                            http2Stream.setProperty(streamKey, request.getBizMsgId());
-                        }
-                );
-            }
-            //write data
-            if (request.content() != null) {
-                ByteBuf byteBuf = ctx.alloc().buffer();
-                EncodeContext enCtx = new Http2EncodeContext(channel);
-                enCtx.setAttr(Http2Codec.HEADER, request.headers());
-                codec.encode(enCtx, new NettyChannelBuffer(byteBuf), request.content());
-                encoder().writeData(ctx, streamId, byteBuf, 0, true, ctx.voidPromise());
-            }
-        } else {
+        if (msg == null || !(msg instanceof Http2RequestMessage)) {
             super.write(ctx, msg, promise);
+            return;
+        }
+        int streamId = connection().local().incrementAndGetNextStreamId();
+        //request 对象
+        Http2RequestMessage request = (Http2RequestMessage) msg;
+        request.setStreamId(streamId);
+        //write header
+        if (request.headers() != null && !request.headers().isEmpty()) {
+            //构建http2响应header
+            Http2Headers http2Headers = new DefaultHttp2Headers(false);
+            request.headers().getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
+            //write header
+            encoder().writeHeaders(ctx, streamId, http2Headers, 0, false, promise).addListener(
+                    f -> {
+                        Http2Stream http2Stream = connection().stream(streamId);
+                        http2Stream.setProperty(streamKey, request.getBizMsgId());
+                    }
+            );
+        }
+        //write data
+        if (request.content() != null) {
+            ByteBuf byteBuf = ctx.alloc().buffer();
+            try {
+                codec.encode(new Http2EncodeContext(channel).attribute(Http2Codec.HEADER, request.headers()),
+                        new NettyChannelBuffer(byteBuf), request.content());
+            } catch (CodecException e) {
+                byteBuf.release();
+                throw e;
+            }
+            encoder().writeData(ctx, streamId, byteBuf, 0, true, ctx.voidPromise()).addListener(f -> byteBuf.release());
         }
     }
 

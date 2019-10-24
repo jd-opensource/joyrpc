@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.http2;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,8 +20,8 @@ package io.joyrpc.transport.netty4.http2;
  * #L%
  */
 
+import io.joyrpc.exception.CodecException;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
 import io.joyrpc.transport.http2.Http2ResponseMessage;
@@ -43,13 +43,14 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyServerTransport.class);
 
-    private Http2Connection.PropertyKey headerKey;
+    protected Http2Connection.PropertyKey headerKey;
 
     protected Http2Codec codec;
 
     protected Channel channel;
 
-    public Http2ServerCodecHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder, Http2Settings initialSettings, Channel channel, Http2Codec codec) {
+    public Http2ServerCodecHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
+                                   Http2Settings initialSettings, Channel channel, Http2Codec codec) {
         super(decoder, encoder, initialSettings);
         this.channel = channel;
         this.codec = codec;
@@ -58,40 +59,43 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg instanceof Http2ResponseMessage) {
-            //response对象
-            Http2ResponseMessage response = (Http2ResponseMessage) msg;
-            //write header
-            if (response.headers() != null && !response.headers().isEmpty()) {
-                //构建http2响应header
-                Http2Headers http2Headers = new DefaultHttp2Headers();
-                response.headers().getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
-                //write
-                encoder().writeHeaders(ctx, response.getStreamId(), http2Headers, 0, false, promise);
-            }
-            //是否需要 write endheader
-            boolean needWriteEndHeaders = response.endHeaders() != null;
-            //write data
-            if (response.content() != null) {
-                ByteBuf byteBuf = ctx.alloc().buffer();
-                EncodeContext enCtx = new Http2EncodeContext(channel);
-                enCtx.setAttr(Http2Codec.HEADER, response.headers());
-                codec.encode(enCtx, new NettyChannelBuffer(byteBuf), response.content());
-                //write
-                encoder().writeData(ctx, response.getStreamId(), byteBuf, 0, !needWriteEndHeaders, ctx.voidPromise());
-            }
-            //write end header
-            if (needWriteEndHeaders) {
-                Http2Headers endHeaders = new DefaultHttp2Headers();
-                response.endHeaders().getAll().forEach((k, v) -> {
-                    endHeaders.add(k, v.toString());
-                });
-                //write
-                encoder().writeHeaders(ctx, response.getStreamId(), endHeaders, 0, true, promise);
-            }
-        } else {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
+        if (msg == null || !(msg instanceof Http2ResponseMessage)) {
             super.write(ctx, msg, promise);
+            return;
+        }
+        //response对象
+        Http2ResponseMessage response = (Http2ResponseMessage) msg;
+        //应答头
+        if (response.headers() != null && !response.headers().isEmpty()) {
+            //构建http2响应header
+            Http2Headers http2Headers = new DefaultHttp2Headers();
+            response.headers().getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
+            //write
+            encoder().writeHeaders(ctx, response.getStreamId(), http2Headers, 0, false, promise);
+        }
+        //是否有结束头
+        boolean withEndHeaders = response.endHeaders() != null;
+        //写应答内容
+        if (response.content() != null) {
+            ByteBuf byteBuf = ctx.alloc().buffer();
+            try {
+                codec.encode(new Http2EncodeContext(channel).attribute(Http2Codec.HEADER, response.headers()),
+                        new NettyChannelBuffer(byteBuf), response.content());
+            } catch (CodecException e) {
+                byteBuf.release();
+                throw e;
+            }
+            encoder().writeData(ctx, response.getStreamId(), byteBuf, 0, !withEndHeaders, ctx.voidPromise())
+                    .addListener(f -> byteBuf.release());
+
+        }
+        //write end header
+        if (withEndHeaders) {
+            Http2Headers endHeaders = new DefaultHttp2Headers();
+            response.endHeaders().getAll().forEach((k, v) -> endHeaders.add(k, v.toString()));
+            //write
+            encoder().writeHeaders(ctx, response.getStreamId(), endHeaders, 0, true, promise);
         }
     }
 
@@ -114,9 +118,12 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
 
     }
 
-    private class FrameListener extends Http2FrameAdapter {
+    /**
+     * 监听器
+     */
+    protected class FrameListener extends Http2FrameAdapter {
 
-        private boolean firstSettings = true;
+        protected boolean firstSettings = true;
 
         @Override
         public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
@@ -146,7 +153,10 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
                     handleRequest(ctx, streamId, headers, null);
                 } else {
                     // 缓存起来
-                    connection().stream(streamId).setProperty(headerKey, headers);
+                    Http2Stream stream = connection().stream(streamId);
+                    if (stream != null) {
+                        stream.setProperty(headerKey, headers);
+                    }
                 }
             }
         }
@@ -163,7 +173,10 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
                     handleRequest(ctx, streamId, headers, null);
                 } else {
                     // 缓存起来
-                    connection().stream(streamId).setProperty(headerKey, headers);
+                    Http2Stream stream = connection().stream(streamId);
+                    if (stream != null) {
+                        stream.setProperty(headerKey, headers);
+                    }
                 }
             }
         }

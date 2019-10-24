@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -47,10 +47,6 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
      * Refer对象
      */
     protected transient volatile Refer<T> refer;
-    /**
-     * 调用handler
-     */
-    protected transient ConsumerInvokeHandler invokeHandler;
     /**
      * 注册中心
      */
@@ -93,9 +89,10 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                 waitingConfig.completeExceptionally(t);
             }
         });
-
+        //构建调用器
         invokeHandler = new ConsumerInvokeHandler(refer, proxyClass);
-        stub = getProxyFactory().getProxy(proxyClass, invokeHandler);
+        //构建代理
+        proxy();
 
         //等待订阅的初始化配置
         waitingConfig.whenComplete((url, e) -> {
@@ -126,9 +123,9 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
 
     @Override
     protected void doUnRefer(final CompletableFuture<Void> future) {
-        if (stub != null) {
+        if (invokeHandler != null) {
             logger.info(String.format("Unrefer consumer config : %s with bean id %s", name(), getId()));
-            stub = null;
+            invokeHandler = null;
             if (!waitingConfig.isDone()) {
                 waitingConfig.completeExceptionally(new InitializationException("Unrefer interrupted waiting config."));
             }

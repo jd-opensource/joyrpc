@@ -36,6 +36,8 @@
 
 - 修复SpringBoot方式consumer调用refer为null的问题
 
+- AbstractConsumerConfig增加proxy方法，方便在spring场景提前创建好代理对象
+
 - 修复transport层关于isWritable判断不合理，导致client不可读的问题
 
 ## 1.0.3-RELEASE(2019-10-12)

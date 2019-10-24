@@ -35,6 +35,7 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.proxy.ConsumerInvokeHandler;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
@@ -152,6 +153,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     protected Integer warmupDuration;
 
     /**
+     * 调用handler
+     */
+    protected transient ConsumerInvokeHandler invokeHandler;
+
+    /**
      * 代理实现类
      */
     protected transient volatile T stub;
@@ -221,6 +227,23 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     }
 
     /**
+     * 代理对象，用于Spring场景提前返回代理
+     *
+     * @return
+     */
+    public T proxy() {
+        if (stub == null) {
+            stub = getProxyFactory().getProxy((Class<T>) getProxyClass(), (proxy, method, args) -> {
+                if (invokeHandler == null) {
+                    throw new InitializationException("consumer is not referred.");
+                }
+                return invokeHandler.invoke(proxy, method, args);
+            });
+        }
+        return stub;
+    }
+
+    /**
      * 异步引用
      *
      * @return
@@ -244,9 +267,12 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      *
      * @param future 操作结果消费者
      * @return 接口代理类
+     * @see AbstractConsumerConfig#refer()
+     * @see AbstractConsumerConfig#proxy()
      */
+    @Deprecated
     public T refer(final CompletableFuture<Void> future) {
-        if (stub != null) {
+        if (stub != null && invokeHandler != null) {
             Futures.complete(future, null);
             return stub;
         }

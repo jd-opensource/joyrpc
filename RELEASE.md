@@ -38,7 +38,7 @@
 
 - 修复transport层关于isWritable判断不合理，导致client不可读的问题
 
-## 1.0.3(2019-10-12)
+## 1.0.3-RELEASE(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞
 
@@ -58,7 +58,7 @@
 
 - 优化StandardValidator.MyConsumer.onCustomAbstract方法返回异常的message
 
-## 1.0.2(2019-09-20)
+## 1.0.2-RELEASE(2019-09-20)
 
 - ConsumerConfig增加无参异步refer方法，方便api方式调用
 

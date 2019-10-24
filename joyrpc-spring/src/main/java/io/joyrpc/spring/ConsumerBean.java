@@ -9,9 +9,9 @@ package io.joyrpc.spring;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -106,7 +106,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public void afterPropertiesSet() throws Exception {
+    public void afterPropertiesSet() {
         //在setApplicationContext调用
         // 如果没有配置注册中心，则默认订阅全部注册中心
         if (getRegistry() == null) {
@@ -141,7 +141,12 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-        this.applicationEventPublisher = applicationEventPublisher;
+    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
+        this.applicationEventPublisher = publisher;
+    }
+
+    public ConsumerBean<T> applicationEventPublisher(ApplicationEventPublisher publisher) {
+        setApplicationEventPublisher(publisher);
+        return this;
     }
 }

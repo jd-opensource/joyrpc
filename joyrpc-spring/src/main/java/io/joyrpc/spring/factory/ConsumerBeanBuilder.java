@@ -9,9 +9,9 @@ package io.joyrpc.spring.factory;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,11 +22,10 @@ package io.joyrpc.spring.factory;
 
 import io.joyrpc.config.MethodConfig;
 import io.joyrpc.config.RegistryConfig;
+import io.joyrpc.exception.InitializationException;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.annotation.Consumer;
 import io.joyrpc.spring.annotation.Method;
-import io.joyrpc.spring.util.BeanFactoryUtils;
-import io.joyrpc.spring.util.MethodConfigUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.MutablePropertyValues;
@@ -39,45 +38,64 @@ import java.beans.PropertyEditorSupport;
 import java.util.Map;
 
 import static io.joyrpc.spring.util.AnnotationUtils.getAttributes;
+import static io.joyrpc.spring.util.BeanFactoryUtils.getOptionalBean;
+import static io.joyrpc.spring.util.MethodConfigUtils.constructMethodConfig;
+import static io.joyrpc.spring.util.MethodConfigUtils.toStringMap;
 import static org.springframework.util.StringUtils.commaDelimitedListToStringArray;
 
 
+/**
+ * 消费者Bean构造器
+ */
 class ConsumerBeanBuilder {
 
     // Ignore those fields
     static final String[] IGNORE_FIELD_NAMES = new String[]{"registry", "methods"};
 
-
     protected final Log logger = LogFactory.getLog(getClass());
 
-    protected final Consumer annotation;
-
-    protected final ApplicationContext applicationContext;
-
-    protected final ClassLoader classLoader;
-
+    /**
+     * 消费者注解
+     */
+    protected Consumer annotation;
+    /**
+     * 应用上下文
+     */
+    protected ApplicationContext applicationContext;
+    /**
+     * 类加载器
+     */
+    protected ClassLoader classLoader;
+    /**
+     * 对象
+     */
     protected Object bean;
-
+    /**
+     * 接口类
+     */
     protected Class<?> interfaceClass;
 
-    private ConsumerBeanBuilder(Consumer annotation, ClassLoader classLoader, ApplicationContext applicationContext) {
+    public static ConsumerBeanBuilder builder() {
+        return new ConsumerBeanBuilder();
+    }
+
+    /**
+     * 构建
+     *
+     * @return
+     */
+    public ConsumerBean build() {
+        Assert.notNull(interfaceClass, "The interface class must set first!");
         Assert.notNull(annotation, "The Annotation must not be null!");
         Assert.notNull(classLoader, "The ClassLoader must not be null!");
         Assert.notNull(applicationContext, "The ApplicationContext must not be null!");
-        this.annotation = annotation;
-        this.applicationContext = applicationContext;
-        this.classLoader = classLoader;
-    }
-
-    public static ConsumerBeanBuilder create(Consumer annotation, ClassLoader classLoader, ApplicationContext applicationContext) {
-        return new ConsumerBeanBuilder(annotation, classLoader, applicationContext);
-    }
-
-    public final ConsumerBean build() throws Exception {
-        ConsumerBean bean = new ConsumerBean<Object>();
-        configureBean(bean);
-        logger.info(String.format("The bean type:%s has been built.", bean.getClass()));
-        return bean;
+        ConsumerBean bean = new ConsumerBean<>();
+        try {
+            configureBean(bean);
+            return bean;
+        } catch (Exception e) {
+            throw new InitializationException("Error occurs while build consumer bean,caused by " + e.getMessage(), e);
+        }
     }
 
     public ConsumerBeanBuilder bean(Object bean) {
@@ -90,19 +108,29 @@ class ConsumerBeanBuilder {
         return this;
     }
 
-    protected void configureBean(ConsumerBean bean) throws Exception {
-
-        preConfigureBean(bean);
-
-        configureRegistryConfigs(bean);
-
-        postConfigureBean(annotation, bean);
-
+    public ConsumerBeanBuilder annotation(Consumer annotation) {
+        this.annotation = annotation;
+        return this;
     }
 
-    protected void preConfigureBean(ConsumerBean referenceBean) {
-        Assert.notNull(interfaceClass, "The interface class must set first!");
-        DataBinder dataBinder = new DataBinder(referenceBean);
+    public ConsumerBeanBuilder classLoader(ClassLoader classLoader) {
+        this.classLoader = classLoader;
+        return this;
+    }
+
+    public ConsumerBeanBuilder applicationContext(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+        return this;
+    }
+
+    /**
+     * 进行配置
+     *
+     * @param bean
+     * @throws Exception
+     */
+    protected void configureBean(ConsumerBean bean) throws Exception {
+        DataBinder dataBinder = new DataBinder(bean);
         dataBinder.registerCustomEditor(Map.class, "parameters", new PropertyEditorSupport() {
             @Override
             public void setAsText(String text) throws java.lang.IllegalArgumentException {
@@ -111,40 +139,18 @@ class ConsumerBeanBuilder {
                     return;
                 }
                 // String[] to Map
-                Map<String, String> parameters = MethodConfigUtils.toStringMap(commaDelimitedListToStringArray(content));
+                Map<String, String> parameters = toStringMap(commaDelimitedListToStringArray(content));
                 setValue(parameters);
             }
         });
         dataBinder.bind(new MutablePropertyValues(getAttributes(annotation, applicationContext.getEnvironment(), true, IGNORE_FIELD_NAMES)));
-    }
-
-    protected void configureRegistryConfigs(ConsumerBean bean) {
-        String registryConfigBeanIds = resolveRegistryConfigBeanNames(annotation);
-        RegistryConfig registryConfigs = BeanFactoryUtils.getOptionalBean(applicationContext, registryConfigBeanIds, RegistryConfig.class);
-        bean.setRegistry(registryConfigs);
-    }
-
-    protected void postConfigureBean(Consumer annotation, ConsumerBean bean) throws Exception {
+        bean.setRegistry(getOptionalBean(applicationContext, annotation.registry(), RegistryConfig.class));
         bean.setApplicationContext(applicationContext);
-        configureInterface(annotation, bean);
-        configureMethodConfig(annotation, bean);
+        bean.setInterfaceClazz(interfaceClass.getName());
+        bean.setInterfaceClass(interfaceClass);
+        Method[] methods = annotation.methods();
+        Map<String, MethodConfig> configs = constructMethodConfig(methods);
+        bean.setMethods(configs);
         bean.afterPropertiesSet();
-    }
-
-
-    private void configureInterface(Consumer reference, ConsumerBean referenceBean) {
-        referenceBean.setInterfaceClazz(this.interfaceClass.getName());
-        referenceBean.setInterfaceClass(this.interfaceClass);
-    }
-
-    void configureMethodConfig(Consumer reference, ConsumerBean<?> referenceBean) {
-        Method[] methods = reference.methods();
-        Map<String, MethodConfig> configs = MethodConfigUtils.constructMethodConfig(methods);
-        referenceBean.setMethods(configs);
-    }
-
-
-    protected String resolveRegistryConfigBeanNames(Consumer annotation) {
-        return annotation.registry();
     }
 }

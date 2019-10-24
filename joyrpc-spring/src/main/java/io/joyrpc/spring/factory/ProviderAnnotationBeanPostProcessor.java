@@ -9,9 +9,9 @@ package io.joyrpc.spring.factory;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,12 +21,12 @@ package io.joyrpc.spring.factory;
  */
 
 import io.joyrpc.config.MethodConfig;
+import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.annotation.Provider;
 import io.joyrpc.spring.context.DefaultClassPathBeanDefinitionScanner;
-import io.joyrpc.spring.util.MethodConfigUtils;
-import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.spring.util.AnnotationUtils;
+import io.joyrpc.spring.util.MethodConfigUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -49,7 +49,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static io.joyrpc.spring.util.AnnotationUtils.getAttributes;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_DUPLICATE_EXPORT;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 import static org.springframework.context.annotation.AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR;
@@ -175,8 +174,8 @@ public class ProviderAnnotationBeanPostProcessor implements BeanDefinitionRegist
     }
 
     private String generateServiceBeanName(Provider service, Class<?> interfaceClass) {
-        AnnotationBeanNameBuilder builder = AnnotationBeanNameBuilder.create(service, interfaceClass, environment);
-        return builder.build();
+        return AnnotationBeanNameBuilder.builder().alias(service.alias()).name(service.name())
+                .interfaceClassName(interfaceClass.getName()).environment(environment).build();
     }
 
     private Class<?> resolveServiceInterfaceClass(Class<?> annotatedServiceBeanClass, Provider service) {

@@ -31,8 +31,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Consumer注解解析器
@@ -42,38 +42,24 @@ public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanP
 
     public static final String BEAN_NAME = "consumerAnnotationBeanPostProcessor";
 
-    /**
-     * Cache size
-     */
-    private static final int CACHE_SIZE = Integer.getInteger(BEAN_NAME + ".cache.size", 32);
+    protected final Map<String, ConsumerBean> beans = new ConcurrentHashMap<>(32);
 
-    private final ConcurrentMap<String, ConsumerBean<?>> referenceBeanCache = new ConcurrentHashMap<String, ConsumerBean<?>>(CACHE_SIZE);
+    protected final Map<String, ReferenceBeanInvocationHandler> localReferenceBeanInvocationHandlerCache = new ConcurrentHashMap<>(32);
 
-    private final ConcurrentHashMap<String, ReferenceBeanInvocationHandler> localReferenceBeanInvocationHandlerCache = new ConcurrentHashMap<String, ReferenceBeanInvocationHandler>(CACHE_SIZE);
-
-    private final ConcurrentMap<InjectionMetadata.InjectedElement, ConsumerBean<?>> injectedFieldReferenceBeanCache = new ConcurrentHashMap<InjectionMetadata.InjectedElement, ConsumerBean<?>>(CACHE_SIZE);
-
-    private final ConcurrentMap<InjectionMetadata.InjectedElement, ConsumerBean<?>> injectedMethodReferenceBeanCache = new ConcurrentHashMap<InjectionMetadata.InjectedElement, ConsumerBean<?>>(CACHE_SIZE);
-
-    private ApplicationContext applicationContext;
+    protected ApplicationContext applicationContext;
 
     /**
      * 事件发布器
      */
     protected transient ApplicationEventPublisher applicationEventPublisher;
 
-
     @Override
     protected Object doGetInjectedBean(Consumer consumer, Object bean, String beanName, Class<?> injectedType,
-                                       InjectionMetadata.InjectedElement injectedElement) throws Exception {
+                                       InjectionMetadata.InjectedElement injectedElement) {
+        String name = buildBeanName(consumer, injectedType);
+        ConsumerBean consumerBean = buildBean(name, consumer, injectedType, getClassLoader());
 
-        String referencedBeanName = buildReferencedBeanName(consumer, injectedType);
-
-        ConsumerBean referenceBean = buildReferenceBeanIfAbsent(referencedBeanName, consumer, injectedType, getClassLoader());
-
-        cacheInjectedReferenceBean(referenceBean, injectedElement);
-
-        InvocationHandler handler = buildInvocationHandler(referencedBeanName, referenceBean);
+        InvocationHandler handler = buildInvocationHandler(name, consumerBean);
         return Proxy.newProxyInstance(getClassLoader(), new Class[]{injectedType}, handler);
     }
 
@@ -94,6 +80,67 @@ public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanP
         return handler;
     }
 
+    @Override
+    protected String buildInjectedObjectCacheKey(Consumer reference, Class<?> injectedType) {
+        return buildBeanName(reference, injectedType);
+    }
+
+    /**
+     * 构建Bean的名称
+     *
+     * @param consumer
+     * @param injectedType
+     * @return
+     */
+    protected String buildBeanName(Consumer consumer, Class<?> injectedType) {
+        return AnnotationBeanNameBuilder.builder().alias(consumer.alias())
+                .interfaceClassName(injectedType.getName())
+                .environment(getEnvironment())
+                .build();
+    }
+
+    /**
+     * 构建Bean
+     *
+     * @param consumerBeanName
+     * @param consumer
+     * @param referencedType
+     * @param classLoader
+     * @return
+     */
+    protected ConsumerBean buildBean(final String consumerBeanName, final Consumer consumer,
+                                     final Class<?> referencedType, final ClassLoader classLoader) {
+
+        return beans.computeIfAbsent(consumerBeanName,
+                o -> ConsumerBeanBuilder.builder().annotation(consumer).classLoader(classLoader)
+                        .applicationContext(applicationContext).interfaceClass(referencedType).build()
+                        .applicationEventPublisher(applicationEventPublisher));
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    @Override
+    public void onApplicationEvent(ApplicationEvent event) {
+        if (event instanceof ContextRefreshedEvent) {
+            beans.forEach((beanName, consumerBean) -> consumerBean.onApplicationEvent((ContextRefreshedEvent) event));
+        }
+    }
+
+    @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        this.applicationEventPublisher = applicationEventPublisher;
+    }
+
+    @Override
+    public void destroy() throws Exception {
+        beans.clear();
+        localReferenceBeanInvocationHandlerCache.clear();
+        super.destroy();
+    }
+
     private static class ReferenceBeanInvocationHandler implements InvocationHandler {
 
         private final ConsumerBean referenceBean;
@@ -112,72 +159,6 @@ public class ConsumerAnnotationBeanPostProcessor extends AnnotationInjectedBeanP
         private void init() {
             this.bean = referenceBean.getObject();
         }
-    }
-
-    @Override
-    protected String buildInjectedObjectCacheKey(Consumer reference, Class<?> injectedType) {
-        return buildReferencedBeanName(reference, injectedType);
-    }
-
-    private String buildReferencedBeanName(Consumer consumer, Class<?> injectedType) {
-
-        AnnotationBeanNameBuilder builder = AnnotationBeanNameBuilder.create(consumer, injectedType, getEnvironment());
-
-        return getEnvironment().resolvePlaceholders(builder.build());
-    }
-
-    private ConsumerBean buildReferenceBeanIfAbsent(String consumerBeanName, Consumer consumer,
-                                                    Class<?> referencedType, ClassLoader classLoader) throws Exception {
-
-        ConsumerBean<?> referenceBean = referenceBeanCache.get(consumerBeanName);
-
-        if (referenceBean == null) {
-            ConsumerBeanBuilder beanBuilder = ConsumerBeanBuilder
-                    .create(consumer, classLoader, applicationContext)
-                    .interfaceClass(referencedType);
-            referenceBean = beanBuilder.build();
-            referenceBean.setApplicationEventPublisher(applicationEventPublisher);
-            referenceBeanCache.put(consumerBeanName, referenceBean);
-        }
-
-        return referenceBean;
-    }
-
-    private void cacheInjectedReferenceBean(ConsumerBean referenceBean,
-                                            InjectionMetadata.InjectedElement injectedElement) {
-        if (injectedElement.getMember() instanceof Field) {
-            injectedFieldReferenceBeanCache.put(injectedElement, referenceBean);
-        } else if (injectedElement.getMember() instanceof Method) {
-            injectedMethodReferenceBeanCache.put(injectedElement, referenceBean);
-        }
-    }
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
-    @Override
-    public void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof ContextRefreshedEvent) {
-            referenceBeanCache.forEach((beanName, comsumerBean) -> {
-                comsumerBean.onApplicationEvent((ContextRefreshedEvent) event);
-            });
-        }
-    }
-
-    @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-        this.applicationEventPublisher = applicationEventPublisher;
-    }
-
-    @Override
-    public void destroy() throws Exception {
-        super.destroy();
-        this.referenceBeanCache.clear();
-        this.localReferenceBeanInvocationHandlerCache.clear();
-        this.injectedFieldReferenceBeanCache.clear();
-        this.injectedMethodReferenceBeanCache.clear();
     }
 }
 

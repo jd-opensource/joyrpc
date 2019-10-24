@@ -9,9 +9,9 @@ package io.joyrpc.protocol.grpc.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,23 +40,27 @@ import io.joyrpc.transport.channel.EnhanceCompletableFuture;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http2.*;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static io.joyrpc.Plugin.COMPRESSION_SELECTOR;
-import static io.joyrpc.Plugin.SERIALIZATION_SELECTOR;
+import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.transport.http.HttpHeaders.Values.GZIP;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
+import static io.joyrpc.util.ClassUtils.*;
+import static io.joyrpc.util.ClassUtils.setValue;
+import static io.joyrpc.util.GrpcType.F_RESULT;
 
 /**
  * grpc client端消息转换handler
@@ -153,7 +157,11 @@ public class GrpcClientConvertHandler extends AbstractHttpHandler {
                     }
                 }
                 //反序列化
-                Object response = serialization.getSerializer().deserialize(in, (Class) future.getAttr());
+                ReturnType returnType = (ReturnType) future.getAttr();
+                Object response = serialization.getSerializer().deserialize(in, returnType.getReturnType());
+                if (returnType.isWrapper()) {
+                    response = getValue(returnType.getReturnType(), F_RESULT, response);
+                }
                 palyLoad = new ResponsePayload(response);
             } else {
                 palyLoad = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", http2Msg.getBizMsgId())));
@@ -170,29 +178,69 @@ public class GrpcClientConvertHandler extends AbstractHttpHandler {
      * 转换
      *
      * @param channel
-     * @param reqMsg
+     * @param message
      * @return
      */
-    protected Http2RequestMessage convert(final Channel channel, final RequestMessage reqMsg) throws IOException {
-        Http2Headers headers = buildHttp2Headers(channel, reqMsg);
-        return buildHttp2Message(headers, reqMsg);
-    }
-
-    protected Http2RequestMessage buildHttp2Message(Http2Headers headers, RequestMessage message) throws IOException {
+    protected Http2RequestMessage convert(final Channel channel, final RequestMessage message) throws IOException, NoSuchMethodException, MethodOverloadException, ClassNotFoundException {
+        if (!(message.getPayLoad() instanceof Invocation)) {
+            throw new CodecException("no such kind of message.");
+        }
+        Invocation invocation = (Invocation) message.getPayLoad();
+        //设置headers
+        final InetSocketAddress remoteAddress = channel.getRemoteAddress();
+        String authority = remoteAddress.getHostName() + ":" + remoteAddress.getPort();
+        String path = "/" + invocation.getClassName() + "/" + invocation.getMethodName();
+        //创建http2header对象
+        Http2Headers headers = new DefaultHttp2Headers().authority(authority).path(path).method(HttpMethod.POST).scheme("http");
+        headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
+        headers.set(GrpcUtil.TE_HEADER.name(), GrpcUtil.TE_TRAILERS);
+        headers.set(GrpcUtil.USER_AGENT_KEY.name(), USER_AGENT);
+        headers.set(ALIAS_OPTION.getName(), invocation.getAlias());
+        String acceptEncoding = GZIP;
+        Session session = message.getSession();
+        if (session != null && session.getCompressions() != null) {
+            acceptEncoding = String.join(",", session.getCompressions());
+        }
+        headers.set(GrpcUtil.MESSAGE_ACCEPT_ENCODING, acceptEncoding);
         //设置content
         UnsafeByteArrayOutputStream outputStream = new UnsafeByteArrayOutputStream();
         //是否压缩
         outputStream.write(0);
         //长度(占位)
         outputStream.write(new byte[]{0, 0, 0, 0}, 0, 4);
-        Object payLoad = message.getPayLoad();
-        if (payLoad instanceof Invocation) {
-            payLoad = ((Invocation) payLoad).getArgs()[0];
+        //设置payload
+        Object payLoad;
+        //做grpc入参与返回值的类型转换，获取GrpcType
+        GrpcType grpcType = getGrpcType(invocation.getClazz(), invocation.getMethodName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        GrpcType.ClassWrapper reqWrapper = grpcType.getRequest();
+        //根据reqWrapper，转换payLoad
+        if (reqWrapper == null) {
+            payLoad = null;
+        } else if (reqWrapper.isWrapper()) {
+            payLoad = newInstance(reqWrapper.getClazz());
+            List<Field> wrapperFields = getFields(payLoad.getClass());
+            int i = 0;
+            for (Field field : wrapperFields) {
+                setValue(reqWrapper.getClazz(), field, payLoad, invocation.getArgs()[i++]);
+            }
         } else {
-            throw new CodecException("no such kind of message.");
+            payLoad = invocation.getArgs()[0];
+        }
+        //将返回值类型放到 future 中
+        GrpcType.ClassWrapper respWrapper = grpcType.getResponse();
+        if (respWrapper != null) {
+            channel.getFutureManager().get(message.getMsgId()).setAttr(new ReturnType(respWrapper.getClazz(), reqWrapper.isWrapper()));
+        } else {
+            Method reqMethod = invocation.getMethod();
+            if (reqMethod == null) {
+                reqMethod = getPublicMethod(invocation.getClassName(), invocation.getMethodName());
+            }
+            channel.getFutureManager().get(message.getMsgId()).setAttr(new ReturnType(reqMethod.getReturnType(), false));
         }
         //序列化
-        serialization.getSerializer().serialize(outputStream, payLoad);
+        if (payLoad != null) {
+            serialization.getSerializer().serialize(outputStream, payLoad);
+        }
         //获取 content 字节数组
         byte[] content = outputStream.toByteArray();
         //压缩处理
@@ -214,37 +262,39 @@ public class GrpcClientConvertHandler extends AbstractHttpHandler {
         return new DefaultHttp2RequestMessage(0, message.getMsgId(), headers, content);
     }
 
-    protected Http2Headers buildHttp2Headers(Channel channel, RequestMessage message) {
-        Invocation invocation = (Invocation) message.getPayLoad();
-        final InetSocketAddress remoteAddress = channel.getRemoteAddress();
-        String authority = remoteAddress.getHostName() + ":" + remoteAddress.getPort();
-        String path = "/" + invocation.getClassName() + "/" + invocation.getMethodName();
-        //创建http2header对象
-        Http2Headers http2Headers = new DefaultHttp2Headers().authority(authority).path(path).method(HttpMethod.POST).scheme("http");
-        http2Headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
-        http2Headers.set(GrpcUtil.TE_HEADER.name(), GrpcUtil.TE_TRAILERS);
-        http2Headers.set(GrpcUtil.USER_AGENT_KEY.name(), USER_AGENT);
-        http2Headers.set(ALIAS_OPTION.getName(), invocation.getAlias());
-        String acceptEncoding = GZIP;
-        Session session = message.getSession();
-        if (session != null && session.getCompressions() != null) {
-            acceptEncoding = String.join(",", session.getCompressions());
+    /**
+     * 返回值类型存储类，存储在响应Future中
+     */
+    protected class ReturnType {
+        /**
+         * 返回值类型
+         */
+        private Class returnType;
+        /**
+         * 是否为转换类
+         */
+        private boolean wrapper;
+
+        public ReturnType(Class returnType, boolean wrapper) {
+            this.returnType = returnType;
+            this.wrapper = wrapper;
         }
-        http2Headers.set(GrpcUtil.MESSAGE_ACCEPT_ENCODING, acceptEncoding);
-        //将返回值类型放入缓存
-        try {
-            Method reqMethod = getPublicMethod(invocation.getClassName(), invocation.getMethodName());
-            //将返回值类型放到 future 中
-            channel.getFutureManager().get(message.getMsgId()).setAttr(reqMethod.getReturnType());
-        } catch (ClassNotFoundException e) {
-            logger.error(e.getMessage(), e);
-        } catch (NoSuchMethodException e) {
-            logger.error(e.getMessage(), e);
-        } catch (MethodOverloadException e) {
-            logger.error(e.getMessage(), e);
+
+        public Class getReturnType() {
+            return returnType;
         }
-        //返回
-        return http2Headers;
+
+        public void setReturnType(Class returnType) {
+            this.returnType = returnType;
+        }
+
+        public boolean isWrapper() {
+            return wrapper;
+        }
+
+        public void setWrapper(boolean wrapper) {
+            this.wrapper = wrapper;
+        }
     }
 
 }

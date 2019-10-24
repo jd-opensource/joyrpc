@@ -86,9 +86,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
                 byteBuf.release();
                 throw e;
             }
-            encoder().writeData(ctx, response.getStreamId(), byteBuf, 0, !withEndHeaders, ctx.voidPromise())
-                    .addListener(f -> byteBuf.release());
-
+            encoder().writeData(ctx, response.getStreamId(), byteBuf, 0, !withEndHeaders, ctx.voidPromise());
         }
         //write end header
         if (withEndHeaders) {

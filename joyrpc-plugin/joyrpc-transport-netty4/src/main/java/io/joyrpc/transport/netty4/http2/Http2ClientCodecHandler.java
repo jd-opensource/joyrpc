@@ -142,7 +142,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
                 byteBuf.release();
                 throw e;
             }
-            encoder().writeData(ctx, streamId, byteBuf, 0, true, ctx.voidPromise()).addListener(f -> byteBuf.release());
+            encoder().writeData(ctx, streamId, byteBuf, 0, true, ctx.voidPromise());
         }
     }
 

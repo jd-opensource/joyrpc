@@ -29,7 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Quick Start client
+ * Quick Start Client
  */
 public class ClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(ClientAPI.class);
@@ -47,7 +47,7 @@ public class ClientAPI {
             DemoService service = future.get();
 
             String echo = service.sayHello("hello"); //发起服务调用
-            logger.info("Get msg: " + echo);
+            logger.info("Get msg: {} ", echo);
 
             System.in.read();
         } catch (Exception e) {

@@ -29,23 +29,24 @@ import org.slf4j.LoggerFactory;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * Quick Start client
+ * Multiple Registry Client
  */
 public class RegistryClientAPI {
     private static final Logger logger = LoggerFactory.getLogger(RegistryClientAPI.class);
 
     public static void main(String[] args) {
-        RegistryConfig joyrpcRegistry = new RegistryConfig("broadcast", "127.0.0.1:6702");// 注册中心
+        RegistryConfig joyrpcRegistryB = new RegistryConfig("broadcast", "127.0.0.1:6702");// 注册中心B
 
-        ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>(); //consumer设置
+        ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>();
         consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
         consumerConfig.setAlias("joyrpc-demo");
-        consumerConfig.setRegistry(joyrpcRegistry);
+        consumerConfig.setRegistry(joyrpcRegistryB);
+
         try {
             CompletableFuture<DemoService> future = consumerConfig.refer();
             DemoService service = future.get();
 
-            String echo = service.sayHello("hello"); //发起服务调用
+            String echo = service.sayHello("hello");
             logger.info("Get msg: {}", echo);
 
             System.in.read();

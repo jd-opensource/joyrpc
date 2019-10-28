@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Quick Start Server
+ * Multiple Registry Server
  */
 public class RegistryServerAPI {
     private static final Logger logger = LoggerFactory.getLogger(RegistryServerAPI.class);
@@ -41,10 +41,10 @@ public class RegistryServerAPI {
     public static void main(String[] args) throws Exception {
         DemoService demoService = new DemoServiceImpl();
         /**
-         * 服务发布到A、B两个注册中心
+         * 发布到A、B两个广播注册中心
          */
-        RegistryConfig joyrpcRegistryA = new RegistryConfig("broadcast", "127.0.0.1:6701");// 注册中心A
-        RegistryConfig joyrpcRegistryB = new RegistryConfig("broadcast", "127.0.0.1:6702");// 注册中心B
+        RegistryConfig joyrpcRegistryA = new RegistryConfig("broadcast", "127.0.0.1:6701");
+        RegistryConfig joyrpcRegistryB = new RegistryConfig("broadcast", "127.0.0.1:6702");
         List<RegistryConfig> list = new ArrayList<>();
         list.add(joyrpcRegistryA);
         list.add(joyrpcRegistryB);

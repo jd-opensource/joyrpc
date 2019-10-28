@@ -40,6 +40,7 @@ public class ClientMain {
             String result = service.sayHello("hello");
             logger.info("response msg from server :" + result);
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
         }
 
         System.in.read();

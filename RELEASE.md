@@ -44,6 +44,8 @@
 
 - Spring中的ConsumerBean初始化异常退出，当时泛型的时候正确返回对象类型
 
+- Spring中的ProviderBean初始化异常退出
+
 ## 1.0.3-RELEASE(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

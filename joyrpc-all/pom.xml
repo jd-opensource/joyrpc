@@ -26,73 +26,61 @@
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-extension-spring</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-extension-springboot</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-cache-cache2k</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-cache-caffeine</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-cache-guava</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-compression-lz4</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-compression-lzma</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-compression-snappy</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-fastjson</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-fst</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-hessian</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-kryo</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
@@ -103,13 +91,11 @@
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-protocol-grpc</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-protocol-http</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
@@ -120,31 +106,26 @@
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-proxy-bytebuddy</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-proxy-javassist</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-registry-etcd</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-registry-zk</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-registry-broadcast</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
@@ -160,7 +141,6 @@
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-springboot</artifactId>
             <version>${project.version}</version>
-            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

@@ -12,6 +12,8 @@
 
 - 升级netty为4.1.42.Final版本
 
+- 升级commons-compress为1.19，解决安全漏洞
+
 - 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
 
 - 注册中心在持久化数据的时候潜在的空指针问题

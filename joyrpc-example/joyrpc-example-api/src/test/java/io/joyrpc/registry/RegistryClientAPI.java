@@ -32,27 +32,25 @@ import java.util.concurrent.CompletableFuture;
  * Quick Start client
  */
 public class RegistryClientAPI {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RegistryClientAPI.class);
+    private static final Logger logger = LoggerFactory.getLogger(RegistryClientAPI.class);
 
     public static void main(String[] args) {
-        RegistryConfig joyrpcRegistryA = new RegistryConfig("zk", "192.168.1.100:2181");// 注册中心A
-        RegistryConfig joyrpcRegistryB = new RegistryConfig("zk", "192.168.1.101:2181");// 注册中心B
-
+        RegistryConfig joyrpcRegistry = new RegistryConfig("broadcast", "127.0.0.1:6702");// 注册中心
 
         ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>(); //consumer设置
         consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
         consumerConfig.setAlias("joyrpc-demo");
-        consumerConfig.setRegistry(joyrpcRegistryA);//注册到A中心
+        consumerConfig.setRegistry(joyrpcRegistry);
         try {
-            CompletableFuture<Void> future = new CompletableFuture<Void>();
-            DemoService service = consumerConfig.refer(future);
-            future.get();
+            CompletableFuture<DemoService> future = consumerConfig.refer();
+            DemoService service = future.get();
 
             String echo = service.sayHello("hello"); //发起服务调用
-            LOGGER.info("Get msg: ", echo);
+            logger.info("Get msg: {}", echo);
 
             System.in.read();
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
         }
     }
 }

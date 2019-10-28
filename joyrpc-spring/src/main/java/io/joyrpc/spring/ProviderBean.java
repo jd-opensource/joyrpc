@@ -9,9 +9,9 @@ package io.joyrpc.spring;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,6 @@ import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
-import io.joyrpc.exception.InitializationException;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,6 +40,8 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+
+import static io.joyrpc.spring.ConsumerSpring.REFERS;
 
 /**
  * 服务提供者
@@ -82,16 +83,25 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof ConsumerReferDoneEvent || (event instanceof ContextRefreshedEvent && referCounter.get() == 0)) {
+        if (event instanceof ConsumerReferDoneEvent || (event instanceof ContextRefreshedEvent && REFERS.get() == 0)) {
             //需要先判断条件，再打开
             switcher.open(() -> {
                 logger.info(String.format("open provider with beanName %s after spring context refreshed.", id));
-                try {
-                    //TODO open的异常没有抛出来
-                    exportFuture.whenComplete((v, t) -> open());
-                } catch (Exception e) {
-                    throw new InitializationException(String.format("Export %s not successes", serviceUrl), e);
-                }
+                exportFuture.whenComplete((v, t) -> {
+                    if (t != null) {
+                        logger.error(String.format("Error occurs while export provider %s", id), t);
+                        //export异常
+                        System.exit(1);
+                    } else {
+                        open().whenComplete((s, e) -> {
+                            if (e != null) {
+                                logger.error(String.format("Error occurs while open provider %s", id), t);
+                                //open异常
+                                System.exit(1);
+                            }
+                        });
+                    }
+                });
             });
         }
     }
@@ -112,7 +122,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                 setRegistry(new ArrayList<>(beans.values()));
             }
         }
-        //没有open，服务不可用
+        //先输出服务，并没有打开，服务不可用
         exportFuture = export();
     }
 

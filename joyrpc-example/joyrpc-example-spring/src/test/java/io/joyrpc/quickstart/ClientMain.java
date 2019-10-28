@@ -30,7 +30,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  * Quick Start client
  */
 public class ClientMain {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClientMain.class);
+    private static final Logger logger = LoggerFactory.getLogger(ClientMain.class);
 
     public static void main(String[] args) throws Exception {
         ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/spring/joyrpc-consumer.xml");
@@ -38,7 +38,7 @@ public class ClientMain {
 
         try {
             String result = service.sayHello("hello");
-            LOGGER.info("response msg from server :{}", result);
+            logger.info("response msg from server :" + result);
         } catch (Exception e) {
         }
 

@@ -25,11 +25,13 @@ import io.joyrpc.cluster.discovery.registry.AbstractRegistryFactory;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.condition.ConditionalOnClass;
 
 /**
  * hazelcast注册中心实现插件
  */
 @Extension(value = "broadcast")
+@ConditionalOnClass("com.hazelcast.core.Hazelcast")
 public class BroadCastRegistryFactory extends AbstractRegistryFactory {
 
     @Override

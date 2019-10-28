@@ -12,6 +12,8 @@
 
 - 升级netty为4.1.42.Final版本
 
+- 升级commons-compress为1.19，解决安全漏洞
+
 - 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
 
 - 注册中心在持久化数据的时候潜在的空指针问题
@@ -41,6 +43,8 @@
 - 修复transport层关于isWritable判断不合理，导致client不可读的问题
 
 - Spring中的ConsumerBean初始化异常退出，当时泛型的时候正确返回对象类型
+
+- Spring中的ProviderBean初始化异常退出
 
 ## 1.0.3-RELEASE(2019-10-12)
 

@@ -14,11 +14,12 @@
     <dependencies>
         <dependency>
             <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-all</artifactId>
+            <artifactId>joyrpc-example-interface</artifactId>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-example-interface</artifactId>
+            <artifactId>joyrpc-all</artifactId>
             <version>${project.version}</version>
         </dependency>
         <!-- slf4j -->

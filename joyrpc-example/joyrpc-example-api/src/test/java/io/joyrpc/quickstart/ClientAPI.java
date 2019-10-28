@@ -32,26 +32,26 @@ import java.util.concurrent.CompletableFuture;
  * Quick Start client
  */
 public class ClientAPI {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClientAPI.class);
+    private static final Logger logger = LoggerFactory.getLogger(ClientAPI.class);
 
     public static void main(String[] args) {
         RegistryConfig registryConfig = new RegistryConfig();
-        registryConfig.setRegistry("memory");//内存注册中心
+        registryConfig.setRegistry("broadcast");//广播注册中心
 
         ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>(); //consumer设置
         consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
         consumerConfig.setAlias("joyrpc-demo");
         consumerConfig.setRegistry(registryConfig);
         try {
-            CompletableFuture<Void> future = new CompletableFuture<Void>();
-            DemoService service = consumerConfig.refer(future);
-            future.get();
+            CompletableFuture<DemoService> future = consumerConfig.refer();
+            DemoService service = future.get();
 
             String echo = service.sayHello("hello"); //发起服务调用
-            LOGGER.info("Get msg: ", echo);
+            logger.info("Get msg: " + echo);
 
             System.in.read();
         } catch (Exception e) {
+            logger.error(e.getMessage(), e);
         }
     }
 }

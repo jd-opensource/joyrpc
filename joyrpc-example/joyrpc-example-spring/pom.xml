@@ -14,19 +14,19 @@
     <dependencies>
         <dependency>
             <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-all</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-example-interface</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-registry-broadcast</artifactId>
+            <artifactId>joyrpc-all</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+        </dependency>
+        <!-- spring -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-core</artifactId>
@@ -39,9 +39,11 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
         </dependency>
+        <!-- slf4j -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
         </dependency>
     </dependencies>
+
 </project>

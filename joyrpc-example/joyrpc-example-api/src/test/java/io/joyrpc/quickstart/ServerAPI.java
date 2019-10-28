@@ -25,15 +25,19 @@ import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.service.DemoService;
 import io.joyrpc.service.impl.DemoServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Quick Start Server
  */
 public class ServerAPI {
 
+    private static final Logger logger = LoggerFactory.getLogger(ServerAPI.class);
+
     public static void main(String[] args) throws Exception {
         RegistryConfig registryConfig = new RegistryConfig();
-        registryConfig.setRegistry("memory");//内存注册中心
+        registryConfig.setRegistry("broadcast");
 
         DemoService demoService = new DemoServiceImpl(); //服务提供者设置
         ProviderConfig<DemoService> providerConfig = new ProviderConfig<>();
@@ -44,8 +48,11 @@ public class ServerAPI {
         providerConfig.setAlias("joyrpc-demo");
         providerConfig.setRegistry(registryConfig);
 
-        providerConfig.export().whenComplete((v, t) -> {//发布服务
-            providerConfig.open();
+        providerConfig.exportAndOpen().whenComplete((v, t) -> {
+            if (t != null) {
+                logger.error(t.getMessage(), t);
+                System.exit(1);
+            }
         });
         System.in.read();
     }

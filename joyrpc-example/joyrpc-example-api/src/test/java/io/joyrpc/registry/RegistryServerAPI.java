@@ -22,36 +22,46 @@ package io.joyrpc.registry;
 
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
+import io.joyrpc.config.ServerConfig;
 import io.joyrpc.service.DemoService;
 import io.joyrpc.service.impl.DemoServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Quick Start Server
+ * Multiple Registry Server
  */
 public class RegistryServerAPI {
+    private static final Logger logger = LoggerFactory.getLogger(RegistryServerAPI.class);
+
 
     public static void main(String[] args) throws Exception {
         DemoService demoService = new DemoServiceImpl();
         /**
-         * 服务发布到A、B两个注册中心
+         * 发布到A、B两个广播注册中心
          */
-        RegistryConfig joyrpcRegistryA = new RegistryConfig("zk", "192.168.1.100:2181");// 注册中心A
-        RegistryConfig joyrpcRegistryB = new RegistryConfig("zk", "192.168.1.101:2181");// 注册中心B
+        RegistryConfig joyrpcRegistryA = new RegistryConfig("broadcast", "127.0.0.1:6701");
+        RegistryConfig joyrpcRegistryB = new RegistryConfig("broadcast", "127.0.0.1:6702");
         List<RegistryConfig> list = new ArrayList<>();
         list.add(joyrpcRegistryA);
         list.add(joyrpcRegistryB);
+
         ProviderConfig<DemoService> providerConfig = new ProviderConfig<DemoService>();
         providerConfig.setRegistry(list);
+        providerConfig.setServerConfig(new ServerConfig());
 
         providerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
         providerConfig.setRef(demoService);
         providerConfig.setAlias("joyrpc-demo");
 
-        providerConfig.export().whenComplete((v, t) -> {//发布服务
-            providerConfig.open();
+        providerConfig.exportAndOpen().whenComplete((v, t) -> {
+            if (t != null) {
+                logger.error(t.getMessage(), t);
+                System.exit(1);
+            }
         });
         System.in.read();
     }

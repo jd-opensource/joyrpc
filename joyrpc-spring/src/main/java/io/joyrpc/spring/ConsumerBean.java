@@ -25,7 +25,6 @@ import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
-import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -36,7 +35,6 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.*;
 import org.springframework.context.event.ContextRefreshedEvent;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 
 /**
@@ -54,10 +52,6 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
      */
     protected transient ApplicationContext applicationContext;
     /**
-     * 工厂实例化的对象
-     */
-    protected transient T object;
-    /**
      * 事件发布器
      */
     protected transient ApplicationEventPublisher applicationEventPublisher;
@@ -66,9 +60,9 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
      */
     protected transient CountDownLatch latch = new CountDownLatch(1);
     /**
-     * 开关
+     * 初始化的Future
      */
-    protected Switcher switcher = new Switcher();
+    protected transient Throwable referThrowable;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -82,51 +76,28 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
+        this.applicationEventPublisher = publisher;
+    }
+
+    @Override
     public void setApplicationContext(ApplicationContext appContext) throws BeansException {
         this.applicationContext = appContext;
     }
 
     @Override
     public T getObject() {
-        return object;
-    }
-
-    @Override
-    public void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
-        switcher.open(() -> {
-            try {
-                latch.await();
-                if (referCounter.decrementAndGet() == 0) {
-                    applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));
-                }
-            } catch (InterruptedException e) {
-                throw new InitializationException("wait refer error", ExceptionCode.CONSUMER_REFER_WAIT_ERROR);
-            }
-        });
-    }
-
-    @Override
-    public void afterPropertiesSet() {
-        //在setApplicationContext调用
-        // 如果没有配置注册中心，则默认订阅全部注册中心
-        if (getRegistry() == null) {
-            setRegistry(applicationContext.getBeansOfType(RegistryConfig.class, false, false));
-        }
-        referCounter.incrementAndGet();
-        CompletableFuture<Void> openFuture = new CompletableFuture<>();
-        openFuture.whenComplete((v, t) -> latch.countDown());
-        object = refer(openFuture);
+        return stub;
     }
 
     @Override
     public Class getObjectType() {
         // 如果spring注入在前，reference操作在后，则会提前走到此方法，此时interface为空
         try {
-            getProxyClass();
-        } catch (Exception ex) {
-            interfaceClass = null;
+            return getProxyClass();
+        } catch (Exception e) {
+            return null;
         }
-        return interfaceClass;
     }
 
     @Override
@@ -141,8 +112,39 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
-        this.applicationEventPublisher = publisher;
+    public synchronized void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
+        try {
+            latch.await();
+            if (referThrowable != null) {
+                //创建引用失败
+                throw new InitializationException(String.format("Error occurs while referring consumer bean %s", id),
+                        referThrowable, ExceptionCode.CONSUMER_REFER_WAIT_ERROR);
+            }
+            if (referCounter.decrementAndGet() == 0) {
+                applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));
+            }
+        } catch (InterruptedException e) {
+            throw new InitializationException("wait refer error", ExceptionCode.CONSUMER_REFER_WAIT_ERROR);
+        }
+    }
+
+    @Override
+    public void afterPropertiesSet() {
+        //在setApplicationContext调用
+        // 如果没有配置注册中心，则默认订阅全部注册中心
+        if (getRegistry() == null) {
+            setRegistry(applicationContext.getBeansOfType(RegistryConfig.class, false, false));
+        }
+        //记录消费者的数量
+        referCounter.incrementAndGet();
+        //生成代理，并创建引用
+        refer().whenComplete((v, t) -> {
+            if (t != null) {
+                //出了异常
+                referThrowable = t;
+            }
+            latch.countDown();
+        });
     }
 
     public ConsumerBean<T> applicationEventPublisher(ApplicationEventPublisher publisher) {

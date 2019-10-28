@@ -23,7 +23,7 @@
                     <xsd:documentation><![CDATA[ 注册中心地址，多个用逗号分隔 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="registry" type="xsd:string" use="optional">
+            <xsd:attribute name="registry" type="xsd:string" use="optional" default="broadcast">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 类型 ]]></xsd:documentation>
                 </xsd:annotation>

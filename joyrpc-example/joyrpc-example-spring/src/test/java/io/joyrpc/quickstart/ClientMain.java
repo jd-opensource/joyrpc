@@ -33,7 +33,7 @@ public class ClientMain {
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientMain.class);
 
     public static void main(String[] args) throws Exception {
-        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/joyrpc-consumer.xml");
+        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/spring/joyrpc-consumer.xml");
         DemoService service = (DemoService) appContext.getBean("demoService");
 
         try {
@@ -42,6 +42,6 @@ public class ClientMain {
         } catch (Exception e) {
         }
 
-        System.in.read();//终端输入任意字符，shutdown进程
+        System.in.read();
     }
 }

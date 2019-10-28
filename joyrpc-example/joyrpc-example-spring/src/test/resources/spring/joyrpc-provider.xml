@@ -2,19 +2,19 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:joyrpc="http://joyrpc.io/schema/joyrpc"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
-    http://joyrpc.io/schema/joyrpc  http://joyrpc.io/schema/joyrpc/joyprc.xsd">
+    http://joyrpc.io/schema/joyrpc  http://joyrpc.io/schema/joyrpc/joyrpc.xsd">
 
     <!-- 实现类 -->
     <bean id="demoServiceImpl" class="io.joyrpc.service.impl.DemoServiceImpl"/>
 
-    <!-- 注册中心  -->
-    <joyrpc:registry id="joyRpcRegistry" address="memory://127.0.0.1" registry="memory"/>
+    <!-- 注册中心,默认:broadcast -->
+    <joyrpc:registry id="joyrpcRegistry" registry="broadcast"/>
 
-    <!-- 服务端 端口默认22000-->
-    <joyrpc:server id="joyRpcServer"/>
+    <!-- 服务端 端口默认:22000 -->
+    <joyrpc:server id="joyrpcServer"/>
 
     <!-- 发布服务 alias可修改 -->
     <joyrpc:provider id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo"
-                     ref="demoServiceImpl" server="joyRpcServer">
+                     ref="demoServiceImpl" server="joyrpcServer">
     </joyrpc:provider>
 </beans>

@@ -33,7 +33,7 @@ public class ServerMain {
 
 
     public static void main(String[] args) throws Exception {
-        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/joyrpc-provider.xml");
+        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/spring/joyrpc-provider.xml");
 
         LOGGER.info("服务端启动完成！");
         System.in.read();

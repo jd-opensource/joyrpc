@@ -68,6 +68,10 @@ public class GlobalContext {
                     Environment environment = ENVIRONMENT.get();
                     Collection<Property> properties = environment.properties();
                     Map<String, Object> map = new ConcurrentHashMap<>(Math.max(properties.size(), 200));
+                    //允许用户在配置文件里面修改协议版本和名称
+                    doPut(map, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
+                    doPut(map, PROTOCOL_KEY, Version.PROTOCOL);
+                    doPut(map, BUILD_VERSION_KEY, Version.BUILD_VERSION);
                     //优先读取系统内置的配置
                     loadResource(map, "META-INF/system_context.properties");
                     //环境变量覆盖
@@ -77,10 +81,6 @@ public class GlobalContext {
                     doPut(map, KEY_APPID, map.get(Environment.APPLICATION_ID));
                     doPut(map, KEY_APPNAME, map.get(Environment.APPLICATION_NAME));
                     doPut(map, KEY_APPINSID, map.get(Environment.APPLICATION_INSTANCE));
-                    doPut(map, BUILD_VERSION_KEY, Version.BUILD_VERSION);
-                    //允许用户在配置文件里面修改协议版本和名称
-                    doPut(map, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
-                    doPut(map, PROTOCOL_KEY, Version.PROTOCOL);
                     //读取用户的配置
                     loadResource(map, environment.getString(CONTEXT_RESOURCE, "global_context.properties"));
                     //打印默认的上下文

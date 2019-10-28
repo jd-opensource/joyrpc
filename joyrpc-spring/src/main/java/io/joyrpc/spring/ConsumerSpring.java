@@ -2,8 +2,6 @@ package io.joyrpc.spring;
 
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.exception.InitializationException;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
@@ -141,15 +139,12 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
             try {
                 latch.await();
                 if (referThrowable != null) {
-                    //创建引用失败
-                    throw new InitializationException(String.format("Error occurs while referring consumer bean %s", config.getId()),
-                            referThrowable, ExceptionCode.CONSUMER_REFER_WAIT_ERROR);
-                }
-                if (REFERS.decrementAndGet() == 0) {
+                    logger.error(String.format("Error occurs while referring consumer bean %s", config.getId()), referThrowable);
+                    System.exit(1);
+                } else if (REFERS.decrementAndGet() == 0) {
                     applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));
                 }
             } catch (InterruptedException e) {
-                throw new InitializationException("wait refer error", ExceptionCode.CONSUMER_REFER_WAIT_ERROR);
             }
         });
     }

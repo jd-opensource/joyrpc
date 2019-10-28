@@ -60,12 +60,12 @@ public class RpcAutoConfiguration {
 
 
     @Import(ConfigConfiguration.Single.class)
-    protected static class SingleDubboConfigConfiguration {
+    protected static class SingleConfigConfiguration {
     }
 
 
     @Import(ConfigConfiguration.Multiple.class)
-    protected static class MultipleDubboConfigConfiguration {
+    protected static class MultipleConfigConfiguration {
     }
 
 

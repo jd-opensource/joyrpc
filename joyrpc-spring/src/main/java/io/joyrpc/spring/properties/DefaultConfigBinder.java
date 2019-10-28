@@ -33,8 +33,8 @@ import java.util.Map;
 public class DefaultConfigBinder extends AbstractConfigBinder {
 
     @Override
-    public <C extends AbstractConfig> void bind(String prefix, C dubboConfig) {
-        DataBinder dataBinder = new DataBinder(dubboConfig);
+    public <C extends AbstractConfig> void bind(String prefix, C config) {
+        DataBinder dataBinder = new DataBinder(config);
         // Set ignored*
         dataBinder.setIgnoreInvalidFields(isIgnoreInvalidFields());
         dataBinder.setIgnoreUnknownFields(isIgnoreUnknownFields());

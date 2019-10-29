@@ -31,7 +31,6 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -704,8 +703,7 @@ public class StandardGenericSerializer implements GenericSerializer {
         String string = (String) value;
         if (char.class.equals(type) || Character.class.equals(type)) {
             if (string.length() != 1) {
-                throw new CodecException(String.format("can not convert String(%s) to char!" +
-                        " when convert String to char, the String MUST only 1 char.", string));
+                throw new CodecException(String.format("can not convert %s to char!", string));
             }
             return string.charAt(0);
         } else if (type.isEnum()) {
@@ -729,11 +727,7 @@ public class StandardGenericSerializer implements GenericSerializer {
         } else if (type == Boolean.class || type == boolean.class) {
             return new Boolean(string);
         } else if (type == Date.class) {
-            try {
-                return LocalDateTime.parse(string, DATE_FORMAT_TIME);
-            } catch (DateTimeParseException e) {
-                throw new CodecException("Failed to parse date " + value + " by format " + DATE_FORMAT_TIME + ", cause: " + e.getMessage(), e);
-            }
+            return LocalDateTime.parse(string, DATE_FORMAT_TIME);
         } else if (type == Class.class) {
             return ClassUtils.getClass((String) value);
         }

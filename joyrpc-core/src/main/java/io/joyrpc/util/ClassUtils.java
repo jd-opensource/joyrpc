@@ -743,21 +743,21 @@ public class ClassUtils {
             return null;
         } else if (!clazz.isPrimitive()) {
             return clazz;
-        } else if (int.class.equals(clazz)) {
+        } else if (int.class == clazz) {
             return Integer.class;
-        } else if (double.class.equals(clazz)) {
+        } else if (double.class == clazz) {
             return Double.class;
-        } else if (char.class.equals(clazz)) {
+        } else if (char.class == clazz) {
             return Character.class;
-        } else if (boolean.class.equals(clazz)) {
+        } else if (boolean.class == clazz) {
             return Boolean.class;
-        } else if (long.class.equals(clazz)) {
+        } else if (long.class == clazz) {
             return Long.class;
-        } else if (float.class.equals(clazz)) {
+        } else if (float.class == clazz) {
             return Float.class;
-        } else if (short.class.equals(clazz)) {
+        } else if (short.class == clazz) {
             return Short.class;
-        } else if (byte.class.equals(clazz)) {
+        } else if (byte.class == clazz) {
             return Byte.class;
         } else {
             return clazz;
@@ -988,34 +988,6 @@ public class ClassUtils {
     public static String getName(final Class clazz) {
         return clazz == null ? null : typeNames.computeIfAbsent(clazz,
                 o -> o.isArray() ? jvmNameToCanonicalName(clazz.getName()) : clazz.getName());
-    }
-
-    /**
-     * 创建集合对象
-     *
-     * @param targetType
-     * @param size
-     * @return
-     * @throws Exception
-     */
-    public static Collection createCollection(final Class<?> targetType, final int size) throws Exception {
-        if (targetType == null) {
-            return null;
-        } else if (targetType.equals(List.class)) {
-            return new ArrayList(size);
-        } else if (targetType.equals(Set.class)) {
-            return new HashSet(size);
-        } else if (targetType.equals(SortedSet.class)) {
-            return new TreeSet();
-        } else if (targetType.isInterface()) {
-            // 接口
-            return null;
-        } else if (Modifier.isAbstract(targetType.getModifiers())) {
-            //抽象方法
-            return null;
-        } else {
-            return (Collection) targetType.newInstance();
-        }
     }
 
     protected static String jvmNameToCanonicalName(final String jvmName) {
@@ -1469,12 +1441,12 @@ public class ClassUtils {
                         name = method.getName();
                         if (name.startsWith("get")) {
                             if (name.length() > 3 && method.getParameterCount() == 0
-                                    && !void.class.equals(method.getReturnType())) {
+                                    && void.class != method.getReturnType()) {
                                 getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
                             }
                         } else if (name.startsWith("is")) {
                             if (name.length() > 2 && method.getParameterCount() == 0
-                                    && boolean.class.equals(method.getReturnType())) {
+                                    && boolean.class == method.getReturnType()) {
                                 getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
                             }
                         } else if (name.startsWith("set")) {

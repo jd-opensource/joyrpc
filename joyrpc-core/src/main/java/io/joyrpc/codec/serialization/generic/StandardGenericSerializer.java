@@ -65,17 +65,30 @@ public class StandardGenericSerializer implements GenericSerializer {
                 || String.class.isAssignableFrom(target)
                 || Date.class.isAssignableFrom(target);
     };
+    public static final String CLASS = "class";
 
     @Override
     public Object serialize(final Object object) throws CodecException {
-        return normalize(object);
+        try {
+            return normalize(object);
+        } catch (CodecException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CodecException("Error occurs while normalizing, caused by " + e.getMessage(), e);
+        }
     }
 
     @Override
     public Object[] deserialize(final Invocation invocation) throws CodecException {
         Object[] genericArgs = invocation.getArgs();
         Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? new Object[0] : (Object[]) genericArgs[2];
-        return realize(paramArgs, invocation.getArgClasses(), invocation.getMethod().getGenericParameterTypes());
+        try {
+            return realize(paramArgs, invocation.getArgClasses(), invocation.getMethod().getGenericParameterTypes());
+        } catch (CodecException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new CodecException("Error occurs while realizing, caused by " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -84,7 +97,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param pojo
      * @return
      */
-    protected Object normalize(final Object pojo) throws CodecException {
+    protected Object normalize(final Object pojo) throws Exception {
         return normalize(pojo, new IdentityHashMap<>());
     }
 
@@ -95,7 +108,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object normalize(final Object pojo, final Map<Object, Object> history) throws CodecException {
+    protected Object normalize(final Object pojo, final Map<Object, Object> history) throws Exception {
         if (pojo == null) {
             return null;
         }
@@ -116,20 +129,14 @@ public class StandardGenericSerializer implements GenericSerializer {
         }
         history.put(pojo, pojo);
 
-        try {
-            if (pojoClass.isArray()) {
-                return normalizeArray(pojo, history);
-            } else if (pojo instanceof Collection<?>) {
-                return normalizeCollection((Collection<?>) pojo, history);
-            } else if (pojo instanceof Map<?, ?>) {
-                return normalizeMap((Map<?, ?>) pojo, history);
-            } else {
-                return normalizePojo(pojo, history);
-            }
-        } catch (CodecException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CodecException("Error occurs while normalizing, caused by " + e.getMessage(), e);
+        if (pojoClass.isArray()) {
+            return normalizeArray(pojo, history);
+        } else if (pojo instanceof Collection<?>) {
+            return normalizeCollection((Collection<?>) pojo, history);
+        } else if (pojo instanceof Map<?, ?>) {
+            return normalizeMap((Map<?, ?>) pojo, history);
+        } else {
+            return normalizePojo(pojo, history);
         }
     }
 
@@ -140,35 +147,31 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object normalizePojo(Object pojo, Map<Object, Object> history) throws InvocationTargetException, IllegalAccessException {
+    protected Object normalizePojo(final Object pojo, final Map<Object, Object> history) throws Exception {
         Class<?> pojoClass = pojo.getClass();
-        Map<String, Object> map = new HashMap<>();
-        history.put(pojo, map);
-        map.put("class", pojoClass.getName());
-        for (Method method : getPublicMethod(pojoClass)) {
-            if (isReader(method)) {
-                map.put(getReaderProperty(method), normalize(method.invoke(pojo), history));
-            }
+        Map<String, Object> result = new HashMap<>();
+        history.put(pojo, result);
+        result.put(CLASS, pojoClass.getName());
+        //读方法
+        for (Map.Entry<String, Method> entry : getGetter(pojoClass).entrySet()) {
+            result.put(entry.getKey(), normalize(entry.getValue().invoke(pojo), history));
         }
-        // public field
+        int modifiers;
+        //公共字段
         for (Field field : getFields(pojoClass)) {
-            if (isPublicInstanceField(field)) {
+            modifiers = field.getModifiers();
+            if (Modifier.isPublic(modifiers)
+                    && !Modifier.isStatic(modifiers)
+                    && !Modifier.isFinal(modifiers) && !field.isSynthetic()
+                    && !Modifier.isTransient(modifiers)
+                    && !result.containsKey(field.getName())) {
                 Object fieldValue = field.get(pojo);
-                // public filed同时也有get/set方法，如果get/set存取的不是前面那个 public field 该如何处理
-                if (history.containsKey(pojo)) {
-                    Object pojoGenerilizedValue = history.get(pojo);
-                    if (pojoGenerilizedValue instanceof Map
-                            && ((Map) pojoGenerilizedValue).containsKey(field.getName())) {
-                        continue;
-                    }
-                }
                 if (fieldValue != null) {
-                    map.put(field.getName(), normalize(fieldValue, history));
+                    result.putIfAbsent(field.getName(), normalize(fieldValue, history));
                 }
-
             }
         }
-        return map;
+        return result;
     }
 
     /**
@@ -178,13 +181,13 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object normalizeMap(Map<?, ?> pojo, Map<Object, Object> history) {
-        Map<Object, Object> dest = createMap(pojo.getClass());
-        history.put(pojo, dest);
+    protected Object normalizeMap(Map<?, ?> pojo, Map<Object, Object> history) throws Exception {
+        Map<Object, Object> result = createMap(pojo.getClass(), pojo.size());
+        history.put(pojo, result);
         for (Map.Entry<?, ?> obj : pojo.entrySet()) {
-            dest.put(normalize(obj.getKey(), history), normalize(obj.getValue(), history));
+            result.put(normalize(obj.getKey(), history), normalize(obj.getValue(), history));
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -194,14 +197,13 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object normalizeCollection(Collection<?> pojo, Map<Object, Object> history) {
-        int len = pojo.size();
-        Collection<Object> dest = (pojo instanceof List<?>) ? new ArrayList<>(len) : new HashSet<>(len);
-        history.put(pojo, dest);
+    protected Object normalizeCollection(Collection<?> pojo, Map<Object, Object> history) throws Exception {
+        Collection<Object> result = createCollection(pojo.getClass(), pojo.size());
+        history.put(pojo, result);
         for (Object obj : pojo) {
-            dest.add(normalize(obj, history));
+            result.add(normalize(obj, history));
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -211,17 +213,17 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object normalizeArray(final Object pojo, final Map<Object, Object> history) {
+    protected Object normalizeArray(final Object pojo, final Map<Object, Object> history) throws Exception {
         if (pojo.getClass().getComponentType().isEnum()) {
             return normalizeEnumArray(pojo, history);
         }
         int len = Array.getLength(pojo);
-        Object[] dest = new Object[len];
-        history.put(pojo, dest);
+        Object[] result = new Object[len];
+        history.put(pojo, result);
         for (int i = 0; i < len; i++) {
-            dest[i] = normalize(Array.get(pojo, i), history);
+            result[i] = normalize(Array.get(pojo, i), history);
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -233,12 +235,12 @@ public class StandardGenericSerializer implements GenericSerializer {
      */
     protected Object normalizeEnumArray(final Object pojo, final Map<Object, Object> history) {
         int len = Array.getLength(pojo);
-        String[] values = new String[len];
-        history.put(pojo, values);
+        String[] result = new String[len];
+        history.put(pojo, result);
         for (int i = 0; i < len; i++) {
-            values[i] = ((Enum<?>) Array.get(pojo, i)).name();
+            result[i] = ((Enum<?>) Array.get(pojo, i)).name();
         }
-        return values;
+        return result;
     }
 
     /**
@@ -247,27 +249,26 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param clazz
      * @return
      */
-    protected Map createMap(Class<?> clazz) {
+    protected Map createMap(Class<?> clazz, int size) {
         if (HashMap.class == clazz) {
-            return new HashMap();
+            return new HashMap(size);
         } else if (Hashtable.class == clazz) {
-            return new Hashtable();
+            return new Hashtable(size);
         } else if (IdentityHashMap.class == clazz) {
-            return new IdentityHashMap();
+            return new IdentityHashMap(size);
         } else if (LinkedHashMap.class == clazz) {
-            return new LinkedHashMap();
+            return new LinkedHashMap(size);
         } else if (Properties.class == clazz) {
             return new Properties();
         } else if (TreeMap.class == clazz) {
             return new TreeMap();
         } else if (WeakHashMap.class == clazz) {
-            return new WeakHashMap();
+            return new WeakHashMap(size);
         } else if (ConcurrentHashMap.class == clazz) {
-            return new ConcurrentHashMap();
+            return new ConcurrentHashMap(size);
         } else if (ConcurrentSkipListMap.class == clazz) {
             return new ConcurrentSkipListMap();
         } else {
-
             Map result = null;
             try {
                 result = (Map) clazz.newInstance();
@@ -291,21 +292,15 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param gtypes 参数泛化类型
      * @return
      */
-    protected Object[] realize(final Object[] objs, final Class<?>[] types, final Type[] gtypes) {
-        try {
-            if (objs.length != types.length || objs.length != gtypes.length) {
-                throw new CodecException("args.length != types.length");
-            }
-            Object[] result = new Object[objs.length];
-            for (int i = 0; i < objs.length; i++) {
-                result[i] = realize(objs[i], types[i], gtypes[i], new IdentityHashMap<>());
-            }
-            return result;
-        } catch (CodecException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new CodecException("Error occurs while realizing, caused by " + e.getMessage(), e);
+    protected Object[] realize(final Object[] objs, final Class<?>[] types, final Type[] gtypes) throws Exception {
+        if (objs.length != types.length || objs.length != gtypes.length) {
+            throw new CodecException("args.length != types.length");
         }
+        Object[] result = new Object[objs.length];
+        for (int i = 0; i < objs.length; i++) {
+            result[i] = realize(objs[i], types[i], gtypes[i], new IdentityHashMap<>());
+        }
+        return result;
     }
 
     /**
@@ -317,21 +312,21 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object realize(final Object pojo, final Class<?> type, final Type genericType, final Map<Object, Object> history) {
+    protected Object realize(final Object pojo, final Class<?> type, final Type genericType,
+                             final Map<Object, Object> history) throws Exception {
         if (pojo == null) {
             return null;
-        } else if (isPrimitive(pojo.getClass(), PRIMITIVE)) {
+        }
+
+        Class<?> clazz = pojo.getClass();
+        if (isPrimitive(clazz, PRIMITIVE)) {
             return realizePrimitive(pojo, type, genericType, history);
-        } else if (type != null && type.isEnum() && pojo.getClass() == String.class) {
+        } else if (type != null && type.isEnum() && clazz == String.class) {
             //枚举
             return Enum.valueOf((Class<Enum>) type, (String) pojo);
-        } else if (type != null && Class.class.isAssignableFrom(type) && pojo.getClass() == String.class) {
+        } else if (type != null && Class.class.isAssignableFrom(type) && clazz == String.class) {
             //类
-            try {
-                return ClassUtils.getClass((String) pojo);
-            } catch (ClassNotFoundException e) {
-                throw new CodecException("Error occurs while realizing, caused by " + e.getMessage(), e);
-            }
+            return ClassUtils.getClass((String) pojo);
         }
 
         Object o = history.get(pojo);
@@ -339,11 +334,11 @@ public class StandardGenericSerializer implements GenericSerializer {
             return o;
         }
         history.put(pojo, pojo);
-        if (pojo.getClass().isArray()) {
+        if (clazz.isArray()) {
             return realizeArray(pojo, type, genericType, history);
-        } else if (pojo instanceof Collection<?>) {
+        } else if (Collection.class.isAssignableFrom(clazz)) {
             return realizeCollection((Collection<?>) pojo, type, genericType, history);
-        } else if (pojo instanceof Map<?, ?> && type != null) {
+        } else if (Map.class.isAssignableFrom(clazz) && type != null) {
             return realizeMap((Map<?, ?>) pojo, type, genericType, history);
         }
         return pojo;
@@ -359,11 +354,12 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeMap(final Map<?, ?> pojo, Class<?> type, final Type genericType,
-                                final Map<Object, Object> history) {
-        Object className = pojo.get("class");
+                                final Map<Object, Object> history) throws Exception {
+        Object className = pojo.get(CLASS);
         if (className != null && className instanceof String) {
             try {
                 type = forName((String) className);
+                pojo.remove(CLASS);
             } catch (ClassNotFoundException e) {
                 // ignore
             }
@@ -386,10 +382,10 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeMap2Intf(final Map<?, ?> pojo, final Class<?> type, final Map<Object, Object> history) {
-        Object dest = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(), new Class<?>[]{type},
-                new PojoInvocationHandler(pojo));
-        history.put(pojo, dest);
-        return dest;
+        Object result = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
+                new Class<?>[]{type}, new PojoInvocationHandler(pojo));
+        history.put(pojo, result);
+        return result;
     }
 
     /**
@@ -400,31 +396,33 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object realizeMap2Pojo(final Map<?, ?> pojo, final Class<?> type, final Map<Object, Object> history) {
-        Object dest = newInstance(type);
-        history.put(pojo, dest);
+    protected Object realizeMap2Pojo(final Map<?, ?> pojo, final Class<?> type, final Map<Object, Object> history) throws Exception {
+        Object result = newInstance(type);
+        history.put(pojo, result);
         for (Map.Entry<?, ?> entry : pojo.entrySet()) {
             if (entry.getKey() instanceof String && entry.getValue() != null) {
-                if (entry.getValue() != null) {
-                    setValue(dest.getClass(), (String) entry.getKey(), dest, (c, t) -> realize(entry.getValue(), c, t, history));
-                }
+                setValue(result.getClass(), (String) entry.getKey(), result, (c, t) -> {
+                    try {
+                        return realize(entry.getValue(), c, t, history);
+                    } catch (CodecException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new CodecException(e.getMessage(), e);
+                    }
+                });
             }
         }
         //异常信息
-        if (dest instanceof Throwable) {
+        if (result instanceof Throwable) {
             Object message = pojo.get("message");
             if (message instanceof String) {
                 try {
-                    Field filed = Throwable.class.getDeclaredField("detailMessage");
-                    if (!filed.isAccessible()) {
-                        filed.setAccessible(true);
-                    }
-                    filed.set(dest, message);
+                    setValue(result.getClass(), "detailMessage", result, message);
                 } catch (Exception e) {
                 }
             }
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -435,8 +433,9 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object realizeMap2Map(final Map<?, ?> pojo, final Class<?> type, final Type genericType, final Map<Object, Object> history) {
-        final Map<Object, Object> result = createMap(type == null || type.isAssignableFrom(pojo.getClass()) ? pojo.getClass() : type);
+    protected Object realizeMap2Map(final Map<?, ?> pojo, final Class<?> type, final Type genericType,
+                                    final Map<Object, Object> history) throws Exception {
+        Map<Object, Object> result = createMap(type == null || type.isAssignableFrom(pojo.getClass()) ? pojo.getClass() : type, pojo.size());
         Type keyType = genericType != null && genericType instanceof ParameterizedType ? ((ParameterizedType) genericType).getActualTypeArguments()[0] : null;
         Type valueType = genericType != null && genericType instanceof ParameterizedType ? ((ParameterizedType) genericType).getActualTypeArguments()[1] : null;
         history.put(pojo, result);
@@ -464,7 +463,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeCollection(final Collection<?> pojo, final Class<?> type, final Type genericType,
-                                       final Map<Object, Object> history) {
+                                       final Map<Object, Object> history) throws Exception {
         if (type.isArray()) {
             return realizeCollection2Array(pojo, type, genericType, history);
         } else {
@@ -481,7 +480,8 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      * @return
      */
-    protected Object realizeArray(final Object pojo, final Class<?> type, final Type genericType, Map<Object, Object> history) {
+    protected Object realizeArray(final Object pojo, final Class<?> type, final Type genericType,
+                                  final Map<Object, Object> history) throws Exception {
         if (Collection.class.isAssignableFrom(type)) {
             return realizeArray2Collection(pojo, type, genericType, history);
         } else {
@@ -499,7 +499,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeArray2Array(final Object pojo, final Class<?> type, final Type genericType,
-                                        final Map<Object, Object> history) {
+                                        final Map<Object, Object> history) throws Exception {
         Class<?> ctype = type != null && type.isArray() ? type.getComponentType() : pojo.getClass().getComponentType();
         Type cgtype = genericType instanceof GenericArrayType ? ((GenericArrayType) genericType).getGenericComponentType() : null;
 
@@ -507,7 +507,7 @@ public class StandardGenericSerializer implements GenericSerializer {
         Object dest = Array.newInstance(ctype, len);
         history.put(pojo, dest);
         for (int i = 0; i < len; i++) {
-            Array.set(dest, i, realize(Array.get(pojo, i), ctype, cgtype, history));
+            Array.set(dest, i, realize(Array.get(pojo, i), cgtype instanceof Class ? (Class<?>) cgtype : ctype, cgtype, history));
         }
         return dest;
     }
@@ -522,16 +522,16 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeArray2Collection(final Object pojo, final Class<?> type, final Type genericType,
-                                             final Map<Object, Object> history) {
+                                             final Map<Object, Object> history) throws Exception {
         Class<?> ctype = pojo.getClass().getComponentType();
         Type cgtype = genericType instanceof ParameterizedType ? ((ParameterizedType) genericType).getActualTypeArguments()[0] : null;
         int len = Array.getLength(pojo);
-        Collection dest = createCollection(type, len);
-        history.put(pojo, dest);
+        Collection result = createCollection(type, len);
+        history.put(pojo, result);
         for (int i = 0; i < len; i++) {
-            dest.add(realize(Array.get(pojo, i), cgtype instanceof Class ? (Class) cgtype : ctype, cgtype, history));
+            result.add(realize(Array.get(pojo, i), cgtype instanceof Class ? (Class) cgtype : ctype, cgtype, history));
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -544,15 +544,15 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeCollection2Collection(final Collection<?> pojo, final Class<?> type, final Type genericType,
-                                                  final Map<Object, Object> history) {
+                                                  final Map<Object, Object> history) throws Exception {
         Type clazz = genericType != null && genericType instanceof ParameterizedType ? ((ParameterizedType) genericType).getActualTypeArguments()[0] : null;
         int len = pojo.size();
-        Collection<Object> dest = createCollection(type, len);
-        history.put(pojo, dest);
+        Collection<Object> result = createCollection(type, len);
+        history.put(pojo, result);
         for (Object obj : pojo) {
-            dest.add(realize(obj, clazz instanceof Class ? (Class) clazz : obj.getClass(), clazz, history));
+            result.add(realize(obj, clazz instanceof Class ? (Class) clazz : obj.getClass(), clazz, history));
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -565,18 +565,18 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeCollection2Array(final Collection<?> pojo, final Class<?> type, final Type genericType,
-                                             final Map<Object, Object> history) {
+                                             final Map<Object, Object> history) throws Exception {
         Class<?> ctype = type.getComponentType();
         Type cgtype = genericType instanceof GenericArrayType ? ((GenericArrayType) genericType).getGenericComponentType() : null;
         int len = pojo.size();
-        Object dest = Array.newInstance(ctype, len);
-        history.put(pojo, dest);
+        Object result = Array.newInstance(ctype, len);
+        history.put(pojo, result);
         int i = 0;
         for (Object obj : pojo) {
-            Array.set(dest, i, realize(obj, cgtype instanceof Class ? (Class) cgtype : ctype, cgtype, history));
+            Array.set(result, i, realize(obj, cgtype instanceof Class ? (Class) cgtype : ctype, cgtype, history));
             i++;
         }
-        return dest;
+        return result;
     }
 
     /**
@@ -608,36 +608,29 @@ public class StandardGenericSerializer implements GenericSerializer {
      *
      * @param cls
      * @return
+     * @throws Exception
      */
-    protected Object newInstance(final Class<?> cls) {
+    protected Object newInstance(final Class<?> cls) throws Exception {
         try {
             return cls.newInstance();
         } catch (Throwable t) {
-            try {
-                Constructor<?>[] constructors = cls.getConstructors();
-                if (constructors == null || constructors.length == 0) {
-                    throw new CodecException("Illegal constructor: " + cls.getName());
-                }
-                Constructor<?> constructor = constructors[0];
-                if (constructor.getParameterTypes().length > 0) {
-                    //找到最小参数的构造函数
-                    for (Constructor<?> c : constructors) {
-                        if (c.getParameterTypes().length < constructor.getParameterTypes().length) {
-                            constructor = c;
-                            if (constructor.getParameterTypes().length == 0) {
-                                break;
-                            }
+            Constructor<?>[] constructors = cls.getConstructors();
+            if (constructors == null || constructors.length == 0) {
+                throw new CodecException("Illegal constructor: " + cls.getName());
+            }
+            Constructor<?> constructor = constructors[0];
+            if (constructor.getParameterTypes().length > 0) {
+                //找到最小参数的构造函数
+                for (Constructor<?> c : constructors) {
+                    if (c.getParameterTypes().length < constructor.getParameterTypes().length) {
+                        constructor = c;
+                        if (constructor.getParameterTypes().length == 0) {
+                            break;
                         }
                     }
                 }
-                return constructor.newInstance(new Object[constructor.getParameterTypes().length]);
-            } catch (InstantiationException e) {
-                throw new CodecException(e.getMessage(), e);
-            } catch (IllegalAccessException e) {
-                throw new CodecException(e.getMessage(), e);
-            } catch (InvocationTargetException e) {
-                throw new CodecException(e.getMessage(), e);
             }
+            return constructor.newInstance(new Object[constructor.getParameterTypes().length]);
         }
     }
 
@@ -656,7 +649,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history
      */
     protected Object realizePrimitive(final Object value, final Class<?> type, final Type genericType,
-                                      final Map<Object, Object> history) {
+                                      final Map<Object, Object> history) throws Exception {
         if (value == null || type == null || type.isAssignableFrom(value.getClass())) {
             return value;
         } else if (value instanceof String) {

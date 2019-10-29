@@ -250,6 +250,26 @@ public class ClassUtils {
     }
 
     /**
+     * 获取Getter
+     *
+     * @param clazz
+     * @return
+     */
+    public static Map<String, Method> getGetter(final Class clazz) {
+        return clazz == null ? null : getClassMeta(clazz).getMethodMeta().getter;
+    }
+
+    /**
+     * 获取Setter
+     *
+     * @param clazz
+     * @return
+     */
+    public static Map<String, Method> getSetter(final Class clazz) {
+        return clazz == null ? null : getClassMeta(clazz).getMethodMeta().setter;
+    }
+
+    /**
      * 方法签名
      *
      * @param methodName 方法名称
@@ -298,72 +318,6 @@ public class ClassUtils {
         }
         return sign;
     }
-
-    /**
-     * 是否是读方法
-     *
-     * @param method
-     * @return
-     */
-    public static boolean isReader(final Method method) {
-        if (method == null) {
-            return false;
-        }
-
-        int mod = method.getModifiers();
-        String name = method.getName();
-        if (!Modifier.isPublic(mod)
-                || Modifier.isStatic(mod)
-                || method.getReturnType() == void.class
-                || method.getDeclaringClass() == Object.class
-                || method.getParameterTypes().length != 0) {
-            return false;
-        }
-        if (name.startsWith("get") && name.length() > 3) {
-            return true;
-        } else if (name.startsWith("is") && name.length() > 2) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 是否是写方法
-     *
-     * @param method
-     * @return
-     */
-    public static boolean isWritter(final Method method) {
-        return method != null
-                && Modifier.isPublic(method.getModifiers())
-                && !Modifier.isStatic(method.getModifiers())
-                && method.getDeclaringClass() != Object.class
-                && method.getParameterTypes().length == 1
-                && method.getName().startsWith("set")
-                && method.getName().length() > 3;
-    }
-
-    /**
-     * 获取属性名称
-     *
-     * @param method
-     * @return
-     */
-    public static String getReaderProperty(final Method method) {
-        if (isReader(method)) {
-            String name = method.getName();
-            if (name.startsWith("get")) {
-                return name.substring(3, 4).toLowerCase()
-                        + name.substring(4);
-            }
-            if (name.startsWith("is")) {
-                return name.substring(2, 3).toLowerCase()
-                        + name.substring(3);
-            }
-        }
-        return null;
-    }
-
 
     /**
      * 得到当前ClassLoader
@@ -564,20 +518,6 @@ public class ClassUtils {
             return results.toArray(new Field[results.size()]);
         }
 
-    }
-
-    /**
-     * 判断是否是公共的实例字段，排除Static、Final和Synthetic
-     *
-     * @param field
-     * @return
-     */
-    public static boolean isPublicInstanceField(final Field field) {
-        if (field == null) {
-            return false;
-        }
-        int modifiers = field.getModifiers();
-        return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers) && !Modifier.isFinal(modifiers) && !field.isSynthetic();
     }
 
     /**
@@ -1441,16 +1381,18 @@ public class ClassUtils {
                         name = method.getName();
                         if (name.startsWith("get")) {
                             if (name.length() > 3 && method.getParameterCount() == 0
-                                    && void.class != method.getReturnType()) {
+                                    && void.class != method.getReturnType()
+                                    && !Modifier.isStatic(method.getModifiers())) {
                                 getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
                             }
                         } else if (name.startsWith("is")) {
                             if (name.length() > 2 && method.getParameterCount() == 0
-                                    && boolean.class == method.getReturnType()) {
+                                    && boolean.class == method.getReturnType()
+                                    && !Modifier.isStatic(method.getModifiers())) {
                                 getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
                             }
                         } else if (name.startsWith("set")) {
-                            if (name.length() > 3 && method.getParameterCount() == 1) {
+                            if (name.length() > 3 && method.getParameterCount() == 1 && !Modifier.isStatic(method.getModifiers())) {
                                 setter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
                             }
                         }

@@ -382,7 +382,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      */
     protected Object realizeMap2Intf(final Map<?, ?> pojo, final Class<?> type, final Map<Object, Object> history) {
         Object result = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
-                new Class<?>[]{type}, new PojoInvocationHandler(pojo));
+                new Class<?>[]{type}, new PojoWrapper(pojo));
         history.put(pojo, result);
         return result;
     }
@@ -737,7 +737,7 @@ public class StandardGenericSerializer implements GenericSerializer {
     /**
      * 对象调用
      */
-    protected class PojoInvocationHandler implements InvocationHandler {
+    protected class PojoWrapper implements InvocationHandler {
 
         protected final Map<?, ?> map;
 
@@ -746,7 +746,7 @@ public class StandardGenericSerializer implements GenericSerializer {
          *
          * @param map
          */
-        public PojoInvocationHandler(final Map<?, ?> map) {
+        public PojoWrapper(final Map<?, ?> map) {
             this.map = map;
         }
 

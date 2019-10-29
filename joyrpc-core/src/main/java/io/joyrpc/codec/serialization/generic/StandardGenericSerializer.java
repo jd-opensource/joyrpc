@@ -700,7 +700,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param type
      * @return
      */
-    protected Object realizeString(Object value, Class<?> type) {
+    protected Object realizeString(final Object value, final Class<?> type) throws Exception {
         String string = (String) value;
         if (char.class.equals(type) || Character.class.equals(type)) {
             if (string.length() != 1) {
@@ -735,11 +735,7 @@ public class StandardGenericSerializer implements GenericSerializer {
                 throw new CodecException("Failed to parse date " + value + " by format " + DATE_FORMAT_TIME + ", cause: " + e.getMessage(), e);
             }
         } else if (type == Class.class) {
-            try {
-                return ClassUtils.getClass((String) value);
-            } catch (ClassNotFoundException e) {
-                throw new CodecException(e.getMessage(), e);
-            }
+            return ClassUtils.getClass((String) value);
         }
         return value;
     }

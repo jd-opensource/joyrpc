@@ -9,9 +9,9 @@ package io.joyrpc.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,22 +59,6 @@ public class ClassUtils {
     public final static Predicate<Field> NONE_STATIC_TRANSIENT = (o) -> {
         int mod = o.getModifiers();
         return !Modifier.isStatic(mod) && !Modifier.isTransient(mod);
-    };
-
-    /**
-     * 判断是否是基本类型
-     */
-    public final static Predicate<Class> PRIMITIVE = (o) -> {
-        Class target = o;
-        if (o.isArray()) { // 数组，检查数组类型
-            target = o.getComponentType();
-        }
-        return target.isPrimitive() // 基本类型
-                || Boolean.class.isAssignableFrom(target)
-                || Character.class.isAssignableFrom(target)
-                || Number.class.isAssignableFrom(target)
-                || String.class.isAssignableFrom(target)
-                || Date.class.isAssignableFrom(target);
     };
 
     protected final static Map<String, Class> forNames = new ConcurrentHashMap(5000);
@@ -126,17 +110,6 @@ public class ClassUtils {
         return length >= 5 && name.startsWith("java") && (name.charAt(4) == '.' || length >= 6 && name.startsWith("x.", 4));
     }
 
-
-    /**
-     * 是否默认基本类型，基本类型+String+Date+Number+Boolean+Character
-     *
-     * @param clazz the cls
-     * @return the boolean
-     */
-    public static boolean isPrimitives(final Class<?> clazz) {
-        return isPrimitives(clazz, PRIMITIVE);
-    }
-
     /**
      * 是否默认类型
      *
@@ -144,7 +117,7 @@ public class ClassUtils {
      * @param predicate 断言
      * @return the boolean
      */
-    public static boolean isPrimitives(final Class<?> clazz, final Predicate<Class> predicate) {
+    public static boolean isPrimitive(final Class<?> clazz, final Predicate<Class> predicate) {
         return clazz == null ? false : (clazz.isPrimitive() ? true : (predicate == null ? false : predicate.test(clazz)));
     }
 
@@ -629,20 +602,6 @@ public class ClassUtils {
     }
 
     /**
-     * 获取字段访问器
-     *
-     * @param clazz
-     * @param field
-     * @return
-     */
-    protected static ReflectAccessor getFieldAccessor(final Class clazz, final Field field) {
-        if (clazz == null || field == null) {
-            return null;
-        }
-        return getClassMeta(clazz).getFieldAccessor(field);
-    }
-
-    /**
      * 获取值
      *
      * @param clazz
@@ -652,7 +611,11 @@ public class ClassUtils {
      * @throws ReflectionException
      */
     public static Object getValue(final Class clazz, final String name, final Object target) throws ReflectionException {
-        return getValue(clazz, getField(clazz, name), target);
+        if (clazz == null || name == null || target == null) {
+            return null;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        return accessor == null || !accessor.isReadable() ? null : accessor.get(target);
     }
 
     /**
@@ -665,8 +628,11 @@ public class ClassUtils {
      * @throws ReflectionException
      */
     public static Object getValue(final Class clazz, final Field field, final Object target) throws ReflectionException {
-        ReflectAccessor accessor = getFieldAccessor(clazz, field);
-        return accessor == null ? null : accessor.get(target);
+        if (clazz == null || field == null || target == null) {
+            return null;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getFieldAccessor(field);
+        return accessor == null || !accessor.isReadable() ? null : accessor.get(target);
     }
 
     /**
@@ -676,10 +642,42 @@ public class ClassUtils {
      * @param name   字段
      * @param target 目标对象
      * @param value  属性值
+     * @return
      * @throws ReflectionException
      */
-    public static void setValue(final Class clazz, final String name, final Object target, final Object value) throws ReflectionException {
-        setValue(clazz, getField(clazz, name), target, value);
+    public static boolean setValue(final Class clazz, final String name, final Object target, final Object value) throws ReflectionException {
+        if (clazz == null || name == null) {
+            return false;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        if (accessor != null && accessor.isWriteable()) {
+            accessor.set(target, value);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 设置值
+     *
+     * @param clazz    类
+     * @param name     字段
+     * @param target   目标对象
+     * @param function 属性值函数
+     * @return
+     * @throws ReflectionException
+     */
+    public static boolean setValue(final Class clazz, final String name, final Object target,
+                                   final BiFunction<Class, Type, Object> function) throws ReflectionException {
+        if (clazz == null || name == null) {
+            return false;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        if (accessor != null && accessor.isWriteable()) {
+            accessor.set(target, function);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -691,13 +689,16 @@ public class ClassUtils {
      * @param value  属性值
      * @throws ReflectionException
      */
-    public static void setValue(final Class clazz, final Field field, final Object target, final Object value) throws ReflectionException {
-        if (target != null) {
-            ReflectAccessor accessor = getFieldAccessor(clazz, field);
-            if (accessor != null) {
-                accessor.set(target, value);
-            }
+    public static boolean setValue(final Class clazz, final Field field, final Object target, final Object value) throws ReflectionException {
+        if (clazz == null || field == null) {
+            return false;
         }
+        ReflectAccessor accessor = getClassMeta(clazz).getFieldAccessor(field);
+        if (accessor != null && accessor.isWriteable()) {
+            accessor.set(target, value);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1076,7 +1077,11 @@ public class ClassUtils {
         /**
          * 字段访问器
          */
-        protected volatile Map<Field, Optional<ReflectAccessor>> accessors;
+        protected volatile Map<Field, ReflectAccessor> fieldAccessors;
+        /**
+         * 属性访问器
+         */
+        protected volatile Map<String, ReflectAccessor> propertyAccessors;
         /**
          * 泛型信息
          */
@@ -1182,41 +1187,61 @@ public class ClassUtils {
         }
 
         /**
+         * 根据属性名称获取访问器
+         *
+         * @param name
+         * @return
+         */
+        protected ReflectAccessor getAccessor(final String name) {
+            if (propertyAccessors == null) {
+                synchronized (this) {
+                    if (propertyAccessors == null) {
+                        propertyAccessors = new ConcurrentHashMap<>(fieldMeta != null ? fieldMeta.fields.size() : 20);
+                    }
+                }
+            }
+            ReflectAccessor result = propertyAccessors.get(name);
+            if (result == null) {
+                MethodMeta meta = getMethodMeta();
+                Field field = getField(name);
+                Method getter = meta.getGetter(name);
+                Method setter = meta.getSetter(name);
+                if (field == null && getter == null && setter == null) {
+                    //不缓存，防止外部调用注入过多的无效属性造成OOM
+                    return null;
+                }
+                return propertyAccessors.computeIfAbsent(name, o -> new ReflectAccessor(field, getter, setter));
+            }
+            return result;
+        }
+
+        /**
          * 获取字段访问器
          *
          * @param field
          * @return
          */
         protected ReflectAccessor getFieldAccessor(final Field field) {
-            if (accessors == null) {
+            if (fieldAccessors == null) {
                 synchronized (this) {
-                    if (accessors == null) {
-                        accessors = new ConcurrentHashMap<>(fieldMeta != null ? fieldMeta.fields.size() : 20);
+                    if (fieldAccessors == null) {
+                        fieldAccessors = new ConcurrentHashMap<>(fieldMeta != null ? fieldMeta.fields.size() : 20);
                     }
                 }
             }
-            return field == null ? null : accessors.computeIfAbsent(field, k -> {
+            return field == null ? null : fieldAccessors.computeIfAbsent(field, k -> {
                 Class<?> fieldType = field.getType();
                 String name = k.getName();
-                char[] data = name.toCharArray();
-                data[0] = Character.toUpperCase(data[0]);
-                name = new String(data);
-                String getName = "get" + name;
-                String getBoolName = (fieldType == boolean.class || fieldType == Boolean.class) ? "is" + name : null;
-                String setName = "set" + name;
                 MethodMeta meta = getMethodMeta();
-                // 获取GETTER方法
-                // 方法的名称会放入JVM的常量池里面
-                OverloadMethod getterMethod = meta.getOverloadMethod(getName);
-                OverloadMethod boolMethod = getBoolName == null ? null : meta.getOverloadMethod(getBoolName);
-                OverloadMethod setterMethod = meta.getOverloadMethod(setName);
+                Method getter = meta.getGetter(name);
+                Method setter = meta.getSetter(name);
 
-                Method getter = getterMethod == null ? (boolMethod == null ? null : boolMethod.getMethod(fieldType)) : getterMethod.getMethod(fieldType);
-                Method setter = setterMethod == null ? null : setterMethod.getMethod(fieldType);
+                getter = getter != null && getter.getReturnType().equals(fieldType) ? getter : null;
+                setter = setter != null && setter.getParameters()[0].getType().equals(fieldType) ? setter : null;
 
-                return Optional.of(new ReflectAccessor(field, getter, setter));
+                return new ReflectAccessor(field, getter, setter);
 
-            }).get();
+            });
         }
 
         /**
@@ -1410,6 +1435,15 @@ public class ClassUtils {
          */
         protected Map<String, OverloadMethod> overloadMethods;
         /**
+         * 读
+         */
+        protected Map<String, Method> getter;
+        /**
+         * 写方法
+         */
+        protected Map<String, Method> setter;
+
+        /**
          * 公共方法
          */
         protected List<Method> methods;
@@ -1424,15 +1458,36 @@ public class ClassUtils {
             if (!type.isPrimitive() && !type.isArray()) {
                 Method[] publicMethods = type.getMethods();
                 overloadMethods = new HashMap<>(publicMethods.length);
+                setter = new HashMap<>(publicMethods.length / 2);
+                getter = new HashMap<>(publicMethods.length / 2);
                 methods = new ArrayList<>(publicMethods.length);
+                String name;
                 for (Method method : publicMethods) {
                     if (!method.getDeclaringClass().equals(Object.class)) {
                         overloadMethods.computeIfAbsent(method.getName(), k -> new OverloadMethod(type, k)).add(method);
                         methods.add(method);
+                        name = method.getName();
+                        if (name.startsWith("get")) {
+                            if (name.length() > 3 && method.getParameterCount() == 0
+                                    && !void.class.equals(method.getReturnType())) {
+                                getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
+                            }
+                        } else if (name.startsWith("is")) {
+                            if (name.length() > 2 && method.getParameterCount() == 0
+                                    && boolean.class.equals(method.getReturnType())) {
+                                getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
+                            }
+                        } else if (name.startsWith("set")) {
+                            if (name.length() > 3 && method.getParameterCount() == 1) {
+                                setter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
+                            }
+                        }
                     }
                 }
             } else {
                 overloadMethods = new HashMap<>(0);
+                setter = new HashMap<>(0);
+                getter = new HashMap<>(0);
                 methods = new ArrayList<>(0);
             }
         }
@@ -1449,6 +1504,14 @@ public class ClassUtils {
 
         public List<Method> getMethods() {
             return methods;
+        }
+
+        public Method getSetter(final String name) {
+            return setter.get(name);
+        }
+
+        public Method getGetter(final String name) {
+            return getter.get(name);
         }
 
         /**
@@ -1875,6 +1938,24 @@ public class ClassUtils {
         }
 
         /**
+         * 是否可写
+         *
+         * @return
+         */
+        public boolean isWriteable() {
+            return field != null || setter != null;
+        }
+
+        /**
+         * 是否可读
+         *
+         * @return
+         */
+        public boolean isReadable() {
+            return field != null && getter != null;
+        }
+
+        /**
          * 获取值
          *
          * @param target
@@ -1882,17 +1963,19 @@ public class ClassUtils {
          * @throws ReflectionException
          */
         public Object get(final Object target) throws ReflectionException {
+            if (target == null) {
+                return null;
+            }
             try {
-                if (target == null) {
-                    return null;
-                } else if (getter != null) {
+                if (getter != null) {
                     return getter.invoke(target);
-                } else if (field.isAccessible()) {
-                    return field.get(target);
-                } else {
-                    field.setAccessible(true);
+                } else if (field != null) {
+                    if (!field.isAccessible()) {
+                        field.setAccessible(true);
+                    }
                     return field.get(target);
                 }
+                return null;
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);
             }
@@ -1907,16 +1990,43 @@ public class ClassUtils {
          * @throws ReflectionException
          */
         public void set(final Object target, final Object value) throws ReflectionException {
+            if (target == null) {
+                return;
+            }
             try {
-                if (target == null) {
-                    return;
-                } else if (setter != null) {
+                if (setter != null) {
                     setter.invoke(target, value);
-                } else if (field.isAccessible()) {
+                } else if (field != null) {
+                    if (!field.isAccessible()) {
+                        field.setAccessible(true);
+                    }
                     field.set(target, value);
-                } else {
-                    field.setAccessible(true);
-                    field.set(target, value);
+                }
+            } catch (Exception e) {
+                throw new ReflectionException(e.getMessage(), e);
+            }
+        }
+
+        /**
+         * 设置值
+         *
+         * @param target
+         * @param function
+         * @throws ReflectionException
+         */
+        public void set(final Object target, final BiFunction<Class, Type, Object> function) throws ReflectionException {
+            if (target == null) {
+                return;
+            }
+            try {
+                if (setter != null) {
+                    Parameter parameter = setter.getParameters()[0];
+                    setter.invoke(target, function.apply(parameter.getType(), parameter.getParameterizedType()));
+                } else if (field != null) {
+                    if (!field.isAccessible()) {
+                        field.setAccessible(true);
+                    }
+                    field.set(target, function.apply(field.getType(), field.getGenericType()));
                 }
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);

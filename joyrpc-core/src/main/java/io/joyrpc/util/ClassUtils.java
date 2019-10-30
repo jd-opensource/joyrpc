@@ -1747,31 +1747,51 @@ public class ClassUtils {
          */
         protected Constructor defaultSingleConstructor;
         /**
+         * 参数最小的构造函数
+         */
+        protected Constructor minimumConstructor;
+        /**
          * 构造函数
          */
         protected List<Constructor> constructors = new LinkedList<>();
 
+        /**
+         * 构造函数
+         *
+         * @param type
+         */
         public ConstructorMeta(Class type) {
             this.type = type;
             //判断是否是公共的具体实现类
             int modifiers = type.getModifiers();
-            boolean b = !Modifier.isAbstract(modifiers) && !Modifier.isInterface(modifiers);
+            boolean concrete = !Modifier.isAbstract(modifiers) && !Modifier.isInterface(modifiers);
             Parameter[] parameters;
-            for (Constructor c : type.getConstructors()) {
+            int minimum = Integer.MAX_VALUE;
+            for (Constructor c : type.getDeclaredConstructors()) {
                 constructors.add(c);
-                if (b) {
+                if (concrete) {
                     parameters = c.getParameters();
+                    //获取最少参数的构造函数
+                    if (parameters.length < minimum) {
+                        minimumConstructor = c;
+                        minimum = parameters.length;
+                    }
                     switch (parameters.length) {
                         case 0:
+                            //默认函数
                             defaultConstructor = setAccessible(c);
                             break;
                         case 1:
+                            //单个参数
                             defaultSingleConstructor = defaultSingleConstructor == null ? c : defaultSingleConstructor;
                             singleConstructors.put(inbox(parameters[0].getType()), setAccessible(c));
                             break;
                     }
-
                 }
+            }
+            if (minimumConstructor != null) {
+                minimumConstructor = (minimumConstructor == defaultConstructor || minimumConstructor == defaultSingleConstructor)
+                        ? null : setAccessible(minimumConstructor);
             }
         }
 
@@ -1820,12 +1840,27 @@ public class ClassUtils {
             try {
                 if (type.isMemberClass() && !Modifier.isStatic(type.getModifiers())) {
                     if (defaultSingleConstructor != null) {
+                        //内部类默认构造函数
                         return (T) defaultSingleConstructor.newInstance(new Object[]{null});
                     }
-                } else {
-                    if (defaultConstructor != null) {
-                        return (T) defaultConstructor.newInstance();
+                } else if (defaultConstructor != null) {
+                    //默认构造函数
+                    return (T) defaultConstructor.newInstance();
+                }
+                if (minimumConstructor != null) {
+                    //最小参数构造函数，构造默认参数
+                    Object[] parameters = new Object[minimumConstructor.getParameterCount()];
+                    int i = 0;
+                    for (Class cl : minimumConstructor.getParameterTypes()) {
+                        if (char.class == cl) {
+                            parameters[i] = Character.MIN_VALUE;
+                        } else if (boolean.class == cl) {
+                            parameters[i] = false;
+                        } else {
+                            parameters[i] = cl.isPrimitive() ? 0 : null;
+                        }
                     }
+                    return (T) minimumConstructor.newInstance(parameters);
                 }
                 return null;
             } catch (Exception e) {

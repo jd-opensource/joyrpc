@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static io.joyrpc.util.ClassUtils.*;
 
@@ -243,6 +244,46 @@ public class StandardGenericSerializer implements GenericSerializer {
     }
 
     /**
+     * 获取类型
+     *
+     * @param type
+     * @param supplier
+     * @return
+     */
+    protected Class<?> getType(final Type type, final Supplier<Class> supplier) {
+        if (type instanceof Class) {
+            return (Class<?>) type;
+        } else if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        }
+        return supplier == null ? null : supplier.get();
+    }
+
+    /**
+     * 构建集合类型
+     *
+     * @param type
+     * @param len
+     * @return
+     */
+    protected Collection<Object> createCollection(final Class<?> type, final int len) {
+        if (List.class == type) {
+            return new ArrayList<>(len);
+        } else if (Set.class == type) {
+            return new HashSet<>(len);
+        } else if (SortedSet.class == type) {
+            return new TreeSet<>();
+        } else if (!type.isInterface() && !Modifier.isAbstract(type.getModifiers())) {
+            try {
+                return (Collection<Object>) type.newInstance();
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return new ArrayList<>();
+    }
+
+    /**
      * 创建MAP
      *
      * @param clazz
@@ -363,6 +404,13 @@ public class StandardGenericSerializer implements GenericSerializer {
                 // ignore
             }
         }
+        //枚举
+        if (type.isEnum()) {
+            Object name = pojo.get("name");
+            if (name != null) {
+                return Enum.valueOf((Class<Enum>) type, name.toString());
+            }
+        }
         if (Map.class.isAssignableFrom(type) || type == Object.class) {
             return realizeMap2Map(pojo, type, genericType, history);
         } else if (type.isInterface()) {
@@ -443,14 +491,15 @@ public class StandardGenericSerializer implements GenericSerializer {
         Object key;
         Object value;
         for (Map.Entry<?, ?> entry : pojo.entrySet()) {
-            keyClazz = keyType != null && keyType instanceof Class ? (Class<?>) keyType : (entry.getKey() == null ? null : entry.getKey().getClass());
-            valueClazz = valueType != null && valueType instanceof Class ? (Class<?>) valueType : (entry.getValue() == null ? null : entry.getValue().getClass());
+            keyClazz = getType(keyType, () -> (entry.getKey() == null ? null : entry.getKey().getClass()));
+            valueClazz = getType(valueType, () -> (entry.getValue() == null ? null : entry.getValue().getClass()));
             key = keyClazz == null ? entry.getKey() : realize(entry.getKey(), keyClazz, keyType, history);
             value = valueClazz == null ? entry.getValue() : realize(entry.getValue(), valueClazz, valueType, history);
             result.put(key, value);
         }
         return result;
     }
+
 
     /**
      * 反序列化计划
@@ -576,61 +625,6 @@ public class StandardGenericSerializer implements GenericSerializer {
             i++;
         }
         return result;
-    }
-
-    /**
-     * 构建集合类型
-     *
-     * @param type
-     * @param len
-     * @return
-     */
-    protected Collection<Object> createCollection(final Class<?> type, final int len) {
-        if (List.class == type) {
-            return new ArrayList<>(len);
-        } else if (Set.class == type) {
-            return new HashSet<>(len);
-        } else if (SortedSet.class == type) {
-            return new TreeSet<>();
-        } else if (!type.isInterface() && !Modifier.isAbstract(type.getModifiers())) {
-            try {
-                return (Collection<Object>) type.newInstance();
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-        return new ArrayList<>();
-    }
-
-    /**
-     * 实例化对象
-     *
-     * @param cls
-     * @return
-     * @throws Exception
-     */
-    protected Object newInstance(final Class<?> cls) throws Exception {
-        try {
-            return cls.newInstance();
-        } catch (Throwable t) {
-            Constructor<?>[] constructors = cls.getConstructors();
-            if (constructors == null || constructors.length == 0) {
-                throw new CodecException("Illegal constructor: " + cls.getName());
-            }
-            Constructor<?> constructor = constructors[0];
-            if (constructor.getParameterTypes().length > 0) {
-                //找到最小参数的构造函数
-                for (Constructor<?> c : constructors) {
-                    if (c.getParameterTypes().length < constructor.getParameterTypes().length) {
-                        constructor = c;
-                        if (constructor.getParameterTypes().length == 0) {
-                            break;
-                        }
-                    }
-                }
-            }
-            return constructor.newInstance(new Object[constructor.getParameterTypes().length]);
-        }
     }
 
     /**

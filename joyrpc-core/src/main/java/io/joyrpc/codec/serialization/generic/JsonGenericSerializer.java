@@ -140,7 +140,6 @@ public class JsonGenericSerializer implements GenericSerializer {
         }
         final int[] index = new int[]{0};
         final Object[] result = new Object[parameters.length];
-        //TODO 参数名称
         Map<String, Integer> names = new HashMap<>(parameters.length);
         Parameter parameter;
         for (int i = 0; i < parameters.length; i++) {

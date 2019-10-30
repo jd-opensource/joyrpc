@@ -30,6 +30,7 @@ import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,7 +49,7 @@ public class StandardGenericSerializer implements GenericSerializer {
     /**
      * 普通时间的格式
      */
-    protected static final DateTimeFormatter DATE_FORMAT_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    protected static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 判断是否是基本类型
@@ -660,7 +661,7 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param type
      * @return
      */
-    protected Object realizeNumber(Object value, Class<?> type) {
+    protected Object realizeNumber(final Object value, final Class<?> type) {
         Number number = (Number) value;
         if (type == byte.class || type == Byte.class) {
             return number.byteValue();
@@ -678,8 +679,16 @@ public class StandardGenericSerializer implements GenericSerializer {
             return BigInteger.valueOf(number.longValue());
         } else if (type == BigDecimal.class) {
             return BigDecimal.valueOf(number.doubleValue());
+        } else if (type == boolean.class || type == Boolean.class) {
+            return 0 != number.intValue();
         } else if (type == Date.class) {
             return new Date(number.longValue());
+        } else if (type == java.sql.Date.class) {
+            return new java.sql.Date(number.longValue());
+        } else if (type == java.sql.Timestamp.class) {
+            return new java.sql.Timestamp(number.longValue());
+        } else if (type == java.sql.Time.class) {
+            return new java.sql.Time(number.longValue());
         }
         return value;
     }
@@ -692,36 +701,44 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object realizeString(final Object value, final Class<?> type) throws Exception {
-        String string = (String) value;
+        String text = (String) value;
         if (char.class.equals(type) || Character.class.equals(type)) {
-            if (string.length() != 1) {
-                throw new CodecException(String.format("can not convert %s to char!", string));
+            if (text.length() != 1) {
+                throw new CodecException(String.format("can not convert %s to char!", text));
             }
-            return string.charAt(0);
+            return text.charAt(0);
         } else if (type.isEnum()) {
-            return Enum.valueOf((Class<Enum>) type, string);
-        } else if (type == BigInteger.class) {
-            return new BigInteger(string);
-        } else if (type == BigDecimal.class) {
-            return new BigDecimal(string);
-        } else if (type == Short.class || type == short.class) {
-            return new Short(string);
+            return Enum.valueOf((Class<Enum>) type, text);
         } else if (type == Integer.class || type == int.class) {
-            return new Integer(string);
+            return new Integer(text);
         } else if (type == Long.class || type == long.class) {
-            return new Long(string);
+            return new Long(text);
         } else if (type == Double.class || type == double.class) {
-            return new Double(string);
-        } else if (type == Float.class || type == float.class) {
-            return new Float(string);
-        } else if (type == Byte.class || type == byte.class) {
-            return new Byte(string);
+            return new Double(text);
         } else if (type == Boolean.class || type == boolean.class) {
-            return new Boolean(string);
+            return new Boolean(text);
+        } else if (type == Byte.class || type == byte.class) {
+            return new Byte(text);
+        } else if (type == Short.class || type == short.class) {
+            return new Short(text);
+        } else if (type == Float.class || type == float.class) {
+            return new Float(text);
         } else if (type == Date.class) {
-            return LocalDateTime.parse(string, DATE_FORMAT_TIME);
+            return Date.from(LocalDateTime.parse(text, DATE_TIME_FORMATTER).atZone(ZoneId.systemDefault()).toInstant());
+        } else if (type == java.sql.Date.class) {
+            return java.sql.Date.from(LocalDateTime.parse(text, DATE_TIME_FORMATTER).atZone(ZoneId.systemDefault()).toInstant());
+        } else if (type == java.sql.Timestamp.class) {
+            return java.sql.Timestamp.from(LocalDateTime.parse(text, DATE_TIME_FORMATTER).atZone(ZoneId.systemDefault()).toInstant());
+        } else if (type == java.sql.Time.class) {
+            return java.sql.Time.from(LocalDateTime.parse(text, DATE_TIME_FORMATTER).atZone(ZoneId.systemDefault()).toInstant());
         } else if (type == Class.class) {
             return ClassUtils.getClass((String) value);
+        } else if (char[].class.equals(type)) {
+            return text.toCharArray();
+        } else if (type == BigInteger.class) {
+            return new BigInteger(text);
+        } else if (type == BigDecimal.class) {
+            return new BigDecimal(text);
         }
         return value;
     }

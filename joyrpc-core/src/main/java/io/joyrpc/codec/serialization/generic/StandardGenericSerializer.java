@@ -83,8 +83,28 @@ public class StandardGenericSerializer implements GenericSerializer {
     public Object[] deserialize(final Invocation invocation) throws CodecException {
         Object[] genericArgs = invocation.getArgs();
         Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? new Object[0] : (Object[]) genericArgs[2];
+        String[] argTypes = genericArgs == null || genericArgs.length < 3 ? null : (String[]) genericArgs[1];
         try {
-            return realize(paramArgs, invocation.getArgClasses(), invocation.getMethod().getGenericParameterTypes());
+            //接口的参数类型
+            Class[] argClasses = invocation.getArgClasses();
+            //计算客户端传递的真实参数类型
+            if (argTypes != null && argTypes.length > 0) {
+                String argType;
+                Class type;
+                //复制一份，防止修改
+                argClasses = Arrays.copyOf(argClasses, argClasses.length);
+                for (int i = 0; i < argTypes.length; i++) {
+                    argType = argTypes[i];
+                    if (argType != null && !argType.isEmpty()) {
+                        try {
+                            type = ClassUtils.getClass(argType);
+                            argClasses[i] = type;
+                        } catch (ClassNotFoundException e) {
+                        }
+                    }
+                }
+            }
+            return realize(paramArgs, argClasses, invocation.getMethod().getGenericParameterTypes());
         } catch (CodecException e) {
             throw e;
         } catch (Exception e) {

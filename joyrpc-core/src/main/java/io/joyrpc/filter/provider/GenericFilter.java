@@ -37,13 +37,10 @@ import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GENERIC_SERIALIZER;
 import static io.joyrpc.codec.serialization.GenericSerializer.STANDARD;
-import static io.joyrpc.util.ClassUtils.forName;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
  * @description: 服务端的泛化调用过滤器<br>
@@ -82,12 +79,6 @@ public class GenericFilter extends AbstractProviderFilter {
             // 根据调用的参数来获取方法及参数类型
             Object[] genericArgs = invocation.getArgs();
             Object[] args = serializers[0].deserialize(invocation);
-            String[] argTypes = (String[]) genericArgs[1];
-            if (argTypes == null || argTypes.length == 0) {
-                argTypes = args == null ?
-                        new String[0] : Arrays.stream(args).map(arg -> arg.getClass().getName()).toArray(String[]::new);
-            }
-            invocation.setArgsType(argTypes);
             invocation.setArgs(args);
         } catch (Exception e) {
             String message = String.format(ExceptionCode.format(ExceptionCode.FILTER_GENERIC_CONVERT) +

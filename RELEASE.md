@@ -46,6 +46,8 @@
 
 - Spring中的ProviderBean初始化异常退出
 
+- 修改泛化反序列化，优先按照用户传递的参数类型来进行反序列化
+
 ## 1.0.3-RELEASE(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

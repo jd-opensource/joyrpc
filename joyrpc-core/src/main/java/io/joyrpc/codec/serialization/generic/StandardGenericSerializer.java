@@ -404,20 +404,18 @@ public class StandardGenericSerializer implements GenericSerializer {
                 // ignore
             }
         }
-        //枚举
-        if (type.isEnum()) {
+
+        if (Map.class.isAssignableFrom(type) || type == Object.class) {
+            return realizeMap2Map(pojo, type, genericType, history);
+        } else if (type.isInterface()) {
+            return realizeMap2Intf(pojo, type, history);
+        } else if (type.isEnum()) {
             Object name = pojo.get("name");
             if (name != null) {
                 return Enum.valueOf((Class<Enum>) type, name.toString());
             }
         }
-        if (Map.class.isAssignableFrom(type) || type == Object.class) {
-            return realizeMap2Map(pojo, type, genericType, history);
-        } else if (type.isInterface()) {
-            return realizeMap2Intf(pojo, type, history);
-        } else {
-            return realizeMap2Pojo(pojo, type, history);
-        }
+        return realizeMap2Pojo(pojo, type, history);
     }
 
     /**

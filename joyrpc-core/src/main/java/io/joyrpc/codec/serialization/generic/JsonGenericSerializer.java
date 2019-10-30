@@ -88,7 +88,11 @@ public class JsonGenericSerializer implements GenericSerializer {
         String argType = argTypes == null || argTypes.length <= index ? null : argTypes[index];
         if (argType != null && !argType.isEmpty()) {
             try {
-                type = ClassUtils.getClass(argType);
+                Class aClass = ClassUtils.getClass(argType);
+                if (parameters[index].getType().isAssignableFrom(aClass)) {
+                    //防止漏洞攻击
+                    type = aClass;
+                }
             } catch (ClassNotFoundException e) {
             }
         }

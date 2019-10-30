@@ -98,7 +98,10 @@ public class StandardGenericSerializer implements GenericSerializer {
                     if (argType != null && !argType.isEmpty()) {
                         try {
                             type = ClassUtils.getClass(argType);
-                            argClasses[i] = type;
+                            if (argClasses[i].isAssignableFrom(type)) {
+                                //确保是子类，防止漏洞攻击
+                                argClasses[i] = type;
+                            }
                         } catch (ClassNotFoundException e) {
                         }
                     }

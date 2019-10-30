@@ -764,7 +764,9 @@ public class ClassUtils {
      * @return Class[]
      * @throws RuntimeException
      */
-    public static Class[] getClasses(final String[] names, final Function<ClassNotFoundException, RuntimeException> function) throws RuntimeException {
+    public static Class[] getClasses(final String[] names,
+                                     final Function<ClassNotFoundException, RuntimeException> function)
+            throws RuntimeException {
         if (names == null || names.length == 0) {
             return new Class[0];
         } else {
@@ -784,7 +786,9 @@ public class ClassUtils {
      * @return Class
      * @throws RuntimeException
      */
-    public static Class getClass(final String name, final Function<ClassNotFoundException, RuntimeException> function) throws RuntimeException {
+    public static Class getClass(final String name,
+                                 final Function<ClassNotFoundException, RuntimeException> function)
+            throws RuntimeException {
         try {
             return getClass(name);
         } catch (ClassNotFoundException e) {

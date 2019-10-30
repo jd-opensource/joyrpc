@@ -57,7 +57,7 @@ public interface Protocol {
      */
     int HTTP_ORDER = 120;
     /**
-     * GRPC插件舒心
+     * GRPC插件顺序
      */
     int GRPC_ORDER = 130;
     /**

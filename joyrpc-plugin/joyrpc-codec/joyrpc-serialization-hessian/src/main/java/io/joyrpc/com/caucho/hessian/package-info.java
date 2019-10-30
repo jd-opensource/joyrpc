@@ -22,8 +22,7 @@ package io.joyrpc.com.caucho.hessian;
 
 /**
  * 修改记录：
- * 1. 修改io.joyrpc.com.caucho.hessian.io.MapSerializer类，添加对LinkedHashMap的特殊处理
- * 2. 修改io.joyrpc.com.caucho.hessian.io.CollectionDeserializer类，添加对LinkedHashMap的特殊处理
- * 3. 修改io.joyrpc.com.caucho.hessian.io.ContextSerializerFactory类，添加locale支持
- * 4. 添加io.joyrpc.com.caucho.hessian.io.java8包下类文件，添加jdk8日期支持，添加zoneregion支持
+ * 1. 修改io.joyrpc.com.caucho.hessian.io.CollectionDeserializer类，添加对LinkedHashSet的特殊处理
+ * 2. 修改io.joyrpc.com.caucho.hessian.io.ContextSerializerFactory类，添加locale支持
+ * 3. 添加io.joyrpc.com.caucho.hessian.io.java8包下类文件，添加jdk8日期支持，添加zoneregion支持
  */

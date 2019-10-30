@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -160,6 +160,20 @@ public class SerializationTest {
     }
 
     @Test
+    public void testLinkedHashMap() {
+        MapObj obj = new MapObj();
+        LinkedHashSet<String> set=new LinkedHashSet<>();
+        set.add("1");
+        set.add("2");
+        obj.setSet(set);
+        LinkedHashMap<String, String> map = new LinkedHashMap();
+        map.putIfAbsent("test", "test");
+        map.putIfAbsent("test2", "test2");
+        obj.setMap(map);
+        serializeAndDeserialize("hessian", obj);
+    }
+
+    @Test
     public void testGrpc() throws NoSuchMethodException, MethodOverloadException, IllegalAccessException {
         PhoneNumber phoneNumber = new PhoneNumber("123456789", PhoneType.MOBILE);
 
@@ -300,6 +314,53 @@ public class SerializationTest {
         long encodeTime;
         long decodeTime;
         long size;
+    }
+
+    protected static class MapObj {
+
+        private LinkedHashMap<String, String> map;
+
+        private LinkedHashSet<String> set;
+
+        public LinkedHashMap<String, String> getMap() {
+            return map;
+        }
+
+        public void setMap(LinkedHashMap<String, String> map) {
+            this.map = map;
+        }
+
+        public LinkedHashSet<String> getSet() {
+            return set;
+        }
+
+        public void setSet(LinkedHashSet<String> set) {
+            this.set = set;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            MapObj mapObj = (MapObj) o;
+
+            if (map != null ? !map.equals(mapObj.map) : mapObj.map != null) {
+                return false;
+            }
+            return set != null ? set.equals(mapObj.set) : mapObj.set == null;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = map != null ? map.hashCode() : 0;
+            result = 31 * result + (set != null ? set.hashCode() : 0);
+            return result;
+        }
     }
 
 }

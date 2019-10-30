@@ -51,13 +51,13 @@ package io.joyrpc.com.caucho.hessian.io;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Serializing a JDK 1.2 java.util.Map.
- *
+ * <p>
  * 增加了LinkedHashMap支持
+ *
  * @since 2019/8/29
  */
 public class MapSerializer extends AbstractSerializer {
@@ -92,11 +92,7 @@ public class MapSerializer extends AbstractSerializer {
         } else if (!_isSendJavaType) {
             // hessian/3a19
             for (; cl != null; cl = cl.getSuperclass()) {
-                if (cl.equals(LinkedHashMap.class)) {
-                    //增加LinkedHashMap
-                    out.writeMapBegin(cl.getName());
-                    break;
-                } else if (cl.equals(HashMap.class)) {
+                if (cl.equals(HashMap.class)) {
                     out.writeMapBegin(null);
                     break;
                 } else if (cl.getName().startsWith("java.")) {

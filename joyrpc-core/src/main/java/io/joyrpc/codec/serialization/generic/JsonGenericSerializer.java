@@ -142,9 +142,15 @@ public class JsonGenericSerializer implements GenericSerializer {
         final Object[] result = new Object[parameters.length];
         //TODO 参数名称
         Map<String, Integer> names = new HashMap<>(parameters.length);
+        Parameter parameter;
         for (int i = 0; i < parameters.length; i++) {
-            names.put(parameters[i].getName(), i);
-            names.put("arg" + i, i);
+            parameter = parameters[i];
+            if (parameter.isNamePresent()) {
+                names.put(parameter.getName(), i);
+                names.put("arg" + i, i);
+            } else {
+                names.put(parameter.getName(), i);
+            }
         }
         json.parseObject(new ByteArrayInputStream(text), (k, o) -> {
             //根据名称获取参数位置

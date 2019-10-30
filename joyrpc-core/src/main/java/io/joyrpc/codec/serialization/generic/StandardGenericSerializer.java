@@ -360,9 +360,12 @@ public class StandardGenericSerializer implements GenericSerializer {
         if (objs.length != types.length || objs.length != gtypes.length) {
             throw new CodecException("args.length != types.length");
         }
+        //一个方法下参数共用一个history
+        Map<Object, Object> history = new IdentityHashMap<>();
+        //反序列化
         Object[] result = new Object[objs.length];
         for (int i = 0; i < objs.length; i++) {
-            result[i] = realize(objs[i], types[i], gtypes[i], new IdentityHashMap<>());
+            result[i] = realize(objs[i], types[i], gtypes[i], history);
         }
         return result;
     }

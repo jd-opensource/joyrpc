@@ -397,7 +397,7 @@ public class StandardGenericSerializer implements GenericSerializer {
     protected Object realizeMap(final Map<?, ?> pojo, Class<?> type, final Type genericType,
                                 final Map<Object, Object> history) throws Exception {
         Object className = pojo.get(CLASS);
-        if (className != null && className instanceof String) {
+        if (className != null && className instanceof String && !((String) className).isEmpty()) {
             try {
                 type = forName((String) className);
                 pojo.remove(CLASS);

@@ -42,7 +42,7 @@
 
 - 修复transport层关于isWritable判断不合理，导致client不可读的问题
 
-- Spring中的ConsumerBean初始化异常退出，当时泛型的时候正确返回对象类型
+- Spring中的ConsumerBean初始化异常退出，当是泛型的时候正确返回对象类型
 
 - Spring中的ProviderBean初始化异常退出
 

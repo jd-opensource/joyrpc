@@ -9,9 +9,9 @@ package io.joyrpc.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,22 +59,6 @@ public class ClassUtils {
     public final static Predicate<Field> NONE_STATIC_TRANSIENT = (o) -> {
         int mod = o.getModifiers();
         return !Modifier.isStatic(mod) && !Modifier.isTransient(mod);
-    };
-
-    /**
-     * 判断是否是基本类型
-     */
-    public final static Predicate<Class> PRIMITIVE = (o) -> {
-        Class target = o;
-        if (o.isArray()) { // 数组，检查数组类型
-            target = o.getComponentType();
-        }
-        return target.isPrimitive() // 基本类型
-                || Boolean.class.isAssignableFrom(target)
-                || Character.class.isAssignableFrom(target)
-                || Number.class.isAssignableFrom(target)
-                || String.class.isAssignableFrom(target)
-                || Date.class.isAssignableFrom(target);
     };
 
     protected final static Map<String, Class> forNames = new ConcurrentHashMap(5000);
@@ -126,17 +110,6 @@ public class ClassUtils {
         return length >= 5 && name.startsWith("java") && (name.charAt(4) == '.' || length >= 6 && name.startsWith("x.", 4));
     }
 
-
-    /**
-     * 是否默认基本类型，基本类型+String+Date+Number+Boolean+Character
-     *
-     * @param clazz the cls
-     * @return the boolean
-     */
-    public static boolean isPrimitives(final Class<?> clazz) {
-        return isPrimitives(clazz, PRIMITIVE);
-    }
-
     /**
      * 是否默认类型
      *
@@ -144,7 +117,7 @@ public class ClassUtils {
      * @param predicate 断言
      * @return the boolean
      */
-    public static boolean isPrimitives(final Class<?> clazz, final Predicate<Class> predicate) {
+    public static boolean isPrimitive(final Class<?> clazz, final Predicate<Class> predicate) {
         return clazz == null ? false : (clazz.isPrimitive() ? true : (predicate == null ? false : predicate.test(clazz)));
     }
 
@@ -277,6 +250,26 @@ public class ClassUtils {
     }
 
     /**
+     * 获取Getter
+     *
+     * @param clazz
+     * @return
+     */
+    public static Map<String, Method> getGetter(final Class clazz) {
+        return clazz == null ? null : getClassMeta(clazz).getMethodMeta().getter;
+    }
+
+    /**
+     * 获取Setter
+     *
+     * @param clazz
+     * @return
+     */
+    public static Map<String, Method> getSetter(final Class clazz) {
+        return clazz == null ? null : getClassMeta(clazz).getMethodMeta().setter;
+    }
+
+    /**
      * 方法签名
      *
      * @param methodName 方法名称
@@ -325,72 +318,6 @@ public class ClassUtils {
         }
         return sign;
     }
-
-    /**
-     * 是否是读方法
-     *
-     * @param method
-     * @return
-     */
-    public static boolean isReader(final Method method) {
-        if (method == null) {
-            return false;
-        }
-
-        int mod = method.getModifiers();
-        String name = method.getName();
-        if (!Modifier.isPublic(mod)
-                || Modifier.isStatic(mod)
-                || method.getReturnType() == void.class
-                || method.getDeclaringClass() == Object.class
-                || method.getParameterTypes().length != 0) {
-            return false;
-        }
-        if (name.startsWith("get") && name.length() > 3) {
-            return true;
-        } else if (name.startsWith("is") && name.length() > 2) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 是否是写方法
-     *
-     * @param method
-     * @return
-     */
-    public static boolean isWritter(final Method method) {
-        return method != null
-                && Modifier.isPublic(method.getModifiers())
-                && !Modifier.isStatic(method.getModifiers())
-                && method.getDeclaringClass() != Object.class
-                && method.getParameterTypes().length == 1
-                && method.getName().startsWith("set")
-                && method.getName().length() > 3;
-    }
-
-    /**
-     * 获取属性名称
-     *
-     * @param method
-     * @return
-     */
-    public static String getReaderProperty(final Method method) {
-        if (isReader(method)) {
-            String name = method.getName();
-            if (name.startsWith("get")) {
-                return name.substring(3, 4).toLowerCase()
-                        + name.substring(4);
-            }
-            if (name.startsWith("is")) {
-                return name.substring(2, 3).toLowerCase()
-                        + name.substring(3);
-            }
-        }
-        return null;
-    }
-
 
     /**
      * 得到当前ClassLoader
@@ -594,20 +521,6 @@ public class ClassUtils {
     }
 
     /**
-     * 判断是否是公共的实例字段，排除Static、Final和Synthetic
-     *
-     * @param field
-     * @return
-     */
-    public static boolean isPublicInstanceField(final Field field) {
-        if (field == null) {
-            return false;
-        }
-        int modifiers = field.getModifiers();
-        return Modifier.isPublic(modifiers) && !Modifier.isStatic(modifiers) && !Modifier.isFinal(modifiers) && !field.isSynthetic();
-    }
-
-    /**
      * 获取类的字段名映射
      *
      * @param clazz 类
@@ -629,20 +542,6 @@ public class ClassUtils {
     }
 
     /**
-     * 获取字段访问器
-     *
-     * @param clazz
-     * @param field
-     * @return
-     */
-    protected static ReflectAccessor getFieldAccessor(final Class clazz, final Field field) {
-        if (clazz == null || field == null) {
-            return null;
-        }
-        return getClassMeta(clazz).getFieldAccessor(field);
-    }
-
-    /**
      * 获取值
      *
      * @param clazz
@@ -652,7 +551,11 @@ public class ClassUtils {
      * @throws ReflectionException
      */
     public static Object getValue(final Class clazz, final String name, final Object target) throws ReflectionException {
-        return getValue(clazz, getField(clazz, name), target);
+        if (clazz == null || name == null || target == null) {
+            return null;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        return accessor == null || !accessor.isReadable() ? null : accessor.get(target);
     }
 
     /**
@@ -665,8 +568,11 @@ public class ClassUtils {
      * @throws ReflectionException
      */
     public static Object getValue(final Class clazz, final Field field, final Object target) throws ReflectionException {
-        ReflectAccessor accessor = getFieldAccessor(clazz, field);
-        return accessor == null ? null : accessor.get(target);
+        if (clazz == null || field == null || target == null) {
+            return null;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getFieldAccessor(field);
+        return accessor == null || !accessor.isReadable() ? null : accessor.get(target);
     }
 
     /**
@@ -676,10 +582,42 @@ public class ClassUtils {
      * @param name   字段
      * @param target 目标对象
      * @param value  属性值
+     * @return
      * @throws ReflectionException
      */
-    public static void setValue(final Class clazz, final String name, final Object target, final Object value) throws ReflectionException {
-        setValue(clazz, getField(clazz, name), target, value);
+    public static boolean setValue(final Class clazz, final String name, final Object target, final Object value) throws ReflectionException {
+        if (clazz == null || name == null) {
+            return false;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        if (accessor != null && accessor.isWriteable()) {
+            accessor.set(target, value);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 设置值
+     *
+     * @param clazz    类
+     * @param name     字段
+     * @param target   目标对象
+     * @param function 属性值函数
+     * @return
+     * @throws ReflectionException
+     */
+    public static boolean setValue(final Class clazz, final String name, final Object target,
+                                   final BiFunction<Class, Type, Object> function) throws ReflectionException {
+        if (clazz == null || name == null) {
+            return false;
+        }
+        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        if (accessor != null && accessor.isWriteable()) {
+            accessor.set(target, function);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -691,13 +629,16 @@ public class ClassUtils {
      * @param value  属性值
      * @throws ReflectionException
      */
-    public static void setValue(final Class clazz, final Field field, final Object target, final Object value) throws ReflectionException {
-        if (target != null) {
-            ReflectAccessor accessor = getFieldAccessor(clazz, field);
-            if (accessor != null) {
-                accessor.set(target, value);
-            }
+    public static boolean setValue(final Class clazz, final Field field, final Object target, final Object value) throws ReflectionException {
+        if (clazz == null || field == null) {
+            return false;
         }
+        ReflectAccessor accessor = getClassMeta(clazz).getFieldAccessor(field);
+        if (accessor != null && accessor.isWriteable()) {
+            accessor.set(target, value);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -742,21 +683,21 @@ public class ClassUtils {
             return null;
         } else if (!clazz.isPrimitive()) {
             return clazz;
-        } else if (int.class.equals(clazz)) {
+        } else if (int.class == clazz) {
             return Integer.class;
-        } else if (double.class.equals(clazz)) {
+        } else if (double.class == clazz) {
             return Double.class;
-        } else if (char.class.equals(clazz)) {
+        } else if (char.class == clazz) {
             return Character.class;
-        } else if (boolean.class.equals(clazz)) {
+        } else if (boolean.class == clazz) {
             return Boolean.class;
-        } else if (long.class.equals(clazz)) {
+        } else if (long.class == clazz) {
             return Long.class;
-        } else if (float.class.equals(clazz)) {
+        } else if (float.class == clazz) {
             return Float.class;
-        } else if (short.class.equals(clazz)) {
+        } else if (short.class == clazz) {
             return Short.class;
-        } else if (byte.class.equals(clazz)) {
+        } else if (byte.class == clazz) {
             return Byte.class;
         } else {
             return clazz;
@@ -989,34 +930,6 @@ public class ClassUtils {
                 o -> o.isArray() ? jvmNameToCanonicalName(clazz.getName()) : clazz.getName());
     }
 
-    /**
-     * 创建集合对象
-     *
-     * @param targetType
-     * @param size
-     * @return
-     * @throws Exception
-     */
-    public static Collection createCollection(final Class<?> targetType, final int size) throws Exception {
-        if (targetType == null) {
-            return null;
-        } else if (targetType.equals(List.class)) {
-            return new ArrayList(size);
-        } else if (targetType.equals(Set.class)) {
-            return new HashSet(size);
-        } else if (targetType.equals(SortedSet.class)) {
-            return new TreeSet();
-        } else if (targetType.isInterface()) {
-            // 接口
-            return null;
-        } else if (Modifier.isAbstract(targetType.getModifiers())) {
-            //抽象方法
-            return null;
-        } else {
-            return (Collection) targetType.newInstance();
-        }
-    }
-
     protected static String jvmNameToCanonicalName(final String jvmName) {
         boolean isarray = jvmName.charAt(0) == '[';
         if (isarray) {
@@ -1076,7 +989,11 @@ public class ClassUtils {
         /**
          * 字段访问器
          */
-        protected volatile Map<Field, Optional<ReflectAccessor>> accessors;
+        protected volatile Map<Field, ReflectAccessor> fieldAccessors;
+        /**
+         * 属性访问器
+         */
+        protected volatile Map<String, ReflectAccessor> propertyAccessors;
         /**
          * 泛型信息
          */
@@ -1182,41 +1099,61 @@ public class ClassUtils {
         }
 
         /**
+         * 根据属性名称获取访问器
+         *
+         * @param name
+         * @return
+         */
+        protected ReflectAccessor getAccessor(final String name) {
+            if (propertyAccessors == null) {
+                synchronized (this) {
+                    if (propertyAccessors == null) {
+                        propertyAccessors = new ConcurrentHashMap<>(fieldMeta != null ? fieldMeta.fields.size() : 20);
+                    }
+                }
+            }
+            ReflectAccessor result = propertyAccessors.get(name);
+            if (result == null) {
+                MethodMeta meta = getMethodMeta();
+                Field field = getField(name);
+                Method getter = meta.getGetter(name);
+                Method setter = meta.getSetter(name);
+                if (field == null && getter == null && setter == null) {
+                    //不缓存，防止外部调用注入过多的无效属性造成OOM
+                    return null;
+                }
+                return propertyAccessors.computeIfAbsent(name, o -> new ReflectAccessor(field, getter, setter));
+            }
+            return result;
+        }
+
+        /**
          * 获取字段访问器
          *
          * @param field
          * @return
          */
         protected ReflectAccessor getFieldAccessor(final Field field) {
-            if (accessors == null) {
+            if (fieldAccessors == null) {
                 synchronized (this) {
-                    if (accessors == null) {
-                        accessors = new ConcurrentHashMap<>(fieldMeta != null ? fieldMeta.fields.size() : 20);
+                    if (fieldAccessors == null) {
+                        fieldAccessors = new ConcurrentHashMap<>(fieldMeta != null ? fieldMeta.fields.size() : 20);
                     }
                 }
             }
-            return field == null ? null : accessors.computeIfAbsent(field, k -> {
+            return field == null ? null : fieldAccessors.computeIfAbsent(field, k -> {
                 Class<?> fieldType = field.getType();
                 String name = k.getName();
-                char[] data = name.toCharArray();
-                data[0] = Character.toUpperCase(data[0]);
-                name = new String(data);
-                String getName = "get" + name;
-                String getBoolName = (fieldType == boolean.class || fieldType == Boolean.class) ? "is" + name : null;
-                String setName = "set" + name;
                 MethodMeta meta = getMethodMeta();
-                // 获取GETTER方法
-                // 方法的名称会放入JVM的常量池里面
-                OverloadMethod getterMethod = meta.getOverloadMethod(getName);
-                OverloadMethod boolMethod = getBoolName == null ? null : meta.getOverloadMethod(getBoolName);
-                OverloadMethod setterMethod = meta.getOverloadMethod(setName);
+                Method getter = meta.getGetter(name);
+                Method setter = meta.getSetter(name);
 
-                Method getter = getterMethod == null ? (boolMethod == null ? null : boolMethod.getMethod(fieldType)) : getterMethod.getMethod(fieldType);
-                Method setter = setterMethod == null ? null : setterMethod.getMethod(fieldType);
+                getter = getter != null && getter.getReturnType().equals(fieldType) ? getter : null;
+                setter = setter != null && setter.getParameters()[0].getType().equals(fieldType) ? setter : null;
 
-                return Optional.of(new ReflectAccessor(field, getter, setter));
+                return new ReflectAccessor(field, getter, setter);
 
-            }).get();
+            });
         }
 
         /**
@@ -1410,6 +1347,15 @@ public class ClassUtils {
          */
         protected Map<String, OverloadMethod> overloadMethods;
         /**
+         * 读
+         */
+        protected Map<String, Method> getter;
+        /**
+         * 写方法
+         */
+        protected Map<String, Method> setter;
+
+        /**
          * 公共方法
          */
         protected List<Method> methods;
@@ -1424,15 +1370,38 @@ public class ClassUtils {
             if (!type.isPrimitive() && !type.isArray()) {
                 Method[] publicMethods = type.getMethods();
                 overloadMethods = new HashMap<>(publicMethods.length);
+                setter = new HashMap<>(publicMethods.length / 2);
+                getter = new HashMap<>(publicMethods.length / 2);
                 methods = new ArrayList<>(publicMethods.length);
+                String name;
                 for (Method method : publicMethods) {
                     if (!method.getDeclaringClass().equals(Object.class)) {
                         overloadMethods.computeIfAbsent(method.getName(), k -> new OverloadMethod(type, k)).add(method);
                         methods.add(method);
+                        name = method.getName();
+                        if (name.startsWith("get")) {
+                            if (name.length() > 3 && method.getParameterCount() == 0
+                                    && void.class != method.getReturnType()
+                                    && !Modifier.isStatic(method.getModifiers())) {
+                                getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
+                            }
+                        } else if (name.startsWith("is")) {
+                            if (name.length() > 2 && method.getParameterCount() == 0
+                                    && boolean.class == method.getReturnType()
+                                    && !Modifier.isStatic(method.getModifiers())) {
+                                getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
+                            }
+                        } else if (name.startsWith("set")) {
+                            if (name.length() > 3 && method.getParameterCount() == 1 && !Modifier.isStatic(method.getModifiers())) {
+                                setter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
+                            }
+                        }
                     }
                 }
             } else {
                 overloadMethods = new HashMap<>(0);
+                setter = new HashMap<>(0);
+                getter = new HashMap<>(0);
                 methods = new ArrayList<>(0);
             }
         }
@@ -1449,6 +1418,14 @@ public class ClassUtils {
 
         public List<Method> getMethods() {
             return methods;
+        }
+
+        public Method getSetter(final String name) {
+            return setter.get(name);
+        }
+
+        public Method getGetter(final String name) {
+            return getter.get(name);
         }
 
         /**
@@ -1565,13 +1542,14 @@ public class ClassUtils {
          *
          * @param method
          */
-        public void add(final Method method) {
+        protected void add(final Method method) {
             if (first == null) {
                 first = new MethodInfo(clazz, method);
             } else {
                 if (signs == null) {
                     signs = new HashMap<>(4);
-                    metas = new HashMap<>(4);
+                    //该方法内部调用，采用IdentityHashMap优化性能
+                    metas = new IdentityHashMap<>(4);
                     signs.put(first.sign, first);
                     metas.put(first.method, first);
                 }
@@ -1770,31 +1748,51 @@ public class ClassUtils {
          */
         protected Constructor defaultSingleConstructor;
         /**
+         * 参数最小的构造函数
+         */
+        protected Constructor minimumConstructor;
+        /**
          * 构造函数
          */
         protected List<Constructor> constructors = new LinkedList<>();
 
+        /**
+         * 构造函数
+         *
+         * @param type
+         */
         public ConstructorMeta(Class type) {
             this.type = type;
             //判断是否是公共的具体实现类
             int modifiers = type.getModifiers();
-            boolean b = !Modifier.isAbstract(modifiers) && !Modifier.isInterface(modifiers);
+            boolean concrete = !Modifier.isAbstract(modifiers) && !Modifier.isInterface(modifiers);
             Parameter[] parameters;
-            for (Constructor c : type.getConstructors()) {
+            int minimum = Integer.MAX_VALUE;
+            for (Constructor c : type.getDeclaredConstructors()) {
                 constructors.add(c);
-                if (b) {
+                if (concrete) {
                     parameters = c.getParameters();
+                    //获取最少参数的构造函数
+                    if (parameters.length < minimum) {
+                        minimumConstructor = c;
+                        minimum = parameters.length;
+                    }
                     switch (parameters.length) {
                         case 0:
+                            //默认函数
                             defaultConstructor = setAccessible(c);
                             break;
                         case 1:
+                            //单个参数
                             defaultSingleConstructor = defaultSingleConstructor == null ? c : defaultSingleConstructor;
                             singleConstructors.put(inbox(parameters[0].getType()), setAccessible(c));
                             break;
                     }
-
                 }
+            }
+            if (minimumConstructor != null) {
+                minimumConstructor = (minimumConstructor == defaultConstructor || minimumConstructor == defaultSingleConstructor)
+                        ? null : setAccessible(minimumConstructor);
             }
         }
 
@@ -1843,12 +1841,27 @@ public class ClassUtils {
             try {
                 if (type.isMemberClass() && !Modifier.isStatic(type.getModifiers())) {
                     if (defaultSingleConstructor != null) {
+                        //内部类默认构造函数
                         return (T) defaultSingleConstructor.newInstance(new Object[]{null});
                     }
-                } else {
-                    if (defaultConstructor != null) {
-                        return (T) defaultConstructor.newInstance();
+                } else if (defaultConstructor != null) {
+                    //默认构造函数
+                    return (T) defaultConstructor.newInstance();
+                }
+                if (minimumConstructor != null) {
+                    //最小参数构造函数，构造默认参数
+                    Object[] parameters = new Object[minimumConstructor.getParameterCount()];
+                    int i = 0;
+                    for (Class cl : minimumConstructor.getParameterTypes()) {
+                        if (char.class == cl) {
+                            parameters[i] = Character.MIN_VALUE;
+                        } else if (boolean.class == cl) {
+                            parameters[i] = false;
+                        } else {
+                            parameters[i] = cl.isPrimitive() ? 0 : null;
+                        }
                     }
+                    return (T) minimumConstructor.newInstance(parameters);
                 }
                 return null;
             } catch (Exception e) {
@@ -1875,6 +1888,24 @@ public class ClassUtils {
         }
 
         /**
+         * 是否可写
+         *
+         * @return
+         */
+        public boolean isWriteable() {
+            return field != null || setter != null;
+        }
+
+        /**
+         * 是否可读
+         *
+         * @return
+         */
+        public boolean isReadable() {
+            return field != null && getter != null;
+        }
+
+        /**
          * 获取值
          *
          * @param target
@@ -1882,17 +1913,19 @@ public class ClassUtils {
          * @throws ReflectionException
          */
         public Object get(final Object target) throws ReflectionException {
+            if (target == null) {
+                return null;
+            }
             try {
-                if (target == null) {
-                    return null;
-                } else if (getter != null) {
+                if (getter != null) {
                     return getter.invoke(target);
-                } else if (field.isAccessible()) {
-                    return field.get(target);
-                } else {
-                    field.setAccessible(true);
+                } else if (field != null) {
+                    if (!field.isAccessible()) {
+                        field.setAccessible(true);
+                    }
                     return field.get(target);
                 }
+                return null;
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);
             }
@@ -1907,16 +1940,43 @@ public class ClassUtils {
          * @throws ReflectionException
          */
         public void set(final Object target, final Object value) throws ReflectionException {
+            if (target == null) {
+                return;
+            }
             try {
-                if (target == null) {
-                    return;
-                } else if (setter != null) {
+                if (setter != null) {
                     setter.invoke(target, value);
-                } else if (field.isAccessible()) {
+                } else if (field != null) {
+                    if (!field.isAccessible()) {
+                        field.setAccessible(true);
+                    }
                     field.set(target, value);
-                } else {
-                    field.setAccessible(true);
-                    field.set(target, value);
+                }
+            } catch (Exception e) {
+                throw new ReflectionException(e.getMessage(), e);
+            }
+        }
+
+        /**
+         * 设置值
+         *
+         * @param target
+         * @param function
+         * @throws ReflectionException
+         */
+        public void set(final Object target, final BiFunction<Class, Type, Object> function) throws ReflectionException {
+            if (target == null) {
+                return;
+            }
+            try {
+                if (setter != null) {
+                    Parameter parameter = setter.getParameters()[0];
+                    setter.invoke(target, function.apply(parameter.getType(), parameter.getParameterizedType()));
+                } else if (field != null) {
+                    if (!field.isAccessible()) {
+                        field.setAccessible(true);
+                    }
+                    field.set(target, function.apply(field.getType(), field.getGenericType()));
                 }
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);

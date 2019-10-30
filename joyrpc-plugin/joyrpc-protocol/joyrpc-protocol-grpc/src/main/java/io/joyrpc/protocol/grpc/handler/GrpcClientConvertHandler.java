@@ -214,8 +214,8 @@ public class GrpcClientConvertHandler extends AbstractHttpHandler {
         GrpcType grpcType = getGrpcType(invocation.getClazz(), invocation.getMethodName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
         GrpcType.ClassWrapper reqWrapper = grpcType.getRequest();
         //根据reqWrapper，转换payLoad
-        if (reqWrapper == null && (invocation.getArgs() == null || invocation.getArgs().length == 0)) {
-            payLoad = null;
+        if (reqWrapper == null) {
+            payLoad = (invocation.getArgs() == null || invocation.getArgs().length == 0) ? null : invocation.getArgs()[0];
         } else if (reqWrapper.isWrapper()) {
             payLoad = newInstance(reqWrapper.getClazz());
             List<Field> wrapperFields = getFields(payLoad.getClass());

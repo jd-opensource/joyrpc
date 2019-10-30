@@ -1542,13 +1542,14 @@ public class ClassUtils {
          *
          * @param method
          */
-        public void add(final Method method) {
+        protected void add(final Method method) {
             if (first == null) {
                 first = new MethodInfo(clazz, method);
             } else {
                 if (signs == null) {
                     signs = new HashMap<>(4);
-                    metas = new HashMap<>(4);
+                    //该方法内部调用，采用IdentityHashMap优化性能
+                    metas = new IdentityHashMap<>(4);
                     signs.put(first.sign, first);
                     metas.put(first.method, first);
                 }

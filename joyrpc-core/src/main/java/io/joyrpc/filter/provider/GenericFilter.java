@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,12 +84,11 @@ public class GenericFilter extends AbstractProviderFilter {
             Object[] args = serializers[0].deserialize(invocation);
             String[] argTypes = (String[]) genericArgs[1];
             if (argTypes == null || argTypes.length == 0) {
-                argTypes = Arrays.stream(args).map(arg -> arg.getClass().getName()).toArray(String[]::new);
+                argTypes = args == null ?
+                        new String[0] : Arrays.stream(args).map(arg -> arg.getClass().getName()).toArray(String[]::new);
             }
             invocation.setArgsType(argTypes);
             invocation.setArgs(args);
-            invocation.setClazz(forName(invocation.getClassName()));
-            invocation.setMethod(getPublicMethod(invocation.getClazz(), invocation.getMethodName()));
         } catch (Exception e) {
             String message = String.format(ExceptionCode.format(ExceptionCode.FILTER_GENERIC_CONVERT) +
                             " Error occurs while processing request %s/%s/%s from channel %s->%s, caused by: %s",

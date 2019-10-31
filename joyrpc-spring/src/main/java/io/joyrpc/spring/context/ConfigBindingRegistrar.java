@@ -9,9 +9,9 @@ package io.joyrpc.spring.context;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,15 +40,12 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 import static org.springframework.beans.factory.support.BeanDefinitionReaderUtils.registerWithGeneratedName;
 
-
+//TODO 待优化
 public class ConfigBindingRegistrar implements ImportBeanDefinitionRegistrar, EnvironmentAware {
 
     private final Log log = LogFactory.getLog(getClass());
@@ -95,7 +92,7 @@ public class ConfigBindingRegistrar implements ImportBeanDefinitionRegistrar, En
 
         for (String beanName : beanNames) {
 
-            registerConfigBean(beanName, configClass, registry);
+            registerConfigBean(beanName, configClass,  multiple ? null : new HashMap<>(properties), registry);
 
             registerConfigBindingBeanPostProcessor(prefix, beanName, multiple, registry);
 
@@ -103,11 +100,15 @@ public class ConfigBindingRegistrar implements ImportBeanDefinitionRegistrar, En
 
     }
 
-    private void registerConfigBean(String beanName, Class<? extends AbstractConfig> configClass,
+    private void registerConfigBean(String beanName, Class<? extends AbstractConfig> configClass, Map<String, Object> properties,
                                     BeanDefinitionRegistry registry) {
 
         BeanDefinitionBuilder builder = rootBeanDefinition(configClass);
         builder.addPropertyValue("id", beanName);
+        if(properties!=null){
+            properties.remove("id");
+            properties.forEach(builder::addPropertyValue);
+        }
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
         registry.registerBeanDefinition(beanName, beanDefinition);
 

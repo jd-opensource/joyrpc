@@ -21,8 +21,8 @@ package io.joyrpc.spring.context;
  */
 
 import io.joyrpc.spring.annotation.EnableRpc;
-import io.joyrpc.spring.factory.ConsumerAnnotationBeanPostProcessor;
-import io.joyrpc.spring.factory.ProviderAnnotationBeanPostProcessor;
+import io.joyrpc.spring.factory.ConsumerInjectedPostProcessor;
+import io.joyrpc.spring.factory.ServiceBeanDefinitionPostProcessor;
 import io.joyrpc.spring.util.BeanRegistrarUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
@@ -50,13 +50,13 @@ public class ComponentScanRegistrar implements ImportBeanDefinitionRegistrar {
 
         registerServiceAnnotationBeanPostProcessor(packagesToScan, registry);
 
-        registerReferenceAnnotationBeanPostProcessor(registry);
+        registerConsumerInjectedPostProcessor(registry);
 
     }
 
     private void registerServiceAnnotationBeanPostProcessor(Set<String> packagesToScan, BeanDefinitionRegistry registry) {
 
-        BeanDefinitionBuilder builder = rootBeanDefinition(ProviderAnnotationBeanPostProcessor.class);
+        BeanDefinitionBuilder builder = rootBeanDefinition(ServiceBeanDefinitionPostProcessor.class);
         builder.addConstructorArgValue(packagesToScan);
         builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
         AbstractBeanDefinition beanDefinition = builder.getBeanDefinition();
@@ -65,9 +65,9 @@ public class ComponentScanRegistrar implements ImportBeanDefinitionRegistrar {
     }
 
 
-    private void registerReferenceAnnotationBeanPostProcessor(BeanDefinitionRegistry registry) {
+    private void registerConsumerInjectedPostProcessor(BeanDefinitionRegistry registry) {
         BeanRegistrarUtils.registerInfrastructureBean(registry,
-                ConsumerAnnotationBeanPostProcessor.BEAN_NAME, ConsumerAnnotationBeanPostProcessor.class);
+                ConsumerInjectedPostProcessor.BEAN_NAME, ConsumerInjectedPostProcessor.class);
 
     }
 

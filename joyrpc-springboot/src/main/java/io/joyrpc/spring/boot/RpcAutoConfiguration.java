@@ -22,8 +22,8 @@ package io.joyrpc.spring.boot;
 
 import io.joyrpc.spring.Prefix;
 import io.joyrpc.spring.context.ConfigConfiguration;
-import io.joyrpc.spring.factory.ConsumerAnnotationBeanPostProcessor;
-import io.joyrpc.spring.factory.ProviderAnnotationBeanPostProcessor;
+import io.joyrpc.spring.factory.ConsumerInjectedPostProcessor;
+import io.joyrpc.spring.factory.ServiceBeanDefinitionPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -47,15 +47,15 @@ public class RpcAutoConfiguration {
 
     @ConditionalOnMissingBean
     @Bean
-    public ProviderAnnotationBeanPostProcessor serviceAnnotationBeanPostProcessor(ConfigurableEnvironment environment) {
+    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ConfigurableEnvironment environment) {
         Set<String> packagesToScan = environment.getProperty("scan-packages", Set.class, emptySet());
-        return new ProviderAnnotationBeanPostProcessor(packagesToScan);
+        return new ServiceBeanDefinitionPostProcessor(packagesToScan);
     }
 
     @ConditionalOnMissingBean
-    @Bean(name = ConsumerAnnotationBeanPostProcessor.BEAN_NAME)
-    public ConsumerAnnotationBeanPostProcessor referenceAnnotationBeanPostProcessor() {
-        return new ConsumerAnnotationBeanPostProcessor();
+    @Bean(name = ConsumerInjectedPostProcessor.BEAN_NAME)
+    public ConsumerInjectedPostProcessor consumerInjectedPostProcessor() {
+        return new ConsumerInjectedPostProcessor();
     }
 
 

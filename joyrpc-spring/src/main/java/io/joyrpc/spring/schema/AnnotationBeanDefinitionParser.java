@@ -20,8 +20,8 @@ package io.joyrpc.spring.schema;
  * #L%
  */
 
-import io.joyrpc.spring.factory.ConsumerAnnotationBeanPostProcessor;
-import io.joyrpc.spring.factory.ProviderAnnotationBeanPostProcessor;
+import io.joyrpc.spring.factory.ConsumerInjectedPostProcessor;
+import io.joyrpc.spring.factory.ServiceBeanDefinitionPostProcessor;
 import io.joyrpc.spring.util.BeanRegistrarUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -46,12 +46,12 @@ public class AnnotationBeanDefinitionParser extends AbstractSingleBeanDefinition
 
         builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 
-        registerConsumerAnnotationBeanPostProcessor(parserContext.getRegistry());
+        registerConsumerInjectedPostProcessor(parserContext.getRegistry());
     }
 
-    private void registerConsumerAnnotationBeanPostProcessor(BeanDefinitionRegistry registry) {
+    private void registerConsumerInjectedPostProcessor(BeanDefinitionRegistry registry) {
         BeanRegistrarUtils.registerInfrastructureBean(registry,
-                ConsumerAnnotationBeanPostProcessor.BEAN_NAME, ConsumerAnnotationBeanPostProcessor.class);
+                ConsumerInjectedPostProcessor.BEAN_NAME, ConsumerInjectedPostProcessor.class);
 
     }
 
@@ -62,7 +62,7 @@ public class AnnotationBeanDefinitionParser extends AbstractSingleBeanDefinition
 
     @Override
     protected Class<?> getBeanClass(Element element) {
-        return ProviderAnnotationBeanPostProcessor.class;
+        return ServiceBeanDefinitionPostProcessor.class;
     }
 
 }

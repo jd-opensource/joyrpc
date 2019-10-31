@@ -9,9 +9,9 @@ package io.joyrpc.extension.spring;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -52,8 +52,9 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         String[] names = context.getBeanNamesForType(extensible);
         if (names != null) {
             for (String name : names) {
-                T plugin = context.getBean(name, extensible);
-                result.add(new Plugin<T>(new Name(plugin.getClass(), name), instance, context.isSingleton(name), plugin, this));
+                //延迟加载，防止Bean还没有初始化好
+                result.add(new Plugin<T>(new Name(context.getType(name), name), instance,
+                        context.isSingleton(name), null, this));
             }
         }
         return result;

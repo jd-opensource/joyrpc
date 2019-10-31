@@ -22,12 +22,17 @@ package io.joyrpc.extension.spring;
 
 import io.joyrpc.extension.*;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
+import org.springframework.util.ClassUtils;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -37,11 +42,13 @@ import java.util.List;
  * Spring加载器
  */
 public class SpringLoader implements ExtensionLoader, PriorityOrdered, ApplicationContextAware,
-        ApplicationListener<ContextClosedEvent> {
+        BeanDefinitionRegistryPostProcessor, ApplicationListener<ContextClosedEvent> {
 
     protected ApplicationContext context;
 
     protected Instantiation instance;
+
+    protected BeanDefinitionRegistry registry;
 
     @Override
     public <T> Collection<Plugin<T>> load(final Class<T> extensible) {
@@ -49,12 +56,22 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
             return null;
         }
         List<Plugin<T>> result = new LinkedList<Plugin<T>>();
-        String[] names = context.getBeanNamesForType(extensible);
-        if (names != null) {
-            for (String name : names) {
-                //延迟加载，防止Bean还没有初始化好
-                result.add(new Plugin<T>(new Name(context.getType(name), name), instance,
-                        context.isSingleton(name), null, this));
+        if (registry != null) {
+            BeanDefinition definition;
+            Class clazz;
+            for (String name : registry.getBeanDefinitionNames()) {
+                definition = registry.getBeanDefinition(name);
+                if (!definition.isAbstract()) {
+                    try {
+                        clazz = ClassUtils.forName(name, Thread.currentThread().getContextClassLoader());
+                        if (extensible.isAssignableFrom(clazz)) {
+                            //延迟加载，防止Bean还没有初始化好
+                            result.add(new Plugin<T>(new Name(clazz, name), instance,
+                                    definition.isSingleton(), null, this));
+                        }
+                    } catch (ClassNotFoundException e) {
+                    }
+                }
             }
         }
         return result;
@@ -63,6 +80,16 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
     @Override
     public int getOrder() {
         return Ordered.HIGHEST_PRECEDENCE;
+    }
+
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        this.registry = registry;
+    }
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+
     }
 
     @Override

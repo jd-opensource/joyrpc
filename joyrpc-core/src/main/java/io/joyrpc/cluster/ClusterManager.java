@@ -132,7 +132,7 @@ public class ClusterManager implements Closeable {
                     new LinkedBlockingQueue<>(),
                     new NamedThreadFactory("clusterManager", true));
             checker = Daemon.builder().name("clusterManager").interval(interval)
-                    .condition(switcher::isOpened)
+                    .condition(() -> switcher.isOpened() && !Shutdown.isShutdown())
                     .runnable(() -> clusters.values().forEach(v -> supervise(v)))
                     .build();
             checker.start();

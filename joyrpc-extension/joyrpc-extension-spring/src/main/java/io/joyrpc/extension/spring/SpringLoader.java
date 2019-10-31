@@ -66,9 +66,9 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
                 if (!definition.isAbstract() && !StringUtils.isEmpty(definition.getBeanClassName())) {
                     try {
                         clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
-                        //工程方法创建Bean
+                        //工程方法创建Bean，不支持FactoryBean
                         String factoryMethodName = definition.getFactoryMethodName();
-                        if (!StringUtils.isEmpty(factoryMethodName)) {
+                        if (!StringUtils.isEmpty(factoryMethodName) && StringUtils.isEmpty(definition.getFactoryBeanName())) {
                             //找到方法
                             Method[] methods = clazz.getMethods();
                             for (Method method : methods) {

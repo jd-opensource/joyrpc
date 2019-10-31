@@ -37,7 +37,6 @@ import java.util.function.Predicate;
 public class ExtensionPointLazy<T, M> implements ExtensionPoint<T, M> {
 
     protected volatile ExtensionPoint<T, M> delegate;
-
     protected final Class<T> extensible;
     protected final ExtensionLoader loader;
     protected final Comparator<ExtensionMeta<T, M>> comparator;
@@ -65,15 +64,12 @@ public class ExtensionPointLazy<T, M> implements ExtensionPoint<T, M> {
 
     protected final ExtensionPoint<T, M> getDelegate() {
         if (delegate == null) {
-            synchronized (extensible) {
+            synchronized (this) {
                 if (delegate == null) {
                     //监听扩展点加载器变更事件，需要重新获取插件
-                    ExtensionManager.addListener(new ExtensionListener() {
-                        @Override
-                        public void onEvent(final ExtensionEvent event) {
-                            if (event instanceof LoaderEvent) {
-                                delegate = null;
-                            }
+                    ExtensionManager.addListener(event -> {
+                        if (event instanceof LoaderEvent) {
+                            delegate = null;
                         }
                     });
                     delegate = ExtensionManager.getOrLoadExtensionPoint(extensible, loader, comparator, classify);

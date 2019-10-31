@@ -63,7 +63,7 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
                 definition = registry.getBeanDefinition(name);
                 if (!definition.isAbstract()) {
                     try {
-                        clazz = ClassUtils.forName(name, Thread.currentThread().getContextClassLoader());
+                        clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
                         if (extensible.isAssignableFrom(clazz)) {
                             //延迟加载，防止Bean还没有初始化好
                             result.add(new Plugin<T>(new Name(clazz, name), instance,

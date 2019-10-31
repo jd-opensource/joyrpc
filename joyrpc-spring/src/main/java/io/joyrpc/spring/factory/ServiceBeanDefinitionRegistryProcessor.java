@@ -20,7 +20,7 @@ public interface ServiceBeanDefinitionRegistryProcessor {
 
     void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader);
 
-    default void addPropertyReference(String propertyName, String beanName, Environment environment, BeanDefinitionBuilder builder) {
+    static void addPropertyReference(String propertyName, String beanName, Environment environment, BeanDefinitionBuilder builder) {
         String resolvedBeanName = environment.resolvePlaceholders(beanName);
         builder.addPropertyReference(propertyName, resolvedBeanName);
     }

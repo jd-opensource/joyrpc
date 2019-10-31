@@ -33,6 +33,7 @@ import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.util.ClassUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.Collection;
 import java.util.LinkedList;
@@ -61,7 +62,7 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
             Class clazz;
             for (String name : registry.getBeanDefinitionNames()) {
                 definition = registry.getBeanDefinition(name);
-                if (!definition.isAbstract()) {
+                if (!definition.isAbstract() && !StringUtils.isEmpty(definition.getBeanClassName())) {
                     try {
                         clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
                         if (extensible.isAssignableFrom(clazz)) {

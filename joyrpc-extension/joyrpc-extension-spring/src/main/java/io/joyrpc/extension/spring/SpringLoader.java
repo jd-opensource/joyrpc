@@ -35,6 +35,7 @@ import org.springframework.core.PriorityOrdered;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -65,12 +66,25 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
                 if (!definition.isAbstract() && !StringUtils.isEmpty(definition.getBeanClassName())) {
                     try {
                         clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
+                        //工程方法创建Bean
+                        String factoryMethodName = definition.getFactoryMethodName();
+                        if (!StringUtils.isEmpty(factoryMethodName)) {
+                            //找到方法
+                            Method[] methods = clazz.getMethods();
+                            for (Method method : methods) {
+                                if (method.getName().equals(factoryMethodName)) {
+                                    //获取方法的返回类型
+                                    clazz = method.getReturnType();
+                                    break;
+                                }
+                            }
+                        }
                         if (extensible.isAssignableFrom(clazz)) {
                             //延迟加载，防止Bean还没有初始化好
                             result.add(new Plugin<T>(new Name(clazz, name), instance,
                                     definition.isSingleton(), null, this));
                         }
-                    } catch (ClassNotFoundException e) {
+                    } catch (Exception e) {
                     }
                 }
             }

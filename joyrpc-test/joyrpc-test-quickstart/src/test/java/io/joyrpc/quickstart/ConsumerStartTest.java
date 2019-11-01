@@ -48,9 +48,9 @@ public class ConsumerStartTest {
         while (true) {
             try {
                 String res = demoService.sayHello("joyrpc");
-                logger.info("res==" + res);
+                System.out.println("res==" + res);
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+                e.printStackTrace();
             } finally {
                 Thread.sleep(2000);
             }

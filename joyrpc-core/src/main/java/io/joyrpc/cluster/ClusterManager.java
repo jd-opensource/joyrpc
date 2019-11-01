@@ -132,11 +132,23 @@ public class ClusterManager implements Closeable {
                     new LinkedBlockingQueue<>(),
                     new NamedThreadFactory("clusterManager", true));
             checker = Daemon.builder().name("clusterManager").interval(interval)
-                    .condition(switcher::isOpened)
-                    .runnable(() -> clusters.values().forEach(v -> supervise(v)))
+                    .condition(() -> switcher.isOpened() && !Shutdown.isShutdown())
+                    .runnable(() -> supervise())
                     .build();
             checker.start();
         });
+    }
+
+    /**
+     * 监管
+     */
+    protected void supervise() {
+        for (Map.Entry<String, Cluster> entry : clusters.entrySet()) {
+            if (!switcher.isOpened() || Shutdown.isShutdown()) {
+                break;
+            }
+            supervise(entry.getValue());
+        }
     }
 
     /**

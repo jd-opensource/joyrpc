@@ -85,6 +85,10 @@ public class SimpleHeartbeatManager implements HeartbeatManager {
         TriggerInfo triggerInfo;
         //定时遍历
         for (Entry<Channel, TriggerInfo> entry : timingTriggers.entrySet()) {
+            if (Shutdown.isShutdown()) {
+                //提早退出
+                break;
+            }
             triggerInfo = entry.getValue();
             //已经超时，处理
             if (triggerInfo.isTimeout() && !triggerInfo.isRunning()) {

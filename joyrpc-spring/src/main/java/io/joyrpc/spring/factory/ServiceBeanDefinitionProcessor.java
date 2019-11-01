@@ -15,8 +15,12 @@ import org.springframework.util.StringUtils;
 /**
  * 含有consumer与provider注解的bean定义的处理类插件
  */
-@Extensible("serviceBeanDefinitionRegistryProcessor")
-public interface ServiceBeanDefinitionRegistryProcessor {
+@Extensible("serviceBeanDefinitionProcessor")
+public interface ServiceBeanDefinitionProcessor {
+
+    String ANNOTATION_DEFAULT_SERVER = "annotation-default-server";
+
+    String ANNOTATION_DEFAULT_REGISTRY = "annotation-default-registry";
 
     void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader);
 

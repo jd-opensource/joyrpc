@@ -9,9 +9,9 @@ package io.joyrpc.spring.boot;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,21 +21,29 @@ package io.joyrpc.spring.boot;
  */
 
 import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.spring.Prefix;
 import io.joyrpc.spring.ServerBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 /**
  * @description:
  */
+@Component
 @ConfigurationProperties(prefix = Prefix.CONFIG)
 public class RpcProperties {
+
     private String basePackage;
-    @NestedConfigurationProperty
-    private ServerBean serverConfig;
-    @NestedConfigurationProperty
-    private RegistryConfig registryConfig;
+
+    private ServerBean server;
+
+    private RegistryConfig registry;
+
+    private List<ServerBean> servers;
+
+    private List<RegistryConfig> registries;
 
     public String getBasePackage() {
         return basePackage;
@@ -45,19 +53,35 @@ public class RpcProperties {
         this.basePackage = basePackage;
     }
 
-    public ServerBean getServerConfig() {
-        return serverConfig;
+    public ServerBean getServer() {
+        return server;
     }
 
-    public void setServerConfig(ServerBean serverConfig) {
-        this.serverConfig = serverConfig;
+    public void setServer(ServerBean server) {
+        this.server = server;
     }
 
-    public RegistryConfig getRegistryConfig() {
-        return registryConfig;
+    public RegistryConfig getRegistry() {
+        return registry;
     }
 
-    public void setRegistryConfig(RegistryConfig registryConfig) {
-        this.registryConfig = registryConfig;
+    public void setRegistry(RegistryConfig registry) {
+        this.registry = registry;
+    }
+
+    public List<ServerBean> getServers() {
+        return servers;
+    }
+
+    public void setServers(List<ServerBean> servers) {
+        this.servers = servers;
+    }
+
+    public List<RegistryConfig> getRegistries() {
+        return registries;
+    }
+
+    public void setRegistries(List<RegistryConfig> registries) {
+        this.registries = registries;
     }
 }

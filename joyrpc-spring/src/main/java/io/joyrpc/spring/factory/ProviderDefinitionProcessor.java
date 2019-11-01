@@ -1,6 +1,7 @@
 package io.joyrpc.spring.factory;
 
 import io.joyrpc.config.MethodConfig;
+import io.joyrpc.config.ServerConfig;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.annotation.Provider;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.config.SingletonBeanRegistry;
 import org.springframework.beans.factory.support.*;
 import org.springframework.context.annotation.AnnotationBeanNameGenerator;
 import org.springframework.core.env.Environment;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -24,15 +26,15 @@ import static org.springframework.context.annotation.AnnotationConfigUtils.CONFI
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
 
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionRegistryProcessor.*;
+import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.*;
 
 /**
  * 处理含有provider注解bean定义的处理类
  */
 @Extension("provider")
-public class ProviderDefinitionRegistryProcessor implements ServiceBeanDefinitionRegistryProcessor {
+public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcessor {
 
-    private final Logger logger = LoggerFactory.getLogger(ProviderDefinitionRegistryProcessor.class);
+    private final Logger logger = LoggerFactory.getLogger(ProviderDefinitionProcessor.class);
 
     @Override
     public void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader) {
@@ -40,6 +42,11 @@ public class ProviderDefinitionRegistryProcessor implements ServiceBeanDefinitio
         Provider providerAnnotation = findAnnotation(refClass, Provider.class);
         if (providerAnnotation == null) {
             return;
+        }
+        //如果没有配置server，且没有注册默认的serverConfig，注册默认的serverConfig
+        if (!StringUtils.hasText(providerAnnotation.server())
+                && !registry.containsBeanDefinition(ANNOTATION_DEFAULT_SERVER)) {
+            registry.registerBeanDefinition(ANNOTATION_DEFAULT_SERVER, new RootBeanDefinition(ServerConfig.class));
         }
         //注册ref
         BeanNameGenerator beanNameGenerator = resolveBeanNameGenerator(registry);
@@ -93,14 +100,18 @@ public class ProviderDefinitionRegistryProcessor implements ServiceBeanDefinitio
         builder.addPropertyValue("id", buildProviderBeanName(provider, refBeanName));
 
         String[] registryConfigBeanNames = provider.registry();
-        List<RuntimeBeanReference> registryRuntimeBeanReferences = toRuntimeBeanReferences(environment, registryConfigBeanNames);
-        if (!registryRuntimeBeanReferences.isEmpty()) {
-            builder.addPropertyValue("registry", registryRuntimeBeanReferences);
+        if (registryConfigBeanNames.length > 0) {
+            List<RuntimeBeanReference> registryRuntimeBeanReferences = toRuntimeBeanReferences(environment, registryConfigBeanNames);
+            if (!registryRuntimeBeanReferences.isEmpty()) {
+                builder.addPropertyValue("registry", registryRuntimeBeanReferences);
+            }
         }
 
         String serverBeanName = provider.server();
-        if (org.springframework.util.StringUtils.hasText(serverBeanName)) {
+        if (StringUtils.hasText(serverBeanName)) {
             addPropertyReference("serverConfig", serverBeanName, environment, builder);
+        } else {
+
         }
 
         Map<String, MethodConfig> methodConfigs = MethodConfigUtils.constructMethodConfig(provider.methods());
@@ -113,9 +124,6 @@ public class ProviderDefinitionRegistryProcessor implements ServiceBeanDefinitio
         return builder.getBeanDefinition();
 
     }
-
-
-
 
 
 }

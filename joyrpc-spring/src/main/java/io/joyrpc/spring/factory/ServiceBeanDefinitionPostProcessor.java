@@ -41,11 +41,14 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
-    private static final ExtensionPoint<ServiceBeanDefinitionRegistryProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionRegistryProcessor.class);
+    private static final ExtensionPoint<ServiceBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionProcessor.class);
 
     private Environment environment;
+
     private ResourceLoader resourceLoader;
+
     private final Set<String> basePackages;
+
     private ClassLoader classLoader;
 
 

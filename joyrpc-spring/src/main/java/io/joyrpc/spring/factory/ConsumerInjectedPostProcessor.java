@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionRegistryProcessor.*;
+import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.*;
 
 /**
  * congsumer注解注入

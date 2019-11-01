@@ -8,27 +8,25 @@ import io.joyrpc.spring.util.AnnotationUtils;
 import io.joyrpc.spring.util.MethodConfigUtils;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Modifier;
-import java.util.List;
 import java.util.Map;
 
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 import static org.springframework.util.ClassUtils.resolveClassName;
 import static org.springframework.util.ReflectionUtils.doWithFields;
 import static org.springframework.util.ReflectionUtils.doWithMethods;
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionRegistryProcessor.*;
+import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.*;
 
 /**
  * 处理含有consumer注解bean定义的处理类
  */
 @Extension("consumer")
-public class ConsumerDefinitionRegistryProcessor implements ServiceBeanDefinitionRegistryProcessor {
+public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcessor {
 
     @Override
     public void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader) {
@@ -73,15 +71,12 @@ public class ConsumerDefinitionRegistryProcessor implements ServiceBeanDefinitio
         propertyValues.addPropertyValues(new MutablePropertyValues(AnnotationUtils.getAttributes(consumerAnnotation, environment, true, ignoreAttributeNames)));
 
 
-        builder.addPropertyValue("id", ServiceBeanDefinitionRegistryProcessor.buildConsumerBeanName(consumerAnnotation, interfaceClass.getName()));
+        builder.addPropertyValue("id", ServiceBeanDefinitionProcessor.buildConsumerBeanName(consumerAnnotation, interfaceClass.getName()));
 
 
-        String registryConfigBeanName = consumerAnnotation.registry();
-        if (StringUtils.hasText(registryConfigBeanName)) {
-            List<RuntimeBeanReference> registryRuntimeBeanReferences = toRuntimeBeanReferences(environment, registryConfigBeanName);
-            if (!registryRuntimeBeanReferences.isEmpty()) {
-                builder.addPropertyValue("registry", registryRuntimeBeanReferences.get(0));
-            }
+        String registryBeanName = consumerAnnotation.registry();
+        if (StringUtils.hasText(registryBeanName)) {
+            addPropertyReference("registry", registryBeanName, environment, builder);
         }
 
         Map<String, MethodConfig> methodConfigs = MethodConfigUtils.constructMethodConfig(consumerAnnotation.methods());

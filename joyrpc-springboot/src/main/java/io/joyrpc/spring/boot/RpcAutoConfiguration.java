@@ -33,6 +33,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import javax.annotation.Resource;
 import java.util.Set;
 
+import static io.joyrpc.spring.boot.RpcProperties.PREFIX;
 import static java.util.Collections.emptySet;
 
 /**
@@ -41,7 +42,7 @@ import static java.util.Collections.emptySet;
 
 @Configuration
 @EnableConfigurationProperties(RpcProperties.class)
-@ConditionalOnProperty(prefix = Prefix.CONFIG, name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = PREFIX, name = "enabled", matchIfMissing = true)
 public class RpcAutoConfiguration {
 
     @Resource

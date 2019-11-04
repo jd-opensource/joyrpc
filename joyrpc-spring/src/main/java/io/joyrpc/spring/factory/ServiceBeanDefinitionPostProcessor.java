@@ -140,7 +140,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 //判断是否Public
                 if (Modifier.isPublic(clazz.getModifiers())) {
                     //Consumer只能在字段、方法上设置
-                    Field[] fields = clazz.getFields();
+                    Field[] fields = clazz.getDeclaredFields();
                     for (Field field : fields) {
                         if (!Modifier.isFinal(field.getModifiers())
                                 && !Modifier.isStatic(field.getModifiers())

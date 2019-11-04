@@ -23,6 +23,7 @@ import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -39,18 +40,17 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(ServiceBeanDefinitionPostProcessor.class);
 
     private static final ExtensionPoint<ServiceBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionProcessor.class);
 
-    private Environment environment;
-
-    private ResourceLoader resourceLoader;
-
     private final Set<String> basePackages;
 
-    private ClassLoader classLoader;
+    protected Environment environment;
 
+    protected ResourceLoader resourceLoader;
+
+    protected ClassLoader classLoader;
 
     /**
      * 构造方法
@@ -66,16 +66,15 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //收集packagesToScan配置，获取rpc要扫描的包路径
         Set<String> packages = new LinkedHashSet<>(basePackages.size());
         for (String packageToScan : basePackages) {
-            if (org.springframework.util.StringUtils.hasText(packageToScan)) {
-                String resolvedPackageToScan = environment.resolvePlaceholders(packageToScan.trim());
-                packages.add(resolvedPackageToScan);
+            if (StringUtils.hasText(packageToScan)) {
+                packages.add(environment.resolvePlaceholders(packageToScan.trim()));
             }
         }
         //处理包下的class类
         if (!CollectionUtils.isEmpty(packages)) {
             processPackages(packages, registry);
         } else {
-            logger.warn("packagesToScan is empty , ProviderBean registry will be ignored!");
+            logger.warn("basePackages is empty , auto scanning package annotation will be ignored!");
         }
     }
 
@@ -98,8 +97,6 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                     REGISTRY_PROCESSOR.extensions().forEach(
                             registryProcessor -> registryProcessor.processBean(beanDefinition, registry, environment, classLoader));
                 }
-            } else {
-                logger.warn(String.format("No Spring Bean annotating @Provider was found under package %s", basePackage));
             }
         }
 
@@ -140,25 +137,27 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         @Override
         public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) {
             ClassMetadata classMetadata = metadataReader.getClassMetadata();
-            if (!classMetadata.isInterface()
-                    && !classMetadata.isAnnotation()
-                    && !classMetadata.isFinal()) {
+            if (classMetadata.isConcrete() && !classMetadata.isAnnotation()) {
+                //找到类
                 Class clazz = resolveClassName(classMetadata.getClassName(), classLoader);
-                if (clazz.getAnnotation(annotationType) != null) {
-                    return true;
-                }
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field field : fields) {
-                    if (!Modifier.isFinal(field.getModifiers())
-                            && !Modifier.isStatic(field.getModifiers())
-                            && field.getAnnotation(annotationType) != null) {
+                //判断是否Public
+                if (Modifier.isPublic(clazz.getModifiers())) {
+                    //判断注解
+                    if (clazz.getAnnotation(annotationType) != null) {
                         return true;
                     }
-                }
-                Method[] methods = clazz.getMethods();
-                for (Method method : methods) {
-                    if (method.getAnnotation(annotationType) != null) {
-                        return true;
+                    Field[] fields = clazz.getFields();
+                    for (Field field : fields) {
+                        if (!Modifier.isFinal(field.getModifiers()) && !Modifier.isStatic(field.getModifiers())
+                                && field.getAnnotation(annotationType) != null) {
+                            return true;
+                        }
+                    }
+                    Method[] methods = clazz.getMethods();
+                    for (Method method : methods) {
+                        if (method.getAnnotation(annotationType) != null) {
+                            return true;
+                        }
                     }
                 }
 

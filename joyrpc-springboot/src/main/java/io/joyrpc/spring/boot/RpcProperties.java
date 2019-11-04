@@ -26,6 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 
 import static io.joyrpc.spring.boot.RpcProperties.PREFIX;
 
@@ -38,7 +39,7 @@ public class RpcProperties {
 
     public final static String PREFIX = "rpc";
 
-    protected String basePackage;
+    protected Set<String> basePackages;
 
     protected ServerBean server;
 
@@ -48,12 +49,12 @@ public class RpcProperties {
 
     protected List<RegistryBean> registries;
 
-    public String getBasePackage() {
-        return basePackage;
+    public Set<String> getBasePackages() {
+        return basePackages;
     }
 
-    public void setBasePackage(String basePackage) {
-        this.basePackage = basePackage;
+    public void setBasePackages(Set<String> basePackages) {
+        this.basePackages = basePackages;
     }
 
     public ServerBean getServer() {

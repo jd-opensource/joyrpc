@@ -30,10 +30,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import javax.annotation.Resource;
-import java.util.Set;
 
 import static io.joyrpc.spring.boot.RpcProperties.PREFIX;
-import static java.util.Collections.emptySet;
 
 /**
  * RPC自动配置
@@ -57,8 +55,7 @@ public class RpcAutoConfiguration {
     @ConditionalOnMissingBean
     @Bean
     public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ConfigurableEnvironment environment) {
-        Set<String> packagesToScan = environment.getProperty("scan-packages", Set.class, emptySet());
-        return new ServiceBeanDefinitionPostProcessor(packagesToScan);
+        return new ServiceBeanDefinitionPostProcessor(rpcProperties.getBasePackages());
     }
 
     @ConditionalOnMissingBean

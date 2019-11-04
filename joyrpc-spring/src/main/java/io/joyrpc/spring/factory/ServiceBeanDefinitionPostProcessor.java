@@ -94,7 +94,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             if (!CollectionUtils.isEmpty(beanDefinitions)) {
                 for (BeanDefinition beanDefinition : beanDefinitions) {
                     REGISTRY_PROCESSOR.extensions().forEach(
-                            registryProcessor -> registryProcessor.processBean(beanDefinition, registry, environment, classLoader));
+                            processor -> processor.processBean(beanDefinition, registry, environment, classLoader));
                 }
             }
         }

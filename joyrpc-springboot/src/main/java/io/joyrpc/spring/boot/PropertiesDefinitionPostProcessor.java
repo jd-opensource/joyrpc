@@ -1,9 +1,6 @@
 package io.joyrpc.spring.boot;
 
-import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.config.ServerConfig;
-import io.joyrpc.spring.RegistryBean;
-import io.joyrpc.spring.ServerBean;
+import io.joyrpc.config.AbstractIdConfig;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -12,6 +9,8 @@ import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.REGISTRY_NAME;
 import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.SERVER_NAME;
@@ -21,7 +20,7 @@ import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.SERVER_NAM
  */
 public class PropertiesDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
-    private RpcProperties rpcProperties;
+    protected RpcProperties rpcProperties;
 
     public PropertiesDefinitionPostProcessor(RpcProperties rpcProperties) {
         this.rpcProperties = rpcProperties;
@@ -29,46 +28,49 @@ public class PropertiesDefinitionPostProcessor implements BeanDefinitionRegistry
 
     @Override
     public void postProcessBeanDefinitionRegistry(final BeanDefinitionRegistry registry) throws BeansException {
-        //注册默认Server
-        ServerBean defaultServer = rpcProperties.getServer();
-        if (defaultServer != null && !registry.containsBeanDefinition(SERVER_NAME)) {
-            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerConfig.class, () -> defaultServer));
-        }
-        //注册默认注册中心
-        RegistryBean defaultRegistry = rpcProperties.getRegistry();
-        if (defaultRegistry != null && !registry.containsBeanDefinition(REGISTRY_NAME)) {
-            registry.registerBeanDefinition(REGISTRY_NAME, new RootBeanDefinition(RegistryConfig.class, () -> defaultRegistry));
-        }
-        //注册多个Server配置
-        String beanName;
-        List<ServerBean> serverConfigs = rpcProperties.getServers();
-        if (serverConfigs != null && !serverConfigs.isEmpty()) {
-            int i = 0;
-            for (ServerBean bean : serverConfigs) {
-                beanName = bean.getId();
-                if (!StringUtils.hasText(beanName)) {
-                    beanName = SERVER_NAME + (i++);
-                }
-                if (!registry.containsBeanDefinition(beanName)) {
-                    registry.registerBeanDefinition(beanName, new RootBeanDefinition(ServerConfig.class, () -> bean));
-                }
-            }
-        }
-        //注册多个注册中心，名称为:registry0,registry1.....
-        List<RegistryBean> registryConfigs = rpcProperties.getRegistries();
-        if (registryConfigs != null && !registryConfigs.isEmpty()) {
-            int i = 0;
-            for (RegistryBean bean : registryConfigs) {
-                beanName = bean.getId();
-                if (!StringUtils.hasText(beanName)) {
-                    beanName = REGISTRY_NAME + (i++);
-                }
-                if (!registry.containsBeanDefinition(beanName)) {
-                    registry.registerBeanDefinition(beanName, new RootBeanDefinition(RegistryConfig.class, () -> bean));
-                }
-            }
-        }
+        register(registry, rpcProperties.getServer(), rpcProperties.getServers(), SERVER_NAME);
+        register(registry, rpcProperties.getRegistry(), rpcProperties.getRegistries(), REGISTRY_NAME);
+    }
 
+    /**
+     * 注册
+     *
+     * @param registry 注册表
+     * @param def      默认配置
+     * @param configs  多个配置
+     * @param defName  默认名称
+     */
+    protected <T extends AbstractIdConfig> void register(final BeanDefinitionRegistry registry, final T def,
+                                                         final List<T> configs, final String defName) {
+        register(registry, def, c -> defName);
+        if (configs != null) {
+            AtomicInteger counter = new AtomicInteger(0);
+            for (T config : configs) {
+                register(registry, config, c -> defName + counter.getAndIncrement());
+            }
+        }
+    }
+
+    /**
+     * 注册
+     *
+     * @param registry
+     * @param config
+     * @param function
+     * @param <T>
+     */
+    protected <T extends AbstractIdConfig> void register(final BeanDefinitionRegistry registry, final T config,
+                                                         final Function<T, String> function) {
+        if (config == null) {
+            return;
+        }
+        String beanName = config.getId();
+        if (!StringUtils.hasText(beanName)) {
+            beanName = function.apply(config);
+        }
+        if (!registry.containsBeanDefinition(beanName)) {
+            registry.registerBeanDefinition(beanName, new RootBeanDefinition((Class<T>) config.getClass(), () -> config));
+        }
     }
 
     @Override

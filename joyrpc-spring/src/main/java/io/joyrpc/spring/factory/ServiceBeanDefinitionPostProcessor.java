@@ -43,6 +43,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private static final ExtensionPoint<ServiceBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionProcessor.class);
 
+    private static final ExtensionPoint<ConfigPropertiesProcessor, String> PROPERTIES_PROCESSOR = new ExtensionPointLazy<>(ConfigPropertiesProcessor.class);
+
     private Environment environment;
 
     private ResourceLoader resourceLoader;
@@ -63,6 +65,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+        //处理配置信息
+        PROPERTIES_PROCESSOR.extensions().forEach(processor -> processor.processProperties(registry, environment));
         //收集packagesToScan配置，获取rpc要扫描的包路径
         Set<String> packages = new LinkedHashSet<>(basePackages.size());
         for (String packageToScan : basePackages) {

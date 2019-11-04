@@ -107,11 +107,12 @@ public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcess
             }
         }
 
+        //配置了server，添加配置的server，否则添加默认server
         String serverBeanName = provider.server();
         if (StringUtils.hasText(serverBeanName)) {
             addPropertyReference("serverConfig", serverBeanName, environment, builder);
         } else {
-
+            addPropertyReference("serverConfig", SERVER_NAME, environment, builder);
         }
 
         Map<String, MethodConfig> methodConfigs = MethodConfigUtils.constructMethodConfig(provider.methods());

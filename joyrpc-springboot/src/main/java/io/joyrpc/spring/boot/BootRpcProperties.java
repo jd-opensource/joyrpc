@@ -22,19 +22,13 @@ package io.joyrpc.spring.boot;
 
 import io.joyrpc.spring.RegistryBean;
 import io.joyrpc.spring.ServerBean;
-import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
-
-import static io.joyrpc.spring.boot.RpcProperties.PREFIX;
 
 /**
  * @description:
  */
-@Component
-@ConfigurationProperties(prefix = PREFIX)
-public class RpcProperties {
+public class BootRpcProperties {
 
     public final static String PREFIX = "rpc";
 

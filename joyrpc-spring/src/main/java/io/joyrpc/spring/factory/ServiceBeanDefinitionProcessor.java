@@ -30,14 +30,14 @@ public interface ServiceBeanDefinitionProcessor {
     }
 
     static String buildConsumerBeanName(Consumer consumerAnnotation, String interfaceClazz) {
-        return interfaceClazz + "#" + consumerAnnotation.alias();
+        return "ConsumerBean-" + interfaceClazz + "#" + consumerAnnotation.alias();
     }
 
     static String buildProviderBeanName(Provider providerAnnotation, String refBeanName) {
         if (StringUtils.hasText(providerAnnotation.name())) {
             return providerAnnotation.name();
         }
-        return refBeanName + "#provider";
+        return "ProviderBean-" + refBeanName;
     }
 
     static ManagedList<RuntimeBeanReference> toRuntimeBeanReferences(Environment environment, String... beanNames) {

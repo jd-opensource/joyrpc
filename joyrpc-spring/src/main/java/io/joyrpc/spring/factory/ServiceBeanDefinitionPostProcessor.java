@@ -44,7 +44,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private static final ExtensionPoint<ServiceBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionProcessor.class);
 
-    private final Set<String> basePackages;
+    protected final Set<String> basePackages;
 
     protected Environment environment;
 

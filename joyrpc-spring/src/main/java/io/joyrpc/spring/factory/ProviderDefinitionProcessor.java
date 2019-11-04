@@ -1,126 +1,172 @@
 package io.joyrpc.spring.factory;
 
-import io.joyrpc.config.MethodConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.annotation.Provider;
 import io.joyrpc.spring.util.AnnotationUtils;
-import io.joyrpc.spring.util.MethodConfigUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
-import org.springframework.beans.factory.config.SingletonBeanRegistry;
-import org.springframework.beans.factory.support.*;
-import org.springframework.context.annotation.AnnotationBeanNameGenerator;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.ManagedList;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.List;
-import java.util.Map;
+import java.beans.Introspector;
 
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
-import static org.springframework.context.annotation.AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
-
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.*;
 
 /**
  * 处理含有provider注解bean定义的处理类
  */
 @Extension("provider")
-public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcessor {
-
-    private final Logger logger = LoggerFactory.getLogger(ProviderDefinitionProcessor.class);
+public class ProviderDefinitionProcessor extends AbstractDefinitionProcessor {
 
     @Override
-    public void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader) {
-        Class<?> refClass = resolveClassName(beanDefinition.getBeanClassName(), classLoader);
-        Provider providerAnnotation = findAnnotation(refClass, Provider.class);
-        if (providerAnnotation == null) {
+    public void processBean(final BeanDefinition definition, final BeanDefinitionRegistry registry,
+                            final Environment environment, final ClassLoader classLoader) {
+        Class<?> refClass = resolveClassName(definition.getBeanClassName(), classLoader);
+        Provider provider = findAnnotation(refClass, Provider.class);
+        if (provider == null) {
             return;
         }
         //如果没有配置server，且没有注册默认的serverConfig，注册默认的serverConfig
-        if (!StringUtils.hasText(providerAnnotation.server())
-                && !registry.containsBeanDefinition(SERVER_NAME)) {
-            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerConfig.class));
-        }
-        //注册ref
-        BeanNameGenerator beanNameGenerator = resolveBeanNameGenerator(registry);
-        String refBeanName = beanNameGenerator.generateBeanName(beanDefinition, registry);
-        registry.registerBeanDefinition(refBeanName, beanDefinition);
+        registerServer(registry, provider);
+        //获取或注册实现
+        String refBeanName = getOrRegisterComponent(definition, refClass, provider, registry, environment);
         //注册provider
-        Class<?> interfaceClazz = null;
-        if (void.class.equals(providerAnnotation.interfaceClass())) {
+        Class<?> interfaceClazz = provider.interfaceClass();
+        if (void.class.equals(interfaceClazz)) {
             Class<?>[] allInterfaces = refClass.getInterfaces();
             if (allInterfaces.length > 0) {
                 interfaceClazz = allInterfaces[0];
             }
+        }
+        String beanName = refBeanName + "#provider";
+        registry.registerBeanDefinition(beanName, buildProvider(
+                provider, interfaceClazz, environment, refBeanName, beanName));
+    }
+
+    /**
+     * 注册服务
+     *
+     * @param registry
+     * @param provider
+     */
+    protected void registerServer(BeanDefinitionRegistry registry, Provider provider) {
+        if (!StringUtils.isEmpty(provider.server()) && !registry.containsBeanDefinition(SERVER_NAME)) {
+            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerConfig.class));
+        }
+    }
+
+    /**
+     * 获取或注册服务
+     *
+     * @param definition
+     * @param definitionClass
+     * @param provider
+     * @param registry
+     * @return
+     */
+    protected String getOrRegisterComponent(final BeanDefinition definition, final Class<?> definitionClass,
+                                            final Provider provider, final BeanDefinitionRegistry registry,
+                                            final Environment environment) {
+        String name = null;
+        //判断重复注册
+        Component component = findAnnotation(definitionClass, Component.class);
+        if (component == null) {
+            Service service = findAnnotation(definitionClass, Service.class);
+            if (service == null) {
+                Repository repository = findAnnotation(definitionClass, Repository.class);
+                if (repository == null) {
+                    Controller controller = findAnnotation(definitionClass, Controller.class);
+                    if (controller != null) {
+                        name = controller.value();
+                    }
+                } else {
+                    name = repository.value();
+                }
+            } else {
+                name = service.value();
+            }
         } else {
-            interfaceClazz = providerAnnotation.interfaceClass();
+            name = component.value();
         }
-        String providerBeanName = buildProviderBeanName(providerAnnotation, refBeanName);
-        BeanDefinition providerDefinition = buildProviderDefinition(providerAnnotation, interfaceClazz, environment, refBeanName);
-        registry.registerBeanDefinition(providerBeanName, providerDefinition);
-
+        boolean register = name == null;
+        if (name == null || name.isEmpty()) {
+            name = provider.name();
+            if (name.isEmpty()) {
+                name = Introspector.decapitalize(ClassUtils.getShortName(definition.getBeanClassName()));
+            } else {
+                name = environment.resolvePlaceholders(name);
+            }
+        } else {
+            name = environment.resolvePlaceholders(name);
+        }
+        if (register && !registry.containsBeanDefinition(name)) {
+            registry.registerBeanDefinition(name, definition);
+        }
+        return name;
     }
 
-    private BeanNameGenerator resolveBeanNameGenerator(BeanDefinitionRegistry registry) {
-        BeanNameGenerator beanNameGenerator = null;
-        if (registry instanceof SingletonBeanRegistry) {
-            SingletonBeanRegistry singletonBeanRegistry = SingletonBeanRegistry.class.cast(registry);
-            beanNameGenerator = (BeanNameGenerator) singletonBeanRegistry.getSingleton(CONFIGURATION_BEAN_NAME_GENERATOR);
-        }
-        if (beanNameGenerator == null) {
-            logger.info(String.format("BeanNameGenerator will be a instance of %s , it maybe a potential problem on bean name generation."
-                    , AnnotationBeanNameGenerator.class.getName()));
-            beanNameGenerator = new AnnotationBeanNameGenerator();
-        }
-        return beanNameGenerator;
-
-    }
-
-    private BeanDefinition buildProviderDefinition(Provider provider, Class<?> interfaceClass, Environment environment,
-                                                   String refBeanName) {
+    /**
+     * 构建Provider定义
+     *
+     * @param provider
+     * @param interfaceClass
+     * @param environment
+     * @param refBeanName
+     * @param beanName
+     * @return
+     */
+    protected BeanDefinition buildProvider(final Provider provider, final Class<?> interfaceClass,
+                                           final Environment environment, final String refBeanName,
+                                           final String beanName) {
 
         BeanDefinitionBuilder builder = rootBeanDefinition(ProviderBean.class);
 
-        BeanDefinition beanDefinition = builder.getBeanDefinition();
-
-        MutablePropertyValues propertyValues = beanDefinition.getPropertyValues();
-
-        String[] ignoreAttributeNames = new String[]{"ref", "id", "registry", "server", "methods", "interfaceClazz", "parameters"};
-        propertyValues.addPropertyValues(new MutablePropertyValues(AnnotationUtils.getAttributes(provider, environment, true, ignoreAttributeNames)));
-
-        addPropertyReference("ref", refBeanName, environment, builder);
-
-        builder.addPropertyValue("id", buildProviderBeanName(provider, refBeanName));
-
-        String[] registryConfigBeanNames = provider.registry();
-        if (registryConfigBeanNames.length > 0) {
-            List<RuntimeBeanReference> registryRuntimeBeanReferences = toRuntimeBeanReferences(environment, registryConfigBeanNames);
-            if (!registryRuntimeBeanReferences.isEmpty()) {
-                builder.addPropertyValue("registry", registryRuntimeBeanReferences);
-            }
-        }
-
-        //配置了server，添加配置的server，否则添加默认server
-        String serverBeanName = provider.server();
-        if (StringUtils.hasText(serverBeanName)) {
-            addPropertyReference("serverConfig", serverBeanName, environment, builder);
-        } else {
-            addPropertyReference("serverConfig", SERVER_NAME, environment, builder);
-        }
-
-        Map<String, MethodConfig> methodConfigs = MethodConfigUtils.constructMethodConfig(provider.methods());
-        builder.addPropertyValue("methods", methodConfigs);
-
+        String[] ignoreAttributeNames = new String[]{"ref", "id", "registry", "server", "methods", "interfaceClazz",
+                "parameters", "include", "exclude", "filter"};
+        builder.getBeanDefinition().getPropertyValues().addPropertyValues(
+                new MutablePropertyValues(AnnotationUtils.getAttributes(
+                        provider, environment, true, ignoreAttributeNames)));
+        builder.addPropertyReference("ref", refBeanName);
+        builder.addPropertyValue("id", beanName);
+        builder.addPropertyValue("include", String.join(",", provider.include()));
+        builder.addPropertyValue("exclude", String.join(",", provider.exclude()));
+        builder.addPropertyValue("filter", String.join(",", provider.filter()));
         builder.addPropertyValue("interfaceClazz", interfaceClass.getName());
-
-        builder.addPropertyValue("parameters", MethodConfigUtils.toStringMap(provider.parameters()));
+        //引用注册中心
+        String[] registryNames = provider.registry();
+        if (registryNames.length > 0) {
+            ManagedList<RuntimeBeanReference> runtimeBeanReferences = new ManagedList<>();
+            for (String registryName : registryNames) {
+                runtimeBeanReferences.add(new RuntimeBeanReference(environment.resolvePlaceholders(registryName)));
+            }
+            builder.addPropertyValue("registry", runtimeBeanReferences);
+        }
+        //引用Server
+        if (!provider.server().isEmpty()) {
+            builder.addPropertyReference("serverConfig", environment.resolvePlaceholders(provider.server()));
+        }
+        //方法配置
+        if (provider.methods().length > 0) {
+            builder.addPropertyValue("methods", build(provider.methods(), environment));
+        }
+        //参数配置
+        if (provider.parameters().length > 0) {
+            builder.addPropertyValue("parameters", buildParameters(provider.parameters(), environment));
+        }
 
         return builder.getBeanDefinition();
 

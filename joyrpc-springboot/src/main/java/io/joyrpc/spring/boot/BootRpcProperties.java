@@ -24,6 +24,7 @@ import io.joyrpc.spring.RegistryBean;
 import io.joyrpc.spring.ServerBean;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * @description:
@@ -32,7 +33,7 @@ public class BootRpcProperties {
 
     public final static String PREFIX = "rpc";
 
-    protected String basePackage;
+    protected Set<String> packages;
 
     protected ServerBean server;
 
@@ -42,12 +43,12 @@ public class BootRpcProperties {
 
     protected List<RegistryBean> registries;
 
-    public String getBasePackage() {
-        return basePackage;
+    public Set<String> getPackages() {
+        return packages;
     }
 
-    public void setBasePackage(String basePackage) {
-        this.basePackage = basePackage;
+    public void setPackages(Set<String> packages) {
+        this.packages = packages;
     }
 
     public ServerBean getServer() {

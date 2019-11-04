@@ -1,39 +1,34 @@
 package io.joyrpc.spring.factory;
 
-import io.joyrpc.config.MethodConfig;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.annotation.Consumer;
 import io.joyrpc.spring.util.AnnotationUtils;
-import io.joyrpc.spring.util.MethodConfigUtils;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.env.Environment;
-import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Modifier;
-import java.util.Map;
 
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 import static org.springframework.util.ClassUtils.resolveClassName;
 import static org.springframework.util.ReflectionUtils.doWithFields;
 import static org.springframework.util.ReflectionUtils.doWithMethods;
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.*;
 
 /**
  * 处理含有consumer注解bean定义的处理类
  */
 @Extension("consumer")
-public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcessor {
+public class ConsumerDefinitionProcessor extends AbstractDefinitionProcessor {
 
     @Override
-    public void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader) {
+    public void processBean(final BeanDefinition beanDefinition, final BeanDefinitionRegistry registry,
+                            final Environment environment, final ClassLoader classLoader) {
         Class<?> beanClass = resolveClassName(beanDefinition.getBeanClassName(), classLoader);
         //处理属上的consumer注解
-        doWithFields(
-                beanClass,
+        doWithFields(beanClass,
                 field -> registryBean(field.getType(), field.getAnnotation(Consumer.class), registry, environment),
                 field -> !Modifier.isFinal(field.getModifiers())
                         && !Modifier.isStatic(field.getModifiers())
@@ -41,8 +36,7 @@ public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcess
         );
 
         //处理方法上的consumer注解
-        doWithMethods(
-                beanClass,
+        doWithMethods(beanClass,
                 method -> registryBean(method.getParameterTypes()[1], method.getAnnotation(Consumer.class), registry, environment),
                 method -> method.getName().startsWith("set")
                         && method.getParameterCount() == 1
@@ -50,42 +44,61 @@ public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcess
         );
     }
 
-    protected void registryBean(Class interfaceClazz, Consumer consumerAnnotation, BeanDefinitionRegistry registry, Environment environment) {
-        String consumerBeanName = buildConsumerBeanName(consumerAnnotation, interfaceClazz.getName());
-        if (!registry.containsBeanDefinition(consumerBeanName)) {
-            BeanDefinition consumerDefinition = buildConsumerDefinition(consumerAnnotation, interfaceClazz, environment);
-            registry.registerBeanDefinition(consumerBeanName, consumerDefinition);
+    /**
+     * 注册Bean
+     *
+     * @param interfaceClazz
+     * @param consumer
+     * @param registry
+     * @param env
+     */
+    protected void registryBean(final Class interfaceClazz, final Consumer consumer,
+                                final BeanDefinitionRegistry registry, final Environment env) {
+        String name = buildBeanName(interfaceClazz.getName(), consumer, env);
+        if (!registry.containsBeanDefinition(name)) {
+            registry.registerBeanDefinition(name, buildDefinition(interfaceClazz, consumer, name, env));
         }
     }
 
+    /**
+     * 构造Bean名称
+     *
+     * @param interfaceClazz
+     * @param consumer
+     * @param env
+     * @return
+     */
+    protected String buildBeanName(final String interfaceClazz, final Consumer consumer, final Environment env) {
+        return interfaceClazz + "#" + env.resolvePlaceholders(consumer.alias());
+    }
 
-    private BeanDefinition buildConsumerDefinition(Consumer consumerAnnotation, Class<?> interfaceClass, Environment environment) {
-
+    /**
+     * 构造Bean的定义
+     *
+     * @param interfaceClass
+     * @param consumer
+     * @param beanName
+     * @param env
+     * @return
+     */
+    protected BeanDefinition buildDefinition(final Class<?> interfaceClass, final Consumer consumer,
+                                             final String beanName, final Environment env) {
         BeanDefinitionBuilder builder = rootBeanDefinition(ConsumerBean.class);
 
-        BeanDefinition beanDefinition = builder.getBeanDefinition();
+        String[] ignoreAttributeNames = new String[]{"id", "registry", "methods", "interfaceClazz", "parameters", "filter"};
+        builder.getBeanDefinition().getPropertyValues().addPropertyValues(new MutablePropertyValues(
+                AnnotationUtils.getAttributes(consumer, env, true, ignoreAttributeNames)));
 
-        MutablePropertyValues propertyValues = beanDefinition.getPropertyValues();
-
-        String[] ignoreAttributeNames = new String[]{"id", "registry", "methods", "interfaceClazz", "parameters"};
-        propertyValues.addPropertyValues(new MutablePropertyValues(AnnotationUtils.getAttributes(consumerAnnotation, environment, true, ignoreAttributeNames)));
-
-
-        builder.addPropertyValue("id", ServiceBeanDefinitionProcessor.buildConsumerBeanName(consumerAnnotation, interfaceClass.getName()));
-
-
-        String registryBeanName = consumerAnnotation.registry();
-        if (StringUtils.hasText(registryBeanName)) {
-            addPropertyReference("registry", registryBeanName, environment, builder);
-        }
-
-        Map<String, MethodConfig> methodConfigs = MethodConfigUtils.constructMethodConfig(consumerAnnotation.methods());
-        builder.addPropertyValue("methods", methodConfigs);
-
+        builder.addPropertyValue("id", beanName);
+        builder.addPropertyValue("filter", String.join(",", consumer.filter()));
         builder.addPropertyValue("interfaceClazz", interfaceClass.getName());
 
-        builder.addPropertyValue("parameters", MethodConfigUtils.toStringMap(consumerAnnotation.parameters()));
+        if (!consumer.registry().isEmpty()) {
+            builder.addPropertyReference("registry", env.resolvePlaceholders(consumer.registry()));
+        }
 
+        builder.addPropertyValue("methods", build(consumer.methods(), env));
+        builder.addPropertyValue("parameters", buildParameters(consumer.parameters(), env));
         return builder.getBeanDefinition();
 
     }

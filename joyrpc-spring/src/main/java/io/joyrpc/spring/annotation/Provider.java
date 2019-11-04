@@ -9,9 +9,9 @@ package io.joyrpc.spring.annotation;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,8 +31,18 @@ import java.lang.annotation.*;
 @Inherited
 public @interface Provider {
 
+    /**
+     * Bean名称
+     *
+     * @return
+     */
     String name() default "";
 
+    /**
+     * 接口类
+     *
+     * @return
+     */
     Class<?> interfaceClass() default void.class;
 
     /**
@@ -49,6 +59,13 @@ public @interface Provider {
      */
 
     String server() default "";
+
+    /**
+     * 代理类型
+     *
+     * @return
+     */
+    String proxy() default "";
 
     /**
      * 是否注册到注册中心
@@ -76,16 +93,15 @@ public @interface Provider {
      */
     int delay() default -1;
 
-
     /**
      * 包含的方法
      */
-    String include() default "";
+    String[] include() default {};
 
     /**
      * 不发布的方法列表，逗号分隔
      */
-    String exclude() default "";
+    String[] exclude() default {};
 
     /**
      * 接口下每方法的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制
@@ -111,11 +127,6 @@ public @interface Provider {
      * 远程调用超时时间(毫秒)
      */
     int timeout() default -1;
-
-    /**
-     * 是否开启参数验证(jsr303)
-     */
-    boolean validation() default false;
 
     /**
      * 压缩算法，为空则不压缩
@@ -152,6 +163,23 @@ public @interface Provider {
      */
     boolean cacheNullable() default false;
 
+    /**
+     * 是否开启参数验证(jsr303)
+     */
+    boolean validation() default false;
+
+    /**
+     * 是否要验证
+     *
+     * @return
+     */
+    boolean enableValidator() default true;
+
+    /**
+     * 接口验证器
+     *
+     * @return
+     */
     String interfaceValidator() default "";
 
     /**

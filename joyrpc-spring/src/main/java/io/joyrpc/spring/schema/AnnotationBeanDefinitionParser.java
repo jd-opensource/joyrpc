@@ -49,7 +49,7 @@ public class AnnotationBeanDefinitionParser extends AbstractSingleBeanDefinition
         registerConsumerInjectedPostProcessor(parserContext.getRegistry());
     }
 
-    private void registerConsumerInjectedPostProcessor(BeanDefinitionRegistry registry) {
+    protected void registerConsumerInjectedPostProcessor(BeanDefinitionRegistry registry) {
         BeanRegistrarUtils.registerInfrastructureBean(registry,
                 ConsumerInjectedPostProcessor.BEAN_NAME, ConsumerInjectedPostProcessor.class);
 

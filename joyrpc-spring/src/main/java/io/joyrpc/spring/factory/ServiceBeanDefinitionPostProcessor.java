@@ -23,8 +23,8 @@ import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -39,7 +39,7 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
         ResourceLoaderAware, BeanClassLoaderAware {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(ServiceBeanDefinitionPostProcessor.class);
 
     private static final ExtensionPoint<ServiceBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionProcessor.class);
 
@@ -47,12 +47,13 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private Environment environment;
 
-    private ResourceLoader resourceLoader;
+    protected final Set<String> basePackages;
 
-    private final Set<String> basePackages;
+    protected Environment environment;
 
-    private ClassLoader classLoader;
+    protected ResourceLoader resourceLoader;
 
+    protected ClassLoader classLoader;
 
     /**
      * 构造方法
@@ -70,16 +71,15 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //收集packagesToScan配置，获取rpc要扫描的包路径
         Set<String> packages = new LinkedHashSet<>(basePackages.size());
         for (String packageToScan : basePackages) {
-            if (org.springframework.util.StringUtils.hasText(packageToScan)) {
-                String resolvedPackageToScan = environment.resolvePlaceholders(packageToScan.trim());
-                packages.add(resolvedPackageToScan);
+            if (StringUtils.hasText(packageToScan)) {
+                packages.add(environment.resolvePlaceholders(packageToScan.trim()));
             }
         }
         //处理包下的class类
         if (!CollectionUtils.isEmpty(packages)) {
             processPackages(packages, registry);
         } else {
-            logger.warn("packagesToScan is empty , ProviderBean registry will be ignored!");
+            logger.warn("basePackages is empty , auto scanning package annotation will be ignored!");
         }
     }
 
@@ -89,21 +89,19 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param packages
      * @param registry
      */
-    private void processPackages(Set<String> packages, BeanDefinitionRegistry registry) {
+    protected void processPackages(Set<String> packages, BeanDefinitionRegistry registry) {
         //构造
         DefaultClassPathBeanDefinitionScanner scanner = new DefaultClassPathBeanDefinitionScanner(registry, environment, resourceLoader);
         scanner.addIncludeFilter(new AnnotationTypeFilter(Provider.class));
-        scanner.addIncludeFilter(new AnnotationFilter(Consumer.class));
+        scanner.addIncludeFilter(new ConsumerAnnotationFilter());
         //获取配置的rpc扫描包下的所有bean定义
         for (String basePackage : packages) {
             Set<BeanDefinition> beanDefinitions = scanner.findCandidateComponents(basePackage);
             if (!CollectionUtils.isEmpty(beanDefinitions)) {
                 for (BeanDefinition beanDefinition : beanDefinitions) {
                     REGISTRY_PROCESSOR.extensions().forEach(
-                            registryProcessor -> registryProcessor.processBean(beanDefinition, registry, environment, classLoader));
+                            processor -> processor.processBean(beanDefinition, registry, environment, classLoader));
                 }
-            } else {
-                logger.warn(String.format("No Spring Bean annotating @Provider was found under package %s", basePackage));
             }
         }
 
@@ -133,37 +131,38 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 扫描类过滤（主要用来过滤含有某一个注解的类）
      */
-    protected class AnnotationFilter implements TypeFilter {
-
-        protected Class<? extends Annotation> annotationType;
-
-        protected AnnotationFilter(Class<? extends Annotation> annotationType) {
-            this.annotationType = annotationType;
-        }
+    protected class ConsumerAnnotationFilter implements TypeFilter {
 
         @Override
         public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) {
             ClassMetadata classMetadata = metadataReader.getClassMetadata();
-            if (!classMetadata.isInterface()
-                    && !classMetadata.isAnnotation()
-                    && !classMetadata.isFinal()) {
+            if (classMetadata.isConcrete() && !classMetadata.isAnnotation()) {
+                //找到类
                 Class clazz = resolveClassName(classMetadata.getClassName(), classLoader);
-                if (clazz.getAnnotation(annotationType) != null) {
-                    return true;
-                }
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field field : fields) {
-                    if (!Modifier.isFinal(field.getModifiers())
-                            && !Modifier.isStatic(field.getModifiers())
-                            && field.getAnnotation(annotationType) != null) {
-                        return true;
+                //判断是否Public
+                if (Modifier.isPublic(clazz.getModifiers())) {
+                    //Consumer只能在字段、方法上设置
+                    Field[] fields = clazz.getFields();
+                    for (Field field : fields) {
+                        if (!Modifier.isFinal(field.getModifiers())
+                                && !Modifier.isStatic(field.getModifiers())
+                                && field.getDeclaringClass() != Object.class
+                                && field.getAnnotation(Consumer.class) != null) {
+                            return true;
+                        }
                     }
-                }
-                Method[] methods = clazz.getMethods();
-                for (Method method : methods) {
-                    if (method.getAnnotation(annotationType) != null) {
-                        return true;
+                    //处理setter注入
+                    Method[] methods = clazz.getMethods();
+                    for (Method method : methods) {
+                        if (method.getDeclaringClass() != Object.class
+                                && method.getName().startsWith("set")
+                                && method.getParameterCount() == 1
+                                && method.getAnnotation(Consumer.class) != null) {
+                            return true;
+                        }
                     }
+
+
                 }
 
             }

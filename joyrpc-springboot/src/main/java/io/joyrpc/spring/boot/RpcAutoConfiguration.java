@@ -22,7 +22,6 @@ package io.joyrpc.spring.boot;
 
 import io.joyrpc.spring.factory.ConsumerInjectedPostProcessor;
 import io.joyrpc.spring.factory.ServiceBeanDefinitionPostProcessor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -37,21 +36,22 @@ import static io.joyrpc.spring.boot.RpcProperties.PREFIX;
 import static java.util.Collections.emptySet;
 
 /**
+ * RPC自动配置
+ *
  * @description:
  */
-
 @Configuration
 @EnableConfigurationProperties(RpcProperties.class)
 @ConditionalOnProperty(prefix = PREFIX, name = "enabled", matchIfMissing = true)
 public class RpcAutoConfiguration {
 
     @Resource
-    private RpcProperties rpcProperties;
+    protected RpcProperties rpcProperties;
 
     @ConditionalOnMissingBean
     @Bean
-    public PropertiesDefinitionPostProcessor propertiesDefinitionPostProcessor() {
-        return new PropertiesDefinitionPostProcessor(rpcProperties);
+    public RpcPropertiesPostProcessor propertiesDefinitionPostProcessor() {
+        return new RpcPropertiesPostProcessor(rpcProperties);
     }
 
     @ConditionalOnMissingBean

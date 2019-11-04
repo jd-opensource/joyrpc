@@ -38,15 +38,15 @@ public class RpcProperties {
 
     public final static String PREFIX = "rpc";
 
-    private String basePackage;
+    protected String basePackage;
 
-    private ServerBean server;
+    protected ServerBean server;
 
-    private RegistryBean registry;
+    protected RegistryBean registry;
 
-    private List<ServerBean> servers;
+    protected List<ServerBean> servers;
 
-    private List<RegistryBean> registries;
+    protected List<RegistryBean> registries;
 
     public String getBasePackage() {
         return basePackage;

@@ -18,11 +18,11 @@ import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.SERVER_NAM
 /**
  * 根据配置生成Server和Registry配置对象
  */
-public class PropertiesDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor {
+public class RpcPropertiesPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
     protected RpcProperties rpcProperties;
 
-    public PropertiesDefinitionPostProcessor(RpcProperties rpcProperties) {
+    public RpcPropertiesPostProcessor(RpcProperties rpcProperties) {
         this.rpcProperties = rpcProperties;
     }
 

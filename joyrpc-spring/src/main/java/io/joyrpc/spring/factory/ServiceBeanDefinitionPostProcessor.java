@@ -45,8 +45,6 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private static final ExtensionPoint<ConfigPropertiesProcessor, String> PROPERTIES_PROCESSOR = new ExtensionPointLazy<>(ConfigPropertiesProcessor.class);
 
-    private Environment environment;
-
     protected final Set<String> basePackages;
 
     protected Environment environment;
@@ -161,10 +159,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                             return true;
                         }
                     }
-
-
                 }
-
             }
             return false;
         }

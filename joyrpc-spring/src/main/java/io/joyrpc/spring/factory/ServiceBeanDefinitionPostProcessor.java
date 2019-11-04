@@ -84,7 +84,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param packages
      * @param registry
      */
-    private void processPackages(Set<String> packages, BeanDefinitionRegistry registry) {
+    protected void processPackages(Set<String> packages, BeanDefinitionRegistry registry) {
         //构造
         DefaultClassPathBeanDefinitionScanner scanner = new DefaultClassPathBeanDefinitionScanner(registry, environment, resourceLoader);
         scanner.addIncludeFilter(new AnnotationTypeFilter(Provider.class));

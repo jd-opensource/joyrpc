@@ -69,6 +69,7 @@ public class RpcPropertiesPostProcessor implements BeanDefinitionRegistryPostPro
             beanName = function.apply(config);
         }
         if (!registry.containsBeanDefinition(beanName)) {
+            //TODO 要验证是否正确注入了环境变量
             registry.registerBeanDefinition(beanName, new RootBeanDefinition((Class<T>) config.getClass(), () -> config));
         }
     }

@@ -54,7 +54,7 @@ public class RpcAutoConfiguration {
     @ConditionalOnMissingBean
     @Bean
     public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor() {
-        return new ServiceBeanDefinitionPostProcessor(rpcProperties.getBasePackages());
+        return new ServiceBeanDefinitionPostProcessor(rpcProperties.getPackages());
     }
 
     @ConditionalOnMissingBean

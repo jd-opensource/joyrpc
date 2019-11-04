@@ -39,7 +39,7 @@ public class RpcProperties {
 
     public final static String PREFIX = "rpc";
 
-    protected Set<String> basePackages;
+    protected Set<String> packages;
 
     protected ServerBean server;
 
@@ -49,12 +49,12 @@ public class RpcProperties {
 
     protected List<RegistryBean> registries;
 
-    public Set<String> getBasePackages() {
-        return basePackages;
+    public Set<String> getPackages() {
+        return packages;
     }
 
-    public void setBasePackages(Set<String> basePackages) {
-        this.basePackages = basePackages;
+    public void setPackages(Set<String> packages) {
+        this.packages = packages;
     }
 
     public ServerBean getServer() {

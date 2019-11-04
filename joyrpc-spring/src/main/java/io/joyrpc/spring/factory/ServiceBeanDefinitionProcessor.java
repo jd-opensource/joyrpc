@@ -18,9 +18,9 @@ import org.springframework.util.StringUtils;
 @Extensible("serviceBeanDefinitionProcessor")
 public interface ServiceBeanDefinitionProcessor {
 
-    String ANNOTATION_DEFAULT_SERVER = "annotation-default-server";
+    String SERVER_NAME = "server";
 
-    String ANNOTATION_DEFAULT_REGISTRY = "annotation-default-registry";
+    String REGISTRY_NAME = "registry";
 
     void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry, Environment environment, ClassLoader classLoader);
 

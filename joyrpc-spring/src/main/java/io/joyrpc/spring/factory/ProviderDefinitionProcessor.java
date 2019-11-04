@@ -45,8 +45,8 @@ public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcess
         }
         //如果没有配置server，且没有注册默认的serverConfig，注册默认的serverConfig
         if (!StringUtils.hasText(providerAnnotation.server())
-                && !registry.containsBeanDefinition(ANNOTATION_DEFAULT_SERVER)) {
-            registry.registerBeanDefinition(ANNOTATION_DEFAULT_SERVER, new RootBeanDefinition(ServerConfig.class));
+                && !registry.containsBeanDefinition(SERVER_NAME)) {
+            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerConfig.class));
         }
         //注册ref
         BeanNameGenerator beanNameGenerator = resolveBeanNameGenerator(registry);

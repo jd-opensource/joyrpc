@@ -148,14 +148,17 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                     }
                     Field[] fields = clazz.getFields();
                     for (Field field : fields) {
-                        if (!Modifier.isFinal(field.getModifiers()) && !Modifier.isStatic(field.getModifiers())
+                        if (!Modifier.isFinal(field.getModifiers())
+                                && !Modifier.isStatic(field.getModifiers())
+                                && field.getDeclaringClass() != Object.class
                                 && field.getAnnotation(annotationType) != null) {
                             return true;
                         }
                     }
                     Method[] methods = clazz.getMethods();
                     for (Method method : methods) {
-                        if (method.getAnnotation(annotationType) != null) {
+                        if (method.getDeclaringClass() != Object.class
+                                && method.getAnnotation(annotationType) != null) {
                             return true;
                         }
                     }

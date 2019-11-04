@@ -20,7 +20,7 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
-import io.joyrpc.config.RegistryConfig;
+import io.joyrpc.spring.RegistryBean;
 import io.joyrpc.spring.ServerBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -42,11 +42,11 @@ public class RpcProperties {
 
     private ServerBean server;
 
-    private RegistryConfig registry;
+    private RegistryBean registry;
 
     private List<ServerBean> servers;
 
-    private List<RegistryConfig> registries;
+    private List<RegistryBean> registries;
 
     public String getBasePackage() {
         return basePackage;
@@ -64,11 +64,11 @@ public class RpcProperties {
         this.server = server;
     }
 
-    public RegistryConfig getRegistry() {
+    public RegistryBean getRegistry() {
         return registry;
     }
 
-    public void setRegistry(RegistryConfig registry) {
+    public void setRegistry(RegistryBean registry) {
         this.registry = registry;
     }
 
@@ -80,11 +80,11 @@ public class RpcProperties {
         this.servers = servers;
     }
 
-    public List<RegistryConfig> getRegistries() {
+    public List<RegistryBean> getRegistries() {
         return registries;
     }
 
-    public void setRegistries(List<RegistryConfig> registries) {
+    public void setRegistries(List<RegistryBean> registries) {
         this.registries = registries;
     }
 }

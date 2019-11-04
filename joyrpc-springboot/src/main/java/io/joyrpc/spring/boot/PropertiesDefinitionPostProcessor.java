@@ -2,6 +2,7 @@ package io.joyrpc.spring.boot;
 
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
+import io.joyrpc.spring.RegistryBean;
 import io.joyrpc.spring.ServerBean;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
@@ -12,9 +13,12 @@ import org.springframework.util.StringUtils;
 
 import java.util.List;
 
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.ANNOTATION_DEFAULT_REGISTRY;
-import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.ANNOTATION_DEFAULT_SERVER;
+import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.REGISTRY_NAME;
+import static io.joyrpc.spring.factory.ServiceBeanDefinitionProcessor.SERVER_NAME;
 
+/**
+ * 根据配置生成Server和Registry配置对象
+ */
 public class PropertiesDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
     private RpcProperties rpcProperties;
@@ -24,38 +28,43 @@ public class PropertiesDefinitionPostProcessor implements BeanDefinitionRegistry
     }
 
     @Override
-    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
-        ServerConfig defaultServer = rpcProperties.getServer();
-        if (defaultServer != null && !registry.containsBeanDefinition(ANNOTATION_DEFAULT_SERVER)) {
-            registry.registerBeanDefinition(ANNOTATION_DEFAULT_SERVER, new RootBeanDefinition(ServerConfig.class, () -> defaultServer));
+    public void postProcessBeanDefinitionRegistry(final BeanDefinitionRegistry registry) throws BeansException {
+        //注册默认Server
+        ServerBean defaultServer = rpcProperties.getServer();
+        if (defaultServer != null && !registry.containsBeanDefinition(SERVER_NAME)) {
+            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerConfig.class, () -> defaultServer));
         }
-        RegistryConfig defaultRegistry = rpcProperties.getRegistry();
-        if (defaultRegistry != null && !registry.containsBeanDefinition(ANNOTATION_DEFAULT_REGISTRY)) {
-            registry.registerBeanDefinition(ANNOTATION_DEFAULT_REGISTRY, new RootBeanDefinition(RegistryConfig.class, () -> defaultRegistry));
+        //注册默认注册中心
+        RegistryBean defaultRegistry = rpcProperties.getRegistry();
+        if (defaultRegistry != null && !registry.containsBeanDefinition(REGISTRY_NAME)) {
+            registry.registerBeanDefinition(REGISTRY_NAME, new RootBeanDefinition(RegistryConfig.class, () -> defaultRegistry));
         }
+        //注册多个Server配置
+        String beanName;
         List<ServerBean> serverConfigs = rpcProperties.getServers();
         if (serverConfigs != null && !serverConfigs.isEmpty()) {
             int i = 0;
-            for (ServerBean serverBean : serverConfigs) {
-                String beanName = serverBean.getId();
+            for (ServerBean bean : serverConfigs) {
+                beanName = bean.getId();
                 if (!StringUtils.hasText(beanName)) {
-                    beanName = "annotation-server-" + (i++);
+                    beanName = SERVER_NAME + (i++);
                 }
                 if (!registry.containsBeanDefinition(beanName)) {
-                    registry.registerBeanDefinition(beanName, new RootBeanDefinition(ServerConfig.class, () -> serverBean));
+                    registry.registerBeanDefinition(beanName, new RootBeanDefinition(ServerConfig.class, () -> bean));
                 }
             }
         }
-        List<RegistryConfig> registryConfigs = rpcProperties.getRegistries();
+        //注册多个注册中心，名称为:registry0,registry1.....
+        List<RegistryBean> registryConfigs = rpcProperties.getRegistries();
         if (registryConfigs != null && !registryConfigs.isEmpty()) {
             int i = 0;
-            for (RegistryConfig registryConfig : registryConfigs) {
-                String beanName = registryConfig.getId();
+            for (RegistryBean bean : registryConfigs) {
+                beanName = bean.getId();
                 if (!StringUtils.hasText(beanName)) {
-                    beanName = "annotation-registry-" + (i++);
+                    beanName = REGISTRY_NAME + (i++);
                 }
                 if (!registry.containsBeanDefinition(beanName)) {
-                    registry.registerBeanDefinition(beanName, new RootBeanDefinition(RegistryConfig.class, () -> registryConfig));
+                    registry.registerBeanDefinition(beanName, new RootBeanDefinition(RegistryConfig.class, () -> bean));
                 }
             }
         }

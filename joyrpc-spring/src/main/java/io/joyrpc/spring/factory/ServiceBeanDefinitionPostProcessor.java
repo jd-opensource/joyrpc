@@ -25,7 +25,6 @@ import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -88,7 +87,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //构造
         DefaultClassPathBeanDefinitionScanner scanner = new DefaultClassPathBeanDefinitionScanner(registry, environment, resourceLoader);
         scanner.addIncludeFilter(new AnnotationTypeFilter(Provider.class));
-        scanner.addIncludeFilter(new AnnotationFilter(Consumer.class));
+        scanner.addIncludeFilter(new ConsumerAnnotationFilter());
         //获取配置的rpc扫描包下的所有bean定义
         for (String basePackage : packages) {
             Set<BeanDefinition> beanDefinitions = scanner.findCandidateComponents(basePackage);
@@ -126,13 +125,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 扫描类过滤（主要用来过滤含有某一个注解的类）
      */
-    protected class AnnotationFilter implements TypeFilter {
-
-        protected Class<? extends Annotation> annotationType;
-
-        protected AnnotationFilter(Class<? extends Annotation> annotationType) {
-            this.annotationType = annotationType;
-        }
+    protected class ConsumerAnnotationFilter implements TypeFilter {
 
         @Override
         public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) {
@@ -142,26 +135,28 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 Class clazz = resolveClassName(classMetadata.getClassName(), classLoader);
                 //判断是否Public
                 if (Modifier.isPublic(clazz.getModifiers())) {
-                    //判断注解
-                    if (clazz.getAnnotation(annotationType) != null) {
-                        return true;
-                    }
+                    //Consumer只能在字段、方法上设置
                     Field[] fields = clazz.getFields();
                     for (Field field : fields) {
                         if (!Modifier.isFinal(field.getModifiers())
                                 && !Modifier.isStatic(field.getModifiers())
                                 && field.getDeclaringClass() != Object.class
-                                && field.getAnnotation(annotationType) != null) {
+                                && field.getAnnotation(Consumer.class) != null) {
                             return true;
                         }
                     }
+                    //处理setter注入
                     Method[] methods = clazz.getMethods();
                     for (Method method : methods) {
                         if (method.getDeclaringClass() != Object.class
-                                && method.getAnnotation(annotationType) != null) {
+                                && method.getName().startsWith("set")
+                                && method.getParameterCount() == 1
+                                && method.getAnnotation(Consumer.class) != null) {
                             return true;
                         }
                     }
+
+
                 }
 
             }

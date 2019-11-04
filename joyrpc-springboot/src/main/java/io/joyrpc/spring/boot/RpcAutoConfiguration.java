@@ -27,7 +27,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.ConfigurableEnvironment;
 
 import javax.annotation.Resource;
 
@@ -54,7 +53,7 @@ public class RpcAutoConfiguration {
 
     @ConditionalOnMissingBean
     @Bean
-    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ConfigurableEnvironment environment) {
+    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor() {
         return new ServiceBeanDefinitionPostProcessor(rpcProperties.getBasePackages());
     }
 

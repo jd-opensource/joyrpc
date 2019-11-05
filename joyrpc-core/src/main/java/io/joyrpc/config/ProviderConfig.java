@@ -172,8 +172,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     @Override
     protected void validateAlias() {
         if (alias == null || alias.isEmpty()) {
-            throw new InitializationException("Value of \"alias\" is not specified in provider" +
-                    " config with key " + name() + " !", ExceptionCode.PROVIDER_ALIAS_IS_NULL);
+            throw new InitializationException("The alias must not be empty of provider " + name(),
+                    ExceptionCode.PROVIDER_ALIAS_IS_NULL);
         }
         checkNormalWithColon("alias", alias);
     }

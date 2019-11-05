@@ -514,12 +514,12 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                 entry.getValue().validate();
             }
         }
+        //验证扩展点
         checkExtension(CACHE, CacheFactory.class, "cacheProvider", cacheProvider);
         checkExtension(CACHE_KEY_GENERATOR, CacheKeyGenerator.class, "cacheKeyGenerator", cacheKeyGenerator);
         checkExtension(COMPRESSION, Compression.class, "compress", compress);
         checkExtension(PROXY, ProxyFactory.class, "proxy", proxy);
     }
-
 
     /**
      * 验证别名，消费组可以配置多个别名，可以运行有逗号，使用方法便于覆盖

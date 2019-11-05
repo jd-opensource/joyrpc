@@ -59,6 +59,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static io.joyrpc.spring.ComponentScanRegistrar.isBootOpen;
 import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 import static org.springframework.util.ClassUtils.resolveClassName;
 
@@ -87,6 +88,9 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * 构造方法
      */
     public ServiceBeanDefinitionPostProcessor(RpcProperties rpcProperties, Environment environment, ResourceLoader resourceLoader) {
+        if (!isBootOpen()) {
+            return;
+        }
         this.rpcProperties = rpcProperties;
         //读取rpc为前缀的配置
         Map<String, Object> objectMap = PropertySourcesUtils.getSubProperties((ConfigurableEnvironment) environment, PREFIX);

@@ -1,4 +1,4 @@
-package io.joyrpc.spring.annotation;
+package io.joyrpc.spring;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.spring.annotation;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,16 +20,20 @@ package io.joyrpc.spring.annotation;
  * #L%
  */
 
-import io.joyrpc.spring.ComponentScanRegistrar;
-import org.springframework.context.annotation.Import;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
+import org.springframework.core.type.AnnotationMetadata;
 
-import java.lang.annotation.*;
+public class ComponentScanRegistrar implements ImportBeanDefinitionRegistrar {
 
-@Target({ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-@Inherited
-@Documented
-@Import({ComponentScanRegistrar.class})
-public @interface EnableRpc {
+    private static boolean bootOpen = false;
 
+    @Override
+    public void registerBeanDefinitions(AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
+        bootOpen = true;
+    }
+
+    public static boolean isBootOpen() {
+        return bootOpen;
+    }
 }

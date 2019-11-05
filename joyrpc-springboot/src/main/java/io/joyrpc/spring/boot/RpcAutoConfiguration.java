@@ -20,10 +20,18 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
+import io.joyrpc.spring.boot.factory.ConsumerInjectedPostProcessor;
+import io.joyrpc.spring.boot.factory.ServiceBeanDefinitionPostProcessor;
+import io.joyrpc.spring.boot.properties.RpcProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.io.ResourceLoader;
 
-import static io.joyrpc.spring.boot.BootRpcProperties.PREFIX;
+import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 
 /**
  * RPC自动配置
@@ -31,8 +39,22 @@ import static io.joyrpc.spring.boot.BootRpcProperties.PREFIX;
  * @description:
  */
 @Configuration
-@ConditionalOnProperty(prefix = PREFIX, name = "enabled", matchIfMissing = true)
+@EnableConfigurationProperties({RpcProperties.class})
+@ConditionalOnProperty(prefix = PREFIX, name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RpcAutoConfiguration {
 
+    @ConditionalOnMissingBean
+    @Bean
+    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ConfigurableEnvironment environment,
+                                                                                 ResourceLoader resourceLoader,
+                                                                                 RpcProperties rpcProperties) {
+        return new ServiceBeanDefinitionPostProcessor(rpcProperties, environment, resourceLoader);
+    }
+
+    @ConditionalOnMissingBean
+    @Bean(name = ConsumerInjectedPostProcessor.BEAN_NAME)
+    public ConsumerInjectedPostProcessor consumerInjectedPostProcessor() {
+        return new ConsumerInjectedPostProcessor();
+    }
 
 }

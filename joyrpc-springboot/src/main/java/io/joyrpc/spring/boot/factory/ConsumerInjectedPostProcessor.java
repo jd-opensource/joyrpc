@@ -1,4 +1,4 @@
-package io.joyrpc.spring.factory;
+package io.joyrpc.spring.boot.factory;
 
 /*-
  * #%L
@@ -26,6 +26,8 @@ import org.springframework.beans.factory.annotation.InjectionMetadata;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
+import static io.joyrpc.spring.boot.processor.ConsumerDefinitionProcessor.buildBeanName;
+
 /**
  * congsumer注解注入
  */
@@ -37,12 +39,12 @@ public class ConsumerInjectedPostProcessor extends AnnotationInjectedBeanPostPro
 
     @Override
     protected Object doGetInjectedBean(Consumer annotation, Object bean, String beanName, Class<?> injectedType, InjectionMetadata.InjectedElement injectedElement) throws Exception {
-        return applicationContext.getBean(buildConsumerBeanName(annotation, injectedType.getName()), injectedType);
+        return applicationContext.getBean(buildBeanName(injectedType.getName(), annotation, environment), injectedType);
     }
 
     @Override
     protected String buildInjectedObjectCacheKey(Consumer annotation, Class<?> injectedType) {
-        return buildConsumerBeanName(annotation, injectedType.getName());
+        return buildBeanName(injectedType.getName(), annotation, environment);
     }
 
 
@@ -51,7 +53,4 @@ public class ConsumerInjectedPostProcessor extends AnnotationInjectedBeanPostPro
         this.applicationContext = applicationContext;
     }
 
-    protected String buildConsumerBeanName(Consumer consumerAnnotation, String interfaceClazz) {
-        return interfaceClazz + "#" + consumerAnnotation.alias();
-    }
 }

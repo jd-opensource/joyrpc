@@ -1,4 +1,4 @@
-package io.joyrpc.spring.context;
+package io.joyrpc.spring.boot.context;
 
 /*-
  * #%L
@@ -21,8 +21,8 @@ package io.joyrpc.spring.context;
  */
 
 import io.joyrpc.spring.annotation.EnableRpc;
-import io.joyrpc.spring.factory.ConsumerInjectedPostProcessor;
-import io.joyrpc.spring.factory.ServiceBeanDefinitionPostProcessor;
+import io.joyrpc.spring.boot.factory.ConsumerInjectedPostProcessor;
+import io.joyrpc.spring.boot.factory.ServiceBeanDefinitionPostProcessor;
 import io.joyrpc.spring.util.BeanRegistrarUtils;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;

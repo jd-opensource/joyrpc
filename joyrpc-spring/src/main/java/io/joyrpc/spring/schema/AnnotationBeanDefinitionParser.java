@@ -1,5 +1,7 @@
+/*
 package io.joyrpc.spring.schema;
 
+*/
 /*-
  * #%L
  * joyrpc
@@ -18,7 +20,8 @@ package io.joyrpc.spring.schema;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  * #L%
- */
+ *//*
+
 
 import io.joyrpc.spring.factory.ConsumerInjectedPostProcessor;
 import io.joyrpc.spring.factory.ServiceBeanDefinitionPostProcessor;
@@ -33,9 +36,11 @@ import org.w3c.dom.Element;
 import static org.springframework.util.StringUtils.commaDelimitedListToStringArray;
 import static org.springframework.util.StringUtils.trimArrayElements;
 
+*/
 /**
  * annotation解析器
- */
+ *//*
+
 public class AnnotationBeanDefinitionParser extends AbstractSingleBeanDefinitionParser {
 
     @Override
@@ -66,3 +71,4 @@ public class AnnotationBeanDefinitionParser extends AbstractSingleBeanDefinition
     }
 
 }
+*/

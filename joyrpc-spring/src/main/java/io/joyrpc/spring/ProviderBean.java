@@ -38,6 +38,7 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -63,6 +64,14 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      * 开关
      */
     protected Switcher switcher = new Switcher();
+    /**
+     * registryConfig 引用列表
+     */
+    protected transient List<String> registryRefs;
+    /**
+     * server引用
+     */
+    protected transient String serverRef;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -132,4 +141,32 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         unexport();
     }
 
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return id;
+    }
+
+    public void setName(String name) {
+        this.id = name;
+    }
+
+    public List<String> getRegistryRefs() {
+        return registryRefs == null ? new ArrayList<>() : registryRefs;
+    }
+
+    public void setRegistryRefs(List<String> registryRefs) {
+        this.registryRefs = registryRefs;
+    }
+
+    public String getServerRef() {
+        return serverRef == null ? "" : serverRef;
+    }
+
+    public void setServerRef(String serverRef) {
+        this.serverRef = serverRef;
+    }
 }

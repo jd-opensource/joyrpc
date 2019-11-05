@@ -1,4 +1,4 @@
-package io.joyrpc.spring.factory;
+package io.joyrpc.spring.boot.factory;
 
 /*-
  * #%L
@@ -24,17 +24,23 @@ import io.joyrpc.extension.ExtensionPoint;
 import io.joyrpc.extension.ExtensionPointLazy;
 import io.joyrpc.spring.annotation.Consumer;
 import io.joyrpc.spring.annotation.Provider;
-import io.joyrpc.spring.context.DefaultClassPathBeanDefinitionScanner;
+import io.joyrpc.spring.boot.context.DefaultClassPathBeanDefinitionScanner;
+import io.joyrpc.spring.boot.processor.ConfigPropertiesProcessor;
+import io.joyrpc.spring.boot.processor.ServiceBeanDefinitionProcessor;
+import io.joyrpc.spring.boot.properties.RpcProperties;
+import io.joyrpc.spring.util.PropertySourcesUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.context.EnvironmentAware;
-import org.springframework.context.ResourceLoaderAware;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.ClassMetadata;
@@ -44,20 +50,22 @@ import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+import org.springframework.validation.DataBinder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 
+import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 import static org.springframework.util.ClassUtils.resolveClassName;
 
 /**
  * 注解扫描处理类
  */
-public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, EnvironmentAware,
-        ResourceLoaderAware, BeanClassLoaderAware {
+public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, BeanClassLoaderAware, ApplicationContextAware {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceBeanDefinitionPostProcessor.class);
 
@@ -65,7 +73,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private static final ExtensionPoint<ConfigPropertiesProcessor, String> PROPERTIES_PROCESSOR = new ExtensionPointLazy<>(ConfigPropertiesProcessor.class);
 
-    protected final Set<String> basePackages;
+    protected RpcProperties rpcProperties;
 
     protected Environment environment;
 
@@ -73,25 +81,35 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     protected ClassLoader classLoader;
 
+    protected ApplicationContext applicationContext;
+
     /**
      * 构造方法
-     *
-     * @param basePackages
      */
-    public ServiceBeanDefinitionPostProcessor(Set<String> basePackages) {
-        this.basePackages = basePackages;
+    public ServiceBeanDefinitionPostProcessor(RpcProperties rpcProperties, Environment environment, ResourceLoader resourceLoader) {
+        this.rpcProperties = rpcProperties;
+        //读取rpc为前缀的配置
+        Map<String, Object> objectMap = PropertySourcesUtils.getSubProperties((ConfigurableEnvironment) environment, PREFIX);
+        //绑定数据
+        DataBinder dataBinder = new DataBinder(rpcProperties);
+        MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
+        dataBinder.bind(propertyValues);
+        this.environment = environment;
+        this.resourceLoader = resourceLoader;
     }
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         //处理配置信息
-        PROPERTIES_PROCESSOR.extensions().forEach(processor -> processor.processProperties(registry, environment));
+        PROPERTIES_PROCESSOR.extensions().forEach(processor -> processor.processProperties(registry, rpcProperties));
         //收集packagesToScan配置，获取rpc要扫描的包路径
-        Set<String> packages = new LinkedHashSet<>(basePackages.size());
-        for (String packageToScan : basePackages) {
-            if (StringUtils.hasText(packageToScan)) {
-                packages.add(environment.resolvePlaceholders(packageToScan.trim()));
-            }
+        Set<String> packages = new LinkedHashSet<>();
+        if (rpcProperties.getPackages() != null) {
+            rpcProperties.getPackages().forEach(pkg -> {
+                if (StringUtils.hasText(pkg)) {
+                    packages.add(environment.resolvePlaceholders(pkg.trim()));
+                }
+            });
         }
         //处理包下的class类
         if (!CollectionUtils.isEmpty(packages)) {
@@ -118,7 +136,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             if (!CollectionUtils.isEmpty(beanDefinitions)) {
                 for (BeanDefinition beanDefinition : beanDefinitions) {
                     REGISTRY_PROCESSOR.extensions().forEach(
-                            processor -> processor.processBean(beanDefinition, registry, environment, classLoader));
+                            processor -> processor.processBean(beanDefinition, registry, environment, rpcProperties, classLoader));
                 }
             }
         }
@@ -132,19 +150,15 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     }
 
     @Override
-    public void setEnvironment(Environment environment) {
-        this.environment = environment;
-    }
-
-    @Override
-    public void setResourceLoader(ResourceLoader resourceLoader) {
-        this.resourceLoader = resourceLoader;
-    }
-
-    @Override
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
 
     /**
      * 扫描类过滤（主要用来过滤含有某一个注解的类）

@@ -39,4 +39,12 @@ public class ServerBean<T> extends ServerConfig implements BeanNameAware {
     public String getId() {
         return id;
     }
+
+    public String getName() {
+        return id;
+    }
+
+    public void setName(String name) {
+        this.id = name;
+    }
 }

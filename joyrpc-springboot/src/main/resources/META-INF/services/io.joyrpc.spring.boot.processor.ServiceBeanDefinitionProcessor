@@ -1,0 +1,2 @@
+io.joyrpc.spring.boot.processor.ProviderDefinitionProcessor
+io.joyrpc.spring.boot.processor.ConsumerDefinitionProcessor

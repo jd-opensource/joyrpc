@@ -1,4 +1,4 @@
-package io.joyrpc.spring.factory;
+package io.joyrpc.spring.boot.factory;
 
 /*-
  * #%L
@@ -72,7 +72,7 @@ public abstract class AnnotationInjectedBeanPostProcessor<A extends Annotation> 
 
     private ConfigurableListableBeanFactory beanFactory;
 
-    private Environment environment;
+    protected Environment environment;
 
     private ClassLoader classLoader;
 

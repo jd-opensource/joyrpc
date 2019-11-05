@@ -1,4 +1,4 @@
-package io.joyrpc.spring.factory;
+package io.joyrpc.spring.boot.processor;
 
 /*-
  * #%L
@@ -21,6 +21,8 @@ package io.joyrpc.spring.factory;
  */
 
 import io.joyrpc.extension.Extensible;
+import io.joyrpc.spring.boot.properties.RpcProperties;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.env.Environment;
@@ -45,9 +47,10 @@ public interface ServiceBeanDefinitionProcessor {
      * @param beanDefinition
      * @param registry
      * @param environment
+     * @param rpcProperties
      * @param classLoader
      */
     void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry,
-                     Environment environment, ClassLoader classLoader);
+                     Environment environment, RpcProperties rpcProperties, ClassLoader classLoader) throws BeansException;
 
 }

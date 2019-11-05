@@ -40,6 +40,11 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     protected transient ConsumerSpring<T> spring;
 
     /**
+     * registry引用
+     */
+    protected transient String registryRef;
+
+    /**
      * 默认构造函数，不允许从外部new
      */
     public ConsumerBean() {
@@ -94,5 +99,26 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     public ConsumerBean<T> applicationEventPublisher(ApplicationEventPublisher publisher) {
         setApplicationEventPublisher(publisher);
         return this;
+    }
+
+    @Override
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return id;
+    }
+
+    public void setName(String name) {
+        this.id = name;
+    }
+
+    public String getRegistryRef() {
+        return registryRef;
+    }
+
+    public void setRegistryRef(String registryRef) {
+        this.registryRef = registryRef;
     }
 }

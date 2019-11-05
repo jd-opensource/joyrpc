@@ -1,4 +1,4 @@
-package io.joyrpc.spring.context;
+package io.joyrpc.spring.boot.context;
 
 /*-
  * #%L

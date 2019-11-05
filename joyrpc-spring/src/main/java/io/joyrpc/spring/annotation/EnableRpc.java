@@ -20,7 +20,6 @@ package io.joyrpc.spring.annotation;
  * #L%
  */
 
-import io.joyrpc.spring.context.ComponentScanRegistrar;
 import org.springframework.context.annotation.Import;
 
 import java.lang.annotation.*;
@@ -29,7 +28,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@Import({ComponentScanRegistrar.class})
 public @interface EnableRpc {
 
     String[] basePackages() default {};

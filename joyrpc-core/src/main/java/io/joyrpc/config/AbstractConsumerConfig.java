@@ -33,6 +33,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.EventHandler;
+import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.proxy.ConsumerInvokeHandler;
@@ -220,8 +221,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     @Override
     protected void validateAlias() {
         if (alias == null || alias.isEmpty()) {
-            throw new InitializationException("Value of \"alias\" is not specified in consumer" +
-                    " config with key " + name() + " !", ExceptionCode.CONSUMER_ALIAS_IS_NULL);
+            throw new IllegalConfigureException("The alias must not be empty of consumer " + name(), ExceptionCode.CONSUMER_ALIAS_IS_NULL);
         }
         checkNormalWithColon("alias", alias);
     }

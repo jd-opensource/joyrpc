@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@ package io.joyrpc.config;
 
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.IllegalConfigureException;
-import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.ExtensionPoint;
 import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
@@ -219,11 +218,13 @@ public abstract class AbstractConfig {
      * @param <T>
      * @return
      */
-    protected static <T> T checkExtension(final ExtensionPoint<T, String> extensionPoint, final Class<T> type, final String property, final String value) {
+    protected static <T> T checkExtension(final ExtensionPoint<T, String> extensionPoint, final Class<T> type,
+                                          final String property, final String value) {
         if (value != null && !value.isEmpty()) {
             T v = extensionPoint.get(value);
             if (v == null) {
-                throw new IllegalConfigureException("No such extension " + value + " for " + property + "@" + type.getName(), ExceptionCode.COMMON_PLUGIN_ILLEGAL);
+                throw new IllegalConfigureException(String.format("No such extension %s for %s@%s", value,
+                        property, type.getName()), ExceptionCode.COMMON_PLUGIN_ILLEGAL);
             }
             return v;
         }
@@ -233,25 +234,21 @@ public abstract class AbstractConfig {
     /**
      * 检查过滤器配置
      *
-     * @param property
+     * @param name
      * @param value
      * @param extension
      */
-    protected void checkFilterConfig(String property, String value, ExtensionPoint<? extends Filter, String> extension) {
+    protected void checkFilterConfig(final String name, final String value,
+                                     final ExtensionPoint<? extends Filter, String> extension) {
         if (value == null || value.isEmpty()) {
             return;
         }
         String[] values = split(value, SEMICOLON_COMMA_WHITESPACE);
-        Filter filter;
         for (String v : values) {
-            if (v.equals("-*") || v.equals("-default")) {
-                continue;
-            } else if (v.startsWith("-")) {
-                v = v.substring(1);
-            }
-            filter = extension.get(v);
-            if (null == filter) {
-                throw new InitializationException("Value of \"filter\" " + v + " value is not found. config with key " + property + " !", ExceptionCode.FILTER_PLUGIN_NO_EXISTS);
+            if (v.charAt(0) != '-' && null == extension.get(v)) {
+                //过滤掉黑名单
+                throw new IllegalConfigureException(String.format("No such extension %s for %s. ", v, name),
+                        ExceptionCode.FILTER_PLUGIN_NO_EXISTS);
             }
         }
     }

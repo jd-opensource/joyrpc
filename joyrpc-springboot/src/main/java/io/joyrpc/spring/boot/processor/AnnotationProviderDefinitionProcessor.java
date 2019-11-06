@@ -20,15 +20,13 @@ package io.joyrpc.spring.boot.processor;
  * #L%
  */
 
-import io.joyrpc.config.ServerConfig;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.spring.ProviderBean;
+import io.joyrpc.spring.ServerBean;
 import io.joyrpc.spring.annotation.Provider;
 import io.joyrpc.spring.boot.properties.MergeServiceBeanProperties;
-import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.*;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -39,10 +37,8 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 import java.beans.Introspector;
-import java.util.List;
 
-import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
-import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
+import static io.joyrpc.constants.Constants.PORT_OPTION;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
 
@@ -63,8 +59,6 @@ public class AnnotationProviderDefinitionProcessor implements AnnotationBeanDefi
         }
         //获取服务类名，若没注册这注册
         String refBeanName = getOrRegisterComponent(beanDefinition, refClass, registry);
-        //设置providerBean的bean名称
-        String beanName = getBeanName(provider, refBeanName, environment);
         //获取接口类名
         String interfaceClazz = provider.interfaceClazz();
         if (!StringUtils.hasText(interfaceClazz)) {
@@ -75,8 +69,14 @@ public class AnnotationProviderDefinitionProcessor implements AnnotationBeanDefi
         } else {
             interfaceClazz = environment.resolvePlaceholders(provider.interfaceClazz());
         }
-        //从配置中获取并合并providerBean
+        //获取别名
         String alias = environment.resolvePlaceholders(provider.alias());
+        //获取providerBean的bean名称
+        String beanName = getBeanName(provider, interfaceClazz, alias, environment);
+        if (beanName.equals(refBeanName)) {
+            throw new BeanDefinitionValidationException("provider annotation name is not validation, can not equals ref bean name");
+        }
+        //合并provider注解信息到mergeProperties
         ProviderBean providerBean = mergeProperties.mergeProvider(beanName, interfaceClazz, alias, refBeanName);
         //如果没有配置server，且没有注册默认的serverConfig，注册默认的serverConfig
         registerServer(registry, providerBean);
@@ -90,7 +90,7 @@ public class AnnotationProviderDefinitionProcessor implements AnnotationBeanDefi
      */
     protected void registerServer(BeanDefinitionRegistry registry, ProviderBean provider) {
         if (!StringUtils.isEmpty(provider.getServerRef()) && !registry.containsBeanDefinition(SERVER_NAME)) {
-            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerConfig.class));
+            registry.registerBeanDefinition(SERVER_NAME, new RootBeanDefinition(ServerBean.class));
         }
     }
 
@@ -135,15 +135,11 @@ public class AnnotationProviderDefinitionProcessor implements AnnotationBeanDefi
         return name;
     }
 
-    protected String getBeanName(final Provider provider, final String refBeanName, final Environment environment) {
+    protected String getBeanName(final Provider provider, final String interfaceClazz, final String alias, final Environment environment) {
         if (provider.name().isEmpty()) {
-            return refBeanName + "-provider";
+            return "provider-" + interfaceClazz + "-" + alias + "-" + PORT_OPTION.getValue();
         }
-        String name = environment.resolvePlaceholders(provider.name());
-        if (name.equals(refBeanName)) {
-            throw new BeanDefinitionValidationException("provider annotation name is not validation, can not equals ref bean name");
-        }
-        return provider.name();
+        return environment.resolvePlaceholders(provider.name());
     }
 
 }

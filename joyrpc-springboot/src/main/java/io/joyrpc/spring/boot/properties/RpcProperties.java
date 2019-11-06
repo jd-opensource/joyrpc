@@ -20,7 +20,6 @@ package io.joyrpc.spring.boot.properties;
  * #L%
  */
 
-import io.joyrpc.config.AbstractIdConfig;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.RegistryBean;
@@ -29,7 +28,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 
@@ -131,37 +129,4 @@ public class RpcProperties {
         this.registries = registries;
     }
 
-    public <T extends AbstractIdConfig> T getConfigBean(String name, Class<T> beanType, Supplier<T> supplier) {
-        T config = getConfigBean(name, beanType);
-        if (config == null) {
-            config = supplier.get();
-            config.setId(name);
-        }
-        return config;
-    }
-
-    public <T extends AbstractIdConfig> T getConfigBean(String name, Class<T> beanType) {
-        if (beanType == ProviderBean.class) {
-            return (T) getConfigBean(name, providers);
-        } else if (beanType == ConsumerBean.class) {
-            return (T) getConfigBean(name, consumers);
-        } else if (beanType == ServerBean.class) {
-            return (T) getConfigBean(name, servers);
-        } else if (beanType == RegistryBean.class) {
-            return (T) getConfigBean(name, registries);
-        }
-        return null;
-    }
-
-    protected <T extends AbstractIdConfig> T getConfigBean(String name, List<T> configs) {
-        if (configs == null || configs.isEmpty()) {
-            return null;
-        }
-        for (T cfg : configs) {
-            if (name.equals(cfg.getId())) {
-                return cfg;
-            }
-        }
-        return null;
-    }
 }

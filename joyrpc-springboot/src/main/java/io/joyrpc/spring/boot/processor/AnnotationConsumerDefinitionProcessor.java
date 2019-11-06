@@ -34,7 +34,6 @@ import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Modifier;
 
-import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
 import static org.springframework.util.ClassUtils.resolveClassName;
 import static org.springframework.util.ReflectionUtils.doWithFields;
 import static org.springframework.util.ReflectionUtils.doWithMethods;

@@ -21,13 +21,9 @@ package io.joyrpc.spring.boot.processor;
  */
 
 import io.joyrpc.config.AbstractIdConfig;
-import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.spring.boot.properties.RpcProperties;
-import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
-import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
 import java.util.List;

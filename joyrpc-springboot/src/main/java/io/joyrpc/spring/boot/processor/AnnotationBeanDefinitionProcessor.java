@@ -21,7 +21,7 @@ package io.joyrpc.spring.boot.processor;
  */
 
 import io.joyrpc.extension.Extensible;
-import io.joyrpc.spring.boot.properties.RpcProperties;
+import io.joyrpc.spring.boot.properties.MergeServiceBeanProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -31,7 +31,7 @@ import org.springframework.core.env.Environment;
  * 含有consumer与provider注解的bean定义的处理类插件
  */
 @Extensible("serviceBeanDefinitionProcessor")
-public interface ServiceBeanDefinitionProcessor {
+public interface AnnotationBeanDefinitionProcessor {
     /**
      * 服务名称
      */
@@ -47,10 +47,10 @@ public interface ServiceBeanDefinitionProcessor {
      * @param beanDefinition
      * @param registry
      * @param environment
-     * @param rpcProperties
+     * @param mergeProperties
      * @param classLoader
      */
     void processBean(BeanDefinition beanDefinition, BeanDefinitionRegistry registry,
-                     Environment environment, RpcProperties rpcProperties, ClassLoader classLoader) throws BeansException;
+                     Environment environment, MergeServiceBeanProperties mergeProperties, ClassLoader classLoader) throws BeansException;
 
 }

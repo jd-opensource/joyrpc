@@ -72,6 +72,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      * server引用
      */
     protected transient String serverRef;
+    /**
+     * ref引用
+     */
+    protected transient String refRef;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -168,5 +172,13 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     public void setServerRef(String serverRef) {
         this.serverRef = serverRef;
+    }
+
+    public String getRefRef() {
+        return refRef;
+    }
+
+    public void setRefRef(String refRef) {
+        this.refRef = refRef;
     }
 }

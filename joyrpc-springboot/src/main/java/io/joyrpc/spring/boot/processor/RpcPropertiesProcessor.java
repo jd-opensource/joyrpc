@@ -27,24 +27,21 @@ import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.joyrpc.spring.boot.processor.ServiceBeanDefinitionProcessor.REGISTRY_NAME;
-import static io.joyrpc.spring.boot.processor.ServiceBeanDefinitionProcessor.SERVER_NAME;
+import static io.joyrpc.spring.boot.processor.AnnotationBeanDefinitionProcessor.REGISTRY_NAME;
+import static io.joyrpc.spring.boot.processor.AnnotationBeanDefinitionProcessor.SERVER_NAME;
 
 /**
  * 根据配置生成Server和Registry配置对象
  */
-@Extension("boot")
-@ConditionalOnClass({"org.springframework.boot.autoconfigure.EnableAutoConfiguration"})
-public class RpcPropertiesProcessor implements ConfigPropertiesProcessor {
+public class RpcPropertiesProcessor {
 
-    @Override
-    public void processProperties(final BeanDefinitionRegistry registry, final RpcProperties properties) throws BeansException {
+    public void processProperties(final BeanDefinitionRegistry registry, final RpcProperties properties) {
         //注册
         register(registry, properties.getRegistry(), REGISTRY_NAME);
         register(registry, properties.getServer(), SERVER_NAME);
@@ -52,12 +49,6 @@ public class RpcPropertiesProcessor implements ConfigPropertiesProcessor {
         register(registry, properties.getRegistries(), "registry-boot");
     }
 
-    /**
-     * 注册
-     *
-     * @param registry 注册表
-     * @param configs  多个配置
-     */
     /**
      * 注册
      *

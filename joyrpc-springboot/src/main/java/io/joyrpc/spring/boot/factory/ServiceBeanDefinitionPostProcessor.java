@@ -25,8 +25,10 @@ import io.joyrpc.extension.ExtensionPointLazy;
 import io.joyrpc.spring.annotation.Consumer;
 import io.joyrpc.spring.annotation.Provider;
 import io.joyrpc.spring.boot.context.DefaultClassPathBeanDefinitionScanner;
-import io.joyrpc.spring.boot.processor.ConfigPropertiesProcessor;
-import io.joyrpc.spring.boot.processor.ServiceBeanDefinitionProcessor;
+import io.joyrpc.spring.boot.processor.AnnotationBeanDefinitionProcessor;
+import io.joyrpc.spring.boot.processor.MergePropertiesProcessor;
+import io.joyrpc.spring.boot.processor.RpcPropertiesProcessor;
+import io.joyrpc.spring.boot.properties.MergeServiceBeanProperties;
 import io.joyrpc.spring.boot.properties.RpcProperties;
 import io.joyrpc.spring.util.PropertySourcesUtils;
 import org.slf4j.Logger;
@@ -68,9 +70,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceBeanDefinitionPostProcessor.class);
 
-    private static final ExtensionPoint<ServiceBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(ServiceBeanDefinitionProcessor.class);
-
-    private static final ExtensionPoint<ConfigPropertiesProcessor, String> PROPERTIES_PROCESSOR = new ExtensionPointLazy<>(ConfigPropertiesProcessor.class);
+    private static final ExtensionPoint<AnnotationBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(AnnotationBeanDefinitionProcessor.class);
 
     protected RpcProperties rpcProperties;
 
@@ -82,26 +82,35 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
 
     protected ApplicationContext applicationContext;
 
+    protected MergeServiceBeanProperties mergeProperties;
+
+    protected RpcPropertiesProcessor rpcPropertiesProcessor;
+
+    protected MergePropertiesProcessor mergePropertiesProcessor;
+
+
     /**
      * 构造方法
      */
-    public ServiceBeanDefinitionPostProcessor(ApplicationContext applicationContext, Environment environment, ResourceLoader resourceLoader) {
+    public ServiceBeanDefinitionPostProcessor(ApplicationContext applicationContext, Environment environment, ResourceLoader resourceLoader, RpcProperties properties) {
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
-        this.rpcProperties = new RpcProperties();
+        this.rpcProperties = properties;
         //读取rpc为前缀的配置
         Map<String, Object> objectMap = PropertySourcesUtils.getSubProperties((ConfigurableEnvironment) environment, PREFIX);
         //绑定数据
         DataBinder dataBinder = new DataBinder(rpcProperties);
         MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
         dataBinder.bind(propertyValues);
+        this.mergeProperties = new MergeServiceBeanProperties(environment, rpcProperties);
+        this.mergePropertiesProcessor = new MergePropertiesProcessor();
     }
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         //处理配置信息
-        PROPERTIES_PROCESSOR.extensions().forEach(processor -> processor.processProperties(registry, rpcProperties));
+        rpcPropertiesProcessor.processProperties(registry, rpcProperties);
         //收集packagesToScan配置，获取rpc要扫描的包路径
         Set<String> packages = new LinkedHashSet<>();
         if (rpcProperties.getPackages() != null) {
@@ -117,6 +126,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         } else {
             logger.warn("basePackages is empty , auto scanning package annotation will be ignored!");
         }
+        //处理mergeProperties
+        mergePropertiesProcessor.processProperties(registry, mergeProperties, environment);
     }
 
     /**
@@ -136,7 +147,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             if (!CollectionUtils.isEmpty(beanDefinitions)) {
                 for (BeanDefinition beanDefinition : beanDefinitions) {
                     REGISTRY_PROCESSOR.extensions().forEach(
-                            processor -> processor.processBean(beanDefinition, registry, environment, rpcProperties, classLoader));
+                            processor -> processor.processBean(beanDefinition, registry, environment, mergeProperties, classLoader));
                 }
             }
         }

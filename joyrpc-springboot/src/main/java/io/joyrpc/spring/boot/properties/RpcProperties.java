@@ -28,7 +28,6 @@ import io.joyrpc.spring.ServerBean;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 

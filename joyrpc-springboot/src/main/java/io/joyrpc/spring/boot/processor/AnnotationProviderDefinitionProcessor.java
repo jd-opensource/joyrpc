@@ -24,6 +24,7 @@ import io.joyrpc.config.ServerConfig;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.annotation.Provider;
+import io.joyrpc.spring.boot.properties.MergeServiceBeanProperties;
 import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -49,11 +50,11 @@ import static org.springframework.util.ClassUtils.resolveClassName;
  * 处理含有provider注解bean定义的处理类
  */
 @Extension("provider")
-public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcessor {
+public class AnnotationProviderDefinitionProcessor implements AnnotationBeanDefinitionProcessor {
 
     @Override
     public void processBean(final BeanDefinition beanDefinition, final BeanDefinitionRegistry registry,
-                            final Environment environment, final RpcProperties rpcProperties,
+                            final Environment environment, final MergeServiceBeanProperties mergeProperties,
                             final ClassLoader classLoader) throws BeansException {
         Class<?> refClass = resolveClassName(beanDefinition.getBeanClassName(), classLoader);
         Provider provider = findAnnotation(refClass, Provider.class);
@@ -63,22 +64,22 @@ public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcess
         //获取服务类名，若没注册这注册
         String refBeanName = getOrRegisterComponent(beanDefinition, refClass, registry);
         //设置providerBean的bean名称
-        String beanName = getBeanName(provider, refBeanName);
-        //从配置中获取providerBean
-        ProviderBean providerBean = rpcProperties.getConfigBean(beanName, ProviderBean.class, ProviderBean::new);
-        //如果没有配置server，且没有注册默认的serverConfig，注册默认的serverConfig
-        registerServer(registry, providerBean);
-        //注册providerBean
-        String interfaceClazz = providerBean.getInterfaceClazz();
+        String beanName = getBeanName(provider, refBeanName, environment);
+        //获取接口类名
+        String interfaceClazz = provider.interfaceClazz();
         if (!StringUtils.hasText(interfaceClazz)) {
             Class<?>[] allInterfaces = refClass.getInterfaces();
             if (allInterfaces.length > 0) {
                 interfaceClazz = allInterfaces[0].getName();
             }
+        } else {
+            interfaceClazz = environment.resolvePlaceholders(provider.interfaceClazz());
         }
-        providerBean.setInterfaceClazz(interfaceClazz);
-        registry.registerBeanDefinition(beanName,
-                buildProvider(provider, providerBean, refBeanName, environment));
+        //从配置中获取并合并providerBean
+        String alias = environment.resolvePlaceholders(provider.alias());
+        ProviderBean providerBean = mergeProperties.mergeProvider(beanName, interfaceClazz, alias, refBeanName);
+        //如果没有配置server，且没有注册默认的serverConfig，注册默认的serverConfig
+        registerServer(registry, providerBean);
     }
 
     /**
@@ -134,53 +135,15 @@ public class ProviderDefinitionProcessor implements ServiceBeanDefinitionProcess
         return name;
     }
 
-    protected String getBeanName(final Provider provider, String refBeanName) {
+    protected String getBeanName(final Provider provider, final String refBeanName, final Environment environment) {
         if (provider.name().isEmpty()) {
             return refBeanName + "-provider";
         }
-        if (provider.name().equals(refBeanName)) {
+        String name = environment.resolvePlaceholders(provider.name());
+        if (name.equals(refBeanName)) {
             throw new BeanDefinitionValidationException("provider annotation name is not validation, can not equals ref bean name");
         }
         return provider.name();
     }
-
-    /**
-     * 构建Provider定义
-     *
-     * @param provider
-     * @param providerBean
-     * @param refBeanName
-     * @param environment
-     * @return
-     */
-    protected BeanDefinition buildProvider(final Provider provider, final ProviderBean providerBean, final String refBeanName,
-                                           final Environment environment) {
-
-        BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> providerBean);
-        builder.addPropertyValue("id", providerBean.getName());
-        //引用ref
-        builder.addPropertyReference("ref", refBeanName);
-        //配置别名
-        if (!StringUtils.hasText(providerBean.getAlias()) && StringUtils.hasText(provider.alias())) {
-            providerBean.setAlias(environment.resolvePlaceholders(provider.alias()));
-        }
-        //引用注册中心
-        List<String> registryNames = providerBean.getRegistryRefs();
-        if (registryNames.size() > 0) {
-            ManagedList<RuntimeBeanReference> runtimeBeanReferences = new ManagedList<>();
-            for (String registryName : registryNames) {
-                runtimeBeanReferences.add(new RuntimeBeanReference(environment.resolvePlaceholders(registryName)));
-            }
-            builder.addPropertyValue("registry", runtimeBeanReferences);
-        }
-        //引用Server
-        if (!providerBean.getServerRef().isEmpty()) {
-            builder.addPropertyReference("serverConfig", environment.resolvePlaceholders(providerBean.getServerRef()));
-        }
-
-        return builder.getBeanDefinition();
-
-    }
-
 
 }

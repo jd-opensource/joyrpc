@@ -23,8 +23,10 @@ package io.joyrpc.spring.boot.processor;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.annotation.Consumer;
+import io.joyrpc.spring.boot.properties.MergeServiceBeanProperties;
 import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.env.Environment;
@@ -41,16 +43,17 @@ import static org.springframework.util.ReflectionUtils.doWithMethods;
  * 处理含有consumer注解bean定义的处理类
  */
 @Extension("consumer")
-public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcessor {
+public class AnnotationConsumerDefinitionProcessor implements AnnotationBeanDefinitionProcessor {
 
     @Override
     public void processBean(final BeanDefinition beanDefinition, final BeanDefinitionRegistry registry,
-                            final Environment environment, final RpcProperties rpcProperties,
+                            final Environment environment, final MergeServiceBeanProperties mergeProperties,
                             final ClassLoader classLoader) {
         Class<?> beanClass = resolveClassName(beanDefinition.getBeanClassName(), classLoader);
         //处理属上的consumer注解
         doWithFields(beanClass,
-                field -> registryBean(field.getType(), field.getAnnotation(Consumer.class), rpcProperties, registry, environment),
+                field -> doProcess(field.getType(), field.getName(), field.getAnnotation(Consumer.class), mergeProperties,
+                        beanDefinition, environment),
                 field -> !Modifier.isFinal(field.getModifiers())
                         && !Modifier.isStatic(field.getModifiers())
                         && field.getAnnotation(Consumer.class) != null
@@ -58,7 +61,8 @@ public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcess
 
         //处理方法上的consumer注解
         doWithMethods(beanClass,
-                method -> registryBean(method.getParameterTypes()[1], method.getAnnotation(Consumer.class), rpcProperties, registry, environment),
+                method -> doProcess(method.getParameterTypes()[1], method.getName().substring(2),
+                        method.getAnnotation(Consumer.class), mergeProperties, beanDefinition, environment),
                 method -> method.getName().startsWith("set")
                         && method.getParameterCount() == 1
                         && method.getAnnotation(Consumer.class) != null
@@ -70,18 +74,14 @@ public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcess
      *
      * @param interfaceClazz
      * @param consumer
-     * @param registry
+     * @param beanDefinition
      * @param env
      */
-    protected void registryBean(final Class interfaceClazz, final Consumer consumer, final RpcProperties properties,
-                                final BeanDefinitionRegistry registry, final Environment env) {
+    protected void doProcess(final Class interfaceClazz, String filedName, final Consumer consumer, final MergeServiceBeanProperties properties,
+                             final BeanDefinition beanDefinition, final Environment env) {
         String name = buildBeanName(interfaceClazz.getName(), consumer, env);
-        ConsumerBean consumerBean = properties.getConfigBean(name, ConsumerBean.class, ConsumerBean::new);
-        consumerBean.setBeanName(name);
-        consumerBean.setInterfaceClazz(interfaceClazz.getName());
-        if (!registry.containsBeanDefinition(name)) {
-            registry.registerBeanDefinition(name, buildConsumer(interfaceClazz, consumer, consumerBean, env));
-        }
+        properties.mergeConsumer(name, interfaceClazz.getName(), env.resolvePlaceholders(consumer.alias()));
+        beanDefinition.getPropertyValues().add(filedName, new RuntimeBeanReference(name));
     }
 
     /**
@@ -101,32 +101,6 @@ public class ConsumerDefinitionProcessor implements ServiceBeanDefinitionProcess
             name = name + "-" + env.resolvePlaceholders(consumer.alias());
         }
         return name;
-    }
-
-    /**
-     * 构造Bean的定义
-     *
-     * @param interfaceClass
-     * @param consumer
-     * @param consumerBean
-     * @param env
-     * @return
-     */
-    protected BeanDefinition buildConsumer(final Class<?> interfaceClass, final Consumer consumer,
-                                           final ConsumerBean consumerBean, final Environment env) {
-        BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> consumerBean);
-
-        builder.addPropertyValue("id", consumerBean.getId());
-        builder.addPropertyValue("interfaceClazz", interfaceClass.getName());
-        //配置别名
-        if (!StringUtils.hasText(consumerBean.getAlias()) && StringUtils.hasText(consumer.alias())) {
-            consumerBean.setAlias(env.resolvePlaceholders(consumer.alias()));
-        }
-        //引用reistry
-        if (StringUtils.hasText(consumerBean.getRegistryRef())) {
-            builder.addPropertyReference("registry", env.resolvePlaceholders(consumerBean.getRegistryRef()));
-        }
-        return builder.getBeanDefinition();
     }
 
 }

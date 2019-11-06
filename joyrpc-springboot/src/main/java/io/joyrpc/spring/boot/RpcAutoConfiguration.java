@@ -36,7 +36,7 @@ import org.springframework.core.io.ResourceLoader;
  * @description:
  */
 @Configuration
-@ConditionalOnProperty(prefix = "rpc.springboot", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "rpc.springboot", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RpcAutoConfiguration {
 
 

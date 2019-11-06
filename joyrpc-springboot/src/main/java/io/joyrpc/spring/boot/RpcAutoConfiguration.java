@@ -20,6 +20,7 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
+import io.joyrpc.spring.boot.factory.ConsumerInjectedPostProcessor;
 import io.joyrpc.spring.boot.factory.ServiceBeanDefinitionPostProcessor;
 import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
@@ -54,6 +55,12 @@ public class RpcAutoConfiguration {
                                                                                  RpcProperties rpcProperties) {
 
         return new ServiceBeanDefinitionPostProcessor(applicationContext, environment, resourceLoader, rpcProperties);
+    }
+
+    @ConditionalOnMissingBean
+    @Bean(name = ConsumerInjectedPostProcessor.BEAN_NAME)
+    public ConsumerInjectedPostProcessor consumerInjectedPostProcessor() {
+        return new ConsumerInjectedPostProcessor();
     }
 
 }

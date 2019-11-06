@@ -21,13 +21,10 @@ package io.joyrpc.spring.boot.processor;
  */
 
 import io.joyrpc.extension.Extension;
-import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.annotation.Consumer;
 import io.joyrpc.spring.boot.properties.MergeServiceBeanProperties;
-import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
-import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.core.env.Environment;
 import org.springframework.util.StringUtils;
@@ -80,7 +77,7 @@ public class AnnotationConsumerDefinitionProcessor implements AnnotationBeanDefi
                              final BeanDefinition beanDefinition, final Environment env) {
         String name = buildBeanName(interfaceClazz.getName(), consumer, env);
         properties.mergeConsumer(name, interfaceClazz.getName(), env.resolvePlaceholders(consumer.alias()));
-        beanDefinition.getPropertyValues().add(filedName, new RuntimeBeanReference(name));
+        //beanDefinition.getPropertyValues().add(filedName, new RuntimeBeanReference(name));
     }
 
     /**

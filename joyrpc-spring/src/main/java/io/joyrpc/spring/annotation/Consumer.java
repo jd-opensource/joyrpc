@@ -41,10 +41,10 @@ public @interface Consumer {
     String name() default "";
 
     /**
-     * 服务别名，必填
+     * 服务别名
      *
      * @return the string
      */
-    String alias() default "";
+    String alias() default "default";
 
 }

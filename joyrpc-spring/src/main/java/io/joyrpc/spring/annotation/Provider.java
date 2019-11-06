@@ -39,10 +39,17 @@ public @interface Provider {
     String name() default "";
 
     /**
-     * 服务别名，必填
+     * 服务别名
      *
      * @return the string
      */
-    String alias() default "";
+    String alias() default "default";
+
+    /**
+     * 接口名
+     *
+     * @return
+     */
+    String interfaceClazz() default "";
 
 }

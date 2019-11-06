@@ -26,6 +26,7 @@ import io.joyrpc.spring.boot.properties.RpcProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
@@ -45,10 +46,10 @@ public class RpcAutoConfiguration {
 
     @ConditionalOnMissingBean
     @Bean
-    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ConfigurableEnvironment environment,
-                                                                                 ResourceLoader resourceLoader,
-                                                                                 RpcProperties rpcProperties) {
-        return new ServiceBeanDefinitionPostProcessor(rpcProperties, environment, resourceLoader);
+    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ApplicationContext applicationContext,
+                                                                                 ConfigurableEnvironment environment,
+                                                                                 ResourceLoader resourceLoader) {
+        return new ServiceBeanDefinitionPostProcessor(applicationContext, environment, resourceLoader);
     }
 
     @ConditionalOnMissingBean

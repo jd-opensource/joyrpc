@@ -39,7 +39,6 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.io.ResourceLoader;
@@ -59,14 +58,13 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static io.joyrpc.spring.ComponentScanRegistrar.isBootOpen;
 import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 import static org.springframework.util.ClassUtils.resolveClassName;
 
 /**
  * 注解扫描处理类
  */
-public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, BeanClassLoaderAware, ApplicationContextAware {
+public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, BeanClassLoaderAware {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceBeanDefinitionPostProcessor.class);
 
@@ -87,19 +85,17 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 构造方法
      */
-    public ServiceBeanDefinitionPostProcessor(RpcProperties rpcProperties, Environment environment, ResourceLoader resourceLoader) {
-        if (!isBootOpen()) {
-            return;
-        }
-        this.rpcProperties = rpcProperties;
+    public ServiceBeanDefinitionPostProcessor(ApplicationContext applicationContext, Environment environment, ResourceLoader resourceLoader) {
+        this.applicationContext = applicationContext;
+        this.environment = environment;
+        this.resourceLoader = resourceLoader;
+        this.rpcProperties = new RpcProperties();
         //读取rpc为前缀的配置
         Map<String, Object> objectMap = PropertySourcesUtils.getSubProperties((ConfigurableEnvironment) environment, PREFIX);
         //绑定数据
         DataBinder dataBinder = new DataBinder(rpcProperties);
         MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
         dataBinder.bind(propertyValues);
-        this.environment = environment;
-        this.resourceLoader = resourceLoader;
     }
 
     @Override
@@ -157,12 +153,6 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     public void setBeanClassLoader(ClassLoader classLoader) {
         this.classLoader = classLoader;
     }
-
-    @Override
-    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        this.applicationContext = applicationContext;
-    }
-
 
     /**
      * 扫描类过滤（主要用来过滤含有某一个注解的类）

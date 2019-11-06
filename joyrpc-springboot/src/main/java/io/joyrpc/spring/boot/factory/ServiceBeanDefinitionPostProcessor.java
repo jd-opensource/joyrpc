@@ -20,6 +20,7 @@ package io.joyrpc.spring.boot.factory;
  * #L%
  */
 
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.ExtensionPoint;
 import io.joyrpc.extension.ExtensionPointLazy;
 import io.joyrpc.spring.annotation.Consumer;
@@ -60,7 +61,7 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
+import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
 import static org.springframework.util.ClassUtils.resolveClassName;
 
 /**
@@ -69,6 +70,10 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor, BeanClassLoaderAware {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceBeanDefinitionPostProcessor.class);
+
+    public static final String BEAN_NAME = "serviceBeanDefinitionPostProcessor";
+
+    public static final String PREFIX = GlobalContext.getString(PROTOCOL_KEY);
 
     private static final ExtensionPoint<AnnotationBeanDefinitionProcessor, String> REGISTRY_PROCESSOR = new ExtensionPointLazy<>(AnnotationBeanDefinitionProcessor.class);
 
@@ -92,11 +97,11 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 构造方法
      */
-    public ServiceBeanDefinitionPostProcessor(ApplicationContext applicationContext, Environment environment, ResourceLoader resourceLoader, RpcProperties properties) {
+    public ServiceBeanDefinitionPostProcessor(ApplicationContext applicationContext, Environment environment, ResourceLoader resourceLoader) {
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
-        this.rpcProperties = properties;
+        this.rpcProperties = new RpcProperties();
         //读取rpc为前缀的配置
         Map<String, Object> objectMap = PropertySourcesUtils.getSubProperties((ConfigurableEnvironment) environment, PREFIX);
         //绑定数据

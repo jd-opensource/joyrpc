@@ -22,19 +22,13 @@ package io.joyrpc.spring.boot;
 
 import io.joyrpc.spring.boot.factory.ConsumerInjectedPostProcessor;
 import io.joyrpc.spring.boot.factory.ServiceBeanDefinitionPostProcessor;
-import io.joyrpc.spring.boot.properties.RpcProperties;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.ResourceLoader;
-
-import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 
 /**
  * RPC自动配置
@@ -42,19 +36,17 @@ import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
  * @description:
  */
 @Configuration
-@EnableConfigurationProperties({RpcProperties.class})
-@ConditionalOnProperty(prefix = PREFIX, name = "enabled", havingValue = "true", matchIfMissing = true)
-@AutoConfigureOrder(Ordered.LOWEST_PRECEDENCE)
+@ConditionalOnProperty(prefix = "rpc.springboot", name = "enabled", havingValue = "true")
 public class RpcAutoConfiguration {
 
+
     @ConditionalOnMissingBean
-    @Bean
+    @Bean(name = ServiceBeanDefinitionPostProcessor.BEAN_NAME)
     public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ApplicationContext applicationContext,
                                                                                  ConfigurableEnvironment environment,
-                                                                                 ResourceLoader resourceLoader,
-                                                                                 RpcProperties rpcProperties) {
+                                                                                 ResourceLoader resourceLoader) {
 
-        return new ServiceBeanDefinitionPostProcessor(applicationContext, environment, resourceLoader, rpcProperties);
+        return new ServiceBeanDefinitionPostProcessor(applicationContext, environment, resourceLoader);
     }
 
     @ConditionalOnMissingBean

@@ -24,12 +24,9 @@ import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.RegistryBean;
 import io.joyrpc.spring.ServerBean;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.List;
 import java.util.Set;
-
-import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 
 /*-
  * #%L
@@ -54,10 +51,7 @@ import static io.joyrpc.spring.boot.properties.RpcProperties.PREFIX;
 /**
  * @description:
  */
-@ConfigurationProperties(prefix = PREFIX)
 public class RpcProperties {
-
-    public final static String PREFIX = "rpc";
 
     private Set<String> packages;
 

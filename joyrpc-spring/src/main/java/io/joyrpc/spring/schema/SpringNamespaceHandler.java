@@ -35,6 +35,5 @@ public class SpringNamespaceHandler extends NamespaceHandlerSupport {
         registerBeanDefinitionParser("server", new ServerBeanDefinitionParser());
         registerBeanDefinitionParser("registry", new RegistryBeanDefinitionParser());
         registerBeanDefinitionParser("parameter", new GlobalParameterDefinitionParser());
-        //registerBeanDefinitionParser("annotation", new AnnotationBeanDefinitionParser());
     }
 }

@@ -104,6 +104,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
         dataBinder.bind(propertyValues);
         this.mergeProperties = new MergeServiceBeanProperties(environment, rpcProperties);
+        this.rpcPropertiesProcessor = new RpcPropertiesProcessor();
         this.mergePropertiesProcessor = new MergePropertiesProcessor();
     }
 

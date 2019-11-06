@@ -73,7 +73,7 @@ public class MergeServiceBeanProperties {
         return config;
     }
 
-    public ProviderBean mergeProvider(String name, String alias, String interfaceClazz, String refName) {
+    public ProviderBean mergeProvider(String name, String interfaceClazz, String alias, String refName) {
         ProviderBean providerBean = compute(name, ProviderBean.class, ProviderBean::new);
         if (!StringUtils.hasText(providerBean.getAlias())) {
             providerBean.setAlias(alias);
@@ -87,7 +87,7 @@ public class MergeServiceBeanProperties {
         return providerBean;
     }
 
-    public ConsumerBean mergeConsumer(String name, String interfaceClazz, String alias){
+    public ConsumerBean mergeConsumer(String name, String interfaceClazz, String alias) {
         ConsumerBean consumerBean = compute(name, ConsumerBean.class, ConsumerBean::new);
         if (!StringUtils.hasText(consumerBean.getAlias())) {
             consumerBean.setAlias(alias);

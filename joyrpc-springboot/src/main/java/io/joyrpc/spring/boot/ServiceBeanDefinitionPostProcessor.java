@@ -130,13 +130,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
-        this.rpcProperties = new RpcProperties();
-        //读取rpc为前缀的配置
-        Map<String, Object> objectMap = getProperties();
-        //绑定数据
-        DataBinder dataBinder = new DataBinder(rpcProperties);
-        MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
-        dataBinder.bind(propertyValues);
+        this.rpcProperties = configure();
         //添加消费者
         if (rpcProperties.getConsumers() != null) {
             rpcProperties.getConsumers().forEach(c -> {
@@ -149,6 +143,20 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 addConfig(c, providers, providerNames);
             });
         }
+    }
+
+    /**
+     * 配置
+     */
+    protected RpcProperties configure() {
+        RpcProperties result = new RpcProperties();
+        //读取rpc为前缀的配置
+        Map<String, Object> objectMap = getProperties();
+        //绑定数据
+        DataBinder dataBinder = new DataBinder(result);
+        MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
+        dataBinder.bind(propertyValues);
+        return result;
     }
 
     @Override

@@ -133,15 +133,11 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         this.rpcProperties = configure();
         //添加消费者
         if (rpcProperties.getConsumers() != null) {
-            rpcProperties.getConsumers().forEach(c -> {
-                addConfig(c, consumers, consumerNameCounters);
-            });
+            rpcProperties.getConsumers().forEach(c -> addConfig(c, consumers, consumerNameCounters));
         }
         //添加服务提供者
         if (rpcProperties.getProviders() != null) {
-            rpcProperties.getProviders().forEach(c -> {
-                addConfig(c, providers, providerNameCounters);
-            });
+            rpcProperties.getProviders().forEach(c -> addConfig(c, providers, providerNameCounters));
         }
     }
 

@@ -1,4 +1,4 @@
-package io.joyrpc.spring.annotation;
+package io.joyrpc.annotation;
 
 /*-
  * #%L
@@ -23,13 +23,13 @@ package io.joyrpc.spring.annotation;
 import java.lang.annotation.*;
 
 /**
- * 服务提供者
+ * 消费者
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
+@Target({ElementType.FIELD, ElementType.METHOD})
 @Inherited
-public @interface Provider {
+public @interface Consumer {
 
     /**
      * Bean名称
@@ -44,12 +44,5 @@ public @interface Provider {
      * @return the string
      */
     String alias() default "default";
-
-    /**
-     * 接口
-     *
-     * @return
-     */
-    Class interfaceClass() default void.class;
 
 }

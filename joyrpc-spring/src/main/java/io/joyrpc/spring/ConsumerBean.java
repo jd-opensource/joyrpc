@@ -42,7 +42,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     /**
      * registry引用
      */
-    protected transient String registryRef;
+    protected transient String registryName;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -114,11 +114,11 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
         this.id = name;
     }
 
-    public String getRegistryRef() {
-        return registryRef;
+    public String getRegistryName() {
+        return registryName;
     }
 
-    public void setRegistryRef(String registryRef) {
-        this.registryRef = registryRef;
+    public void setRegistryName(String registryName) {
+        this.registryName = registryName;
     }
 }

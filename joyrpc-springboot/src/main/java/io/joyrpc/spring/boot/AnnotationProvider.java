@@ -1,8 +1,8 @@
 package io.joyrpc.spring.boot;
 
+import io.joyrpc.annotation.Consumer;
+import io.joyrpc.annotation.Provider;
 import io.joyrpc.extension.Extensible;
-import io.joyrpc.spring.annotation.Consumer;
-import io.joyrpc.spring.annotation.Provider;
 
 import java.lang.annotation.Annotation;
 

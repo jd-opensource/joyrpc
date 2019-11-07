@@ -42,4 +42,95 @@ public interface AnnotationProvider {
      */
     Consumer toConsumer(Annotation annotation);
 
+    /**
+     * 服务提供者实现
+     */
+    class ProviderAnnotation implements Annotation, Provider {
+        /**
+         * 名称
+         */
+        private String name;
+        /**
+         * 分组
+         */
+        private String alias;
+        /**
+         * 接口
+         */
+        private Class interfaceClass;
+
+        /**
+         * 构造函数
+         *
+         * @param name
+         * @param alias
+         * @param interfaceClass
+         */
+        public ProviderAnnotation(String name, String alias, Class interfaceClass) {
+            this.name = name;
+            this.alias = alias;
+            this.interfaceClass = interfaceClass;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String alias() {
+            return alias;
+        }
+
+        @Override
+        public Class interfaceClass() {
+            return interfaceClass;
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return Provider.class;
+        }
+    }
+
+    /**
+     * 消费者实现
+     */
+    class ConsumerAnnotation implements Annotation, Consumer {
+        /**
+         * 名称
+         */
+        private String name;
+        /**
+         * 分组
+         */
+        private String alias;
+
+        /**
+         * 构造函数
+         *
+         * @param name
+         * @param alias
+         */
+        public ConsumerAnnotation(String name, String alias) {
+            this.name = name;
+            this.alias = alias;
+        }
+
+        @Override
+        public String name() {
+            return name;
+        }
+
+        @Override
+        public String alias() {
+            return alias;
+        }
+
+        @Override
+        public Class<? extends Annotation> annotationType() {
+            return Consumer.class;
+        }
+    }
+
 }

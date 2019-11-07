@@ -180,13 +180,13 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                     ConsumerBean config = members.get(f);
                     if (config != null) {
                         ReflectionUtils.makeAccessible(f);
-                        ReflectionUtils.setField(f, bean, applicationContext.getBean(config.getName()));
+                        ReflectionUtils.setField(f, bean, config.proxy());
                     }
                 },
                 m -> {
                     ConsumerBean config = members.get(m);
                     if (config != null) {
-                        ReflectionUtils.invokeMethod(m, bean, applicationContext.getBean(config.getName()));
+                        ReflectionUtils.invokeMethod(m, bean, config.proxy());
                     }
                 });
         return bean;

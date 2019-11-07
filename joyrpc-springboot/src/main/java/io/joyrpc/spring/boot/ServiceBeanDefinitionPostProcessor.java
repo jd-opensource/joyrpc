@@ -115,11 +115,11 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * Consumer名称计数器
      */
-    protected Map<String, AtomicInteger> consumerNames = new HashMap<>();
+    protected Map<String, AtomicInteger> consumerNameCounters = new HashMap<>();
     /**
      * Provider名称计数器
      */
-    protected Map<String, AtomicInteger> providerNames = new HashMap<>();
+    protected Map<String, AtomicInteger> providerNameCounters = new HashMap<>();
 
     /**
      * 构造方法
@@ -140,13 +140,13 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //添加消费者
         if (rpcProperties.getConsumers() != null) {
             rpcProperties.getConsumers().forEach(c -> {
-                addConfig(c, consumers, consumerNames);
+                addConfig(c, consumers, consumerNameCounters);
             });
         }
         //添加服务提供者
         if (rpcProperties.getProviders() != null) {
             rpcProperties.getProviders().forEach(c -> {
-                addConfig(c, providers, providerNames);
+                addConfig(c, providers, providerNameCounters);
             });
         }
     }
@@ -179,13 +179,14 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 f -> {
                     ConsumerBean config = members.get(f);
                     if (config != null) {
-                        ReflectionUtils.setField(f, bean, config.proxy());
+                        ReflectionUtils.makeAccessible(f);
+                        ReflectionUtils.setField(f, bean, applicationContext.getBean(config.getName()));
                     }
                 },
                 m -> {
                     ConsumerBean config = members.get(m);
                     if (config != null) {
-                        ReflectionUtils.invokeMethod(m, bean, config.proxy());
+                        ReflectionUtils.invokeMethod(m, bean, applicationContext.getBean(config.getName()));
                     }
                 });
         return bean;
@@ -308,12 +309,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         register(registry, rpcProperties.getRegistries(), REGISTRY_NAME);
         register(registry, rpcProperties.getServer(), SERVER_NAME);
         register(registry, rpcProperties.getServers(), SERVER_NAME);
-        if (rpcProperties.getConsumers() != null) {
-            rpcProperties.getConsumers().forEach(c -> register(c, registry));
-        }
-        if (rpcProperties.getProviders() != null) {
-            rpcProperties.getProviders().forEach(p -> register(p, registry));
-        }
+        consumers.forEach((name, c) -> register(c, registry));
+        providers.forEach((name, p) -> register(p, registry));
     }
 
     /**
@@ -434,17 +431,17 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 throw new BeanInitializationException("there is not any interface in class " + providerClass);
             }
             //获取服务实现类的Bean名称
-            String componentName = getComponentName(providerClass);
-            if (componentName == null) {
-                componentName = Introspector.decapitalize(ClassUtils.getShortName(providerClass.getName()));
-                if (!registry.containsBeanDefinition(componentName)) {
+            String refName = getComponentName(providerClass);
+            if (refName == null) {
+                refName = Introspector.decapitalize(ClassUtils.getShortName(providerClass.getName()));
+                if (!registry.containsBeanDefinition(refName)) {
                     //注册服务实现类
-                    registry.registerBeanDefinition(componentName, definition);
+                    registry.registerBeanDefinition(refName, definition);
                 }
             }
-            final String name = provider.name().isEmpty() ? PROVIDER_PREFIX + componentName : provider.name();
+            final String name = provider.name().isEmpty() ? PROVIDER_PREFIX + refName : provider.name();
             //添加provider
-            addProvider(provider, interfaceClazz, componentName, () -> name);
+            addProvider(provider, interfaceClazz, refName, () -> name);
         }
     }
 
@@ -460,7 +457,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         if (component != null) {
             name = component.value();
         }
-        if (name.isEmpty()) {
+        if (StringUtils.isEmpty(name)) {
             Service service = findAnnotation(providerClass, Service.class);
             if (service != null) {
                 name = service.value();

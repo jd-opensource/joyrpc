@@ -20,8 +20,6 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
-import io.joyrpc.spring.boot.factory.ConsumerInjectedPostProcessor;
-import io.joyrpc.spring.boot.factory.ServiceBeanDefinitionPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
@@ -36,9 +34,8 @@ import org.springframework.core.io.ResourceLoader;
  * @description:
  */
 @Configuration
-@ConditionalOnProperty(prefix = "rpc.springboot", name = "enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "rpc", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RpcAutoConfiguration {
-
 
     @ConditionalOnMissingBean
     @Bean(name = ServiceBeanDefinitionPostProcessor.BEAN_NAME)
@@ -47,12 +44,6 @@ public class RpcAutoConfiguration {
                                                                                  ResourceLoader resourceLoader) {
 
         return new ServiceBeanDefinitionPostProcessor(applicationContext, environment, resourceLoader);
-    }
-
-    @ConditionalOnMissingBean
-    @Bean(name = ConsumerInjectedPostProcessor.BEAN_NAME)
-    public ConsumerInjectedPostProcessor consumerInjectedPostProcessor() {
-        return new ConsumerInjectedPostProcessor();
     }
 
 }

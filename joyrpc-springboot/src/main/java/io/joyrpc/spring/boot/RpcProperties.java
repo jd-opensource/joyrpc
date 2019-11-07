@@ -1,4 +1,4 @@
-package io.joyrpc.spring.boot.properties;
+package io.joyrpc.spring.boot;
 
 /*-
  * #%L

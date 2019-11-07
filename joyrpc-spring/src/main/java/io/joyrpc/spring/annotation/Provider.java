@@ -46,10 +46,10 @@ public @interface Provider {
     String alias() default "default";
 
     /**
-     * 接口名
+     * 接口
      *
      * @return
      */
-    String interfaceClazz() default "";
+    Class interfaceClass() default void.class;
 
 }

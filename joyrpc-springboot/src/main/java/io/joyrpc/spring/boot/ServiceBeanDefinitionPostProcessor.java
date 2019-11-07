@@ -24,8 +24,8 @@ import io.joyrpc.config.AbstractIdConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ProviderBean;
-import io.joyrpc.spring.annotation.Consumer;
-import io.joyrpc.spring.annotation.Provider;
+import io.joyrpc.annotation.Consumer;
+import io.joyrpc.annotation.Provider;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -48,6 +48,8 @@ import org.springframework.core.type.classreading.MetadataReaderFactory;
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Controller;
+import org.springframework.stereotype.Repository;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -227,13 +229,14 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         String name = config.getId();
         String interfaceClazz = config.getInterfaceClazz();
         if (StringUtils.isEmpty(name) && !StringUtils.isEmpty(interfaceClazz)) {
-            name = Introspector.decapitalize(ClassUtils.getShortName(interfaceClazz));
-            if (!StringUtils.isEmpty(name) && counters != null) {
+            String namePrefix = config instanceof ProviderBean ? "provider-" : "consumer-";
+            name = namePrefix + Introspector.decapitalize(ClassUtils.getShortName(interfaceClazz));
+            if (counters != null) {
                 AtomicInteger counter = counters.computeIfAbsent(name, n -> new AtomicInteger(0));
                 int index = counter.get();
-                name = index == 0 ? name : name + index;
-                config.setId(name);
+                name = index == 0 ? name : name + "-" + index;
             }
+            config.setId(name);
         }
         return name;
     }
@@ -252,7 +255,6 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         config.setInterfaceClazz(interfaceClazz.getName());
         //注解的不自动添加计数器
         String name = computeName(config, null);
-        config.setId(name);
         ConsumerBean old = consumers.putIfAbsent(name, config);
         if (old != null) {
             old.setInterfaceClazz(config.getInterfaceClazz());
@@ -271,15 +273,16 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param interfaceClazz
      * @param naming
      */
-    protected ProviderBean addProvider(final Provider provider, final Class interfaceClazz, final Supplier<String> naming) {
+    protected ProviderBean addProvider(final Provider provider, final Class interfaceClazz, final String refName,
+                                       final Supplier<String> naming) {
         ProviderBean config = new ProviderBean();
         config.setId(naming.get());
         config.setAlias(environment.resolvePlaceholders(provider.alias()));
         config.setInterfaceClass(interfaceClazz);
         config.setInterfaceClazz(interfaceClazz.getName());
+        config.setRefName(refName);
         //注解的不自动添加计数器
         String name = computeName(config, null);
-        config.setId(name);
         ProviderBean old = providers.putIfAbsent(name, config);
         if (old != null) {
             if (StringUtils.isEmpty(old.getInterfaceClazz())) {
@@ -287,6 +290,9 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             }
             if (StringUtils.isEmpty(old.getAlias())) {
                 old.setAlias(config.getAlias());
+            }
+            if (StringUtils.isEmpty(old.getRefName())) {
+                old.setRefName(refName);
             }
         }
         return old != null ? old : config;
@@ -319,8 +325,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     protected void register(final ConsumerBean config, final BeanDefinitionRegistry registry) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config);
         //引用reistry
-        if (StringUtils.hasText(config.getRegistryRef())) {
-            builder.addPropertyReference("registry", environment.resolvePlaceholders(config.getRegistryRef()));
+        if (StringUtils.hasText(config.getRegistryName())) {
+            builder.addPropertyReference("registry", environment.resolvePlaceholders(config.getRegistryName()));
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -335,9 +341,9 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     protected void register(final ProviderBean config, final BeanDefinitionRegistry registry) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> config);
         //引用ref
-        builder.addPropertyReference("ref", config.getRefRef());
+        builder.addPropertyReference("ref", config.getRefName());
         //引用注册中心
-        List<String> registryNames = config.getRegistryRefs();
+        List<String> registryNames = config.getRegistryNames();
         if (registryNames.size() > 0) {
             ManagedList<RuntimeBeanReference> runtimeBeanReferences = new ManagedList<>();
             for (String registryName : registryNames) {
@@ -346,8 +352,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             builder.addPropertyValue("registry", runtimeBeanReferences);
         }
         //引用Server
-        if (!config.getServerRef().isEmpty()) {
-            builder.addPropertyReference("serverConfig", config.getServerRef());
+        if (!config.getServerName().isEmpty()) {
+            builder.addPropertyReference("serverConfig", config.getServerName());
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -371,7 +377,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             if (!CollectionUtils.isEmpty(definitions)) {
                 for (BeanDefinition definition : definitions) {
                     processConsumerAnnotation(definition);
-                    processProviderAnnotation(definition);
+                    processProviderAnnotation(definition, registry);
                 }
             }
         }
@@ -417,7 +423,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      *
      * @param definition
      */
-    protected void processProviderAnnotation(final BeanDefinition definition) {
+    protected void processProviderAnnotation(final BeanDefinition definition, BeanDefinitionRegistry registry) {
         Class<?> providerClass = resolveClassName(definition.getBeanClassName(), classLoader);
         Provider provider = findAnnotation(providerClass, Provider.class);
         if (provider != null) {
@@ -427,8 +433,52 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 //没有找到接口
                 throw new BeanInitializationException("there is not any interface in class " + providerClass);
             }
-            addProvider(provider, interfaceClazz, () -> getName(provider, providerClass));
+            //获取服务类名，若没注册则注册
+            String refBeanName = getOrRegisterComponent(definition, providerClass, registry);
+            //添加provider
+            addProvider(provider, interfaceClazz, refBeanName, () -> getName(provider, providerClass));
         }
+    }
+
+    /**
+     * 获取或注册服务
+     *
+     * @param definition
+     * @param definitionClass
+     * @param registry
+     * @return
+     */
+    protected String getOrRegisterComponent(final BeanDefinition definition, final Class<?> definitionClass,
+                                            final BeanDefinitionRegistry registry) {
+        String name = null;
+        //判断重复注册
+        Component component = findAnnotation(definitionClass, Component.class);
+        if (component == null) {
+            Service service = findAnnotation(definitionClass, Service.class);
+            if (service == null) {
+                Repository repository = findAnnotation(definitionClass, Repository.class);
+                if (repository == null) {
+                    Controller controller = findAnnotation(definitionClass, Controller.class);
+                    if (controller != null) {
+                        name = controller.value();
+                    }
+                } else {
+                    name = repository.value();
+                }
+            } else {
+                name = service.value();
+            }
+        } else {
+            name = component.value();
+        }
+        boolean register = name == null;
+        if (name == null || name.isEmpty()) {
+            name = Introspector.decapitalize(ClassUtils.getShortName(definition.getBeanClassName()));
+        }
+        if (register && !registry.containsBeanDefinition(name)) {
+            registry.registerBeanDefinition(name, definition);
+        }
+        return name;
     }
 
     /**
@@ -451,9 +501,10 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                     name = service.value();
                 }
             }
-            if (name == null || name.isEmpty()) {
+            if (name.isEmpty()) {
                 name = Introspector.decapitalize(ClassUtils.getShortName(providerClass.getName()));
             }
+            name = "provider-" + name;
         }
         return name;
     }

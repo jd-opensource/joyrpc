@@ -1,4 +1,4 @@
-package io.joyrpc.spring.annotation;
+package io.joyrpc.annotation;
 
 /*-
  * #%L
@@ -22,16 +22,14 @@ package io.joyrpc.spring.annotation;
 
 import java.lang.annotation.*;
 
-import static io.joyrpc.constants.Constants.DEFAULT_TIMEOUT;
-
 /**
- * 消费者
+ * 服务提供者
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.METHOD})
+@Target({ElementType.TYPE})
 @Inherited
-public @interface Consumer {
+public @interface Provider {
 
     /**
      * Bean名称
@@ -46,5 +44,12 @@ public @interface Consumer {
      * @return the string
      */
     String alias() default "default";
+
+    /**
+     * 接口
+     *
+     * @return
+     */
+    Class interfaceClass() default void.class;
 
 }

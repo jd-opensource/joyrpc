@@ -67,15 +67,15 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     /**
      * registryConfig 引用列表
      */
-    protected transient List<String> registryRefs;
+    protected transient List<String> registryNames;
     /**
      * server引用
      */
-    protected transient String serverRef;
+    protected transient String serverName;
     /**
      * ref引用
      */
-    protected transient String refRef;
+    protected transient String refName;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -158,27 +158,27 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         this.id = name;
     }
 
-    public List<String> getRegistryRefs() {
-        return registryRefs == null ? new ArrayList<>() : registryRefs;
+    public List<String> getRegistryNames() {
+        return registryNames == null ? new ArrayList<>() : registryNames;
     }
 
-    public void setRegistryRefs(List<String> registryRefs) {
-        this.registryRefs = registryRefs;
+    public void setRegistryNames(List<String> registryNames) {
+        this.registryNames = registryNames;
     }
 
-    public String getServerRef() {
-        return serverRef == null ? "" : serverRef;
+    public String getServerName() {
+        return serverName == null ? "" : serverName;
     }
 
-    public void setServerRef(String serverRef) {
-        this.serverRef = serverRef;
+    public void setServerName(String serverName) {
+        this.serverName = serverName;
     }
 
-    public String getRefRef() {
-        return refRef;
+    public String getRefName() {
+        return refName;
     }
 
-    public void setRefRef(String refRef) {
-        this.refRef = refRef;
+    public void setRefName(String refName) {
+        this.refName = refName;
     }
 }

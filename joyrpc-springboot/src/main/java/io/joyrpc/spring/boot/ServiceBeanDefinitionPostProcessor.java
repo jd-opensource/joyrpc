@@ -492,7 +492,6 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 获取接口
      *
-     * @param provider
      * @param providerClass
      * @return
      */

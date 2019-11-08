@@ -20,12 +20,12 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
-import io.joyrpc.annotation.Consumer;
-import io.joyrpc.annotation.Provider;
 import io.joyrpc.config.AbstractIdConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ProviderBean;
+import io.joyrpc.spring.boot.annotation.AnnotationProvider;
+import io.joyrpc.util.Pair;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -45,7 +45,6 @@ import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
 import org.springframework.core.type.classreading.MetadataReaderFactory;
-import org.springframework.core.type.filter.AnnotationTypeFilter;
 import org.springframework.core.type.filter.TypeFilter;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -56,20 +55,21 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.DataBinder;
 
 import java.beans.Introspector;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
+import java.util.function.BiConsumer;
+import java.util.function.Function;
 
+import static io.joyrpc.spring.boot.Plugin.ANNOTATION_PROVIDER;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
 import static org.springframework.context.annotation.AnnotationConfigUtils.registerAnnotationConfigProcessors;
 import static org.springframework.core.annotation.AnnotationUtils.findAnnotation;
 import static org.springframework.util.ClassUtils.resolveClassName;
-import static org.springframework.util.ReflectionUtils.doWithFields;
-import static org.springframework.util.ReflectionUtils.doWithMethods;
 
 /**
  * 注解扫描处理类
@@ -180,14 +180,14 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     public Object postProcessAfterInitialization(final Object bean, final String beanName) throws BeansException {
         //查找所有的Consumer注解，检查是否注入了
         processConsumerAnnotation(bean.getClass(),
-                f -> {
+                (f, c) -> {
                     ConsumerBean config = members.get(f);
                     if (config != null) {
                         ReflectionUtils.makeAccessible(f);
                         ReflectionUtils.setField(f, bean, config.proxy());
                     }
                 },
-                m -> {
+                (m, c) -> {
                     ConsumerBean config = members.get(m);
                     if (config != null) {
                         ReflectionUtils.invokeMethod(m, bean, config.proxy());
@@ -252,23 +252,20 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param consumer
      * @param interfaceClazz
      */
-    protected ConsumerBean addConsumer(final Consumer consumer, final Class interfaceClazz) {
-        ConsumerBean config = new ConsumerBean();
-        config.setId(consumer.name());
-        config.setAlias(environment.resolvePlaceholders(consumer.alias()));
-        config.setInterfaceClass(interfaceClazz);
-        config.setInterfaceClazz(interfaceClazz.getName());
+    protected ConsumerBean addConsumer(final ConsumerBean consumer, final Class interfaceClazz) {
+        consumer.setInterfaceClass(interfaceClazz);
+        consumer.setInterfaceClazz(interfaceClazz.getName());
         //注解的不自动添加计数器
-        String name = computeName(config, null);
-        ConsumerBean old = consumers.putIfAbsent(name, config);
+        String name = computeName(consumer, null);
+        ConsumerBean old = consumers.putIfAbsent(name, consumer);
         if (old != null) {
-            old.setInterfaceClazz(config.getInterfaceClazz());
+            old.setInterfaceClazz(consumer.getInterfaceClazz());
             old.setInterfaceClass(interfaceClazz);
             if (StringUtils.isEmpty(old.getAlias())) {
-                old.setAlias(config.getAlias());
+                old.setAlias(consumer.getAlias());
             }
         }
-        return old != null ? old : config;
+        return old != null ? old : consumer;
     }
 
     /**
@@ -276,32 +273,27 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      *
      * @param provider
      * @param interfaceClazz
-     * @param naming
+     * @param refName
      */
-    protected ProviderBean addProvider(final Provider provider, final Class interfaceClazz, final String refName,
-                                       final Supplier<String> naming) {
-        ProviderBean config = new ProviderBean();
+    protected ProviderBean addProvider(final ProviderBean provider, final Class interfaceClazz, final String refName) {
         //这里不为空
-        String name = naming.get();
-        config.setId(name);
-        config.setAlias(environment.resolvePlaceholders(provider.alias()));
-        config.setInterfaceClass(interfaceClazz);
-        config.setInterfaceClazz(interfaceClazz.getName());
-        config.setRefName(refName);
+        provider.setInterfaceClass(interfaceClazz);
+        provider.setInterfaceClazz(interfaceClazz.getName());
+        provider.setRefName(refName);
         //注解的不自动添加计数器
-        ProviderBean old = providers.putIfAbsent(name, config);
+        ProviderBean old = providers.putIfAbsent(provider.getId(), provider);
         if (old != null) {
             if (StringUtils.isEmpty(old.getInterfaceClazz())) {
-                old.setInterfaceClazz(config.getInterfaceClazz());
+                old.setInterfaceClazz(provider.getInterfaceClazz());
             }
             if (StringUtils.isEmpty(old.getAlias())) {
-                old.setAlias(config.getAlias());
+                old.setAlias(provider.getAlias());
             }
             if (StringUtils.isEmpty(old.getRefName())) {
                 old.setRefName(refName);
             }
         }
-        return old != null ? old : config;
+        return old != null ? old : provider;
     }
 
 
@@ -371,8 +363,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //构造
         ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(registry, false, environment, resourceLoader);
         registerAnnotationConfigProcessors(registry);
-        scanner.addIncludeFilter(new AnnotationTypeFilter(Provider.class));
-        scanner.addIncludeFilter(new ConsumerAnnotationFilter());
+        scanner.addIncludeFilter(new AnnotationFilter());
         //获取配置的rpc扫描包下的所有bean定义
         for (String basePackage : packages) {
             Set<BeanDefinition> definitions = scanner.findCandidateComponents(basePackage);
@@ -394,30 +385,45 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     protected void processConsumerAnnotation(final BeanDefinition definition) {
         Class<?> beanClass = resolveClassName(definition.getBeanClassName(), classLoader);
         processConsumerAnnotation(beanClass,
-                f -> members.put(f, addConsumer(f.getAnnotation(Consumer.class), f.getType())),
-                m -> members.put(m, addConsumer(m.getAnnotation(Consumer.class), m.getParameterTypes()[1])));
+                (f, c) -> members.put(f, addConsumer(c, f.getType())),
+                (m, c) -> members.put(m, addConsumer(c, m.getParameterTypes()[1])));
     }
 
     /**
      * 处理消费者注解
+     *
+     * @param fieldConsumer
+     * @param methodConsumer
      */
     protected void processConsumerAnnotation(final Class beanClass,
-                                             final java.util.function.Consumer<Field> fieldConsumer,
-                                             final java.util.function.Consumer<Method> methodConsumer) {
-        //处理属上的consumer注解
-        doWithFields(beanClass, field -> fieldConsumer.accept(field),
-                field -> !Modifier.isFinal(field.getModifiers())
-                        && !Modifier.isStatic(field.getModifiers())
-                        && field.getType().isInterface()
-                        && field.getAnnotation(Consumer.class) != null
-        );
+                                             final BiConsumer<Field, ConsumerBean> fieldConsumer,
+                                             final BiConsumer<Method, ConsumerBean> methodConsumer) {
 
-        //处理方法上的consumer注解
-        doWithMethods(beanClass, method -> methodConsumer.accept(method),
-                method -> method.getName().startsWith("set")
+        Class targetClass = beanClass;
+        Pair<AnnotationProvider, Annotation> pair;
+        while (targetClass != null && targetClass != Object.class) {
+            //处理字段上的注解
+            for (Field field : targetClass.getDeclaredFields()) {
+                if (!Modifier.isFinal(field.getModifiers()) && !Modifier.isStatic(field.getModifiers())) {
+                    pair = getAnnotation(field);
+                    if (pair != null) {
+                        fieldConsumer.accept(field, pair.getKey().toConsumerBean(pair.getValue(), environment));
+                    }
+                }
+            }
+            //处理方法上的注解
+            for (Method method : targetClass.getDeclaredMethods()) {
+                if (!Modifier.isStatic(method.getModifiers()) && Modifier.isPublic(method.getModifiers())
                         && method.getParameterCount() == 1
-                        && method.getAnnotation(Consumer.class) != null
-        );
+                        && method.getName().startsWith("set")) {
+                    pair = getAnnotation(method);
+                    if (pair != null) {
+                        methodConsumer.accept(method, pair.getKey().toConsumerBean(pair.getValue(), environment));
+                    }
+                }
+            }
+            targetClass = targetClass.getSuperclass();
+        }
     }
 
     /**
@@ -427,11 +433,21 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      */
     protected void processProviderAnnotation(final BeanDefinition definition, BeanDefinitionRegistry registry) {
         Class<?> providerClass = resolveClassName(definition.getBeanClassName(), classLoader);
-        Provider provider = findAnnotation(providerClass, Provider.class);
-        if (provider != null) {
+        //查找服务提供者注解
+        Class targetClass = providerClass;
+        Pair<AnnotationProvider, Annotation> pair = null;
+        while (targetClass != null && targetClass != Object.class) {
+            pair = getAnnotation(targetClass);
+            if (pair != null) {
+                break;
+            }
+            targetClass = targetClass.getSuperclass();
+        }
+        if (pair != null) {
+            ProviderBean provider = pair.getKey().toProviderBean(pair.getValue(), environment);
             //获取接口类名
             Class interfaceClazz = getInterfaceClass(provider, providerClass);
-            if (interfaceClazz == void.class) {
+            if (interfaceClazz == null || interfaceClazz == void.class) {
                 //没有找到接口
                 throw new BeanInitializationException("there is not any interface in class " + providerClass);
             }
@@ -444,9 +460,11 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                     registry.registerBeanDefinition(refName, definition);
                 }
             }
-            final String name = provider.name().isEmpty() ? PROVIDER_PREFIX + refName : provider.name();
+            if (StringUtils.isEmpty(provider.getId())) {
+                provider.setId(PROVIDER_PREFIX + refName);
+            }
             //添加provider
-            addProvider(provider, interfaceClazz, refName, () -> name);
+            addProvider(provider, interfaceClazz, refName);
         }
     }
 
@@ -478,9 +496,9 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param providerClass
      * @return
      */
-    protected Class getInterfaceClass(final Provider provider, final Class<?> providerClass) {
-        Class interfaceClazz = provider.interfaceClass();
-        if (interfaceClazz == void.class) {
+    protected Class getInterfaceClass(final ProviderBean provider, final Class<?> providerClass) {
+        Class interfaceClazz = provider.getInterfaceClass();
+        if (interfaceClazz == null || interfaceClazz == void.class) {
             Class<?>[] interfaces = providerClass.getInterfaces();
             if (interfaces.length == 1) {
                 interfaceClazz = interfaces[0];
@@ -553,6 +571,53 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     }
 
     /**
+     * 获取注解
+     *
+     * @param function
+     * @return
+     */
+    protected Pair<AnnotationProvider, Annotation> getAnnotation(final Function<AnnotationProvider, Annotation> function) {
+        Annotation result;
+        for (AnnotationProvider provider : ANNOTATION_PROVIDER.extensions()) {
+            result = function.apply(provider);
+            if (result != null) {
+                return Pair.of(provider, result);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 获取类上的服务提供者注解
+     *
+     * @param clazz
+     * @return
+     */
+    protected Pair<AnnotationProvider, Annotation> getAnnotation(final Class clazz) {
+        return getAnnotation(p -> clazz.getDeclaredAnnotation(p.getProviderAnnotationClass()));
+    }
+
+    /**
+     * 获取方法上的消费者注解
+     *
+     * @param method
+     * @return
+     */
+    protected Pair<AnnotationProvider, Annotation> getAnnotation(final Method method) {
+        return getAnnotation(p -> method.getAnnotation(p.getConsumerAnnotationClass()));
+    }
+
+    /**
+     * 获取字段上的消费者注解
+     *
+     * @param field
+     * @return
+     */
+    protected Pair<AnnotationProvider, Annotation> getAnnotation(final Field field) {
+        return getAnnotation(p -> field.getAnnotation(p.getConsumerAnnotationClass()));
+    }
+
+    /**
      * Get Sub {@link Properties}
      *
      * @return Map
@@ -589,7 +654,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 扫描类过滤（主要用来过滤含有某一个注解的类）
      */
-    protected class ConsumerAnnotationFilter implements TypeFilter {
+    protected class AnnotationFilter implements TypeFilter {
 
         @Override
         public boolean match(MetadataReader metadataReader, MetadataReaderFactory metadataReaderFactory) {
@@ -599,29 +664,38 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 Class clazz = resolveClassName(classMetadata.getClassName(), classLoader);
                 //判断是否Public
                 if (Modifier.isPublic(clazz.getModifiers())) {
-                    //Consumer只能在字段、方法上设置
-                    Field[] fields = clazz.getDeclaredFields();
-                    for (Field field : fields) {
-                        if (!Modifier.isFinal(field.getModifiers())
-                                && !Modifier.isStatic(field.getModifiers())
-                                && field.getDeclaringClass() != Object.class
-                                && field.getAnnotation(Consumer.class) != null) {
+                    Class targetClass = clazz;
+                    while (targetClass != null && targetClass != Object.class) {
+                        //处理类上的服务提供者注解
+                        if (getAnnotation(targetClass) != null) {
                             return true;
                         }
-                    }
-                    //处理setter注入
-                    Method[] methods = clazz.getMethods();
-                    for (Method method : methods) {
-                        if (method.getDeclaringClass() != Object.class
-                                && method.getName().startsWith("set")
-                                && method.getParameterCount() == 1
-                                && method.getAnnotation(Consumer.class) != null) {
-                            return true;
+                        //处理字段的消费者注解
+                        for (Field field : targetClass.getDeclaredFields()) {
+                            if (!Modifier.isFinal(field.getModifiers())
+                                    && !Modifier.isStatic(field.getModifiers())
+                                    && getAnnotation(field) != null) {
+                                return true;
+                            }
                         }
+                        //处理方法上的消费者注解
+                        for (Method method : clazz.getDeclaredMethods()) {
+                            if (!Modifier.isStatic(method.getModifiers())
+                                    && Modifier.isPublic(method.getModifiers())
+                                    && method.getParameterCount() == 1
+                                    && method.getName().startsWith("set")
+                                    && getAnnotation(method) != null) {
+                                return true;
+                            }
+                        }
+                        targetClass = targetClass.getSuperclass();
                     }
+
                 }
             }
             return false;
         }
     }
+
+
 }

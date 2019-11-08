@@ -122,7 +122,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共的Method方法，过滤掉了Object类型的方法
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param clazzName  类名
      * @param methodName 方法名
@@ -139,7 +139,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共的Method方法，过滤掉了Object类型的方法
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param className  类名
      * @param methodName 方法名
@@ -154,7 +154,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共的Method方法，过滤掉了Object类型的方法
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -168,7 +168,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共的Method方法，过滤掉了Object类型的方法
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -181,7 +181,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共的Method方法，过滤掉了Object类型的方法
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param className  类
      * @param methodName 方法名
@@ -198,7 +198,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取唯一的指定名称的方法，过滤掉了Object类型的方法
+     * 获取唯一的指定名称的公共非静态方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -229,7 +229,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取重载的方法列表
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -241,7 +241,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共的Method方法，过滤掉了Object类型的方法
+     * 获取公共非静态方法，过滤掉了Object类型的方法
      *
      * @param clazz 类
      */

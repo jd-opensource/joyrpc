@@ -2,6 +2,8 @@
 
 ## 1.0.4-SNAPSHOT
 
+### Enhancement
+
 - ProviderConfig增加exportAndOpen方法，便于API调用
 
 - 配置动态更新JSON解析异常捕获
@@ -13,6 +15,14 @@
 - 升级netty为4.1.43.Final版本
 
 - 升级commons-compress为1.19，解决安全漏洞
+
+- 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点
+
+- 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置。支持第三方注解插件
+
+- 修改泛化调用的反序列化，优先按照用户传递的子类参数类型来进行反序列化
+
+### Bugfixes
 
 - 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
 
@@ -26,15 +36,11 @@
 
 - 修复ZK注册中心初始化时未成功连接到集群，后续连接到集群，却不重新发起服务订阅与注册的问题
 
-- 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点
-
 - 修改注册中心，集群事件增量数据先到达，全量数据后到达需要正确合并的问题
 
 - 修改GrpcClientProtocol，每次build chain的时候都重新创建，防止内部逻辑发生StreamId冲突
 
 - GRPC存在潜在的内存泄漏问题，ByteBuf没有Release
-
-- 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置
 
 - 修改SpringBoot方式采用SpringLoader加载插件挂住的问题
 
@@ -47,8 +53,6 @@
 - AbstractConsumerConfig增加proxy方法，方便在spring场景提前创建好代理对象
 
 - 修复transport层关于isWritable判断不合理，导致client不可读的问题
-
-- 修改泛化调用的反序列化，优先按照用户传递的子类参数类型来进行反序列化
 
 ## 1.0.3-RELEASE(2019-10-12)
 

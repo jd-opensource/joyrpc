@@ -23,7 +23,11 @@ package io.joyrpc.spring;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
+import io.joyrpc.constants.ExceptionCode;
+import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -156,6 +160,18 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     public void setName(String name) {
         this.id = name;
+    }
+
+    @Override
+    public Class getInterfaceClass() {
+        if (interfaceClass == null) {
+            try {
+                interfaceClass = StringUtils.isEmpty(interfaceClazz) ? null : ClassUtils.forName(interfaceClazz);
+            } catch (ClassNotFoundException e) {
+                throw new IllegalConfigureException(e.getMessage(), ExceptionCode.COMMON_CLASS_NOT_FOUND);
+            }
+        }
+        return interfaceClass;
     }
 
     public List<String> getRegistryNames() {

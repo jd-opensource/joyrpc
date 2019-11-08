@@ -30,7 +30,8 @@ public class DefaultAnnotationProvider implements AnnotationProvider<Provider, C
         config.setId(environment.resolvePlaceholders(provider.name()));
         config.setAlias(environment.resolvePlaceholders(provider.alias()));
         Class interfaceClass = provider.interfaceClass();
-        if (interfaceClass != void.class) {
+        if (interfaceClass.isInterface()) {
+            //确保是接口
             config.setInterfaceClass(interfaceClass);
             config.setInterfaceClazz(interfaceClass.getName());
         }

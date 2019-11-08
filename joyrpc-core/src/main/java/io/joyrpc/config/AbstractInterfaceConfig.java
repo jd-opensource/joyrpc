@@ -230,12 +230,12 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     public Class getInterfaceClass() {
         if (interfaceClass == null) {
+            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
+                throw new IllegalConfigureException("interfaceClazz", "null",
+                        "interfaceClazz must be not null", ExceptionCode.COMMON_NOT_RIGHT_INTERFACE);
+            }
             try {
                 interfaceClass = ClassUtils.forName(interfaceClazz);
-                if (interfaceClass == null) {
-                    throw new IllegalConfigureException("interfaceClazz", "null",
-                            "interfaceClazz must be not null", ExceptionCode.COMMON_NOT_RIGHT_INTERFACE);
-                }
             } catch (ClassNotFoundException e) {
                 throw new IllegalConfigureException(e.getMessage(), ExceptionCode.COMMON_CLASS_NOT_FOUND);
             }

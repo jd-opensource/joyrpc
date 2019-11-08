@@ -34,17 +34,19 @@
 
 - GRPC存在潜在的内存泄漏问题，ByteBuf没有Release
 
+- 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置
+
 - 修改SpringBoot方式采用SpringLoader加载插件挂住的问题
 
 - 修复SpringBoot方式consumer调用refer为null的问题
 
-- AbstractConsumerConfig增加proxy方法，方便在spring场景提前创建好代理对象
-
-- 修复transport层关于isWritable判断不合理，导致client不可读的问题
-
 - Spring中的ConsumerBean初始化异常退出，当是泛型的时候正确返回对象类型
 
 - Spring中的ProviderBean初始化异常退出
+
+- AbstractConsumerConfig增加proxy方法，方便在spring场景提前创建好代理对象
+
+- 修复transport层关于isWritable判断不合理，导致client不可读的问题
 
 - 修改泛化调用的反序列化，优先按照用户传递的子类参数类型来进行反序列化
 

@@ -22,6 +22,8 @@
 
 - 修改泛化调用的反序列化，优先按照用户传递的子类参数类型来进行反序列化
 
+- ClassUtils的getPublicMethods返回公共的非静态方法
+
 ### Bugfixes
 
 - 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件

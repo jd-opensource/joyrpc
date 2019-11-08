@@ -1347,7 +1347,7 @@ public class ClassUtils {
          */
         protected Class type;
         /**
-         * 方法重载信息
+         * 公共非静态方法的重载信息
          */
         protected Map<String, OverloadMethod> overloadMethods;
         /**
@@ -1360,7 +1360,7 @@ public class ClassUtils {
         protected Map<String, Method> setter;
 
         /**
-         * 公共方法
+         * 公共非静态方法
          */
         protected List<Method> methods;
 
@@ -1379,24 +1379,23 @@ public class ClassUtils {
                 methods = new ArrayList<>(publicMethods.length);
                 String name;
                 for (Method method : publicMethods) {
-                    if (!method.getDeclaringClass().equals(Object.class)) {
+                    //过滤掉静态方法
+                    if (!method.getDeclaringClass().equals(Object.class) && !Modifier.isStatic(method.getModifiers())) {
                         overloadMethods.computeIfAbsent(method.getName(), k -> new OverloadMethod(type, k)).add(method);
                         methods.add(method);
                         name = method.getName();
                         if (name.startsWith("get")) {
                             if (name.length() > 3 && method.getParameterCount() == 0
-                                    && void.class != method.getReturnType()
-                                    && !Modifier.isStatic(method.getModifiers())) {
+                                    && void.class != method.getReturnType()) {
                                 getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
                             }
                         } else if (name.startsWith("is")) {
                             if (name.length() > 2 && method.getParameterCount() == 0
-                                    && boolean.class == method.getReturnType()
-                                    && !Modifier.isStatic(method.getModifiers())) {
+                                    && boolean.class == method.getReturnType()) {
                                 getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
                             }
                         } else if (name.startsWith("set")) {
-                            if (name.length() > 3 && method.getParameterCount() == 1 && !Modifier.isStatic(method.getModifiers())) {
+                            if (name.length() > 3 && method.getParameterCount() == 1) {
                                 setter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
                             }
                         }

@@ -446,8 +446,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         if (pair != null) {
             ProviderBean provider = pair.getKey().toProviderBean(pair.getValue(), environment);
             //获取接口类名
-            Class interfaceClazz = getInterfaceClass(provider, providerClass);
-            if (interfaceClazz == null || interfaceClazz == void.class) {
+            Class interfaceClazz = provider.getInterfaceClass(() -> getInterfaceClass(providerClass));
+            if (interfaceClazz == null) {
                 //没有找到接口
                 throw new BeanInitializationException("there is not any interface in class " + providerClass);
             }
@@ -496,32 +496,30 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param providerClass
      * @return
      */
-    protected Class getInterfaceClass(final ProviderBean provider, final Class<?> providerClass) {
-        Class interfaceClazz = provider.getInterfaceClass();
-        if (interfaceClazz == null || interfaceClazz == void.class) {
-            Class<?>[] interfaces = providerClass.getInterfaces();
-            if (interfaces.length == 1) {
-                interfaceClazz = interfaces[0];
-            } else if (interfaces.length > 1) {
-                //多个接口，查找最佳匹配接口
-                int max = -1;
-                int priority;
-                String providerClassName = providerClass.getSimpleName();
-                String intfName;
-                //计算最佳接口
-                for (Class intf : interfaces) {
-                    intfName = intf.getName();
-                    if (intfName.startsWith("java")) {
-                        priority = 0;
-                    } else if (intfName.startsWith("javax")) {
-                        priority = 0;
-                    } else {
-                        priority = providerClassName.startsWith(intf.getSimpleName()) ? 2 : 1;
-                    }
-                    if (priority > max) {
-                        interfaceClazz = intf;
-                        max = priority;
-                    }
+    protected Class getInterfaceClass(final Class<?> providerClass) {
+        Class interfaceClazz = null;
+        Class<?>[] interfaces = providerClass.getInterfaces();
+        if (interfaces.length == 1) {
+            interfaceClazz = interfaces[0];
+        } else if (interfaces.length > 1) {
+            //多个接口，查找最佳匹配接口
+            int max = -1;
+            int priority;
+            String providerClassName = providerClass.getSimpleName();
+            String intfName;
+            //计算最佳接口
+            for (Class intf : interfaces) {
+                intfName = intf.getName();
+                if (intfName.startsWith("java")) {
+                    priority = 0;
+                } else if (intfName.startsWith("javax")) {
+                    priority = 0;
+                } else {
+                    priority = providerClassName.startsWith(intf.getSimpleName()) ? 2 : 1;
+                }
+                if (priority > max) {
+                    interfaceClazz = intf;
+                    max = priority;
                 }
             }
         }

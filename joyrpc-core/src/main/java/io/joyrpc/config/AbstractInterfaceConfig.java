@@ -46,6 +46,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
@@ -238,6 +239,26 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                 interfaceClass = ClassUtils.forName(interfaceClazz);
             } catch (ClassNotFoundException e) {
                 throw new IllegalConfigureException(e.getMessage(), ExceptionCode.COMMON_CLASS_NOT_FOUND);
+            }
+        }
+        return interfaceClass;
+    }
+
+    /**
+     * 获取接口类
+     *
+     * @param supplier
+     * @return
+     */
+    public Class getInterfaceClass(final Supplier<Class> supplier) {
+        if (interfaceClass == null) {
+            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
+                interfaceClass = supplier.get();
+            }
+            try {
+                interfaceClass = ClassUtils.forName(interfaceClazz);
+            } catch (ClassNotFoundException e) {
+                interfaceClass = supplier.get();
             }
         }
         return interfaceClass;

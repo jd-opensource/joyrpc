@@ -281,13 +281,14 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     protected ProviderBean addProvider(final Provider provider, final Class interfaceClazz, final String refName,
                                        final Supplier<String> naming) {
         ProviderBean config = new ProviderBean();
-        config.setId(naming.get());
+        //这里不为空
+        String name = naming.get();
+        config.setId(name);
         config.setAlias(environment.resolvePlaceholders(provider.alias()));
         config.setInterfaceClass(interfaceClazz);
         config.setInterfaceClazz(interfaceClazz.getName());
         config.setRefName(refName);
         //注解的不自动添加计数器
-        String name = computeName(config, null);
         ProviderBean old = providers.putIfAbsent(name, config);
         if (old != null) {
             if (StringUtils.isEmpty(old.getInterfaceClazz())) {

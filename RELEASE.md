@@ -56,6 +56,8 @@
 
 - 修复transport层关于isWritable判断不合理，导致client不可读的问题
 
+- 处理Spring的xml配置文件中全局参数占位符替换
+
 ## 1.0.3-RELEASE(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

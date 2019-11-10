@@ -22,6 +22,7 @@ package io.joyrpc.spring.boot;
 
 import io.joyrpc.config.AbstractIdConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.boot.annotation.AnnotationProvider;
@@ -308,6 +309,11 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         register(registry, rpcProperties.getServers(), SERVER_NAME);
         consumers.forEach((name, c) -> register(c, registry));
         providers.forEach((name, p) -> register(p, registry));
+        //注册全局参数
+        if (rpcProperties.getParameters() != null) {
+            rpcProperties.getParameters().forEach((k, v) -> GlobalContext.put(environment.resolvePlaceholders(k),
+                    environment.resolvePlaceholders(v)));
+        }
     }
 
     /**

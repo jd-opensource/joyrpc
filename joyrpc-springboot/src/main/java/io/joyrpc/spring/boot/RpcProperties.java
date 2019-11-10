@@ -26,6 +26,7 @@ import io.joyrpc.spring.RegistryBean;
 import io.joyrpc.spring.ServerBean;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /*-
@@ -54,18 +55,34 @@ import java.util.Set;
 public class RpcProperties {
 
     private Set<String> packages;
-
+    /**
+     * 服务
+     */
     private ServerBean server;
-
+    /**
+     * 注册中心
+     */
     private RegistryBean registry;
-
+    /**
+     * 消费者
+     */
     private List<ConsumerBean> consumers;
-
+    /**
+     * 服务提供者
+     */
     private List<ProviderBean> providers;
-
+    /**
+     * 服务
+     */
     private List<ServerBean> servers;
-
+    /**
+     * 注册中心
+     */
     private List<RegistryBean> registries;
+    /**
+     * 全局参数
+     */
+    private Map<String, String> parameters;
 
     public Set<String> getPackages() {
         return packages;
@@ -123,4 +140,11 @@ public class RpcProperties {
         this.registries = registries;
     }
 
+    public Map<String, String> getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(Map<String, String> parameters) {
+        this.parameters = parameters;
+    }
 }

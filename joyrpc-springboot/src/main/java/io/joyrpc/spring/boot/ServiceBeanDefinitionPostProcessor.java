@@ -304,12 +304,12 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      */
     protected void register(final BeanDefinitionRegistry registry) {
         //注册
-        register(registry, rpcProperties.getRegistry(), () -> REGISTRY_NAME);
+        String defRegName = register(registry, rpcProperties.getRegistry(), REGISTRY_NAME);
+        String defServerName = register(registry, rpcProperties.getServer(), SERVER_NAME);
         register(registry, rpcProperties.getRegistries(), REGISTRY_NAME);
-        register(registry, rpcProperties.getServer(), () -> SERVER_NAME);
         register(registry, rpcProperties.getServers(), SERVER_NAME);
-        consumers.forEach((name, c) -> register(c, registry));
-        providers.forEach((name, p) -> register(p, registry));
+        consumers.forEach((name, c) -> register(c, registry, defRegName));
+        providers.forEach((name, p) -> register(p, registry, defRegName, defServerName));
         //注册全局参数
         if (rpcProperties.getParameters() != null) {
             rpcProperties.getParameters().forEach((k, v) -> GlobalContext.put(environment.resolvePlaceholders(k),
@@ -323,13 +323,13 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param config
      * @param registry
      */
-    protected void register(final ConsumerBean config, final BeanDefinitionRegistry registry) {
+    protected void register(final ConsumerBean config, final BeanDefinitionRegistry registry, final String defRegName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config);
         //引用reistry
         if (!StringUtils.isEmpty(config.getRegistryName())) {
             builder.addPropertyReference("registry", environment.resolvePlaceholders(config.getRegistryName()));
-        } else if (registry.containsBeanDefinition(REGISTRY_NAME)) {
-            builder.addPropertyReference("registry", REGISTRY_NAME);
+        } else if (StringUtils.hasText(defRegName)) {
+            builder.addPropertyReference("registry", defRegName);
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -341,7 +341,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      * @param config
      * @param registry
      */
-    protected void register(final ProviderBean config, final BeanDefinitionRegistry registry) {
+    protected void register(final ProviderBean config, final BeanDefinitionRegistry registry, final String defRegName,
+                            final String defServerName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> config);
         //引用ref
         builder.addPropertyReference("ref", config.getRefName());
@@ -352,8 +353,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             for (String registryName : registryNames) {
                 runtimeBeanReferences.add(new RuntimeBeanReference(environment.resolvePlaceholders(registryName)));
             }
-        } else if (registry.containsBeanDefinition(REGISTRY_NAME)) {
-            runtimeBeanReferences.add(new RuntimeBeanReference(REGISTRY_NAME));
+        } else if (StringUtils.hasText(defRegName)) {
+            runtimeBeanReferences.add(new RuntimeBeanReference(defRegName));
         }
         if (!runtimeBeanReferences.isEmpty()) {
             builder.addPropertyValue("registry", runtimeBeanReferences);
@@ -361,8 +362,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //引用Server
         if (!StringUtils.isEmpty(config.getServerName())) {
             builder.addPropertyReference("serverConfig", config.getServerName());
-        } else if (registry.containsBeanDefinition(SERVER_NAME)) {
-            builder.addPropertyReference("serverConfig", SERVER_NAME);
+        } else if (StringUtils.hasText(defServerName)) {
+            builder.addPropertyReference("serverConfig", defServerName);
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -553,13 +554,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         if (configs != null) {
             AtomicInteger counter = new AtomicInteger(0);
             for (T config : configs) {
-                register(registry, config, () -> {
-                    String beanName = config.getId();
-                    if (!StringUtils.hasText(beanName)) {
-                        beanName = defNamePrefix + "-" + counter.getAndIncrement();
-                    }
-                    return beanName;
-                });
+                register(registry, config, defNamePrefix + "-" + counter.getAndIncrement());
             }
         }
     }
@@ -569,20 +564,24 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      *
      * @param registry
      * @param config
-     * @param naming
+     * @param defName
      * @param <T>
      */
-    protected <T extends AbstractIdConfig> void register(final BeanDefinitionRegistry registry, final T config,
-                                                         final Supplier<String> naming) {
+    protected <T extends AbstractIdConfig> String register(final BeanDefinitionRegistry registry, final T config,
+                                                           final String defName) {
         if (config == null) {
-            return;
+            return null;
         }
-        String beanName = naming.get();
+        String beanName = config.getId();
+        if (!StringUtils.hasText(beanName)) {
+            beanName = defName;
+        }
         if (!registry.containsBeanDefinition(beanName)) {
             registry.registerBeanDefinition(beanName, new RootBeanDefinition((Class<T>) config.getClass(), () -> config));
         } else {
             throw new BeanInitializationException("duplication bean name " + beanName);
         }
+        return beanName;
     }
 
     /**

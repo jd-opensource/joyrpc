@@ -70,7 +70,13 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
     @Override
     protected void doRefer(final CompletableFuture<Void> future) {
         //构造代理类
-        Class<T> proxyClass = getProxyClass();
+        Class<T> proxyClass;
+        try {
+            proxyClass = getProxyClass();
+        } catch (Exception e) {
+            future.completeExceptionally(e);
+            return;
+        }
         //创建注册中心
         registryRef = REGISTRY.get(registryUrl.getProtocol()).getRegistry(registryUrl);
         configure = registryRef;

@@ -238,7 +238,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             try {
                 interfaceClass = ClassUtils.forName(interfaceClazz);
             } catch (ClassNotFoundException e) {
-                throw new IllegalConfigureException(e.getMessage(), ExceptionCode.COMMON_CLASS_NOT_FOUND);
+                throw new IllegalConfigureException(String.format("class is not found \"%s\"", interfaceClazz), ExceptionCode.COMMON_CLASS_NOT_FOUND);
             }
         }
         return interfaceClass;

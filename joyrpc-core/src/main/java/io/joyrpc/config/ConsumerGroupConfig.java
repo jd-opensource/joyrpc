@@ -102,11 +102,18 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     @Override
     protected void doRefer(final CompletableFuture<Void> future) {
         //创建分组调用
+        Class<T> proxyClass;
+        try {
+            proxyClass = getProxyClass();
+        } catch (Exception e) {
+            future.completeExceptionally(e);
+            return;
+        }
         route = GROUP_ROUTE.get(groupRouter, Constants.GROUP_ROUTER_OPTION.getValue());
         route.setAliasAdaptive(aliasAdaptive);
         route.setUrl(serviceUrl);
         route.setAlias(alias);
-        route.setClass(getProxyClass());
+        route.setClass(proxyClass);
         route.setClassName(interfaceClazz);
         route.setConfigFunction(this::createGroupConfig);
         route.setup();

@@ -22,27 +22,21 @@ package io.joyrpc.example.spring;
 
 
 import io.joyrpc.example.service.DemoService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
  * Quick Start client
  */
 public class SpringClient {
-    private static final Logger logger = LoggerFactory.getLogger(SpringClient.class);
 
     public static void main(String[] args) throws Exception {
-        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/spring/joyrpc-consumer.xml");
-        DemoService service = (DemoService) appContext.getBean("demoService");
+        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("classpath:spring/joyrpc-consumer.xml");
+        DemoService consumer = (DemoService) appContext.getBean("demoService");
 
-        try {
-            String result = service.sayHello("hello");
-            logger.info("response msg from server :" + result);
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+        while (true) {
+            System.out.println(consumer.sayHello("helloWold"));
+            Thread.sleep(1000L);
         }
 
-        System.in.read();
     }
 }

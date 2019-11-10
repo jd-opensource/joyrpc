@@ -52,7 +52,7 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
         values.addPropertyValue("value", value);
         values.addPropertyValue("hide", hide);
 
-        String beanName = GlobalParameterBean.class.getName() + "-" + COUNTER.getAndIncrement();
+        String beanName = "global-parameter-" + COUNTER.getAndIncrement();
         parserContext.getRegistry().registerBeanDefinition(beanName, definition);
         return definition;
     }

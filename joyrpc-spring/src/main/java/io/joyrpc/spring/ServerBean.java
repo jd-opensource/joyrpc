@@ -28,7 +28,7 @@ import org.springframework.beans.factory.BeanNameAware;
  *
  * @description:
  */
-public class ServerBean<T> extends ServerConfig implements BeanNameAware {
+public class ServerBean extends ServerConfig implements BeanNameAware {
 
     @Override
     public void setBeanName(String name) {

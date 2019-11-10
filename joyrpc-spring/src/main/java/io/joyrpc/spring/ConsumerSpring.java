@@ -3,6 +3,7 @@ package io.joyrpc.spring;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,9 +128,10 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     @Override
     public void destroy() {
-        logger.info("destroy consumer group with bean name : {}", config.getId());
-        //TODO 如何做到优雅停机
-        config.unrefer();
+        if (!Shutdown.isShutdown()) {
+            logger.info("destroy consumer group with bean name : {}", config.getId());
+            config.unrefer();
+        }
     }
 
     @Override

@@ -24,6 +24,7 @@ import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -141,8 +142,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void destroy() {
-        logger.info(String.format("destroy provider with beanName %s", id));
-        unexport();
+        if (!Shutdown.isShutdown()) {
+            logger.info(String.format("destroy provider with beanName %s", id));
+            unexport();
+        }
     }
 
     @Override

@@ -1,4 +1,4 @@
-package io.joyrpc.quickstart.service;
+package io.joyrpc.example.service;
 
 /*-
  * #%L

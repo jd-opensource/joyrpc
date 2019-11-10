@@ -5,7 +5,7 @@
     http://joyrpc.io/schema/joyrpc  http://joyrpc.io/schema/joyrpc/joyrpc.xsd">
 
     <!-- 实现类 -->
-    <bean id="demoServiceImpl" class="io.joyrpc.service.impl.DemoServiceImpl"/>
+    <bean id="demoServiceImpl" class="io.joyrpc.example.service.impl.DemoServiceImpl"/>
 
     <!-- 注册中心,默认:broadcast -->
     <joyrpc:registry id="joyrpcRegistry" registry="broadcast"/>
@@ -14,7 +14,7 @@
     <joyrpc:server id="joyrpcServer"/>
 
     <!-- 发布服务 alias可修改 -->
-    <joyrpc:provider id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo"
+    <joyrpc:provider id="demoService" interface="io.joyrpc.example.service.DemoService" alias="joyrpc-demo"
                      ref="demoServiceImpl" server="joyrpcServer">
     </joyrpc:provider>
 </beans>

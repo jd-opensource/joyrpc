@@ -1,4 +1,4 @@
-package io.joyrpc.service.impl;
+package io.joyrpc.example.service;
 
 /*-
  * #%L
@@ -20,13 +20,7 @@ package io.joyrpc.service.impl;
  * #L%
  */
 
-import io.joyrpc.service.DemoService;
+public interface DemoService {
 
-public class DemoServiceImpl implements DemoService {
-
-    @Override
-    public String sayHello(String str) {
-        System.out.println("Hi " + str + ", request from consumer.");
-        return "Hi " + str + ", response from provider. ";
-    }
+    String sayHello(String name);
 }

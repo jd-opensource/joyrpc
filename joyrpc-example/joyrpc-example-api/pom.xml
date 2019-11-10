@@ -22,6 +22,10 @@
             <artifactId>joyrpc-all</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+        </dependency>
         <!-- slf4j -->
         <dependency>
             <groupId>org.slf4j</groupId>

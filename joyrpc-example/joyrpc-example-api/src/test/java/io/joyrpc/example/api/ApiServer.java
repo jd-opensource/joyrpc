@@ -1,4 +1,4 @@
-package io.joyrpc.quickstart;
+package io.joyrpc.example.api;
 
 /*-
  * #%L
@@ -23,30 +23,27 @@ package io.joyrpc.quickstart;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
-import io.joyrpc.service.DemoService;
-import io.joyrpc.service.impl.DemoServiceImpl;
+import io.joyrpc.example.service.DemoService;
+import io.joyrpc.example.service.impl.DemoServiceImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Quick Start Server
  */
-public class ServerAPI {
+public class ApiServer {
 
-    private static final Logger logger = LoggerFactory.getLogger(ServerAPI.class);
+    private static final Logger logger = LoggerFactory.getLogger(ApiServer.class);
 
     public static void main(String[] args) throws Exception {
-        RegistryConfig registryConfig = new RegistryConfig();
-        registryConfig.setRegistry("broadcast");
 
         DemoService demoService = new DemoServiceImpl(); //服务提供者设置
         ProviderConfig<DemoService> providerConfig = new ProviderConfig<>();
         providerConfig.setServerConfig(new ServerConfig());
-
-        providerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
+        providerConfig.setInterfaceClazz(DemoService.class.getName());
         providerConfig.setRef(demoService);
         providerConfig.setAlias("joyrpc-demo");
-        providerConfig.setRegistry(registryConfig);
+        providerConfig.setRegistry(new RegistryConfig("broadcast"));
 
         providerConfig.exportAndOpen().whenComplete((v, t) -> {
             if (t != null) {

@@ -1,4 +1,4 @@
-package io.joyrpc.quickstart.service;
+package io.joyrpc.example.service;
 
 /*-
  * #%L
@@ -20,7 +20,10 @@ package io.joyrpc.quickstart.service;
  * #L%
  */
 
+/**
+ * Demo service
+ */
 public interface DemoService {
 
-    String sayHello(String name);
+    String sayHello(String str);
 }

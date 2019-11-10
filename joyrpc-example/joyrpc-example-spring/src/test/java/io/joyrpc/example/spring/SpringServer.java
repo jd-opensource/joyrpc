@@ -1,4 +1,4 @@
-package io.joyrpc.quickstart;
+package io.joyrpc.example.spring;
 
 /*-
  * #%L
@@ -21,28 +21,21 @@ package io.joyrpc.quickstart;
  */
 
 
-import io.joyrpc.service.DemoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 /**
- * Quick Start client
+ * Quick Start server
  */
-public class ClientMain {
-    private static final Logger logger = LoggerFactory.getLogger(ClientMain.class);
+public class SpringServer {
+    private static final Logger LOGGER = LoggerFactory.getLogger(SpringClient.class);
+
 
     public static void main(String[] args) throws Exception {
-        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/spring/joyrpc-consumer.xml");
-        DemoService service = (DemoService) appContext.getBean("demoService");
+        ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("/spring/joyrpc-provider.xml");
 
-        try {
-            String result = service.sayHello("hello");
-            logger.info("response msg from server :" + result);
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        }
-
+        LOGGER.info("服务端启动完成！");
         System.in.read();
     }
 }

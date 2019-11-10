@@ -1,8 +1,8 @@
-package io.joyrpc.quickstart;
+package io.joyrpc.example;
 
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.quickstart.service.DemoService;
+import io.joyrpc.example.service.DemoService;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

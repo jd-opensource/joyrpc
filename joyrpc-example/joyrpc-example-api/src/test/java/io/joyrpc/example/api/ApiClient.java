@@ -1,4 +1,4 @@
-package io.joyrpc.quickstart;
+package io.joyrpc.example.api;
 
 /*-
  * #%L
@@ -22,7 +22,7 @@ package io.joyrpc.quickstart;
 
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.service.DemoService;
+import io.joyrpc.example.service.DemoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,17 +31,14 @@ import java.util.concurrent.CompletableFuture;
 /**
  * Quick Start Client
  */
-public class ClientAPI {
-    private static final Logger logger = LoggerFactory.getLogger(ClientAPI.class);
+public class ApiClient {
+    private static final Logger logger = LoggerFactory.getLogger(ApiClient.class);
 
     public static void main(String[] args) {
-        RegistryConfig registryConfig = new RegistryConfig();
-        registryConfig.setRegistry("broadcast");//广播注册中心
-
         ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>(); //consumer设置
-        consumerConfig.setInterfaceClazz("io.joyrpc.service.DemoService");
+        consumerConfig.setInterfaceClazz(DemoService.class.getName());
         consumerConfig.setAlias("joyrpc-demo");
-        consumerConfig.setRegistry(registryConfig);
+        consumerConfig.setRegistry(new RegistryConfig("broadcast"));
         try {
             CompletableFuture<DemoService> future = consumerConfig.refer();
             DemoService service = future.get();

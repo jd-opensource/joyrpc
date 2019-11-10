@@ -8,5 +8,5 @@
     <joyrpc:registry id="joyprpcRegistry"  registry="broadcast"/>
 
     <!-- 调用者配置  -->
-    <joyrpc:consumer id="demoService" interface="io.joyrpc.service.DemoService" alias="joyrpc-demo"></joyrpc:consumer>
+    <joyrpc:consumer id="demoService" interface="io.joyrpc.example.service.DemoService" alias="joyrpc-demo"></joyrpc:consumer>
 </beans>

@@ -75,7 +75,7 @@ import static org.springframework.util.ClassUtils.resolveClassName;
 /**
  * 注解扫描处理类
  */
-public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor,
+public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor,
         BeanPostProcessor, BeanClassLoaderAware {
 
     /**
@@ -87,7 +87,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      */
     public static final String REGISTRY_NAME = "registry";
 
-    public static final String BEAN_NAME = "serviceBeanDefinitionPostProcessor";
+    public static final String BEAN_NAME = "rpcDefinitionPostProcessor";
     public static final String RPC_PREFIX = "rpc.";
     public static final String PROVIDER_PREFIX = "provider-";
     public static final String CONSUMER_PREFIX = "consumer-";
@@ -125,9 +125,9 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
     /**
      * 构造方法
      */
-    public ServiceBeanDefinitionPostProcessor(final ApplicationContext applicationContext,
-                                              final ConfigurableEnvironment environment,
-                                              final ResourceLoader resourceLoader) {
+    public RpcDefinitionPostProcessor(final ApplicationContext applicationContext,
+                                      final ConfigurableEnvironment environment,
+                                      final ResourceLoader resourceLoader) {
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;

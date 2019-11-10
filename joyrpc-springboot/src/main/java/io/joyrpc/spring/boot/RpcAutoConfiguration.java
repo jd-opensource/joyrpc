@@ -38,12 +38,12 @@ import org.springframework.core.io.ResourceLoader;
 public class RpcAutoConfiguration {
 
     @ConditionalOnMissingBean
-    @Bean(name = ServiceBeanDefinitionPostProcessor.BEAN_NAME)
-    public ServiceBeanDefinitionPostProcessor serviceBeanDefinitionPostProcessor(ApplicationContext applicationContext,
-                                                                                 ConfigurableEnvironment environment,
-                                                                                 ResourceLoader resourceLoader) {
+    @Bean(name = RpcDefinitionPostProcessor.BEAN_NAME)
+    public RpcDefinitionPostProcessor rpcDefinitionPostProcessor(ApplicationContext applicationContext,
+                                                                 ConfigurableEnvironment environment,
+                                                                 ResourceLoader resourceLoader) {
 
-        return new ServiceBeanDefinitionPostProcessor(applicationContext, environment, resourceLoader);
+        return new RpcDefinitionPostProcessor(applicationContext, environment, resourceLoader);
     }
 
 }

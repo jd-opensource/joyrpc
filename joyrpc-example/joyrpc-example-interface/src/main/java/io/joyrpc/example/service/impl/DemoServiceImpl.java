@@ -20,8 +20,10 @@ package io.joyrpc.example.service.impl;
  * #L%
  */
 
+import io.joyrpc.annotation.Provider;
 import io.joyrpc.example.service.DemoService;
 
+@Provider(name = "provider-bootService", alias = "2.0-Boot")
 public class DemoServiceImpl implements DemoService {
 
     @Override

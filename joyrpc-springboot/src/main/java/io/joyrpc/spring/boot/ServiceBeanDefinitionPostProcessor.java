@@ -163,7 +163,7 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         if (rpcProperties.getPackages() != null) {
             rpcProperties.getPackages().forEach(pkg -> {
                 if (StringUtils.hasText(pkg)) {
-                    packages.add(environment.resolvePlaceholders(pkg.trim()));
+                    packages.add(pkg.trim());
                 }
             });
         }
@@ -311,8 +311,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         providers.forEach((name, p) -> register(p, registry, defRegName, defServerName));
         //注册全局参数
         if (rpcProperties.getParameters() != null) {
-            rpcProperties.getParameters().forEach((k, v) -> GlobalContext.put(environment.resolvePlaceholders(k),
-                    environment.resolvePlaceholders(v)));
+            //从配置文件读取，值已经做了占位符替换
+            rpcProperties.getParameters().forEach((k, v) -> GlobalContext.put(k, v));
         }
     }
 
@@ -327,7 +327,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         if (config.getRegistry() == null) {
             //引用registry
             if (!StringUtils.isEmpty(config.getRegistryName())) {
-                builder.addPropertyReference("registry", environment.resolvePlaceholders(config.getRegistryName()));
+                //从配置文件读取，值已经做了占位符替换
+                builder.addPropertyReference("registry", config.getRegistryName());
             } else if (!StringUtils.isEmpty(defRegName)) {
                 builder.addPropertyReference("registry", defRegName);
             }
@@ -354,7 +355,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
             List<String> registryNames = config.getRegistryNames();
             if (!CollectionUtils.isEmpty(registryNames)) {
                 for (String registryName : registryNames) {
-                    runtimeBeanReferences.add(new RuntimeBeanReference(environment.resolvePlaceholders(registryName)));
+                    //从配置文件读取，值已经做了占位符替换
+                    runtimeBeanReferences.add(new RuntimeBeanReference(registryName));
                 }
             } else if (!StringUtils.isEmpty(defRegName)) {
                 runtimeBeanReferences.add(new RuntimeBeanReference(defRegName));
@@ -654,14 +656,10 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
                 for (String name : ((EnumerablePropertySource<?>) source).getPropertyNames()) {
                     if (!subProperties.containsKey(name) && name.startsWith(RPC_PREFIX)) {
                         String subName = name.substring(RPC_PREFIX.length());
-                        if (!subProperties.containsKey(subName)) { // take first one
+                        subProperties.computeIfAbsent(subName, s -> {
                             Object value = source.getProperty(name);
-                            if (value instanceof String) {
-                                // Resolve placeholder
-                                value = environment.resolvePlaceholders((String) value);
-                            }
-                            subProperties.put(subName, value);
-                        }
+                            return value instanceof String ? environment.resolvePlaceholders((String) value) : value;
+                        });
                     }
                 }
             }

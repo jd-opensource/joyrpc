@@ -54,7 +54,7 @@ import java.util.Set;
  */
 public class RpcProperties {
 
-    private Set<String> packages;
+    private List<String> packages;
     /**
      * 服务
      */
@@ -84,11 +84,11 @@ public class RpcProperties {
      */
     private Map<String, String> parameters;
 
-    public Set<String> getPackages() {
+    public List<String> getPackages() {
         return packages;
     }
 
-    public void setPackages(Set<String> packages) {
+    public void setPackages(List<String> packages) {
         this.packages = packages;
     }
 

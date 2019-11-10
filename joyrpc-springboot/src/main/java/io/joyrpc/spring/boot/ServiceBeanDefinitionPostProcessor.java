@@ -65,6 +65,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static io.joyrpc.spring.boot.Plugin.ANNOTATION_PROVIDER;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.genericBeanDefinition;
@@ -303,9 +304,9 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      */
     protected void register(final BeanDefinitionRegistry registry) {
         //注册
-        register(registry, rpcProperties.getRegistry(), REGISTRY_NAME);
+        register(registry, rpcProperties.getRegistry(), () -> REGISTRY_NAME);
         register(registry, rpcProperties.getRegistries(), REGISTRY_NAME);
-        register(registry, rpcProperties.getServer(), SERVER_NAME);
+        register(registry, rpcProperties.getServer(), () -> SERVER_NAME);
         register(registry, rpcProperties.getServers(), SERVER_NAME);
         consumers.forEach((name, c) -> register(c, registry));
         providers.forEach((name, p) -> register(p, registry));
@@ -327,6 +328,8 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //引用reistry
         if (!StringUtils.isEmpty(config.getRegistryName())) {
             builder.addPropertyReference("registry", environment.resolvePlaceholders(config.getRegistryName()));
+        } else if (registry.containsBeanDefinition(REGISTRY_NAME)) {
+            builder.addPropertyReference("registry", REGISTRY_NAME);
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -343,17 +346,23 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         //引用ref
         builder.addPropertyReference("ref", config.getRefName());
         //引用注册中心
+        ManagedList<RuntimeBeanReference> runtimeBeanReferences = new ManagedList<>();
         List<String> registryNames = config.getRegistryNames();
         if (!CollectionUtils.isEmpty(registryNames)) {
-            ManagedList<RuntimeBeanReference> runtimeBeanReferences = new ManagedList<>();
             for (String registryName : registryNames) {
                 runtimeBeanReferences.add(new RuntimeBeanReference(environment.resolvePlaceholders(registryName)));
             }
+        } else if (registry.containsBeanDefinition(REGISTRY_NAME)) {
+            runtimeBeanReferences.add(new RuntimeBeanReference(REGISTRY_NAME));
+        }
+        if (!runtimeBeanReferences.isEmpty()) {
             builder.addPropertyValue("registry", runtimeBeanReferences);
         }
         //引用Server
         if (!StringUtils.isEmpty(config.getServerName())) {
             builder.addPropertyReference("serverConfig", config.getServerName());
+        } else if (registry.containsBeanDefinition(SERVER_NAME)) {
+            builder.addPropertyReference("serverConfig", SERVER_NAME);
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -544,7 +553,13 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
         if (configs != null) {
             AtomicInteger counter = new AtomicInteger(0);
             for (T config : configs) {
-                register(registry, config, defNamePrefix + "-" + counter.getAndIncrement());
+                register(registry, config, () -> {
+                    String beanName = config.getId();
+                    if (!StringUtils.hasText(beanName)) {
+                        beanName = defNamePrefix + "-" + counter.getAndIncrement();
+                    }
+                    return beanName;
+                });
             }
         }
     }
@@ -554,18 +569,15 @@ public class ServiceBeanDefinitionPostProcessor implements BeanDefinitionRegistr
      *
      * @param registry
      * @param config
-     * @param defName
+     * @param naming
      * @param <T>
      */
     protected <T extends AbstractIdConfig> void register(final BeanDefinitionRegistry registry, final T config,
-                                                         final String defName) {
+                                                         final Supplier<String> naming) {
         if (config == null) {
             return;
         }
-        String beanName = config.getId();
-        if (!StringUtils.hasText(beanName)) {
-            beanName = defName;
-        }
+        String beanName = naming.get();
         if (!registry.containsBeanDefinition(beanName)) {
             registry.registerBeanDefinition(beanName, new RootBeanDefinition((Class<T>) config.getClass(), () -> config));
         } else {

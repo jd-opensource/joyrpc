@@ -2,6 +2,10 @@
 
 ## 1.0.4-SNAPSHOT
 
+### New Features  
+
+- Springboot支持第三方服务提供者和消费者注解插件
+
 ### Enhancement
 
 - ProviderConfig增加exportAndOpen方法，便于API调用
@@ -18,7 +22,7 @@
 
 - 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点
 
-- 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置。支持第三方注解插件
+- 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置。
 
 - 修改泛化调用的反序列化，优先按照用户传递的子类参数类型来进行反序列化
 

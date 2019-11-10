@@ -28,10 +28,14 @@ import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.w3c.dom.Element;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * 全局解析
  */
 public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
+
+    private static final AtomicInteger COUNTER = new AtomicInteger();
 
     @Override
     public BeanDefinition parse(Element element, ParserContext parserContext) {
@@ -48,6 +52,8 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
         values.addPropertyValue("value", value);
         values.addPropertyValue("hide", hide);
 
+        String beanName = GlobalParameterBean.class.getName() + "-" + COUNTER.getAndIncrement();
+        parserContext.getRegistry().registerBeanDefinition(beanName, definition);
         return definition;
     }
 }

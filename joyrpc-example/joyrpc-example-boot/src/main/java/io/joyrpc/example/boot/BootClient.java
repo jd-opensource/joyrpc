@@ -5,11 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.PropertySource;
 
 @SpringBootApplication
-@PropertySource({"classpath:application-server.properties"})
-public class BootServer {
+@PropertySource({"classpath:application-client.properties"})
+public class BootClient {
 
     public static void main(String[] args) {
-        SpringApplication.run(BootServer.class, args);
+        SpringApplication.run(BootClient.class, args);
     }
 }
 

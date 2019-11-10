@@ -36,6 +36,8 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.Server;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.MethodOption;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -52,6 +54,8 @@ import static io.joyrpc.util.ClassUtils.isReturnFuture;
  * @date: 15/1/2019
  */
 public class Exporter<T> extends AbstractInvoker<T> {
+
+    private static final Logger logger= LoggerFactory.getLogger(Exporter.class);
     /**
      * 配置
      */
@@ -276,6 +280,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
      * @return
      */
     protected CompletableFuture<Void> deRegister() {
+        logger.info(String.format("deregister provider config : %s", url.toString(false, false)));
         if (registries == null || registries.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         } else {

@@ -47,7 +47,6 @@ public interface Environment {
     String APPLICATION_INSTANCE = "application.instance";
     String CLIENT_VERSION = "client.version";
     String USER_HOME = "user.home";
-    String JAVA_IO_TEMPDIR = "java.io.tmpdir";
     String OS_NAME = "os.name";
     String OS_TYPE = "os.type";
     String PID = "pid";

@@ -54,6 +54,8 @@
         <grpc.version>1.20.0</grpc.version>
         <netty.version>4.1.43.Final</netty.version>
         <hazelcast.version>3.12.4</hazelcast.version>
+        <curator.version>4.2.0</curator.version>
+        <zookeeper.version>3.5.5</zookeeper.version>
         <protobuf.version>3.7.1</protobuf.version>
 
         <license.inceptionYear>2019</license.inceptionYear>

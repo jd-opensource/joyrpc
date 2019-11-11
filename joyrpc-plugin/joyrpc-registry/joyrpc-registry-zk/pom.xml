@@ -11,11 +11,6 @@
 
     <artifactId>joyrpc-registry-zk</artifactId>
 
-    <properties>
-        <curator.version>4.2.0</curator.version>
-        <zookeeper.version>3.5.5</zookeeper.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>io.netty</groupId>

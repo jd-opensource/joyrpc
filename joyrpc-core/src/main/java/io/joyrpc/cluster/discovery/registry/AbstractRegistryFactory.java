@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.registry;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,7 +33,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.context.Environment.USER_HOME;
 
 /**
@@ -77,7 +76,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
                 path = GlobalContext.getString(Constants.REGISTRY_BACKUP_PATH_OPTION.getName());
                 if (path == null || path.isEmpty()) {
                     //用户目录
-                    path = ENVIRONMENT.get().getString(USER_HOME) + File.separator + "rpc_backup";
+                    path = System.getProperty(USER_HOME) + File.separator + "rpc_backup";
                 }
             }
             File directory = new File(path + File.separator + name +

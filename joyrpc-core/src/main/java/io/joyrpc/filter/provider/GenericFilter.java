@@ -77,9 +77,7 @@ public class GenericFilter extends AbstractProviderFilter {
                 serializers[0] = defSerializer;
             }
             // 根据调用的参数来获取方法及参数类型
-            Object[] genericArgs = invocation.getArgs();
-            Object[] args = serializers[0].deserialize(invocation);
-            invocation.setArgs(args);
+            invocation.setArgs(serializers[0].deserialize(invocation));
         } catch (Exception e) {
             String message = String.format(ExceptionCode.format(ExceptionCode.FILTER_GENERIC_CONVERT) +
                             " Error occurs while processing request %s/%s/%s from channel %s->%s, caused by: %s",

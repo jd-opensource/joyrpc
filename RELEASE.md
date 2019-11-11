@@ -30,6 +30,8 @@
 
 - ClassUtils的getPublicMethods返回公共的非静态方法
 
+- 优化区域感知算法，如果没有指定候选者最小数量，则尝试获取就近机房节点数量平均值作为选择的目标，防止本地机房节点数量很少的情况
+
 ### Bugfixes
 
 - 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件

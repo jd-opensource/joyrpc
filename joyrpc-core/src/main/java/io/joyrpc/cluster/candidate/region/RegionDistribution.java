@@ -26,7 +26,6 @@ import io.joyrpc.context.circuit.CircuitConfiguration;
 import io.joyrpc.extension.URL;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -45,8 +44,6 @@ public class RegionDistribution {
     protected int standbyPerDc;
     //机房淘汰百分比
     protected int rejectRatio;
-    //同区域分片数量
-    protected int size;
     //区域的分片
     protected Map<String, Map<String, DataCenterDistribution>> regions = new HashMap<>(5);
     //机房分片
@@ -131,38 +128,38 @@ public class RegionDistribution {
 
         DataCenterDistribution local = !dataCenter.isEmpty() ? dataCenters.get(dataCenter) : null;
         //确保本地机房都能选择上
-        int remain = local == null ? size : Math.max(minSize, local.getSize());
+        int remain = local == null ? minSize : Math.max(minSize, local.getSize());
         //全量添加本地机房，不淘汰
         remain -= local == null ? 0 : local.candidate(candidates, localBackups, remain);
         if (!dcExclusive) {
-            if (remain > 0 || candidates.isEmpty()) {
-                //数量不够，或者本地机房没有，则尝试获取其它机房的节点
-                //跨机房，首选或同区域的或最多节点机房所在区域的
-                LinkedHashSet<DataCenterDistribution> prefers = !candidates.isEmpty() ?
-                        preferredOrNeighbourDc(local) : preferredOrNeighbourOrMaxDc(local);
-                if (!prefers.isEmpty()) {
-                    AtomicInteger count = new AtomicInteger();
-                    prefers.forEach(o -> count.addAndGet(o.getSize()));
-                    if (remain == 0 && candidates.isEmpty()) {
-                        remain = count.get() / prefers.size();
-                    }
+            //本地机房没有，则尝试获取其它机房的节点，包括首选或同区域的或最多节点机房所在区域的
+            //本地机房有，则尝试首选或同区域的补充
+            LinkedHashSet<DataCenterDistribution> prefers = candidates.isEmpty() ? preferredOrNeighbourOrMaxDc(local) : preferredOrNeighbourDc(local);
+            int count = getCount(prefers);
+            if (count > 0) {
+                if (minSize > 0 && remain <= 0) {
+                    //如果本地机房满足指定的数量，则补充热备
+                    remain = 0;
+                } else if (candidates.isEmpty()) {
+                    //本地机房没有，则按照就近机房平均值按比例补充
+                    remain = count / prefers.size();
+                } else if (minSize <= 0 && remain > 0) {
+                    //如果没有指定最小数量，则获取多个机房的平均值作为最小数量，防止当前机房的服务节点数量过小造成压力
+                    remain = (count + local.getSize()) / (prefers.size() + 1) - local.getSize();
+                }
+                if (remain > 0) {
                     int mount = remain;
                     for (DataCenterDistribution v : prefers) {
                         remain -= v.candidate(candidates, otherBackups,
-                                Math.max(standbyPerDc, (int) Math.ceil(mount * v.getSize() * 1.0 / count.get())));
+                                Math.max(standbyPerDc, (int) Math.ceil(mount * v.getSize() * 1.0 / count)));
                     }
-                }
-                //丢弃其它机房
-                foreach(o -> o != local && !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
-            } else {
-                //跨机房，首选的或同区域的机房进行热备
-                LinkedHashSet<DataCenterDistribution> prefers = preferredOrNeighbourDc(local);
-                if (!prefers.isEmpty()) {
+                } else {
                     //热备
                     prefers.forEach(o -> o.candidate(standbys, otherBackups, standbyPerDc));
                 }
-                foreach(o -> o != local && !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
             }
+            //丢弃其它机房
+            foreach(o -> o != local && !prefers.contains(o), o -> o.candidate(candidates, discards, 0));
             //保持本地机房的优先级
             if (!otherBackups.isEmpty()) {
                 //其它机房随机
@@ -192,6 +189,20 @@ public class RegionDistribution {
                 consumer.accept(o);
             }
         }));
+    }
+
+    /**
+     * 获取节点数量
+     *
+     * @param dcs
+     * @return
+     */
+    protected int getCount(final Set<DataCenterDistribution> dcs) {
+        int result = 0;
+        for (DataCenterDistribution dc : dcs) {
+            result += dc.getSize();
+        }
+        return result;
     }
 
     /**
@@ -316,9 +327,5 @@ public class RegionDistribution {
                 }
             }
         }
-    }
-
-    public int getSize() {
-        return size;
     }
 }

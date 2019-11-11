@@ -18,6 +18,8 @@
 
 - 升级netty为4.1.43.Final版本
 
+- 升级hazelcast为3.12.4版本
+
 - 升级commons-compress为1.19，解决安全漏洞
 
 - 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点

@@ -145,8 +145,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
     protected RpcProperties configure() {
         Binder binder = Binder.get(environment);
         BindResult<RpcProperties> res = binder.bind(RPC_PREFIX, RpcProperties.class);
-        RpcProperties result = res.get();
-        return result == null ? new RpcProperties() : result;
+        return res.orElseGet(RpcProperties::new);
     }
 
     @Override

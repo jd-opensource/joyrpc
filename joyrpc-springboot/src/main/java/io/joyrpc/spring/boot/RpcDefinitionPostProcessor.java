@@ -128,7 +128,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
-        this.rpcProperties = configure();
+        this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
         //添加消费者
         if (rpcProperties.getConsumers() != null) {
             rpcProperties.getConsumers().forEach(c -> addConfig(c, consumers, consumerNameCounters));
@@ -137,15 +137,6 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         if (rpcProperties.getProviders() != null) {
             rpcProperties.getProviders().forEach(c -> addConfig(c, providers, providerNameCounters));
         }
-    }
-
-    /**
-     * 配置
-     */
-    protected RpcProperties configure() {
-        Binder binder = Binder.get(environment);
-        BindResult<RpcProperties> res = binder.bind(RPC_PREFIX, RpcProperties.class);
-        return res.orElseGet(RpcProperties::new);
     }
 
     @Override

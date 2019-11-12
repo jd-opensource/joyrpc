@@ -28,7 +28,6 @@ import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.boot.annotation.AnnotationProvider;
 import io.joyrpc.util.Pair;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.config.BeanDefinition;
@@ -36,12 +35,11 @@ import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.*;
+import org.springframework.boot.context.properties.bind.BindResult;
+import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.EnumerablePropertySource;
-import org.springframework.core.env.MutablePropertySources;
-import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.type.ClassMetadata;
 import org.springframework.core.type.classreading.MetadataReader;
@@ -53,7 +51,6 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.validation.DataBinder;
 
 import java.beans.Introspector;
 import java.lang.annotation.Annotation;
@@ -88,7 +85,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
     public static final String REGISTRY_NAME = "registry";
 
     public static final String BEAN_NAME = "rpcDefinitionPostProcessor";
-    public static final String RPC_PREFIX = "rpc.";
+    public static final String RPC_PREFIX = "rpc";
     public static final String PROVIDER_PREFIX = "provider-";
     public static final String CONSUMER_PREFIX = "consumer-";
 
@@ -146,14 +143,10 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * 配置
      */
     protected RpcProperties configure() {
-        RpcProperties result = new RpcProperties();
-        //读取rpc为前缀的配置
-        Map<String, Object> objectMap = getProperties();
-        //绑定数据
-        DataBinder dataBinder = new DataBinder(result);
-        MutablePropertyValues propertyValues = new MutablePropertyValues(objectMap);
-        dataBinder.bind(propertyValues);
-        return result;
+        Binder binder = Binder.get(environment);
+        BindResult<RpcProperties> res = binder.bind(RPC_PREFIX, RpcProperties.class);
+        RpcProperties result = res.get();
+        return result == null ? new RpcProperties() : result;
     }
 
     @Override
@@ -637,36 +630,6 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      */
     protected Pair<AnnotationProvider, Annotation> getAnnotation(final Field field) {
         return getAnnotation(p -> field.getAnnotation(p.getConsumerAnnotationClass()));
-    }
-
-    /**
-     * Get Sub {@link Properties}
-     *
-     * @return Map
-     * @see Properties
-     */
-    public Map<String, Object> getProperties() {
-
-        Map<String, Object> subProperties = new LinkedHashMap<String, Object>();
-
-        MutablePropertySources propertySources = environment.getPropertySources();
-
-        for (PropertySource<?> source : propertySources) {
-            if (source instanceof EnumerablePropertySource) {
-                for (String name : ((EnumerablePropertySource<?>) source).getPropertyNames()) {
-                    if (!subProperties.containsKey(name) && name.startsWith(RPC_PREFIX)) {
-                        String subName = name.substring(RPC_PREFIX.length());
-                        subProperties.computeIfAbsent(subName, s -> {
-                            Object value = source.getProperty(name);
-                            return value instanceof String ? environment.resolvePlaceholders((String) value) : value;
-                        });
-                    }
-                }
-            }
-        }
-
-        return Collections.unmodifiableMap(subProperties);
-
     }
 
     /**

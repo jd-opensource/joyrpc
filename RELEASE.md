@@ -20,7 +20,7 @@
 
 - 升级commons-compress为1.19，解决安全漏洞
 
-- 优化BroadCast注册中心，改成2个备份，当Provider实例停止的时候，Consumer能快速去掉节点
+- 优化Broadcast注册中心，数据备份默认改成同步和异步各一份，读主节点。当Provider实例停止的时候，Consumer能快速去掉节点
 
 - 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置。
 

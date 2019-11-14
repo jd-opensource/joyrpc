@@ -68,7 +68,12 @@ public class BroadCastRegistry extends AbstractRegistry {
     /**
      * 备份个数
      */
-    public static final URLOption<Integer> BACKUP_COUNT = new URLOption<>("backupCount", 2);
+    public static final URLOption<Integer> BACKUP_COUNT = new URLOption<>("backupCount", 1);
+
+    /**
+     * 异步备份个数
+     */
+    public static final URLOption<Integer> ASYNC_BACKUP_COUNT = new URLOption<>("asyncBackupCount", 1);
     /**
      * hazelcast集群分组名称
      */
@@ -153,7 +158,8 @@ public class BroadCastRegistry extends AbstractRegistry {
         properties.setProperty("hazelcast.shutdownhook.enabled", "false");
 
         //同步复制，可以读取从
-        cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).setReadBackupData(true);
+        cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).
+                setAsyncBackupCount(url.getNaturalInt(ASYNC_BACKUP_COUNT)).setReadBackupData(false);
         cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
         cfg.getNetworkConfig().setPort(url.getPositiveInt(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)

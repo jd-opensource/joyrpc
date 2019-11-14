@@ -153,11 +153,11 @@ public class BroadCastRegistry extends AbstractRegistry {
         properties.setProperty("hazelcast.shutdownhook.enabled", "false");
 
         //同步复制，可以读取从
-        cfg.getMapConfig("default").setBackupCount(url.getInteger(BACKUP_COUNT)).setReadBackupData(true);
+        cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).setReadBackupData(true);
         cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
-        cfg.getNetworkConfig().setPort(url.getInteger(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
+        cfg.getNetworkConfig().setPort(url.getPositiveInt(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)
-                .setMulticastGroup(url.getString(MULTICAST_GROUP)).setMulticastPort(url.getInteger(MULTICAST_PORT));
+                .setMulticastGroup(url.getString(MULTICAST_GROUP)).setMulticastPort(url.getPositiveInt(MULTICAST_PORT));
         this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
         if (root.charAt(0) == '/') {
@@ -179,21 +179,6 @@ public class BroadCastRegistry extends AbstractRegistry {
         CompletableFuture<Void> future = new CompletableFuture<>();
         try {
             instance = Hazelcast.newHazelcastInstance(cfg);
-            /*instance.getLifecycleService().addLifecycleListener(event -> {
-                if (event.getState() == SHUTTING_DOWN) {
-                    logger.warn("hazelcast instance is shutting down now.");
-                    List<CompletableFuture<URL>> futures = new ArrayList<>();
-                    registers.forEach((k, meta) -> {
-                        logger.info("deregister " + k);
-                        futures.add(deregister(meta.getUrl()));
-                    });
-                    try {
-                        Futures.allOf(futures).get();
-                    } catch (Exception e) {
-                        //忽略掉关闭的异常
-                    }
-                }
-            });*/
             daemon = Daemon.builder().name("BroadCastRegistry-" + registryId + "-heartbeat-task")
                     .interval(Math.max(15000, nodeExpiredTime / 3))
                     .runnable(() -> registers.forEach((key, meta) -> lease(meta)))

@@ -137,8 +137,11 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                 serverConfig = applicationContext.getBean(serverName, ServerConfig.class);
             } else {
                 Map<String, ServerConfig> beans = applicationContext.getBeansOfType(ServerConfig.class, false, false);
-                if (!beans.isEmpty()) {
+                if (beans != null && !beans.isEmpty()) {
                     setServerConfig(beans.values().iterator().next());
+                    Map.Entry<String, ServerConfig> entry = beans.entrySet().iterator().next();
+                    setServerConfig(entry.getValue());
+                    logger.info(String.format("detect serverConfig: %s for %s", entry.getKey(), getId()));
                 }
             }
         }
@@ -149,13 +152,29 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
             } else {
                 Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
                 if (!beans.isEmpty()) {
-                    setRegistry(new ArrayList<>(beans.values()));
+                    List<RegistryConfig> registryList = new ArrayList<>(beans.size());
+                    List<String> nameList = new ArrayList<>(beans.size());
+                    for (Map.Entry<String, RegistryConfig> entry : beans.entrySet()) {
+                        registryList.add(entry.getValue());
+                        nameList.add(entry.getKey());
+                    }
+                    setRegistry(registryList);
+                    logger.info(String.format("detect registryConfig: %s for %s", String.join(",", nameList), getId()));
                 }
             }
         }
         //判断是否设置了配置中心
-        if (configure == null && !StringUtils.isEmpty(configureName)) {
-            configure = applicationContext.getBean(configureName, Configure.class);
+        if (configure == null) {
+            if (!StringUtils.isEmpty(configureName)) {
+                configure = applicationContext.getBean(configureName, Configure.class);
+            } else {
+                Map<String, Configure> beans = applicationContext.getBeansOfType(Configure.class, false, false);
+                if (beans != null && !beans.isEmpty()) {
+                    Map.Entry<String, Configure> entry = beans.entrySet().iterator().next();
+                    configure = entry.getValue();
+                    logger.info(String.format("detect configure: %s for %s", entry.getKey(), getId()));
+                }
+            }
         }
         //接口实现
         if (ref == null && !StringUtils.isEmpty(refName)) {

@@ -15,6 +15,6 @@
 
     <!-- 发布服务 alias可修改 -->
     <joyrpc:provider id="demoService" interface="io.joyrpc.example.service.DemoService" alias="joyrpc-demo"
-                     ref="demoServiceImpl" server="joyrpcServer">
+                     ref="demoServiceImpl">
     </joyrpc:provider>
 </beans>

@@ -139,15 +139,26 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
             if (!StringUtils.isEmpty(registryName)) {
                 config.setRegistry(applicationContext.getBean(registryName, RegistryConfig.class));
             } else {
-                Map<String, RegistryConfig> registries = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
-                if (registries != null && !registries.isEmpty()) {
-                    config.setRegistry(registries.values().iterator().next());
+                Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
+                if (beans != null && !beans.isEmpty()) {
+                    Map.Entry<String, RegistryConfig> entry = beans.entrySet().iterator().next();
+                    config.setRegistry(entry.getValue());
+                    logger.info(String.format("detect registryConfig: %s for %s", entry.getKey(), config.getId()));
                 }
             }
         }
         //判断是否设置了配置中心
-        if (config.getCandidature() == null && !StringUtils.isEmpty(configureName)) {
-            config.setConfigure(applicationContext.getBean(configureName, Configure.class));
+        if (config.getConfigure() == null) {
+            if (!StringUtils.isEmpty(configureName)) {
+                config.setConfigure(applicationContext.getBean(configureName, Configure.class));
+            } else {
+                Map<String, Configure> beans = applicationContext.getBeansOfType(Configure.class, false, false);
+                if (beans != null && !beans.isEmpty()) {
+                    Map.Entry<String, Configure> entry = beans.entrySet().iterator().next();
+                    config.setConfigure(entry.getValue());
+                    logger.info(String.format("detect configure: %s for %s", entry.getKey(), config.getId()));
+                }
+            }
         }
         //记录消费者的数量
         REFERS.incrementAndGet();

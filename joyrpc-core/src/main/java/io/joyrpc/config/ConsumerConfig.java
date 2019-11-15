@@ -81,13 +81,15 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
         registryRef = REGISTRY.get(registryUrl.getProtocol()).getRegistry(registryUrl);
         //如果提前注入了其它配置中心
         configureRef = configure == null ? registryRef : configure;
+        //订阅的URL
+        subscribeUrl = configureRef.normalize(serviceUrl);
         //连接注册中心
         CompletableFuture<Void> f = !register && !subscribe && StringUtils.isEmpty(url) ? CompletableFuture.completedFuture(null) : registryRef.open();
         f.whenComplete((s, t) -> {
             if (t == null) {
                 //订阅
                 if (serviceUrl.getBoolean(Constants.SUBSCRIBE_OPTION)) {
-                    registryRef.subscribe(serviceUrl, configHandler);
+                    registryRef.subscribe(subscribeUrl, configHandler);
                 } else {
                     //没有订阅的时候，主动complete
                     waitingConfig.complete(serviceUrl);
@@ -110,7 +112,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                 resubscribe(serviceUrl, url);
                 serviceUrl = url;
                 try {
-                    refer = InvokerManager.refer(this, registryRef);
+                    refer = InvokerManager.refer(this, registryRef, configureRef, subscribeUrl);
                     invokeHandler.setInvoker(refer);
                     invokeHandler.setServiceUrl(refer.getUrl());
                     //open
@@ -147,7 +149,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                 }));
                 refer = null;
             }
-            configureRef=null;
+            configureRef = null;
             registryRef = null;
         }
         future.complete(null);
@@ -178,7 +180,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
     protected void onChanged(final URL newUrl, final long version) {
         Refer oldRefer = refer;
         //更新 consumer config refer
-        Refer newRefer = InvokerManager.refer(this, newUrl, registryRef);
+        Refer newRefer = InvokerManager.refer(this, newUrl, registryRef, configureRef, subscribeUrl);
         newRefer.open().whenComplete((v, t) -> {
             if (t == null) {
                 //异步并发，需要进行版本比较

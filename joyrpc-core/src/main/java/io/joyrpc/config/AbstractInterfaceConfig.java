@@ -173,6 +173,11 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     protected transient URL serviceUrl;
 
     /**
+     * 订阅的URL
+     */
+    protected transient URL subscribeUrl;
+
+    /**
      * 配置事件监听器
      */
     protected transient List<ConfigHandler> configHandlers;

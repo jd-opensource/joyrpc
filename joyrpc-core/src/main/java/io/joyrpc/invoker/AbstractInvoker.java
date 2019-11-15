@@ -9,9 +9,9 @@ package io.joyrpc.invoker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,8 @@ package io.joyrpc.invoker;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
+import io.joyrpc.cluster.discovery.Normalizer;
+import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
@@ -53,10 +54,6 @@ public abstract class AbstractInvoker<T> implements Invoker {
      */
     protected URL url;
     /**
-     * 往注册中心订阅注册的URL
-     */
-    protected URL registerUrl;
-    /**
      * 名称
      */
     protected String name;
@@ -68,6 +65,14 @@ public abstract class AbstractInvoker<T> implements Invoker {
      * 是否是系统服务
      */
     protected boolean system;
+    /**
+     * 配置器
+     */
+    protected Configure configure;
+    /***
+     * 订阅的URL
+     */
+    protected URL subscribeUrl;
     /**
      * 调用计数器
      */
@@ -197,14 +202,15 @@ public abstract class AbstractInvoker<T> implements Invoker {
     protected abstract CompletableFuture<Void> doClose();
 
     /**
-     * 构建订阅的URL
+     * 标准化
      *
+     * @param normalizer
      * @param url
      * @param clazz
      * @return
      */
-    protected URL buildRegisterUrl(final URL url, final Class<?> clazz) {
-        return AbstractRegistry.REGISTER_URL_FUNCTION.apply(url);
+    protected URL normalize(final Normalizer normalizer, final URL url, final Class<?> clazz) {
+        return normalizer.normalize(url);
     }
 
 }

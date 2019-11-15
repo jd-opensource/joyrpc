@@ -9,9 +9,9 @@ package io.joyrpc.invoker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ package io.joyrpc.invoker;
 
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
+import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.constants.Constants;
@@ -45,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static io.joyrpc.Plugin.AUTHENTICATOR;
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
@@ -55,7 +57,7 @@ import static io.joyrpc.util.ClassUtils.isReturnFuture;
  */
 public class Exporter<T> extends AbstractInvoker<T> {
 
-    private static final Logger logger= LoggerFactory.getLogger(Exporter.class);
+    private static final Logger logger = LoggerFactory.getLogger(Exporter.class);
     /**
      * 配置
      */
@@ -65,9 +67,9 @@ public class Exporter<T> extends AbstractInvoker<T> {
      */
     protected String compress;
     /**
-     * 注册中心地址
+     * 注册的URL
      */
-    protected List<URL> registryUrls;
+    protected List<URL> registerUrls;
     /**
      * 关闭事件处理器
      */
@@ -126,11 +128,15 @@ public class Exporter<T> extends AbstractInvoker<T> {
     protected Exporter(final String name,
                        final URL url,
                        final ProviderConfig<T> config,
+                       final Configure configure,
+                       final URL subscribeUrl,
                        final Server server,
                        final Consumer<Exporter> closing) {
         this.name = name;
         this.url = url;
         this.config = config;
+        this.configure = configure;
+        this.subscribeUrl = subscribeUrl;
         this.server = server;
         this.closing = closing;
 
@@ -141,10 +147,6 @@ public class Exporter<T> extends AbstractInvoker<T> {
         this.interfaceName = config.getInterfaceClazz();
         //保留全局的配置变更处理器，订阅和取消订阅对象一致
         this.configHandler = config.getConfigHandler();
-        //往注册中心注册的URL
-        this.registerUrl = buildRegisterUrl(url, config.getProxyClass());
-        //注册中心地址
-        this.registryUrls = config.getRegistryUrls();
         this.ref = config.getRef();
         this.port = url.getPort();
         this.compress = url.getString(Constants.COMPRESS_OPTION.getName());
@@ -156,6 +158,8 @@ public class Exporter<T> extends AbstractInvoker<T> {
         this.chain = FilterChain.producer(this, this::invokeMethod);
         this.authenticator = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
         this.registries = config.getRegistries();
+        //往注册中心注册的URL
+        this.registerUrls = registries.stream().map(registry -> normalize(registry, url, config.getProxyClass())).collect(Collectors.toList());
     }
 
     @Override
@@ -285,14 +289,14 @@ public class Exporter<T> extends AbstractInvoker<T> {
             return CompletableFuture.completedFuture(null);
         } else {
             CompletableFuture<URL>[] futures = new CompletableFuture[registries.size()];
-            int i = 0;
+            if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
+                //取消订阅
+                // todo 不能保证执行成功
+                configure.unsubscribe(subscribeUrl, configHandler);
+            }
             //取消注册
-            for (Registry registry : registries) {
-                if (i == 0) {
-                    // todo 不能保证执行成功
-                    registry.unsubscribe(registerUrl, configHandler);
-                }
-                futures[i++] = registry.deregister(registerUrl);
+            for (int i = 0; i < registries.size(); i++) {
+                futures[i] = registries.get(i).deregister(registerUrls.get(i));
             }
             return CompletableFuture.allOf(futures);
         }

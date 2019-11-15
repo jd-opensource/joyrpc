@@ -30,8 +30,6 @@ import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.Version;
-import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Event;
 import io.joyrpc.event.EventHandler;
@@ -59,8 +57,8 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.cluster.event.ClusterEvent.ShardEventType.ADD;
-import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.Environment.*;
+import static io.joyrpc.constants.Constants.ALIAS_OPTION;
+import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 
 /**
  * 注册中心基类，实现Registry接口
@@ -150,37 +148,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
     protected long taskRetryInterval;
 
     /**
-     * 由refer与export的url到注册中心存储url的转换function
-     */
-    public static final Function<URL, URL> REGISTER_URL_FUNCTION = url -> {
-        Map<String, String> params = new HashMap<>();
-        params.put(ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
-        params.put(BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
-        params.put(VERSION_KEY, GlobalContext.getString(PROTOCOL_VERSION_KEY));
-        params.put(KEY_APPAPTH, GlobalContext.getString(APPLICATION_PATH));
-        params.put(KEY_APPID, GlobalContext.getString(APPLICATION_ID));
-        params.put(KEY_APPNAME, GlobalContext.getString(APPLICATION_NAME));
-        params.put(KEY_APPINSID, GlobalContext.getString(APPLICATION_INSTANCE));
-        params.put(REGION, GlobalContext.getString(REGION));
-        params.put(DATA_CENTER, GlobalContext.getString(DATA_CENTER));
-        params.put(Constants.JAVA_VERSION_KEY, GlobalContext.getString(Environment.JAVA_VERSION));
-        params.put(ROLE_OPTION.getName(), url.getString(ROLE_OPTION));
-        params.put(SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
-        params.put(TIMEOUT_OPTION.getName(), url.getString(TIMEOUT_OPTION.getName()));
-        params.put(WEIGHT_OPTION.getName(), url.getString(WEIGHT_OPTION.getName()));
-        params.put(DYNAMIC_OPTION.getName(), url.getString(DYNAMIC_OPTION.getName()));
-        if (url.getBoolean(SSL_ENABLE)) {
-            //ssl标识
-            params.put(SSL_ENABLE.getName(), "true");
-        }
-        if (url.getBoolean(GENERIC_OPTION)) {
-            //泛化调用标识
-            params.put(GENERIC_OPTION.getName(), "true");
-        }
-        return new URL(url.getProtocol(), url.getHost(), url.getPort(), url.getPath(), params);
-    };
-
-    /**
      * 构造函数
      *
      * @param url
@@ -214,15 +181,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
         this.maxConnectRetryTimes = url.getInteger("maxConnectRetryTimes", -1);
         this.taskRetryInterval = url.getLong("taskRetryInterval", 500L);
         this.registryId = ID_GENERATOR.get();
-    }
-
-    /**
-     * 由refer与export的url到注册中心存储url的转换
-     *
-     * @return
-     */
-    protected Function<URL, URL> serviceUrlFunction() {
-        return REGISTER_URL_FUNCTION;
     }
 
     @Override

@@ -354,7 +354,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 //检查动态配置是否修改了别名，需要重新订阅
                 resubscribe(serviceUrl, url);
                 try {
-                    exporter = InvokerManager.export(this);
+                    exporter = InvokerManager.export(this, configureRef, subscribeUrl);
                     future.complete(null);
                 } catch (Exception ex) {
                     future.completeExceptionally(ex);
@@ -367,7 +367,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected void onChanged(final URL newUrl, final long version) {
         Exporter<T> oldExporter = exporter;
         exporter.close().whenComplete((v, t) -> {
-            Exporter<T> newExporter = InvokerManager.export(this, newUrl);
+            Exporter<T> newExporter = InvokerManager.export(this, newUrl, configureRef, subscribeUrl);
             newExporter.open().whenComplete((r, ex) -> {
                 if (r == null) {
                     //异步并发，需要进行版本比较
@@ -573,8 +573,10 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                         String.format("Registry open error. %s", registry.getUrl().toString(false, false))));
             } else if (!subscribed.get()) {
                 //保存订阅注册中心
-                configureRef = configure==null?registry:configure;
-                configureRef.subscribe(serviceUrl, configHandler);
+                configureRef = configure == null ? registry : configure;
+                //订阅的URL
+                subscribeUrl = configureRef.normalize(serviceUrl);
+                configureRef.subscribe(subscribeUrl, configHandler);
                 //只向满足条件的第一个注册中心订阅配置变化，多个注册中心同时订阅有问题
                 subscribed.set(true);
             }

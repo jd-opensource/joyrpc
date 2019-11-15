@@ -23,6 +23,7 @@ package io.joyrpc.invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.ClusterManager;
+import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.cluster.distribution.loadbalance.StickyLoadBalance;
@@ -174,11 +175,17 @@ public class InvokerManager {
      * 创建引用对象
      *
      * @param config
+     * @param registry
+     * @param configure
+     * @param subscribeUrl
      * @param <T>
      * @return
      */
-    public static <T> Refer refer(final ConsumerConfig<T> config, final Registry registry) {
-        return INSTANCE.doRefer(config, config.getServiceUrl(), registry);
+    public static <T> Refer refer(final ConsumerConfig<T> config,
+                                  final Registry registry,
+                                  final Configure configure,
+                                  final URL subscribeUrl) {
+        return INSTANCE.doRefer(config, config.getServiceUrl(), registry, configure, subscribeUrl);
     }
 
     /**
@@ -186,22 +193,31 @@ public class InvokerManager {
      *
      * @param config
      * @param url
+     * @param registry
+     * @param configure
+     * @param subscribeUrl
      * @param <T>
      * @return
      */
-    public static <T> Refer refer(final ConsumerConfig<T> config, final URL url, final Registry registry) {
-        return INSTANCE.doRefer(config, url, registry);
+    public static <T> Refer refer(final ConsumerConfig<T> config,
+                                  final URL url,
+                                  final Registry registry,
+                                  final Configure configure,
+                                  final URL subscribeUrl) {
+        return INSTANCE.doRefer(config, url, registry, configure, subscribeUrl);
     }
 
     /**
      * 创建引用对象
      *
      * @param config
+     * @param configure
+     * @param subscribeUrl
      * @param <T>
      * @return
      */
-    public static <T> Exporter export(final ProviderConfig<T> config) {
-        return INSTANCE.doExport(config, config.getServiceUrl());
+    public static <T> Exporter export(final ProviderConfig<T> config, final Configure configure, final URL subscribeUrl) {
+        return INSTANCE.doExport(config, config.getServiceUrl(), configure, subscribeUrl);
     }
 
     /**
@@ -209,11 +225,16 @@ public class InvokerManager {
      *
      * @param config
      * @param url
+     * @param configure
+     * @param subscribeUrl
      * @param <T>
      * @return
      */
-    public static <T> Exporter export(final ProviderConfig<T> config, final URL url) {
-        return INSTANCE.doExport(config, url);
+    public static <T> Exporter export(final ProviderConfig<T> config,
+                                      final URL url,
+                                      final Configure configure,
+                                      final URL subscribeUrl) {
+        return INSTANCE.doExport(config, url, configure, subscribeUrl);
     }
 
     /**
@@ -399,11 +420,18 @@ public class InvokerManager {
      *
      * @param config
      * @param url
+     * @param registry
+     * @param configure
+     * @param subscribeUrl
      * @param <T>
      * @return
      */
-    protected <T> Refer doRefer(final ConsumerConfig<T> config, final URL url, final Registry registry) {
-        return doRefer(config, url, registry, url.getBoolean(Constants.SYSTEM_REFER_OPTION) ? systems : refers);
+    protected <T> Refer doRefer(final ConsumerConfig<T> config,
+                                final URL url,
+                                final Registry registry,
+                                final Configure configure,
+                                final URL subscribeUrl) {
+        return doRefer(config, url, registry, configure, subscribeUrl, url.getBoolean(Constants.SYSTEM_REFER_OPTION) ? systems : refers);
     }
 
     /**
@@ -411,11 +439,19 @@ public class InvokerManager {
      *
      * @param config
      * @param url
+     * @param registry
+     * @param configure
+     * @param subscribeUrl
      * @param refers
      * @param <T>
      * @return
      */
-    protected <T> Refer doRefer(final ConsumerConfig<T> config, final URL url, final Registry registry, final Map<String, Refer> refers) {
+    protected <T> Refer doRefer(final ConsumerConfig<T> config,
+                                final URL url,
+                                final Registry registry,
+                                final Configure configure,
+                                final URL subscribeUrl,
+                                final Map<String, Refer> refers) {
         if (clusterManager == null) {
             synchronized (this) {
                 if (clusterManager == null) {
@@ -472,7 +508,7 @@ public class InvokerManager {
             }
             serializationRegister(config.getProxyClass(), callbackManager);
             //refer的名称和key保持一致，便于删除
-            return new Refer<T>(clusterName, u, config, registry, cluster, loadBalance, container,
+            return new Refer<T>(clusterName, u, config, registry, configure, subscribeUrl, cluster, loadBalance, container,
                     (v, t) -> {
                         //关闭回调，移除集群和引用
                         clusterManager.removeCluster(v.getCluster().getName());
@@ -562,10 +598,15 @@ public class InvokerManager {
      *
      * @param config
      * @param url
+     * @param configure
+     * @param subscribeUrl
      * @param <T>
      * @return
      */
-    protected <T> Exporter<T> doExport(final ProviderConfig<T> config, final URL url) {
+    protected <T> Exporter<T> doExport(final ProviderConfig<T> config,
+                                       final URL url,
+                                       final Configure configure,
+                                       final URL subscribeUrl) {
         final URL u = configure(url);
         final String name = NAME.apply(config.getInterfaceClazz(), config.getAlias());
         Map<Integer, Exporter> ports = exports.get(name);
@@ -578,7 +619,7 @@ public class InvokerManager {
                 o -> {
                     callbackManager.register(config.getProxyClass());
                     serializationRegister(config.getProxyClass(), callbackManager);
-                    return new Exporter<>(name, u, config, getServer(u), c -> {
+                    return new Exporter<>(name, u, config, configure, subscribeUrl, getServer(u), c -> {
                         Map<Integer, Exporter> map = exports.get(c.getName());
                         if (map != null) {
                             map.remove(c.getPort());

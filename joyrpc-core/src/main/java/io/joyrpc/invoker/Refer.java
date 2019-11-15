@@ -25,7 +25,9 @@ import io.joyrpc.annotation.Alias;
 import io.joyrpc.annotation.Service;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.Node;
+import io.joyrpc.cluster.discovery.Normalizer;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
+import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.config.ConsumerConfig;
@@ -76,6 +78,10 @@ public class Refer<T> extends AbstractInvoker<T> {
      * 注册中心
      */
     protected Registry registry;
+    /**
+     * 往注册中心订阅注册的URL
+     */
+    protected URL registerUrl;
     /**
      * 集群
      */
@@ -136,6 +142,8 @@ public class Refer<T> extends AbstractInvoker<T> {
      * @param url
      * @param config
      * @param registry
+     * @param configure
+     * @param subscribeUrl
      * @param cluster
      * @param loadBalance
      * @param container
@@ -144,6 +152,8 @@ public class Refer<T> extends AbstractInvoker<T> {
     protected Refer(final String name, final URL url,
                     final ConsumerConfig config,
                     final Registry registry,
+                    final Configure configure,
+                    final URL subscribeUrl,
                     final Cluster cluster,
                     final LoadBalance loadBalance,
                     final CallbackContainer container,
@@ -152,6 +162,8 @@ public class Refer<T> extends AbstractInvoker<T> {
         this.url = url;
         this.config = config;
         this.registry = registry;
+        this.configure = configure;
+        this.subscribeUrl = subscribeUrl;
         this.cluster = cluster;
         this.container = container;
         this.closing = closing;
@@ -165,8 +177,8 @@ public class Refer<T> extends AbstractInvoker<T> {
         this.interfaceClass = config.getProxyClass();
         //真实类名
         this.interfaceName = config.getInterfaceClazz();
-        //获取真实的接口上的注解
-        this.registerUrl = buildRegisterUrl(url, config.getProxyClass());
+        //获取真实的接口上的注解进行注册URL标准化
+        this.registerUrl = normalize(registry, url, config.getProxyClass());
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
         this.exporter = NAME.apply(config.getInterfaceClazz(), alias);
 
@@ -181,7 +193,6 @@ public class Refer<T> extends AbstractInvoker<T> {
         this.transmits = TRANSMIT.extensions();
         this.injections = NODE_REQUEST_INJECTION.extensions(o -> o.test());
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
-
     }
 
     /**
@@ -302,8 +313,8 @@ public class Refer<T> extends AbstractInvoker<T> {
     }
 
     @Override
-    protected URL buildRegisterUrl(final URL url, final Class<?> clazz) {
-        URL result = super.buildRegisterUrl(url, clazz);
+    protected URL normalize(final Normalizer normalizer, final URL url, final Class<?> clazz) {
+        URL result = super.normalize(normalizer, url, clazz);
         if (!config.isGeneric()) {
             String aliasName = null;
             //不是泛化调用
@@ -435,7 +446,7 @@ public class Refer<T> extends AbstractInvoker<T> {
             //订阅
             if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
                 // todo 不能保证执行成功
-                registry.unsubscribe(registerUrl, configHandler);
+                configure.unsubscribe(subscribeUrl, configHandler);
             }
             chain.close();
             cluster.close();

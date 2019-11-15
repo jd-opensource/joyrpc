@@ -20,6 +20,7 @@ package io.joyrpc.spring;
  * #L%
  */
 
+import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerGroupConfig;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
@@ -92,4 +93,21 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
         spring.afterPropertiesSet();
     }
 
+    public String getRegistryName() {
+        return spring.getRegistryName();
+    }
+
+    @Alias("registry")
+    public void setRegistryName(String registryName) {
+        spring.setRegistryName(registryName);
+    }
+
+    public String getConfigureName() {
+        return spring.getConfigureName();
+    }
+
+    @Alias("configure")
+    public void setConfigureName(String configureName) {
+        spring.setConfigureName(configureName);
+    }
 }

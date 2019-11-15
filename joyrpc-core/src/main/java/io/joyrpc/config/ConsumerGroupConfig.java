@@ -137,10 +137,10 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
      * @return
      */
     protected ConsumerConfig createGroupConfig(final String alias) {
-        ConsumerConfig customConfig = new ConsumerConfig<>(this, alias);
+        ConsumerConfig result = new ConsumerConfig<>(this, alias);
         // 注册的时候标记属于分组调用的group
-        customConfig.setParameter(FROM_GROUP_OPTION.getName(), "true");
-        return customConfig;
+        result.setParameter(FROM_GROUP_OPTION.getName(), "true");
+        return result;
     }
 
     @Override

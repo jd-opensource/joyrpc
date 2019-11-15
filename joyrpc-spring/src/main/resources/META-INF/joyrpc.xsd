@@ -168,6 +168,11 @@
                 <xsd:documentation><![CDATA[ 注册中心bean名称,多个用英文逗号分隔 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
+        <xsd:attribute name="configure" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 配置中心名称 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
         <xsd:attribute name="subscribe" type="xsd:string" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 是否从注册中心订阅 ]]></xsd:documentation>

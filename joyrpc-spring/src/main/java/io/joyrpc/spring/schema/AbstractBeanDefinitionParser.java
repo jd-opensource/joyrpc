@@ -9,9 +9,9 @@ package io.joyrpc.spring.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,19 +20,19 @@ package io.joyrpc.spring.schema;
  * #L%
  */
 
+import io.joyrpc.annotation.Alias;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.extension.Converts;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.config.TypedStringValue;
-import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.beans.factory.support.ManagedMap;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
+import org.springframework.util.StringUtils;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -43,7 +43,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
-import static io.joyrpc.util.StringUtils.*;
+import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**
  * 解析类
@@ -105,6 +105,7 @@ public class AbstractBeanDefinitionParser implements BeanDefinitionParser {
         String property;
         CustomParser parser;
         List<Method> methods = getPublicMethod(beanClass);
+        Map<String, CustomParser> parserMap = new HashMap<>(methods.size());
         for (Method setter : methods) {
             //略过不是property的方法
             if (!isSetter(setter)) {
@@ -114,14 +115,19 @@ public class AbstractBeanDefinitionParser implements BeanDefinitionParser {
             property = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
             parser = parsers.get(property);
             if (parser != null) {
-                parser.parse(definition, id, element, property, context);
+                parserMap.put(property, parser);
             } else {
-                String value = element.getAttribute(property);
-                if (!isEmpty(value)) {
-                    definition.getPropertyValues().addPropertyValue(property, value);
+                Alias alias = setter.getAnnotation(Alias.class);
+                //对象属性对应的xml中的attribute名称
+                if (alias != null && !StringUtils.isEmpty(alias.value())) {
+                    parserMap.put(alias.value(), new AliasParser(property));
+                } else {
+                    //判断是否已经设置了别名
+                    parserMap.putIfAbsent(property, new AliasParser(property));
                 }
             }
         }
+        parserMap.forEach((a, p) -> p.parse(definition, id, element, a, context));
 
         return definition;
     }
@@ -152,65 +158,26 @@ public class AbstractBeanDefinitionParser implements BeanDefinitionParser {
     }
 
     /**
-     * 名称转义解析器
+     * 别名解析
      */
-    public static class MappingParser implements CustomParser {
+    public static class AliasParser implements CustomParser {
         /**
-         * 配置名称
+         * 对应的字段
          */
-        protected String attribute;
+        protected String property;
 
-        /**
-         * 构造函数
-         *
-         * @param attribute
-         */
-        public MappingParser(String attribute) {
-            this.attribute = attribute;
+        public AliasParser(String property) {
+            this.property = property;
         }
 
         @Override
-        public void parse(final BeanDefinition definition, final String id, final Element element, final String name,
-                          final ParserContext context) {
-            String value = element.getAttribute(attribute);
-            if (!isEmpty(value)) {
-                definition.getPropertyValues().addPropertyValue(name, value);
-            }
-        }
-    }
-
-    /**
-     * 引用
-     */
-    public static class ReferenceParser implements CustomParser {
-
-        @Override
-        public void parse(final BeanDefinition definition, final String id, final Element element, final String name,
-                          final ParserContext context) {
+        public void parse(final BeanDefinition definition, final String id, final Element element,
+                          final String name, final ParserContext context) {
             String value = element.getAttribute(name);
             if (!isEmpty(value)) {
-                definition.getPropertyValues().addPropertyValue(name, new RuntimeBeanReference(value));
+                definition.getPropertyValues().addPropertyValue(property, value);
             }
-        }
-    }
-
-    /**
-     * 逗号分隔的多个引用
-     */
-    public static class MultiReferenceParser implements CustomParser {
-
-        @Override
-        public void parse(final BeanDefinition definition, final String id, final Element element, final String name,
-                          final ParserContext context) {
-            String value = element.getAttribute(name);
-            if (!isEmpty(value)) {
-                String[] values = split(value, SEMICOLON_COMMA_WHITESPACE);
-                ManagedList list = new ManagedList();
-                for (String v : values) {
-                    list.add(new RuntimeBeanReference(v));
-                }
-                definition.getPropertyValues().addPropertyValue(name, list);
-            }
+            ;
         }
     }
 

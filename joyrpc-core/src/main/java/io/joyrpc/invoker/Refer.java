@@ -21,6 +21,7 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Result;
+import io.joyrpc.annotation.Alias;
 import io.joyrpc.annotation.Service;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.Node;
@@ -304,13 +305,20 @@ public class Refer<T> extends AbstractInvoker<T> {
     protected URL buildRegisterUrl(final URL url, final Class<?> clazz) {
         URL result = super.buildRegisterUrl(url, clazz);
         if (!config.isGeneric()) {
+            String aliasName = null;
             //不是泛化调用
             Service service = clazz.getAnnotation(Service.class);
-            if (service != null) {
+            if (service != null && service.name() != null && !service.name().isEmpty()) {
                 //判断服务名
-                if (service.name() != null && !service.name().isEmpty()) {
-                    result = url.setPath(service.name());
+                aliasName = service.name();
+            } else {
+                Alias alias = clazz.getAnnotation(Alias.class);
+                if (alias != null && alias.value() != null && !alias.value().isEmpty()) {
+                    aliasName = alias.value();
                 }
+            }
+            if (aliasName != null) {
+                result = result.setPath(aliasName);
             }
         }
         return result;

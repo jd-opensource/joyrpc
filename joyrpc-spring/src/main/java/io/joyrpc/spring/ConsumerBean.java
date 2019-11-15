@@ -20,6 +20,7 @@ package io.joyrpc.spring;
  * #L%
  */
 
+import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerConfig;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
@@ -38,11 +39,6 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
      * spring处理器
      */
     protected transient ConsumerSpring<T> spring;
-
-    /**
-     * registry引用
-     */
-    protected transient String registryName;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -115,10 +111,20 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     public String getRegistryName() {
-        return registryName;
+        return spring.getRegistryName();
     }
 
+    @Alias("registry")
     public void setRegistryName(String registryName) {
-        this.registryName = registryName;
+        spring.setRegistryName(registryName);
+    }
+
+    public String getConfigureName() {
+        return spring.getConfigureName();
+    }
+
+    @Alias("configure")
+    public void setConfigureName(String configureName) {
+        spring.setConfigureName(configureName);
     }
 }

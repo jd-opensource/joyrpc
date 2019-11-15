@@ -20,6 +20,7 @@ package io.joyrpc.config;
  * #L%
  */
 
+import io.joyrpc.annotation.Alias;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -149,6 +150,11 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     protected Boolean cacheNullable;
 
+    /**
+     * 外部注入的配置中心
+     */
+    protected Configure configure;
+
     /*-------------配置项结束----------------*/
 
     /**
@@ -187,9 +193,9 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     protected transient CompletableFuture<URL> waitingConfig;
 
     /**
-     * 订阅配置的注销中心
+     * 实际的配置中心，如果没有注入配置中心则使用注册中心的配置
      */
-    protected transient Configure configure;
+    protected transient Configure configureRef;
 
     /**
      * 自身的配置变化监听器
@@ -222,6 +228,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         this.cacheNullable = config.cacheNullable;
         this.name = config.name;
         this.interfaceClass = config.interfaceClass;
+        this.configure = config.configure;
     }
 
     /**
@@ -288,6 +295,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         return interfaceClazz;
     }
 
+    @Alias("interface")
     public void setInterfaceClazz(String interfaceClazz) {
         this.interfaceClazz = interfaceClazz;
     }
@@ -491,6 +499,14 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
 
     public void setCacheNullable(Boolean cacheNullable) {
         this.cacheNullable = cacheNullable;
+    }
+
+    public Configure getConfigure() {
+        return configure;
+    }
+
+    public void setConfigure(Configure configure) {
+        this.configure = configure;
     }
 
     public ConfigHandler getConfigHandler() {
@@ -698,8 +714,8 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         String newAlias = newUrl.getString(Constants.ALIAS_OPTION.getName());
         if (subscribe && !Objects.equals(oldAlias, newAlias)) {
             //动态配置修改了别名，需要重新订阅
-            configure.unsubscribe(oldUrl, configHandler);
-            configure.subscribe(newUrl, configHandler);
+            configureRef.unsubscribe(oldUrl, configHandler);
+            configureRef.subscribe(newUrl, configHandler);
         }
     }
 

@@ -20,6 +20,8 @@ package io.joyrpc.spring;
  * #L%
  */
 
+import io.joyrpc.annotation.Alias;
+import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
@@ -37,11 +39,13 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import static io.joyrpc.spring.ConsumerSpring.REFERS;
 
@@ -77,6 +81,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      * ref引用
      */
     protected transient String refName;
+    /**
+     * 配置中心名称
+     */
+    protected String configureName;
 
     /**
      * 默认构造函数，不允许从外部new
@@ -122,19 +130,36 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void afterPropertiesSet() {
-        //如果没有配置协议，则默认发全部协议
-        if (getServerConfig() == null) {
-            Map<String, ServerConfig> beans = applicationContext.getBeansOfType(ServerConfig.class, false, false);
-            if (!beans.isEmpty()) {
-                setServerConfig(beans.values().iterator().next());
+        //如果没有配置网络参数
+        if (serverConfig == null) {
+            //判断是否有引用对象配置
+            if (!StringUtils.isEmpty(serverName)) {
+                serverConfig = applicationContext.getBean(serverName, ServerConfig.class);
+            } else {
+                Map<String, ServerConfig> beans = applicationContext.getBeansOfType(ServerConfig.class, false, false);
+                if (!beans.isEmpty()) {
+                    setServerConfig(beans.values().iterator().next());
+                }
             }
         }
         //如果没有配置注册中心，则默认发布到全部注册中心
-        if (getRegistry() == null) {
-            Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
-            if (!beans.isEmpty()) {
-                setRegistry(new ArrayList<>(beans.values()));
+        if (StringUtils.isEmpty(registry)) {
+            if (!StringUtils.isEmpty(registryNames)) {
+                registry = registryNames.stream().map(name -> applicationContext.getBean(name, RegistryConfig.class)).collect(Collectors.toList());
+            } else {
+                Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
+                if (!beans.isEmpty()) {
+                    setRegistry(new ArrayList<>(beans.values()));
+                }
             }
+        }
+        //判断是否设置了配置中心
+        if (configure == null && !StringUtils.isEmpty(configureName)) {
+            configure = applicationContext.getBean(configureName, Configure.class);
+        }
+        //接口实现
+        if (ref == null && !StringUtils.isEmpty(refName)) {
+            ref = (T) applicationContext.getBean(refName);
         }
         //先输出服务，并没有打开，服务不可用
         exportFuture = export();
@@ -165,6 +190,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         return registryNames == null ? new ArrayList<>() : registryNames;
     }
 
+    @Alias("registry")
     public void setRegistryNames(List<String> registryNames) {
         this.registryNames = registryNames;
     }
@@ -173,6 +199,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         return serverName == null ? "" : serverName;
     }
 
+    @Alias("server")
     public void setServerName(String serverName) {
         this.serverName = serverName;
     }
@@ -181,7 +208,17 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         return refName;
     }
 
+    @Alias("ref")
     public void setRefName(String refName) {
         this.refName = refName;
+    }
+
+    public String getConfigureName() {
+        return configureName;
+    }
+
+    @Alias("configure")
+    public void setConfigureName(String configureName) {
+        this.configureName = configureName;
     }
 }

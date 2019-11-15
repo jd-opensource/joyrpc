@@ -277,7 +277,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
             logger.info(String.format("Unexport provider config : %s with bean id %s", name(), getId()));
             exporter.close();
             exporter = null;
-            configure = null;
+            configureRef = null;
         }
         if (!waitingConfig.isDone()) {
             waitingConfig.completeExceptionally(new InitializationException("Unexport interrupted waiting config."));
@@ -573,8 +573,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                         String.format("Registry open error. %s", registry.getUrl().toString(false, false))));
             } else if (!subscribed.get()) {
                 //保存订阅注册中心
-                configure = registry;
-                configure.subscribe(serviceUrl, configHandler);
+                configureRef = configure==null?registry:configure;
+                configureRef.subscribe(serviceUrl, configHandler);
                 //只向满足条件的第一个注册中心订阅配置变化，多个注册中心同时订阅有问题
                 subscribed.set(true);
             }

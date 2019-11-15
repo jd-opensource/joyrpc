@@ -79,7 +79,8 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
         }
         //创建注册中心
         registryRef = REGISTRY.get(registryUrl.getProtocol()).getRegistry(registryUrl);
-        configure = registryRef;
+        //如果提前注入了其它配置中心
+        configureRef = configure == null ? registryRef : configure;
         //连接注册中心
         CompletableFuture<Void> f = !register && !subscribe && StringUtils.isEmpty(url) ? CompletableFuture.completedFuture(null) : registryRef.open();
         f.whenComplete((s, t) -> {
@@ -146,6 +147,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                 }));
                 refer = null;
             }
+            configureRef=null;
             registryRef = null;
         }
         future.complete(null);

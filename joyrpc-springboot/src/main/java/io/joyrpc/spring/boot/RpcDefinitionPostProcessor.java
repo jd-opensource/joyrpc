@@ -33,9 +33,10 @@ import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.config.RuntimeBeanReference;
-import org.springframework.beans.factory.support.*;
-import org.springframework.boot.context.properties.bind.BindResult;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
@@ -307,14 +308,11 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      */
     protected void register(final ConsumerBean config, final BeanDefinitionRegistry registry, final String defRegName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config);
-        if (config.getRegistry() == null) {
+        if (config.getRegistry() == null
+                && StringUtils.isEmpty(config.getRegistryName())
+                && !StringUtils.isEmpty(defRegName)) {
             //引用registry
-            if (!StringUtils.isEmpty(config.getRegistryName())) {
-                //从配置文件读取，值已经做了占位符替换
-                builder.addPropertyReference("registry", config.getRegistryName());
-            } else if (!StringUtils.isEmpty(defRegName)) {
-                builder.addPropertyReference("registry", defRegName);
-            }
+            config.setRegistryName(defRegName);
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
@@ -329,32 +327,18 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
     protected void register(final ProviderBean config, final BeanDefinitionRegistry registry, final String defRegName,
                             final String defServerName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> config);
-        //引用ref
-        builder.addPropertyReference("ref", config.getRefName());
         //判断是否设置了注册中心配置
-        if (CollectionUtils.isEmpty(config.getRegistry())) {
+        if (CollectionUtils.isEmpty(config.getRegistry())
+                && CollectionUtils.isEmpty(config.getRegistryNames())
+                && !StringUtils.isEmpty(defRegName)) {
             //引用注册中心
-            ManagedList<RuntimeBeanReference> runtimeBeanReferences = new ManagedList<>();
-            List<String> registryNames = config.getRegistryNames();
-            if (!CollectionUtils.isEmpty(registryNames)) {
-                for (String registryName : registryNames) {
-                    //从配置文件读取，值已经做了占位符替换
-                    runtimeBeanReferences.add(new RuntimeBeanReference(registryName));
-                }
-            } else if (!StringUtils.isEmpty(defRegName)) {
-                runtimeBeanReferences.add(new RuntimeBeanReference(defRegName));
-            }
-            if (!runtimeBeanReferences.isEmpty()) {
-                builder.addPropertyValue("registry", runtimeBeanReferences);
-            }
+            config.setRegistryNames(Arrays.asList(defRegName));
         }
         //引用Server
-        if (config.getServerConfig() == null) {
-            if (!StringUtils.isEmpty(config.getServerName())) {
-                builder.addPropertyReference("serverConfig", config.getServerName());
-            } else if (!StringUtils.isEmpty(defServerName)) {
-                builder.addPropertyReference("serverConfig", defServerName);
-            }
+        if (config.getServerConfig() == null
+                && StringUtils.isEmpty(config.getServerName())
+                && !StringUtils.isEmpty(defServerName)) {
+            config.setServerName(defServerName);
         }
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());

@@ -1,5 +1,6 @@
 package io.joyrpc.spring;
 
+import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.*;
 import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -38,6 +40,16 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
      * 抽象消费者类
      */
     protected AbstractConsumerConfig<T> config;
+
+    /**
+     * registry引用
+     */
+    protected String registryName;
+    /**
+     * 配置中心名称
+     */
+    protected String configureName;
+
     /**
      * spring上下文
      */
@@ -67,6 +79,22 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
      */
     public ConsumerSpring(AbstractConsumerConfig<T> config) {
         this.config = config;
+    }
+
+    public String getRegistryName() {
+        return registryName;
+    }
+
+    public void setRegistryName(String registryName) {
+        this.registryName = registryName;
+    }
+
+    public String getConfigureName() {
+        return configureName;
+    }
+
+    public void setConfigureName(String configureName) {
+        this.configureName = configureName;
     }
 
     @Override
@@ -108,10 +136,18 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     public void afterPropertiesSet() {
         //如果没有配置注册中心，则默认订阅全部注册中心
         if (config.getRegistry() == null) {
-            Map<String, RegistryConfig> registries = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
-            if (registries != null && !registries.isEmpty()) {
-                config.setRegistry(registries.values().iterator().next());
+            if (!StringUtils.isEmpty(registryName)) {
+                config.setRegistry(applicationContext.getBean(registryName, RegistryConfig.class));
+            } else {
+                Map<String, RegistryConfig> registries = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
+                if (registries != null && !registries.isEmpty()) {
+                    config.setRegistry(registries.values().iterator().next());
+                }
             }
+        }
+        //判断是否设置了配置中心
+        if (config.getCandidature() == null && !StringUtils.isEmpty(configureName)) {
+            config.setConfigure(applicationContext.getBean(configureName, Configure.class));
         }
         //记录消费者的数量
         REFERS.incrementAndGet();

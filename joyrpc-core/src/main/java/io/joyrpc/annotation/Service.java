@@ -26,8 +26,13 @@ import java.lang.annotation.Target;
 
 import static java.lang.annotation.ElementType.TYPE;
 
+/**
+ * 服务
+ * @See io.joyrpc.annotation.Alias
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({TYPE})
+@Deprecated
 public @interface Service {
 
     String name() default "";

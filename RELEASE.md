@@ -8,6 +8,7 @@
 
 - 增加第三方配置中心注入
 
+
 ### Enhancement
 
 - ProviderConfig增加exportAndOpen方法，便于API调用

@@ -66,8 +66,9 @@ public class Timer {
         this.bossPool.submit(() -> {
             while (!Shutdown.isShutdown()) {
                 try {
+                    //TODO 停止的时候要及时中断
                     Slot slot = queue.poll(timeWheel.getDuration(), TimeUnit.MILLISECONDS);
-                    if (slot != null) {
+                    if (slot != null && !Shutdown.isShutdown()) {
                         //推进时间
                         timeWheel.advance(slot.getExpiration());
                         //执行任务

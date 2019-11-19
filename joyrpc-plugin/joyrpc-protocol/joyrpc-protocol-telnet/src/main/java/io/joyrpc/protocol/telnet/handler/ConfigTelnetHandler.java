@@ -66,7 +66,7 @@ public class ConfigTelnetHandler extends AbstractTelnetHandler {
                         .desc("Show consumer configs")
                         .build())
                 .addOption("r", false, "Show global context")
-                .addOption("s", false, "Show all nterface settings")
+                .addOption("s", false, "Show all interface settings")
                 .addOption("g", false, "Show global settings")
                 .addOption("i", false, "Show interface id mapping");
         //.addOption("a", false, "Show all above");

@@ -44,8 +44,6 @@
 
   - 升级commons-compress为1.19，解决安全漏洞
 
-
-
 ### Bugfixes
 
 - Bootstrap

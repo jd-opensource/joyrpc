@@ -89,7 +89,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
             if (t == null) {
                 //订阅
                 if (serviceUrl.getBoolean(Constants.SUBSCRIBE_OPTION)) {
-                    registryRef.subscribe(subscribeUrl, configHandler);
+                    configureRef.subscribe(subscribeUrl, configHandler);
                 } else {
                     //没有订阅的时候，主动complete
                     waitingConfig.complete(serviceUrl);

@@ -22,19 +22,19 @@ package io.joyrpc.context.router;
 
 
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.constants.Constants.SETTING_MAP_PARAM_ALIAS;
 import static io.joyrpc.context.ConfigEventHandler.BIZ_ORDER;
-import static io.joyrpc.context.GlobalContext.update;
-import static io.joyrpc.context.router.GroupRouterConfiguration.GROUP_ROUTER_CONF;
+import static io.joyrpc.context.router.GroupRouterConfiguration.GROUP_ROUTER;
 
 
 /**
@@ -48,31 +48,48 @@ public class GroupRouterConfigHandler implements ConfigEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(GroupRouterConfigHandler.class);
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
-        if (update(className, attrs, SETTING_MAP_PARAM_ALIAS, null)) {
-            String value = GlobalContext.get(className, SETTING_MAP_PARAM_ALIAS, "");
-            if (value != null && !value.isEmpty()) {
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
+        if (!GLOBAL_SETTING.equals(className)) {
+            String oldAttr = oldAttrs.get(SETTING_MAP_PARAM_ALIAS);
+            String newAttr = newAttrs.get(SETTING_MAP_PARAM_ALIAS);
+            if (!Objects.equals(oldAttr, newAttr)) {
                 try {
-                    Map<String, String> config = JSON.get().parseObject(value, Map.class);
-                    Map<String, Map<String, String>> methodCfg = new HashMap<>();
-                    for (Map.Entry<String, String> entry : config.entrySet()) {
-                        String methodAndParam = entry.getKey();
-                        int split = methodAndParam.indexOf(":");
-                        if (split > 0) {
-                            String method = methodAndParam.substring(0, split);
-                            String param = methodAndParam.substring(split + 1);
-                            Map paramCfg = methodCfg.computeIfAbsent(method, key -> new HashMap<>());
-                            paramCfg.put(param, entry.getValue());
-                        }
-                    }
-                    GROUP_ROUTER_CONF.update(className, methodCfg);
+                    GROUP_ROUTER.update(className, parse(newAttr));
                 } catch (Exception e) {
                     logger.error(String.format("Error occurs while parsing group router of %s. caused by %s", className, e.getMessage()), e);
                     //如果异常，则忽略掉本次更新
                 }
-            } else {
-                GROUP_ROUTER_CONF.remove(className);
             }
         }
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{SETTING_MAP_PARAM_ALIAS};
+    }
+
+    /**
+     * 解析
+     *
+     * @param value
+     * @return
+     */
+    protected Map<String, Map<String, String>> parse(final String value) {
+        if (value == null || value.isEmpty()) {
+            return null;
+        }
+        Map<String, String> config = JSON.get().parseObject(value, Map.class);
+        Map<String, Map<String, String>> methodCfg = new HashMap<>();
+        for (Map.Entry<String, String> entry : config.entrySet()) {
+            String methodAndParam = entry.getKey();
+            int split = methodAndParam.indexOf(":");
+            if (split > 0) {
+                String method = methodAndParam.substring(0, split);
+                String param = methodAndParam.substring(split + 1);
+                Map paramCfg = methodCfg.computeIfAbsent(method, key -> new HashMap<>());
+                paramCfg.put(param, entry.getValue());
+            }
+        }
+        return methodCfg;
     }
 }

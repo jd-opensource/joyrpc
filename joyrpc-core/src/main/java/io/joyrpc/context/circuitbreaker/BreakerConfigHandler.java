@@ -25,7 +25,7 @@ import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreakerConfig;
 import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.context.GlobalContext;
+import io.joyrpc.context.circuitbreaker.BreakerConfiguration.MethodBreaker;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
@@ -38,9 +38,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.constants.Constants.SETTING_INVOKE_CONSUMER_CIRCUITBREAKER;
-import static io.joyrpc.context.ConfigEventHandler.ZERO_ORDER;
-import static io.joyrpc.context.GlobalContext.update;
+import static io.joyrpc.context.ConfigEventHandler.BREAKER_ORDER;
+import static io.joyrpc.context.circuitbreaker.BreakerConfiguration.BREAKER;
 import static io.joyrpc.util.ClassUtils.forNameQuiet;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
@@ -48,25 +49,44 @@ import static io.joyrpc.util.ClassUtils.getPublicMethod;
 /**
  * 熔断配置信息
  */
-@Extension(value = "circuitBreaker", order = ZERO_ORDER)
+@Extension(value = "circuitBreaker", order = BREAKER_ORDER)
 public class BreakerConfigHandler implements ConfigEventHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(BreakerConfigHandler.class);
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
-        if (update(className, attrs, SETTING_INVOKE_CONSUMER_CIRCUITBREAKER, null)) {
-            try {
-                doUpdate(className);
-            } catch (Exception e) {
-                logger.error("Error occurs while parsing circuitBreaker config. caused by " + e.getMessage(), e);
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
+        if (!GLOBAL_SETTING.equals(className)) {
+            String oldAttr = oldAttrs.get(SETTING_INVOKE_CONSUMER_CIRCUITBREAKER);
+            String newAttr = newAttrs.get(SETTING_INVOKE_CONSUMER_CIRCUITBREAKER);
+            if (!Objects.equals(oldAttr, newAttr)) {
+                try {
+                    BREAKER.update(className, parse(className, newAttr));
+                } catch (Exception e) {
+                    logger.error("Error occurs while parsing circuitBreaker config. caused by " + e.getMessage(), e);
+                }
             }
         }
     }
 
-    protected void doUpdate(final String className) {
+    @Override
+    public String[] getKeys() {
+        return new String[]{SETTING_INVOKE_CONSUMER_CIRCUITBREAKER};
+    }
+
+    /**
+     * 解析配置
+     *
+     * @param className
+     * @param text
+     * @return
+     */
+    protected MethodBreaker parse(final String className, final String text) {
+        if (text == null || text.isEmpty()) {
+            return null;
+        }
         Class clazz = forNameQuiet(className);
-        List<Map> results = JSON.get().parseObject(GlobalContext.asParametric(className).getString(SETTING_INVOKE_CONSUMER_CIRCUITBREAKER), new TypeReference<List<Map>>() {
+        List<Map> results = JSON.get().parseObject(text, new TypeReference<List<Map>>() {
         });
 
         Map<String, McCircuitBreakerConfig> configs = new HashMap<>(results.size());
@@ -89,10 +109,11 @@ public class BreakerConfigHandler implements ConfigEventHandler {
             for (Method method : methods) {
                 BreakerConfiguration.build(defConfig, configs, breakers, method.getName());
             }
-            BreakerConfiguration.BREAKER.update(className, new BreakerConfiguration.MethodBreaker(breakers));
+            return new MethodBreaker(breakers);
         } else {
-            BreakerConfiguration.BREAKER.update(className, new BreakerConfiguration.MethodBreaker(defConfig, configs));
+            return new MethodBreaker(defConfig, configs);
         }
+
     }
 
     /**
@@ -131,9 +152,9 @@ public class BreakerConfigHandler implements ConfigEventHandler {
         for (String type : types) {
             clazz = ClassUtils.forNameQuiet(type);
             if (clazz == null) {
-                logger.warn(String.format("Error occurs while setting circuitbreaker of %. caused by class is not found. %s ", className, type));
+                logger.warn(String.format("Error occurs while setting circuit breaker of %. caused by class is not found. %s ", className, type));
             } else if (!Throwable.class.isAssignableFrom(clazz)) {
-                logger.warn(String.format("Error occurs while setting circuitbreaker of %. caused by class is not throwable. %s ", className, type));
+                logger.warn(String.format("Error occurs while setting circuit breaker of %. caused by class is not throwable. %s ", className, type));
             } else {
                 result.add(clazz);
             }

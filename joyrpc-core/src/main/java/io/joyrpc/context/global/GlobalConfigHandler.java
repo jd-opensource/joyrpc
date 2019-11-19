@@ -9,9 +9,9 @@ package io.joyrpc.context.global;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,8 +22,8 @@ package io.joyrpc.context.global;
 
 
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.invoker.InvokerManager;
 
 import java.util.Map;
@@ -41,15 +41,13 @@ import static io.joyrpc.context.ConfigEventHandler.GLOBAL_ORDER;
 public class GlobalConfigHandler implements ConfigEventHandler {
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
-
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
         if (GLOBAL_SETTING.equals(className)) {
-            GlobalContext.update(GLOBAL_SETTING, attrs, SETTING_REGISTRY_HEARTBEAT_INTERVAL, "15000");
-            GlobalContext.update(GLOBAL_SETTING, attrs, SETTING_REGISTRY_CHECK_INTERVAL, "300000");
-            GlobalContext.put(className, attrs);
+            newAttrs.putIfAbsent(SETTING_REGISTRY_HEARTBEAT_INTERVAL, "15000");
+            newAttrs.putIfAbsent(SETTING_REGISTRY_CHECK_INTERVAL, "300000");
             //修改回调线程池
             InvokerManager.updateThreadPool(InvokerManager.getCallbackThreadPool(), "callback",
-                    GlobalContext.asParametric(GLOBAL_SETTING),
+                    new MapParametric(newAttrs),
                     SETTING_CALLBACK_POOL_CORE_SIZE,
                     SETTING_CALLBACK_POOL_MAX_SIZE);
         }

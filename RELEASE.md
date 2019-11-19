@@ -66,6 +66,8 @@
 
 - 处理Spring和SpringBoot服务提供者在进程关闭的时候不能正常的Unrefer问题
 
+- 修复配置动态更新的问题
+
 ## 1.0.3-RELEASE(2019-10-12)
 
 - 升级Fastjson版本为1.2.61，防止autoType漏洞

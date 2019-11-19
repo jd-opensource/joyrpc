@@ -28,6 +28,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -275,100 +277,51 @@ public class GlobalContext {
         if (interfaceId == null || key == null) {
             return null;
         }
-        return interfaceConfigs.computeIfAbsent(interfaceId, o -> new ConcurrentHashMap<>()).getOrDefault(key, def);
+        Map<String, String> map = interfaceConfigs.get(interfaceId);
+        return map == null ? def : map.getOrDefault(key, def);
     }
 
     /**
      * 设置接口参数
      *
      * @param interfaceId the interface id
-     * @param key         the key
-     * @param value       the value
+     * @param key
+     * @param value
+     * @see GlobalContext#put(java.lang.String, java.util.Map)
      */
-    public static Object put(final String interfaceId, final String key, final String value) {
+    @Deprecated
+    public static void put(final String interfaceId, final String key, final String value) {
         if (interfaceId == null || key == null) {
-            return null;
+            return;
         }
-        Map<String, String> map = interfaceConfigs.computeIfAbsent(interfaceId, o -> new ConcurrentHashMap<>());
-        if (value == null) {
-            return map.remove(key);
-        } else {
-            return map.put(key, value);
+        Map<String, String> configs = interfaceConfigs.get(interfaceId);
+        if (value != null) {
+            configs = new HashMap<>(configs);
+            configs.put(key, value);
+            interfaceConfigs.put(interfaceId, configs);
+        } else if (configs != null) {
+            configs = new HashMap<>(configs);
+            configs.remove(key);
+            interfaceConfigs.put(interfaceId, configs);
         }
     }
 
     /**
-     * 设置接口参数
+     * 设置接口参数。
      *
      * @param interfaceId the interface id
      * @param configs     the config
+     * @see
      */
     public static void put(final String interfaceId, final Map<String, String> configs) {
-        if (interfaceId == null || configs == null || configs.isEmpty()) {
+        if (interfaceId == null) {
             return;
         }
-        Map<String, String> configMap = interfaceConfigs.computeIfAbsent(interfaceId, o -> new ConcurrentHashMap<>());
-        configs.forEach((k, v) -> {
-            if (k != null && v != null) {
-                configMap.put(k, v);
-            }
-        });
-    }
-
-    /**
-     * 当参数发生变化的时候，修改接口参数
-     *
-     * @param interfaceId the interface id
-     * @param key         the key
-     * @param value       the value
-     */
-    public static boolean update(final String interfaceId, final String key, final String value) {
-        if (interfaceId == null || key == null) {
-            return false;
+        if (configs == null) {
+            interfaceConfigs.remove(interfaceId);
+        } else {
+            interfaceConfigs.put(interfaceId, Collections.unmodifiableMap(configs));
         }
-        Map<String, String> map = interfaceConfigs.computeIfAbsent(interfaceId, o -> new ConcurrentHashMap<>());
-        if (value == null) {
-            return map.remove(key) != null;
-        } else if (!value.equals(map.get(key))) {
-            map.put(key, value);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * 当参数发生变化的时候，修改接口参数
-     *
-     * @param interfaceId
-     * @param configs
-     * @param key
-     * @param defaultVal
-     * @return
-     */
-    public static boolean update(final String interfaceId, final Map<String, String> configs,
-                                 final String key, final String defaultVal) {
-        if (configs == null || key == null) {
-            return false;
-        }
-        if (!configs.containsKey(key)) {
-            return false;
-        }
-        String value = configs.remove(key);
-        return update(interfaceId, key, value == null || value.isEmpty() ? defaultVal : value);
-    }
-
-    /**
-     * 移除接口参数
-     *
-     * @param interfaceId the interface id
-     * @param key         the key
-     */
-    public static Object remove(final String interfaceId, final String key) {
-        if (interfaceId == null || key == null) {
-            return null;
-        }
-        Map<String, String> map = interfaceConfigs.get(interfaceId);
-        return map == null ? null : map.remove(key);
     }
 
     /**
@@ -377,7 +330,7 @@ public class GlobalContext {
      * @return the config map
      */
     public static Map<String, Map<String, String>> getInterfaceConfigs() {
-        return interfaceConfigs;
+        return Collections.unmodifiableMap(interfaceConfigs);
     }
 
     /**

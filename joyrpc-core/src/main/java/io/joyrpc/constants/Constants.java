@@ -26,10 +26,12 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
+import static io.joyrpc.Plugin.CONFIG_EVENT_HANDLER;
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.context.Environment.OS_TYPE;
 
@@ -143,22 +145,45 @@ public class Constants {
     public final static String AND_SEPARATOR = "&";
 
     /**
-     * 不能修改的属性
+     * 过滤掉不能修改和动态变更的属性
      */
-    public final static Map<String, String> EXCLUDE_CHANGED_ATTR_MAP = new ConcurrentHashMap<String, String>() {{
-        put("id", "");
-        put("interfaceClazz", "");
-        put("ref", "");
-        put("server", "");
-        put("delay", "");
-        put("proxy", "");
-        put("registry", "");
-        put("generic", "");
-        put("dynamic", "");
-        put("register", "");
-        put("subscribe", "");
-        put("interfaceValidator", "");
-    }};
+    public static final Predicate<String> ALTERABLE_ATTR = new Predicate<String>() {
+
+        protected Set<String> excludes;
+
+        @Override
+        public boolean test(String name) {
+            if (excludes == null) {
+                synchronized (this) {
+                    if (excludes == null) {
+                        excludes = new HashSet<>(30);
+                        excludes.add("id");
+                        excludes.add("interfaceClazz");
+                        excludes.add("ref");
+                        excludes.add("server");
+                        excludes.add("delay");
+                        excludes.add("proxy");
+                        excludes.add("registry");
+                        excludes.add("generic");
+                        excludes.add("dynamic");
+                        excludes.add("register");
+                        excludes.add("subscribe");
+                        excludes.add("interfaceValidator");
+                        CONFIG_EVENT_HANDLER.extensions().forEach(o -> {
+                            String[] keys = o.getKeys();
+                            if (keys != null) {
+                                for (String key : keys) {
+                                    excludes.add(key);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            return !excludes.contains(name);
+        }
+    };
 
 
     /*======================= Registration center configuration information item name =======================*/

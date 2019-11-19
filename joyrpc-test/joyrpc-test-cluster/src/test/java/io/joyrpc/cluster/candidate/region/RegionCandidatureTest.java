@@ -169,7 +169,7 @@ public class RegionCandidatureTest {
 
         Map<String, List<String>> map = new HashMap<>();
         map.put("lf1", Arrays.asList("lf"));
-        CircuitConfiguration.INSTANCE.update(map);
+        CircuitConfiguration.CIRCUIT.update(map);
         Candidate.Builder builder = Candidate.builder().region(new Region.DefaultRegion("huabei1", "lf1")).nodes(nodes);
         Candidature.Result result = candidature.candidate(null, builder.size(5).build());
         Assert.assertEquals(result.getCandidates().size(), 10);

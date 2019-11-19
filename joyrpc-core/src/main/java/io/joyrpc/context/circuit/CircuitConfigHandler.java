@@ -21,7 +21,6 @@ package io.joyrpc.context.circuit;
  */
 
 import io.joyrpc.codec.serialization.TypeReference;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.extension.Extension;
 import org.slf4j.Logger;
@@ -29,10 +28,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.CIRCUIT_KEY;
 import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.context.ConfigEventHandler.CIRCUIT_ORDER;
+import static io.joyrpc.context.circuit.CircuitConfiguration.CIRCUIT;
 
 /**
  * 跨机房访问首选的机房
@@ -45,19 +47,26 @@ public class CircuitConfigHandler implements ConfigEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(CircuitConfigHandler.class);
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
         //跨机房首选访问放在全局配置里面
         if (GLOBAL_SETTING.equals(className)) {
-            String value = attrs.remove(Constants.CIRCUIT_KEY);
-            if (value != null && !value.isEmpty()) {
+            String oldAttr = oldAttrs.get(CIRCUIT_KEY);
+            String newAttr = newAttrs.get(CIRCUIT_KEY);
+            if (!Objects.equals(oldAttr, newAttr)) {
                 try {
-                    Map<String, List<String>> results = JSON.get().parseObject(value, new TypeReference<Map<String, List<String>>>() {
-                    });
-                    CircuitConfiguration.INSTANCE.update(results);
+                    Map<String, List<String>> results = newAttr == null || newAttr.isEmpty() ? null :
+                            JSON.get().parseObject(newAttr, new TypeReference<Map<String, List<String>>>() {
+                            });
+                    CIRCUIT.update(results);
                 } catch (Exception e) {
                     logger.error("Error occurs while parsing circuit config. caused by " + e.getMessage(), e);
                 }
             }
         }
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{CIRCUIT_KEY};
     }
 }

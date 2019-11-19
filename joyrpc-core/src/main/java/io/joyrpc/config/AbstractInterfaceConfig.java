@@ -734,8 +734,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             return;
         }
         try {
-            Map<String, String> updates = event.changed(Constants.EXCLUDE_CHANGED_ATTR_MAP::containsKey,
-                    o -> serviceUrl.getString(o));
+            Map<String, String> updates = event.changed(Constants.ALTERABLE_ATTR, o -> serviceUrl.getString(o));
             if (waitingConfig != null && !waitingConfig.isDone()) {
                 //触发URL变化
                 switcher.writer().run(() -> waitingConfig.complete(serviceUrl.add(updates)));

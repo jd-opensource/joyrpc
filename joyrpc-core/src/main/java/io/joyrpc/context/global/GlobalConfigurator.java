@@ -30,6 +30,8 @@ import io.joyrpc.extension.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.joyrpc.constants.Constants.ALTERABLE_ATTR;
+
 /**
  * 全局配置
  */
@@ -63,18 +65,13 @@ public class GlobalConfigurator implements Configurator {
      * @param to
      * @param <T>
      */
-    protected <T> void update(Map<String, T> from, Map<String, String> to) {
-
+    protected <T> void update(final Map<String, T> from, final Map<String, String> to) {
         if (from != null) {
             from.forEach((k, v) -> {
-                if (v instanceof String) {
-                    if (!Constants.EXCLUDE_CHANGED_ATTR_MAP.containsKey(v)) {
-                        to.put(k, (String) v);
-                    }
+                if (v instanceof String && ALTERABLE_ATTR.test(k)) {
+                    to.put(k, (String) v);
                 }
             });
         }
-
-
     }
 }

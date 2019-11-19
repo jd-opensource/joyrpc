@@ -70,8 +70,8 @@ public class ContextTransmit implements Transmit {
                 }
             });
         }
-        //从会话恢复
-        if (session != null && context.getAttachment(HIDDEN_KEY_APPID) == null && context.getAttachment(HIDDEN_KEY_APPNAME) == null) {
+        //优先使用会话里面值，防止透传
+        if (session != null && session.getRemoteAppId() != null) {
             context.setAttachment(HIDDEN_KEY_APPID, session.getRemoteAppId());
             context.setAttachment(HIDDEN_KEY_APPNAME, session.getRemoteAppName());
             context.setAttachment(HIDDEN_KEY_APPINSID, session.getRemoteAppIns());

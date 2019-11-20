@@ -51,12 +51,12 @@ public class IPPermissionConfigHandler implements ConfigEventHandler {
     @Override
     public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
         if (!GLOBAL_SETTING.equals(className)) {
-            String oldOpen = oldAttrs.getOrDefault(SETTING_INVOKE_PROVIDER_LIMIT, "true");
-            String newOpen = newAttrs.getOrDefault(SETTING_INVOKE_PROVIDER_LIMIT, "true");
-            String oldBlacklist = oldAttrs.getOrDefault(SETTING_INVOKE_PROVIDER_LIMIT, "");
-            String newBlacklist = newAttrs.getOrDefault(SETTING_INVOKE_PROVIDER_LIMIT, "");
-            String oldWhitelist = oldAttrs.getOrDefault(SETTING_INVOKE_PROVIDER_LIMIT, "{\"*\":\"*\"}");
-            String newWhiteList = newAttrs.getOrDefault(SETTING_INVOKE_PROVIDER_LIMIT, "{\"*\":\"*\"}");
+            String oldOpen = oldAttrs.getOrDefault(SETTING_INVOKE_WB_OPEN, "true");
+            String newOpen = newAttrs.getOrDefault(SETTING_INVOKE_WB_OPEN, "true");
+            String oldBlacklist = oldAttrs.getOrDefault(SETTING_INVOKE_BLACKLIST, "");
+            String newBlacklist = newAttrs.getOrDefault(SETTING_INVOKE_BLACKLIST, "");
+            String oldWhitelist = oldAttrs.getOrDefault(SETTING_INVOKE_WHITELIST, "{\"*\":\"*\"}");
+            String newWhiteList = newAttrs.getOrDefault(SETTING_INVOKE_WHITELIST, "{\"*\":\"*\"}");
             if (!Objects.equals(oldOpen, newOpen)
                     || !Objects.equals(oldBlacklist, newBlacklist)
                     || !Objects.equals(oldWhitelist, newWhiteList)) {

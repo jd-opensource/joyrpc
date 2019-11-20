@@ -91,7 +91,7 @@ public class LimiterConfigHandler implements ConfigEventHandler {
         }
         Map<String, RateLimiter> result = new HashMap<>(configs.size());
         configs.forEach((name, config) -> {
-            RateLimiter limiter = limiters.get(name);
+            RateLimiter limiter = limiters == null ? null : limiters.get(name);
             if (limiter == null || !limiter.type().equals(config.getType())) {
                 limiter = load(config);
                 if (limiter != null) {

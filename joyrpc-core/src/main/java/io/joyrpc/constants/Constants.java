@@ -773,4 +773,24 @@ public class Constants {
      * 是否需要客户端验证（REQUIRE:需要客户端认证 及双向认证，OPTIONAL:可选 ，NONE:不需要客户端认证 单项认证）
      */
     public static final URLOption<String> SSL_CLIENT_AUTH = new URLOption<>("ssl.clientAuth", "NONE");
+
+    /**
+     * ss5代理服务host
+     */
+    public static final URLOption<String> SS5_HOST = new URLOption<>("ss5.host", (String) null);
+
+    /**
+     * ss5代理服务port
+     */
+    public static final URLOption<Integer> SS5_PORT = new URLOption<>("ss5.port", 1080);
+
+    /**
+     * ss5用户名
+     */
+    public static final URLOption<String> SS5_USER = new URLOption<>("ss5.user", (String) null);
+
+    /**
+     * ss5密码
+     */
+    public static final URLOption<String> SS5_PASSWORD = new URLOption<>("ss5.password", (String) null);
 }

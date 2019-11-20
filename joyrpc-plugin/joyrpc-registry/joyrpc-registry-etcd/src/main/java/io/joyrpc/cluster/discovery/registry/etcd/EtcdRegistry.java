@@ -382,7 +382,7 @@ public class EtcdRegistry extends AbstractRegistry {
             String className = url.getUrl().getPath();
             Map<String, String> oldAttrs = GlobalContext.getInterfaceConfig(className);
             //全局配置动态配置变更
-            CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(className, oldAttrs, datum));
+            CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(className, oldAttrs == null ? new HashMap<>() : oldAttrs, datum));
             //修改全局配置
             GlobalContext.put(className, datum);
             //TODO 是否需要实例配置

@@ -1,2 +1,1 @@
 io.joyrpc.transport.netty4.transport.NettyTransportFactory
-io.joyrpc.transport.netty4.ss5.NettySs5TransportFactory

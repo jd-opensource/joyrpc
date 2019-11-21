@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,11 +41,15 @@ import io.netty.channel.*;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.timeout.IdleStateHandler;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * @date: 2019/2/21
@@ -148,6 +152,13 @@ public class NettyClientTransport extends AbstractClientTransport {
 
                 if (sslContext != null) {
                     ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
+                }
+                //若开启了ss5代理，添加ss5
+                boolean ss5Enable = url.getBoolean(SS5_ENABLE);
+                if (ss5Enable) {
+                    InetSocketAddress ss5Address = InetSocketAddress.createUnresolved(url.getString(SS5_HOST), url.getInteger(SS5_PORT));
+                    ch.pipeline().addFirst("ss5",
+                            new Socks5ProxyHandler(ss5Address, url.getString(SS5_USER), url.getString(SS5_PASSWORD)));
                 }
             }
         });

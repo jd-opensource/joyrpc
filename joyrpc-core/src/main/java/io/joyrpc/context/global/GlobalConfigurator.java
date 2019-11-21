@@ -27,16 +27,50 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Predicate;
 
-import static io.joyrpc.constants.Constants.ALTERABLE_ATTR;
+import static io.joyrpc.Plugin.CONFIG_EVENT_HANDLER;
 
 /**
  * 全局配置
  */
 @Extension("global")
 public class GlobalConfigurator implements Configurator {
+
+    /**
+     * 过滤掉不需要拼接在url中的属性
+     */
+    protected static Predicate<String> EXCLUDES_ATTR = new Predicate<String>() {
+
+        protected Set<String> excludes;
+
+        @Override
+        public boolean test(String name) {
+            if (excludes == null) {
+                synchronized (this) {
+                    if (excludes == null) {
+                        excludes = new HashSet<>(30);
+                        excludes.add("id");
+                        excludes.add("interfaceClazz");
+                        excludes.add("ref");
+                        excludes.add("server");
+                        excludes.add("delay");
+                        excludes.add("registry");
+                        excludes.add("interfaceValidator");
+                        CONFIG_EVENT_HANDLER.extensions().forEach(o -> {
+                            String[] keys = o.getKeys();
+                            if (keys != null) {
+                                Collections.addAll(excludes, keys);
+                            }
+                        });
+                    }
+                }
+            }
+
+            return !excludes.contains(name);
+        }
+    };
 
     @Override
     public URL configure(final URL url) {
@@ -68,7 +102,7 @@ public class GlobalConfigurator implements Configurator {
     protected <T> void update(final Map<String, T> from, final Map<String, String> to) {
         if (from != null) {
             from.forEach((k, v) -> {
-                if (v instanceof String && ALTERABLE_ATTR.test(k)) {
+                if (v instanceof String && EXCLUDES_ATTR.test(k)) {
                     to.put(k, (String) v);
                 }
             });

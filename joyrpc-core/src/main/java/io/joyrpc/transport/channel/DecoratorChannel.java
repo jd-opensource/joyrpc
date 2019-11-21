@@ -91,8 +91,8 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
-    public void setAttribute(final String key, final Object value) {
-        channel.setAttribute(key, value);
+    public Channel setAttribute(final String key, final Object value) {
+        return channel.setAttribute(key, value);
     }
 
     @Override

@@ -198,11 +198,11 @@ public class NettyChannel implements Channel {
     }
 
     @Override
-    public void setAttribute(final String key, final Object value) {
-        if (key == null) {
-            return;
+    public Channel setAttribute(final String key, final Object value) {
+        if (key != null) {
+            channel.attr(AttributeKey.valueOf(key)).set(value);
         }
-        channel.attr(AttributeKey.valueOf(key)).set(value);
+        return this;
     }
 
     @Override
@@ -210,7 +210,7 @@ public class NettyChannel implements Channel {
         if (key == null) {
             return null;
         }
-        return channel.attr(AttributeKey.valueOf(key)).getAndRemove();
+        return channel.attr(AttributeKey.valueOf(key)).getAndSet(null);
     }
 
     @Override

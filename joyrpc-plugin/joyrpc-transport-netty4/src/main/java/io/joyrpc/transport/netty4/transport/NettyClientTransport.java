@@ -154,11 +154,13 @@ public class NettyClientTransport extends AbstractClientTransport {
                     ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
                 }
                 //若开启了ss5代理，添加ss5
-                boolean ss5Enable = url.getBoolean(SS5_ENABLE);
-                if (ss5Enable) {
-                    InetSocketAddress ss5Address = InetSocketAddress.createUnresolved(url.getString(SS5_HOST), url.getInteger(SS5_PORT));
-                    ch.pipeline().addFirst("ss5",
-                            new Socks5ProxyHandler(ss5Address, url.getString(SS5_USER), url.getString(SS5_PASSWORD)));
+                if (url.getBoolean(SS5_ENABLE)) {
+                    String host = url.getString(SS5_HOST);
+                    if (host != null && !host.isEmpty()) {
+                        InetSocketAddress ss5Address = InetSocketAddress.createUnresolved(host, url.getInteger(SS5_PORT));
+                        ch.pipeline().addFirst("ss5",
+                                new Socks5ProxyHandler(ss5Address, url.getString(SS5_USER), url.getString(SS5_PASSWORD)));
+                    }
                 }
             }
         });

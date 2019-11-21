@@ -775,6 +775,11 @@ public class Constants {
     public static final URLOption<String> SSL_CLIENT_AUTH = new URLOption<>("ssl.clientAuth", "NONE");
 
     /**
+     * ss5启用标识
+     */
+    public static final URLOption<Boolean> SS5_ENABLE = new URLOption<>("ss5.enable", Boolean.FALSE);
+
+    /**
      * ss5代理服务host
      */
     public static final URLOption<String> SS5_HOST = new URLOption<>("ss5.host", (String) null);

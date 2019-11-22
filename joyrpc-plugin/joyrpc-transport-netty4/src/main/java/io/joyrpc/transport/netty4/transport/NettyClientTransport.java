@@ -154,7 +154,7 @@ public class NettyClientTransport extends AbstractClientTransport {
                 if (url.getBoolean(SS5_ENABLE)) {
                     String host = url.getString(SS5_HOST);
                     if (host != null && !host.isEmpty()) {
-                        InetSocketAddress ss5Address = InetSocketAddress.createUnresolved(host, url.getInteger(SS5_PORT));
+                        InetSocketAddress ss5Address = new InetSocketAddress(host, url.getInteger(SS5_PORT));
                         ch.pipeline().addFirst("ss5",
                                 new Socks5ProxyHandler(ss5Address, url.getString(SS5_USER), url.getString(SS5_PASSWORD)));
                     }

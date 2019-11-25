@@ -91,6 +91,10 @@
 - Transport
 
   - 修复transport层关于isWritable判断不合理，导致client不可读的问题
+  
+ - Telnet 
+  
+  - 修复invoke命令的密码设置问题
 
 ## 1.0.3-RELEASE(2019-10-12)
 

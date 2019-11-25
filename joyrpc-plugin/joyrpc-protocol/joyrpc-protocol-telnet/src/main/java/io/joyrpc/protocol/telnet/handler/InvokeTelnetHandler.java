@@ -111,12 +111,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
             //获取global
             boolean isGlobal = cmd.hasOption("g") ? true : false;
             //获取password
-            String password;
-            if (isGlobal) {
-                password = cmd.getOptionValue("g");
-            } else {
-                password = cmd.getOptionValue("p");
-            }
+            String password = cmd.getOptionValue(isGlobal ? "g" : "p");
             //获取token
             String token = cmd.getOptionValue("t");
             //获取alias

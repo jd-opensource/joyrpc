@@ -52,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.codec.Hex.encode;
 import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
@@ -269,7 +270,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
                 String cryptoKey = parametric.getString(Constants.SETTING_SERVER_SUDO_CRYPTO_KEY, "");
                 byte[] cryptoKeyBytes = StringUtils.isEmpty(cryptoKey) ? DEFAULT_CRYPTO_KEY : cryptoKey.getBytes();
                 //校验
-                if (!invokePassword.equals(byte2hex(encryptor.encrypt(password.getBytes(), cryptoKeyBytes)))) {
+                if (!invokePassword.equals(encode(encryptor.encrypt(password.getBytes(), cryptoKeyBytes)))) {
                     return new TelnetResponse("Wrong password [" + password + "], please check it");
                 }
                 return null;
@@ -302,23 +303,5 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
             97, 118, 97, 46, 108, 97, 110, 103, 46, 69, 110, 117,
             109, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 120, 112, 116,
             0, 6, 83, 69, 67, 82, 69, 84};
-
-    /**
-     * 二行制转字符串
-     *
-     * @param b
-     * @return
-     */
-    public static String byte2hex(byte[] b) {
-        StringBuilder hs = new StringBuilder();
-        String stmp;
-        for (int n = 0; b != null && n < b.length; n++) {
-            stmp = Integer.toHexString(b[n] & 0XFF);
-            if (stmp.length() == 1)
-                hs.append('0');
-            hs.append(stmp);
-        }
-        return hs.toString().toUpperCase();
-    }
 
 }

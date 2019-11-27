@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.naming.fix;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,8 @@ package io.joyrpc.cluster.discovery.naming.fix;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.naming.AbstractRegistar;
 import io.joyrpc.cluster.discovery.naming.ClusterProvider;
+import io.joyrpc.constants.Constants;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.StringUtils;
@@ -102,7 +104,6 @@ public class FixRegistar extends AbstractRegistar {
             if (value == null || value.isEmpty()) {
                 value = url.getHost() + ":" + url.getPort();
             }
-            String prefix = url.getProtocol() + "://";
             String rg = url.getString(REGION, region);
             String dc = url.getString(DATA_CENTER, dataCenter);
             String name = url.getString("name");
@@ -114,12 +115,10 @@ public class FixRegistar extends AbstractRegistar {
             String[] shards = StringUtils.split(value, delimiterPredicate);
             int j = 0;
             URL nodeUrl;
+            String defProtocol = GlobalContext.asParametric().getString(Constants.PROTOCOL_KEY);
+            Integer defPort = url.getInteger(Constants.PORT_OPTION);
             for (String shard : shards) {
-                if (shard.contains("://")) {
-                    nodeUrl = URL.valueOf(shard);
-                } else {
-                    nodeUrl = URL.valueOf(prefix + shard);
-                }
+                nodeUrl = URL.valueOf(shard, defProtocol, defPort, null);
                 result.add(new Shard.DefaultShard(name != null ? name + "-" + j++ : nodeUrl.getAddress(),
                         rg, dc, nodeUrl.getProtocol(), nodeUrl,
                         nodeUrl.getInteger(WEIGHT), Shard.ShardState.INITIAL));

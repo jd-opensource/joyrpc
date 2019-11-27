@@ -104,29 +104,42 @@ public final class URL implements Serializable, Parametric {
      * @return 新创建的URL对象
      */
     public static URL valueOf(final String url) {
-        return valueOf(url, null, null);
+        return valueOf(url, null, null, null);
     }
 
     /**
      * 把字符串转化成URL对象
      *
      * @param source 字符串
-     * @param defaultProtocol 默认的协议
+     * @param defProtocol 默认的协议
      * @return 新创建的URL对象
      */
-    public static URL valueOf(final String source, final String defaultProtocol) {
-        return valueOf(source, defaultProtocol, null);
+    public static URL valueOf(final String source, final String defProtocol) {
+        return valueOf(source, defProtocol, null, null);
     }
 
     /**
      * 把字符串转化成URL对象
      *
      * @param source 字符串
-     * @param defaultProtocol 默认的协议
+     * @param defProtocol 默认的协议
      * @param params 参数
      * @return 新创建的URL对象
      */
-    public static URL valueOf(final String source, final String defaultProtocol, final List<String> params) {
+    public static URL valueOf(final String source, final String defProtocol, final List<String> params) {
+        return valueOf(source, defProtocol, null, params);
+    }
+
+    /**
+     * 把字符串转化成URL对象
+     *
+     * @param source 字符串
+     * @param defProtocol 默认的协议
+     * @param defPort 默认端口
+     * @param params 参数
+     * @return 新创建的URL对象
+     */
+    public static URL valueOf(final String source, final String defProtocol, final Integer defPort, final List<String> params) {
         if (source == null) {
             return null;
         }
@@ -194,7 +207,7 @@ public final class URL implements Serializable, Parametric {
             }
         }
         if (protocol == null || protocol.isEmpty()) {
-            protocol = defaultProtocol;
+            protocol = defProtocol;
             if (protocol == null || protocol.isEmpty()) {
                 throw new IllegalStateException("url missing protocol: " + url);
             }
@@ -238,6 +251,8 @@ public final class URL implements Serializable, Parametric {
                 // 排除zookeeper://192.168.1.2:2181,192.168.1.3:2181
                 port = Integer.parseInt(values[1]);
                 url = values[0];
+            } else if (defPort != null) {
+                port = defPort;
             }
         }
         if (!url.isEmpty()) {

@@ -102,15 +102,14 @@ public class ConsumerInvokeHandler implements InvocationHandler {
             return method.invoke(proxy, param);
         }
 
-        String methodName = method.getName();
         int count = method.getParameterCount();
         if (count == 0) {
-            if (METHOD_NAME_TOSTRING.equals(methodName)) {
+            if (METHOD_NAME_TOSTRING.equals(method.getName())) {
                 return invoker.toString();
-            } else if (METHOD_NAME_HASHCODE.equals(methodName)) {
+            } else if (METHOD_NAME_HASHCODE.equals(method.getName())) {
                 return invoker.hashCode();
             }
-        } else if (count == 1 && METHOD_NAME_EQUALS.equals(methodName)) {
+        } else if (count == 1 && METHOD_NAME_EQUALS.equals(method.getName())) {
             return invoker.equals(param[0]);
         }
 

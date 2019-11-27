@@ -872,6 +872,10 @@ public class Cluster {
          * 下次快照时间
          */
         protected long time;
+        /**
+         * 名称
+         */
+        protected final String name;
 
 
         /**
@@ -888,11 +892,12 @@ public class Cluster {
             this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
             this.time = lastSnapshotTime + dashboard.getMetric().getWindowTime();
             this.dashboard.setLastSnapshotTime(lastSnapshotTime);
+            this.name = this.getClass().getSimpleName() + " " + cluster.name;
         }
 
         @Override
         public String getName() {
-            return this.getClass().getSimpleName() + " " + cluster.name;
+            return name;
         }
 
         @Override
@@ -923,6 +928,8 @@ public class Cluster {
          */
         protected final Node node;
 
+        protected final String name;
+
         /**
          * 构造函数
          *
@@ -932,11 +939,12 @@ public class Cluster {
         public NodeTask(Cluster cluster, Node node) {
             this.cluster = cluster;
             this.node = node;
+            this.name = this.getClass().getSimpleName() + " " + node.getName();
         }
 
         @Override
         public String getName() {
-            return this.getClass().getSimpleName() + " " + node.getName();
+            return name;
         }
 
         @Override

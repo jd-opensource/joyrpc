@@ -1046,6 +1046,10 @@ public class Node implements Shard {
          * 版本
          */
         protected final long version;
+        /**
+         * 名称
+         */
+        protected final String name;
 
         /**
          * 构造函数
@@ -1056,11 +1060,12 @@ public class Node implements Shard {
         public NodeTask(Node node, long version) {
             this.node = node;
             this.version = version;
+            this.name = this.getClass().getSimpleName() + " " + node.getName();
         }
 
         @Override
         public String getName() {
-            return this.getClass().getSimpleName() + " " + node.getName();
+            return name;
         }
 
         @Override

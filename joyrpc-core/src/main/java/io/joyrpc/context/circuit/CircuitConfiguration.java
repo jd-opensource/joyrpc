@@ -29,7 +29,7 @@ import java.util.Map;
  */
 public class CircuitConfiguration {
 
-    public static final CircuitConfiguration INSTANCE = new CircuitConfiguration();
+    public static final CircuitConfiguration CIRCUIT = new CircuitConfiguration();
 
     /**
      * 结果缓存
@@ -52,9 +52,7 @@ public class CircuitConfiguration {
      * @param circuits
      */
     public synchronized void update(final Map<String, List<String>> circuits) {
-        if (circuits != null) {
-            CIRCUITS = circuits;
-        }
+        CIRCUITS = circuits == null ? new HashMap<>() : circuits;
     }
 
 }

@@ -32,7 +32,7 @@ public class GroupRouterConfiguration extends AbstractInterfaceConfiguration<Str
     /**
      * 结果缓存
      */
-    public static final GroupRouterConfiguration GROUP_ROUTER_CONF = new GroupRouterConfiguration();
+    public static final GroupRouterConfiguration GROUP_ROUTER = new GroupRouterConfiguration();
 
 
     /**

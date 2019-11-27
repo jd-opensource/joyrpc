@@ -24,9 +24,7 @@ package io.joyrpc.context.limiter;
 import io.joyrpc.cluster.distribution.RateLimiter;
 import io.joyrpc.cluster.distribution.limiter.RateLimiterConfig;
 import io.joyrpc.codec.serialization.TypeReference;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
@@ -36,11 +34,15 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.Plugin.LIMITER;
 import static io.joyrpc.cluster.distribution.RateLimiter.DELIMITER;
+import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
+import static io.joyrpc.constants.Constants.SETTING_INVOKE_PROVIDER_LIMIT;
+import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
 
 
 /**
@@ -54,17 +56,26 @@ public class LimiterConfigHandler implements ConfigEventHandler {
     public final static String DEFAULT_LIMITER_TYPE = "leakyBucket";
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
-        if (GlobalContext.update(className, attrs, Constants.SETTING_INVOKE_PROVIDER_LIMIT, null)) {
-            try {
-                Map<String, RateLimiterConfig> configs = parse(GlobalContext.asParametric(className).getString(Constants.SETTING_INVOKE_PROVIDER_LIMIT));
-                Map<String, RateLimiter> limiters = load(configs, LimiterConfiguration.LIMITERS.get(className));
-                //全量更新
-                LimiterConfiguration.LIMITERS.update(className, limiters);
-            } catch (Exception e) {
-                logger.error("Error occurs while parsing limiter config. caused by " + e.getMessage(), e);
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
+        if (!GLOBAL_SETTING.equals(className)) {
+            String oldAttr = oldAttrs.get(SETTING_INVOKE_PROVIDER_LIMIT);
+            String newAttr = newAttrs.get(SETTING_INVOKE_PROVIDER_LIMIT);
+            if (!Objects.equals(oldAttr, newAttr)) {
+                try {
+                    Map<String, RateLimiterConfig> configs = parse(newAttr);
+                    Map<String, RateLimiter> limiters = load(configs, LIMITERS.get(className));
+                    //全量更新
+                    LIMITERS.update(className, limiters);
+                } catch (Exception e) {
+                    logger.error("Error occurs while parsing limiter config. caused by " + e.getMessage(), e);
+                }
             }
         }
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{SETTING_INVOKE_PROVIDER_LIMIT};
     }
 
     /**
@@ -75,38 +86,23 @@ public class LimiterConfigHandler implements ConfigEventHandler {
      * @return
      */
     protected Map<String, RateLimiter> load(final Map<String, RateLimiterConfig> configs, final Map<String, RateLimiter> limiters) {
+        if (configs == null) {
+            return null;
+        }
         Map<String, RateLimiter> result = new HashMap<>(configs.size());
-        RateLimiterConfig config;
-        RateLimiter rateLimiter;
-        //遍历老的限流器
-        if (limiters != null && !limiters.isEmpty()) {
-            for (Map.Entry<String, RateLimiter> old : limiters.entrySet()) {
-                //从新的移除
-                config = configs.remove(old.getKey());
-                rateLimiter = old.getValue();
-                if (config != null) {
-                    //新的存在，则判断类型是否变更
-                    if (!rateLimiter.type().equals(config.getType())) {
-                        //类型不同，重新加载插件
-                        rateLimiter = load(config);
-                        if (rateLimiter != null) {
-                            result.put(old.getKey(), rateLimiter);
-                        }
-                    } else {
-                        //重新加载配置
-                        rateLimiter.reload(config);
-                        result.put(old.getKey(), rateLimiter);
-                    }
+        configs.forEach((name, config) -> {
+            RateLimiter limiter = limiters == null ? null : limiters.get(name);
+            if (limiter == null || !limiter.type().equals(config.getType())) {
+                limiter = load(config);
+                if (limiter != null) {
+                    result.put(name, limiter);
                 }
+            } else {
+                //重新加载配置
+                limiter.reload(config);
+                result.put(name, limiter);
             }
-        }
-        //新增的配置
-        for (Map.Entry<String, RateLimiterConfig> entry : configs.entrySet()) {
-            rateLimiter = load(entry.getValue());
-            if (rateLimiter != null) {
-                result.put(entry.getKey(), rateLimiter);
-            }
-        }
+        });
         return result;
     }
 
@@ -135,12 +131,12 @@ public class LimiterConfigHandler implements ConfigEventHandler {
      * @return
      */
     protected Map<String, RateLimiterConfig> parse(String limitStr) {
-        Map<String, RateLimiterConfig> configs = new HashMap<>();
+        if (limitStr == null || limitStr.isEmpty()) {
+            return null;
+        }
         List<Map> results = JSON.get().parseObject(limitStr, new TypeReference<List<Map>>() {
         });
-        if (null == results) {
-            return configs;
-        }
+        Map<String, RateLimiterConfig> configs = new HashMap<>(results.size());
         Parametric parametric;
         //遍历限流配置
         for (Map result : results) {

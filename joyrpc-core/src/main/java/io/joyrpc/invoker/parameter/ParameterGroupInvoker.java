@@ -162,7 +162,7 @@ public class ParameterGroupInvoker extends AbstractGroupInvoker {
             return meta.random();
         } else {
             // 有目标参数配置
-            String alias = GroupRouterConfiguration.GROUP_ROUTER_CONF.get(className, methodName, dstParam);
+            String alias = GroupRouterConfiguration.GROUP_ROUTER.get(className, methodName, dstParam);
             // 映射里找不到 认为传入值就当是参数值
             // 不需要检查分组是否存在，在ConsumerGroupConfig里面会根据自适应参数来动态创建不存在的分组
             return alias == null || alias.isEmpty() ? dstParam : alias;

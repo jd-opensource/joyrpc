@@ -9,9 +9,9 @@ package io.joyrpc.context.auth;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,21 +22,19 @@ package io.joyrpc.context.auth;
 
 
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.exception.SerializerException;
+import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.util.network.Lan;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.ConfigEventHandler.ZERO_ORDER;
-import static io.joyrpc.context.GlobalContext.asParametric;
-import static io.joyrpc.context.GlobalContext.update;
+import static io.joyrpc.context.ConfigEventHandler.PERMISSION_ORDER;
 import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
 
 
@@ -45,33 +43,40 @@ import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
  *
  * @date: 2019/6/21
  */
-@Extension(value = "auth", order = ZERO_ORDER)
+@Extension(value = "auth", order = PERMISSION_ORDER)
 public class IPPermissionConfigHandler implements ConfigEventHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(IPPermissionConfiguration.class);
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
-        boolean ivkb1 = update(className, attrs, SETTING_INVOKE_WB_OPEN, "true");
-        boolean ivkb2 = update(className, attrs, SETTING_INVOKE_BLACKLIST, "");
-        boolean ivkb3 = update(className, attrs, SETTING_INVOKE_WHITELIST, "{\"*\":\"*\"}");
-        if (ivkb1 || ivkb2 || ivkb3) {
-            Parametric parametric = asParametric(className);
-            //重新构建
-            boolean enabled = parametric.getBoolean(SETTING_INVOKE_WB_OPEN, Boolean.TRUE);
-            if (!enabled) {
-                IP_PERMISSION.remove(className);
-            } else {
-                //白名单
-                String white = parametric.getString(SETTING_INVOKE_WHITELIST);
-                //黑名单
-                String black = parametric.getString(SETTING_INVOKE_BLACKLIST);
-                //许可`
-                IPPermission permission = new IPPermission(enabled, parse(className, white), parse(className, black));
-                //修改黑白名单
-                IP_PERMISSION.update(className, permission);
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
+        if (!GLOBAL_SETTING.equals(className)) {
+            String oldOpen = oldAttrs.getOrDefault(SETTING_INVOKE_WB_OPEN, "true");
+            String newOpen = newAttrs.getOrDefault(SETTING_INVOKE_WB_OPEN, "true");
+            String oldBlacklist = oldAttrs.getOrDefault(SETTING_INVOKE_BLACKLIST, "");
+            String newBlacklist = newAttrs.getOrDefault(SETTING_INVOKE_BLACKLIST, "");
+            String oldWhitelist = oldAttrs.getOrDefault(SETTING_INVOKE_WHITELIST, "{\"*\":\"*\"}");
+            String newWhiteList = newAttrs.getOrDefault(SETTING_INVOKE_WHITELIST, "{\"*\":\"*\"}");
+            if (!Objects.equals(oldOpen, newOpen)
+                    || !Objects.equals(oldBlacklist, newBlacklist)
+                    || !Objects.equals(oldWhitelist, newWhiteList)) {
+                //重新构建
+                boolean enabled = Converts.getBoolean(newOpen, Boolean.TRUE);
+                if (!enabled) {
+                    IP_PERMISSION.remove(className);
+                } else {
+                    //许可`
+                    IPPermission permission = new IPPermission(true, parse(className, newWhiteList), parse(className, newBlacklist));
+                    //修改黑白名单
+                    IP_PERMISSION.update(className, permission);
+                }
             }
         }
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{SETTING_INVOKE_WB_OPEN, SETTING_INVOKE_BLACKLIST, SETTING_INVOKE_WHITELIST};
     }
 
     /**
@@ -93,7 +98,7 @@ public class IPPermissionConfigHandler implements ConfigEventHandler {
                 Map<String, Lan> result = new HashMap<>(map.size());
                 map.forEach((k, v) -> result.put(k, new Lan(v == null ? IPPermission.MASK : v, true)));
                 return result;
-            } catch (SerializerException e) {
+            } catch (Exception e) {
                 logger.error("Error occurs while parsing ip blackWhiteList of " + interfaceId, e);
                 return new HashMap<>();
             }

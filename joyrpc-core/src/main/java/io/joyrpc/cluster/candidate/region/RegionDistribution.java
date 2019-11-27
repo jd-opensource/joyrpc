@@ -252,7 +252,7 @@ public class RegionDistribution {
                                final LinkedHashSet<DataCenterDistribution> others) {
         if (!dataCenter.isEmpty()) {
             //判断当前机房的跨机房首选连接机房配置
-            List<String> prefers = CircuitConfiguration.INSTANCE.get(dataCenter);
+            List<String> prefers = CircuitConfiguration.CIRCUIT.get(dataCenter);
             if (prefers != null && !prefers.isEmpty()) {
                 DataCenterDistribution distribution;
                 for (String prefer : prefers) {

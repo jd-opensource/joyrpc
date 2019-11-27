@@ -33,9 +33,24 @@ import java.util.Map;
 public interface ConfigEventHandler {
 
     /**
-     * 权限鉴别相关配置事件order，较高优先级
+     * IP权限配置
      */
-    int ZERO_ORDER = 0;
+    int PERMISSION_ORDER = 0;
+
+    /**
+     * 熔断配置
+     */
+    int BREAKER_ORDER = 10;
+
+    /**
+     * 跨机房访问首选机房配置顺序
+     */
+    int CIRCUIT_ORDER = 40;
+
+    /**
+     * 自适应负载均衡配置
+     */
+    int ADAPTIVE_ORDER = 50;
 
     /**
      * 全局配置事件order
@@ -43,26 +58,26 @@ public interface ConfigEventHandler {
     int GLOBAL_ORDER = 100;
 
     /**
-     * 跨机房访问首选机房配置顺序
-     */
-    int CIRCUIT_ORDER = GLOBAL_ORDER - 1;
-
-    /**
      * 接口级业务相关配置事件order
      */
     int BIZ_ORDER = 200;
 
     /**
-     * 接口级全部配置事件order，由于可能覆盖业务相关配置，优先级排在最后
-     */
-    int IFACE_ORDER = Short.MAX_VALUE;
-
-    /**
      * 处理配置
      *
      * @param className 接口类名
-     * @param attrs     扩展属性
+     * @param oldAttrs  老配置
+     * @param newAttrs  新配置
      */
-    void handle(final String className, final Map<String, String> attrs);
+    void handle(String className, Map<String, String> oldAttrs, Map<String, String> newAttrs);
+
+    /**
+     * 获取动态更新的Key，这些Key不会拼接到URL里面
+     *
+     * @return
+     */
+    default String[] getKeys() {
+        return new String[0];
+    }
 
 }

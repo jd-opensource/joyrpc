@@ -10,61 +10,91 @@
 
 ### Enhancement
 
-- ProviderConfig增加exportAndOpen方法，便于API调用
+- Bootstrap
 
-- 配置动态更新JSON解析异常捕获
+  - ProviderConfig增加exportAndOpen方法，便于API调用
+  
+  - AbstractConsumerConfig增加proxy方法，方便在spring场景提前创建好代理对象
 
-- 优化区域感知算法，跨机房选择，优先根据首选配置选择本区域首选，再选择本区域，然后再选择其它区域首选。跨机房首选机房配置放在全局配置里面。如果没有指定候选者最小数量并且允许跨机房选择，则尝试获取就近机房节点数量平均值和本地机房的数量的最大值作为选择的目标，防止本地机房节点数量很少的情况
+- Cluster
 
-- 升级netty为4.1.43.Final版本
+  - 优化区域感知算法，跨机房选择，优先根据首选配置选择本区域首选，再选择本区域，然后再选择其它区域首选。跨机房首选机房配置放在全局配置里面。如果没有指定候选者最小数量并且允许跨机房选择，则尝试获取就近机房节点数量平均值和本地机房的数量的最大值作为选择的目标，防止本地机房节点数量很少的情况
 
-- 升级hazelcast为3.12.4版本
+- 注册中心
 
-- 升级commons-compress为1.19，解决安全漏洞
+  - 优化Broadcast注册中心，数据备份默认改成同步和异步各一份，读主节点。当Provider实例停止的时候，Consumer能快速去掉节点
+  
+- Spring&Springboot
 
-- 优化Broadcast注册中心，数据备份默认改成同步和异步各一份，读主节点。当Provider实例停止的时候，Consumer能快速去掉节点
+  - 完善Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置。
+  
+- 序列化
+  
+  - 修改泛化调用的反序列化逻辑，优先按照用户传递的子类参数类型来进行反序列化
+  
+- 工具类
+  
+  - ClassUtils的getPublicMethods返回公共的非静态方法
 
-- 调整Spring和SpringBoot支持，Spring只支持xml解析，Springboot支持注解方式，并支持消费者和生产者参数在配置文件中配置。
+- Dependency
 
-- 修改泛化调用的反序列化，优先按照用户传递的子类参数类型来进行反序列化
+  - 升级netty为4.1.43.Final版本
 
-- ClassUtils的getPublicMethods返回公共的非静态方法
+  - 升级hazelcast为3.12.4版本
+
+  - 升级commons-compress为1.19，解决安全漏洞
 
 ### Bugfixes
 
-- 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
+- Bootstrap
 
-- 注册中心在持久化数据的时候潜在的空指针问题
+  - 修复优雅停机问题，Shutdown没有正确的触发对象close方法产生的CompletableFuture事件
 
-- 修改ETCD续约成功，连续续约失败次数没有重置的问题
+- 注册中心&动态配置
 
-- 修复ETCD和ZK注册中心，初始化时候，当注册中心集群连接不上，后续集群恢复后，无法正常重连问题
+  - 注册中心在持久化数据的时候潜在的空指针问题
 
-- ZK注册中心添加连接监听，与ZK重连成功，触发recover
+  - 修改ETCD续约成功，连续续约失败次数没有重置的问题
 
-- 修复ZK注册中心初始化时未成功连接到集群，后续连接到集群，却不重新发起服务订阅与注册的问题
+  - 修复ETCD和ZK注册中心，初始化时候，当注册中心集群连接不上，后续集群恢复后，无法正常重连问题
 
-- 修改注册中心，集群事件增量数据先到达，全量数据后到达需要正确合并的问题
+  - ZK注册中心添加连接监听，与ZK重连成功，触发recover
 
-- 修改GrpcClientProtocol，每次build chain的时候都重新创建，防止内部逻辑发生StreamId冲突
+  - 修复ZK注册中心初始化时未成功连接到集群，后续连接到集群，却不重新发起服务订阅与注册的问题
 
-- GRPC存在潜在的内存泄漏问题，ByteBuf没有Release
+  - 修改注册中心，集群事件增量数据先到达，全量数据后到达需要正确合并的问题
+  
+  - 修复配置动态更新的问题
+  
+  - 配置动态更新JSON解析异常捕获
+  
+- GRPC
 
-- 修改SpringBoot方式采用SpringLoader加载插件挂住的问题
+  - 修改GrpcClientProtocol，每次build chain的时候都重新创建，防止内部逻辑发生StreamId冲突
 
-- 修复SpringBoot方式consumer调用refer为null的问题
+  - GRPC存在潜在的内存泄漏问题，ByteBuf没有Release
 
-- Spring中的ConsumerBean初始化异常退出，当是泛型的时候正确返回对象类型
+- Spring&Springboot
 
-- Spring中的ProviderBean初始化异常退出
+  - 修改SpringBoot方式采用SpringLoader加载插件挂住的问题
 
-- AbstractConsumerConfig增加proxy方法，方便在spring场景提前创建好代理对象
+  - 修复SpringBoot方式consumer调用refer为null的问题
 
-- 修复transport层关于isWritable判断不合理，导致client不可读的问题
+  - Spring中的ConsumerBean初始化异常退出，当是泛型的时候正确返回对象类型
 
-- 处理Spring的xml配置文件中全局参数占位符替换
+  - Spring中的ProviderBean初始化异常退出
+  
+  - 处理Spring的xml配置文件中全局参数占位符替换
+  
+  - 处理Spring和SpringBoot服务提供者在进程关闭的时候不能正常的Unrefer问题
 
-- 处理Spring和SpringBoot服务提供者在进程关闭的时候不能正常的Unrefer问题
+- Transport
+
+  - 修复transport层关于isWritable判断不合理，导致client不可读的问题
+  
+ - Telnet 
+  
+  - 修复invoke命令的密码设置问题
 
 ## 1.0.3-RELEASE(2019-10-12)
 

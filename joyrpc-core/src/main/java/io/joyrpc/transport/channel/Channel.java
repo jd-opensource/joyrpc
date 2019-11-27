@@ -29,7 +29,7 @@ import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.List;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -205,8 +205,24 @@ public interface Channel {
      *
      * @param key
      * @param value
+     * @return
      */
-    void setAttribute(String key, Object value);
+    Channel setAttribute(String key, Object value);
+
+    /**
+     * 设置属性
+     *
+     * @param key
+     * @param value
+     * @param predicate
+     * @return
+     */
+    default Channel setAttribute(final String key, final Object value, final BiPredicate<String, Object> predicate) {
+        if (predicate.test(key, value)) {
+            return setAttribute(key, value);
+        }
+        return this;
+    }
 
     /**
      * 删除属性

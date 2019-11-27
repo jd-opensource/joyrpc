@@ -26,10 +26,12 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Predicate;
 
+import static io.joyrpc.Plugin.CONFIG_EVENT_HANDLER;
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.context.Environment.OS_TYPE;
 
@@ -143,22 +145,45 @@ public class Constants {
     public final static String AND_SEPARATOR = "&";
 
     /**
-     * 不能修改的属性
+     * 过滤掉不能修改和动态变更的属性
      */
-    public final static Map<String, String> EXCLUDE_CHANGED_ATTR_MAP = new ConcurrentHashMap<String, String>() {{
-        put("id", "");
-        put("interfaceClazz", "");
-        put("ref", "");
-        put("server", "");
-        put("delay", "");
-        put("proxy", "");
-        put("registry", "");
-        put("generic", "");
-        put("dynamic", "");
-        put("register", "");
-        put("subscribe", "");
-        put("interfaceValidator", "");
-    }};
+    public static final Predicate<String> ALTERABLE_ATTR = new Predicate<String>() {
+
+        protected Set<String> excludes;
+
+        @Override
+        public boolean test(String name) {
+            if (excludes == null) {
+                synchronized (this) {
+                    if (excludes == null) {
+                        excludes = new HashSet<>(30);
+                        excludes.add("id");
+                        excludes.add("interfaceClazz");
+                        excludes.add("ref");
+                        excludes.add("server");
+                        excludes.add("delay");
+                        excludes.add("proxy");
+                        excludes.add("registry");
+                        excludes.add("generic");
+                        excludes.add("dynamic");
+                        excludes.add("register");
+                        excludes.add("subscribe");
+                        excludes.add("interfaceValidator");
+                        CONFIG_EVENT_HANDLER.extensions().forEach(o -> {
+                            String[] keys = o.getKeys();
+                            if (keys != null) {
+                                for (String key : keys) {
+                                    excludes.add(key);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            return !excludes.contains(name);
+        }
+    };
 
 
     /*======================= Registration center configuration information item name =======================*/
@@ -742,4 +767,29 @@ public class Constants {
      * 是否需要客户端验证（REQUIRE:需要客户端认证 及双向认证，OPTIONAL:可选 ，NONE:不需要客户端认证 单项认证）
      */
     public static final URLOption<String> SSL_CLIENT_AUTH = new URLOption<>("ssl.clientAuth", "NONE");
+
+    /**
+     * ss5启用标识
+     */
+    public static final URLOption<Boolean> SS5_ENABLE = new URLOption<>("ss5.enable", Boolean.FALSE);
+
+    /**
+     * ss5代理服务host
+     */
+    public static final URLOption<String> SS5_HOST = new URLOption<>("ss5.host", (String) null);
+
+    /**
+     * ss5代理服务port
+     */
+    public static final URLOption<Integer> SS5_PORT = new URLOption<>("ss5.port", 1080);
+
+    /**
+     * ss5用户名
+     */
+    public static final URLOption<String> SS5_USER = new URLOption<>("ss5.user", (String) null);
+
+    /**
+     * ss5密码
+     */
+    public static final URLOption<String> SS5_PASSWORD = new URLOption<>("ss5.password", (String) null);
 }

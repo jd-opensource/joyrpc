@@ -9,9 +9,9 @@ package io.joyrpc.cluster.event;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -60,11 +60,11 @@ public class ConfigEvent extends UpdateEvent<Map<String, String>> {
     /**
      * 获取修改的值
      *
-     * @param exclude 过滤掉的Key
-     * @param old     获取老的值
+           * @param predicate 过滤掉的Key
+     * @param old       获取老的值
      * @return
      */
-    public Map<String, String> changed(final Predicate<String> exclude, final Function<String, String> old) {
+    public Map<String, String> changed(final Predicate<String> predicate, final Function<String, String> old) {
         int size = datum == null ? 0 : datum.size();
         Map<String, String> result = new HashMap<>(size);
         if (size > 0) {
@@ -73,7 +73,7 @@ public class ConfigEvent extends UpdateEvent<Map<String, String>> {
             for (Map.Entry<String, String> entry : datum.entrySet()) {
                 key = entry.getKey();
                 newValue = entry.getValue();
-                if (exclude == null || !exclude.test(key)) {
+                if (predicate == null || predicate.test(key)) {
                     if (!Objects.equals(old.apply(key), newValue)) {
                         result.put(key, newValue);
                     }

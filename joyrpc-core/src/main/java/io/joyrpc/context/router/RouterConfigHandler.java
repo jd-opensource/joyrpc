@@ -23,15 +23,17 @@ package io.joyrpc.context.router;
 
 import io.joyrpc.cluster.distribution.router.method.MethodRouterBuilder;
 import io.joyrpc.context.ConfigEventHandler;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Objects;
 
+import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.constants.Constants.SETTING_ROUTER_RULE;
 import static io.joyrpc.context.ConfigEventHandler.BIZ_ORDER;
+import static io.joyrpc.context.router.RouterConfiguration.ROUTER;
 
 
 /**
@@ -43,13 +45,22 @@ public class RouterConfigHandler implements ConfigEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(RouterConfigHandler.class);
 
     @Override
-    public void handle(final String className, final Map<String, String> attrs) {
-        if (GlobalContext.update(className, attrs, SETTING_ROUTER_RULE, null)) {
-            try {
-                RouterConfiguration.ROUTER.update(className, MethodRouterBuilder.build(GlobalContext.get(className, SETTING_ROUTER_RULE, "")));
-            } catch (Exception e) {
-                logger.error("Error occurs while parsing router config. caused by " + e.getMessage(), e);
+    public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
+        if (!GLOBAL_SETTING.equals(className)) {
+            String oldAttr = oldAttrs.get(SETTING_ROUTER_RULE);
+            String newAttr = newAttrs.get(SETTING_ROUTER_RULE);
+            if (!Objects.equals(oldAttr, newAttr)) {
+                try {
+                    ROUTER.update(className, MethodRouterBuilder.build(newAttr));
+                } catch (Exception e) {
+                    logger.error("Error occurs while parsing router config. caused by " + e.getMessage(), e);
+                }
             }
         }
+    }
+
+    @Override
+    public String[] getKeys() {
+        return new String[]{SETTING_ROUTER_RULE};
     }
 }

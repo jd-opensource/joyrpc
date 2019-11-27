@@ -85,13 +85,15 @@ public class NettyServerTransport extends AbstractServerTransport {
                 workerGroup = EventLoopGroupFactory.getChildEventLoopGroup(url);
                 ServerBootstrap serverBootstrap = configure(new ServerBootstrap(), sslContext);
 
+                String host = url.getString(Constants.BIND_IP_KEY, url.getHost());
+                String address = host + ":" + url.getPort();
                 // 绑定到全部网卡 或者 指定网卡
-                serverBootstrap.bind(new InetSocketAddress(url.getHost(), url.getPort())).addListener((ChannelFutureListener) f -> {
+                serverBootstrap.bind(new InetSocketAddress(host, url.getPort())).addListener((ChannelFutureListener) f -> {
                     if (f.isSuccess()) {
-                        logger.info(String.format("Success binding server to %s", url.getAddress()));
+                        logger.info(String.format("Success binding server to %s", address));
                         consumer.accept(new AsyncResult<>(new NettyServerChannel(f.channel(), serverChannelContext)));
                     } else {
-                        logger.error(String.format("Failed binding server to %s", url.getAddress()));
+                        logger.error(String.format("Failed binding server to %s", address));
                         consumer.accept(new AsyncResult<>(new ConnectionException("Server start fail !", f.cause())));
                     }
                 });

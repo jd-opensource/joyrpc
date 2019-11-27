@@ -293,9 +293,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         registry = registry != null ? registry : Arrays.asList(RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get());
         registryUrls = parse(registry);
         String host;
+        String bindIp = null;
         if (Ipv4.isLocalHost(serverConfig.getHost())) {
-            //Ipv4有本地地址缓存功能
+            //拿到本机地址
             host = getLocalHost(registryUrls.get(0).getString(ADDRESS_OPTION));
+            bindIp = "0.0.0.0";
         } else {
             host = serverConfig.getHost();
         }
@@ -306,6 +308,9 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
 
         //生成注册的URL
         Map<String, String> map = addAttribute2Map(serverConfig.addAttribute2Map());
+        if (bindIp != null) {
+            map.put(BIND_IP_KEY, bindIp);
+        }
         serviceUrl = new URL(GlobalContext.getString(PROTOCOL_KEY), host, port, interfaceClazz, map);
 
         //构造注册中心对象

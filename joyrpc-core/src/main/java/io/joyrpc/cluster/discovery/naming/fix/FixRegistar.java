@@ -121,7 +121,7 @@ public class FixRegistar extends AbstractRegistar {
                     nodeUrl = URL.valueOf(prefix + shard);
                 }
                 result.add(new Shard.DefaultShard(name != null ? name + "-" + j++ : nodeUrl.getAddress(),
-                        rg, dc, url.getProtocol(), nodeUrl,
+                        rg, dc, nodeUrl.getProtocol(), nodeUrl,
                         nodeUrl.getInteger(WEIGHT), Shard.ShardState.INITIAL));
             }
             return result;

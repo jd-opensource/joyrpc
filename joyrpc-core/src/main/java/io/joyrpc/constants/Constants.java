@@ -584,6 +584,7 @@ public class Constants {
 
     public static final String IO_THREADS_KEY = "ioThreads";
     public static final String BOSS_THREADS_KEY = "bossThreads";
+    public static final String BIND_IP_KEY = "bind.ip";
 
     public static final String BUFFER_PREFER_DIRECT_KEY = "buffer.preferDirect";
 

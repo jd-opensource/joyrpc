@@ -22,7 +22,6 @@ package io.joyrpc.invoker;
 
 import io.joyrpc.InvokerAware;
 import io.joyrpc.cluster.Cluster;
-import io.joyrpc.cluster.ClusterManager;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.LoadBalance;
@@ -111,10 +110,6 @@ public class InvokerManager {
      * 共享的TCP服务
      */
     protected Map<Integer, Server> servers = new ConcurrentHashMap<>(10);
-    /**
-     * 集群管理器，延迟创建，因为如果只作为Provider，没必要启动线程
-     */
-    protected ClusterManager clusterManager;
     /**
      * 集群管理器
      */
@@ -452,17 +447,6 @@ public class InvokerManager {
                                 final Configure configure,
                                 final URL subscribeUrl,
                                 final Map<String, Refer> refers) {
-        if (clusterManager == null) {
-            synchronized (this) {
-                if (clusterManager == null) {
-                    Parametric parametric = GlobalContext.asParametric();
-                    clusterManager = new ClusterManager(
-                            parametric.getPositive(Constants.CLUSTER_MANAGER_THREADS, ClusterManager.THREADS),
-                            parametric.getPositive(Constants.CLUSTER_MANAGER_INTERVAL, ClusterManager.INTERVAL));
-                    clusterManager.start();
-                }
-            }
-        }
         //配置器
         URL u = configure(url);
         //一个服务接口可以注册多次，每个的参数不一样
@@ -484,7 +468,7 @@ public class InvokerManager {
             DashboardFactory dashboardFactory = buildDashboardFactory(loadBalance);
             //集群的名字是服务名称+别名+配置变更计数器，确保相同接口引用的集群名称不一样
             final Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
-            final Cluster cluster = clusterManager.getCluster(clusterName, v -> new Cluster(v, u, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher));
+            final Cluster cluster = new Cluster(clusterName, u, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
             //判断是否有回调，如果注册成功，说明有回调方法，需要往Cluster注册事件，监听节点断开事件
             CallbackContainer container = null;
             boolean callback = callbackManager.register(config.getProxyClass());
@@ -511,7 +495,6 @@ public class InvokerManager {
             return new Refer<T>(clusterName, u, config, registry, configure, subscribeUrl, cluster, loadBalance, container,
                     (v, t) -> {
                         //关闭回调，移除集群和引用
-                        clusterManager.removeCluster(v.getCluster().getName());
                         refers.remove(v.getName());
                     });
         });
@@ -699,10 +682,6 @@ public class InvokerManager {
                     exports = new ConcurrentHashMap<>();
                     refers = new ConcurrentHashMap<>();
                     callbackManager.close();
-                    if (clusterManager != null) {
-                        clusterManager.close();
-                        clusterManager = null;
-                    }
                     //关闭服务
                     servers.forEach((o, r) -> r.close(null));
                     servers = new ConcurrentHashMap<>();

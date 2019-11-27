@@ -88,11 +88,48 @@ public class Timer {
      * @param time     任务执行时间
      * @param runnable 执行任务
      */
-    public void add(final String name, final int time, final Runnable runnable) {
+    public void add(final String name, final long time, final Runnable runnable) {
         if (runnable == null) {
             return;
         }
         add(new Task(name, time, runnable));
+    }
+
+    /**
+     * 添加任务
+     *
+     * @param task
+     */
+    public void add(final TimeTask task) {
+        if (task != null) {
+            add(task.getName(), task.getTime(), task);
+        }
+    }
+
+    /**
+     * 添加任务，至少需要一跳
+     *
+     * @param name     名称
+     * @param time     任务执行时间
+     * @param runnable 执行任务
+     */
+    public void addLeastOneTick(final String name, final long time, final Runnable runnable) {
+        if (runnable == null) {
+            return;
+        }
+        long nextTickTime = timeWheel.getNextTickTime();
+        add(new Task(name, (time < nextTickTime ? nextTickTime : time) + SystemClock.now(), runnable));
+    }
+
+    /**
+     * 添加任务，至少需要一条
+     *
+     * @param task 任务
+     */
+    public void addLeastOneTick(final TimeTask task) {
+        if (task != null) {
+            addLeastOneTick(task.getName(), task.getTime(), task);
+        }
     }
 
     /**
@@ -180,11 +217,21 @@ public class Timer {
         }
 
         /**
+         * 获取下一跳的时间
+         *
+         * @return
+         */
+        public long getNextTickTime() {
+            return now + tickTime;
+        }
+
+        /**
          * 添加任务到时间轮
          */
         public boolean add(final Task task) {
             long time = task.getTime();
             long current = now;
+            //TODO 超时时间很短的情况是否邀增加到下一次
             if (time < current + tickTime) {
                 //过期任务直接执行
                 return false;
@@ -368,5 +415,24 @@ public class Timer {
         public int compareTo(final Delayed o) {
             return o instanceof Slot ? Long.compare(expiration, ((Slot) o).expiration) : 0;
         }
+    }
+
+    /**
+     * 任务
+     */
+    public interface TimeTask extends Runnable {
+        /**
+         * 任务名称
+         *
+         * @return
+         */
+        String getName();
+
+        /**
+         * 执行时间
+         *
+         * @return
+         */
+        long getTime();
     }
 }

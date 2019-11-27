@@ -55,14 +55,13 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.Switcher;
 import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.Queue;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -72,6 +71,7 @@ import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.GlobalContext.timer;
 
 /**
  * 节点
@@ -114,8 +114,6 @@ public class Node implements Shard {
     protected volatile ShardState state;
     //客户端
     protected volatile Client client;
-    //上次会话心跳时间
-    protected long lastSessionbeat;
     //会话心跳间隔
     protected long sessionbeatInterval;
     //超时时间
@@ -132,14 +130,18 @@ public class Node implements Shard {
     protected int warmupDuration;
     //当前节点启动的时间戳
     protected long startTime;
-    //版本
+    /**
+     * 集群版本
+     */
+    protected long clusterVersion;
+    /**
+     * 当前节点版本
+     */
     protected AtomicLong version = new AtomicLong(0);
     //心跳连续失败次数
     protected AtomicLong successiveHeartbeatFails = new AtomicLong();
     //指标事件处理器
     protected EventHandler<MetricEvent> handler;
-    //存放待下线的客户端，处理服务端优雅关闭，尽可能的把数据处理完
-    protected Queue<OfflineClient> offlines = new ConcurrentLinkedQueue<>();
     //前置条件
     protected CompletableFuture<Void> precondition;
     //是否启用ssl
@@ -162,22 +164,25 @@ public class Node implements Shard {
      * @param shard       分片
      */
     public Node(final String clusterName, final URL clusterUrl, final Shard shard) {
-        this(clusterName, clusterUrl, shard, ENDPOINT_FACTORY.get(), null, null, null, null);
+        this(clusterName, clusterUrl, 0, shard, ENDPOINT_FACTORY.get(), null, null, null, null);
     }
 
     /**
      * 构造函数
      *
-     * @param clusterName   集群名称
-     * @param clusterUrl    集群URL
-     * @param shard         分片
-     * @param factory       连接工程
-     * @param authorization 授权
-     * @param nodeHandler   节点事件处理器
-     * @param dashboard     当前节点指标面板
-     * @param publisher     额外的指标事件监听器
+     * @param clusterName    集群名称
+     * @param clusterUrl     集群URL
+     * @param clusterVersion 集群版本
+     * @param shard          分片
+     * @param factory        连接工程
+     * @param authorization  授权
+     * @param nodeHandler    节点事件处理器
+     * @param dashboard      当前节点指标面板
+     * @param publisher      额外的指标事件监听器
      */
-    public Node(final String clusterName, final URL clusterUrl, final Shard shard, final EndpointFactory factory,
+    public Node(final String clusterName, final URL clusterUrl, final long clusterVersion,
+                final Shard shard,
+                final EndpointFactory factory,
                 final Function<URL, Message> authorization,
                 final EventHandler<NodeEvent> nodeHandler,
                 final Dashboard dashboard,
@@ -194,6 +199,7 @@ public class Node implements Shard {
             this.clusterUrl = clusterUrl;
         }
         this.clusterName = clusterName;
+        this.clusterVersion = clusterVersion;
         this.shard = shard;
         this.factory = factory;
         this.authorization = authorization;
@@ -236,8 +242,6 @@ public class Node implements Shard {
         };
         this.alias = url.getString(Constants.ALIAS_OPTION);
         this.mesh = url.getBoolean(SERVICE_MESH_OPTION);
-
-
     }
 
     /**
@@ -259,7 +263,7 @@ public class Node implements Shard {
         //优雅下线
         if (disconnect(client, false)) {
             //5秒后优雅关闭
-            offlines.add(new OfflineClient(client, 5000L));
+            timer().addLeastOneTick(new OfflineTask(this, client));
         }
     }
 
@@ -354,8 +358,12 @@ public class Node implements Shard {
             this.startTime = this.startTime == 0 ? this.client.session().getRemoteStartTime() : this.startTime;
             //每次连接后，获取目标节点的启动的时间戳，并初始化计算一次权重
             this.weight = warmup();
-            //随机打散心跳时间
-            this.lastSessionbeat = SystemClock.now() + ThreadLocalRandom.current().nextInt((int) sessionbeatInterval);
+            //心跳定时任务
+            timer().addLeastOneTick(new SessionbeatTask(this, v));
+            //预热定时任务
+            timer().addLeastOneTick(new WarmupTask(this, v));
+            //面板刷新
+            Optional.ofNullable(dashboard).ifPresent(d -> timer().addLeastOneTick(new DashboardTask(this, v)));
 
             //在client赋值之后绑定事件监听器
             client.addEventHandler(clientHandler);
@@ -406,13 +414,6 @@ public class Node implements Shard {
                 publisher.removeHandler(handler);
             }
             state.close(this::setState);
-
-            //关闭待下线的
-            OfflineClient offline;
-            while ((offline = offlines.poll()) != null) {
-                close(offline.client, null);
-            }
-
             close(client, consumer);
             client = null;
             precondition = null;
@@ -517,6 +518,10 @@ public class Node implements Shard {
         return mesh;
     }
 
+    protected long getClusterVersion() {
+        return clusterVersion;
+    }
+
     /**
      * 消息协商
      *
@@ -602,94 +607,22 @@ public class Node implements Shard {
     }
 
     /**
-     * 被监管
-     *
-     * @return
-     */
-    protected void supervise(final List<Runnable> runnables) {
-        //检查待下线客户端
-        checkOffline();
-        //定时计算预热权重
-        this.weight = warmup();
-        if (dashboard != null && dashboard.isExpired()) {
-            runnables.add(dashboard::snapshot);
-        }
-        if (sessionbeatExpire()) {
-            runnables.add(this::sessionbeat);
-        }
-    }
-
-    /**
-     * 检查待下线客户端
-     */
-    protected void checkOffline() {
-        if (offlines.isEmpty()) {
-            return;
-        }
-        //检查待下线的client是否超时
-        OfflineClient offline = offlines.peek();
-        if (offline != null) {
-            Client client = offline.client;
-            switch (client.getStatus()) {
-                case CLOSED:
-                case CLOSING:
-                    poll(offline);
-                    break;
-                default:
-                    if (offline.isTimeout() || !client.getChannel().isActive()) {
-                        close(client, null);
-                        poll(offline);
-                    }
-            }
-        }
-    }
-
-    /**
-     * 待下线的节点出队
-     *
-     * @param offline
-     */
-    protected void poll(final OfflineClient offline) {
-        OfflineClient poll = offlines.poll();
-        if (offline != poll) {
-            if (switcher.isOpened()) {
-                offlines.add(poll);
-            }
-        }
-    }
-
-    /**
-     * 会话心跳过期
-     *
-     * @return
-     */
-    protected boolean sessionbeatExpire() {
-        return state == ShardState.CONNECTED && (SystemClock.now() - lastSessionbeat) >= sessionbeatInterval;
-    }
-
-    /**
      * 发送会话心跳信息
      */
     protected void sessionbeat() {
-        //在独立的线程里面触发心跳，再次进行心跳过期判断和防重入
-        if (sessionbeatExpire() && sessionbeating.compareAndSet(false, true)) {
-            //防止并发
-            lastSessionbeat = SystemClock.now();
-            //保留一份现场
-            Client client = this.client;
-            ClientProtocol protocol = client.getProtocol();
-            Session session = client.session();
-            if (client != null && protocol != null) {
-                Message message = protocol.sessionbeat(clusterUrl, client);
-                Header header = message.getHeader();
-                header.setSerialization(session.getSerialization().getTypeId());
-                header.setCompression(Compression.NONE);
-                header.setChecksum(Checksum.NONE);
-                if (message != null) {
-                    client.oneway(message);
-                }
+        //保留一份现场
+        Client client = this.client;
+        ClientProtocol protocol = client.getProtocol();
+        Session session = client.session();
+        if (client != null && protocol != null) {
+            Message message = protocol.sessionbeat(clusterUrl, client);
+            Header header = message.getHeader();
+            header.setSerialization(session.getSerialization().getTypeId());
+            header.setCompression(Compression.NONE);
+            header.setChecksum(Checksum.NONE);
+            if (message != null) {
+                client.oneway(message);
             }
-            sessionbeating.set(false);
         }
     }
 
@@ -1012,48 +945,6 @@ public class Node implements Shard {
     }
 
     /**
-     * 下线客户端
-     */
-    protected static class OfflineClient {
-        /**
-         * 客户端
-         */
-        protected Client client;
-        /**
-         * 过期时间
-         */
-        protected long expireTime;
-
-        /**
-         * 构造函数
-         *
-         * @param client
-         * @param expireTime
-         */
-        public OfflineClient(Client client, long expireTime) {
-            this.client = client;
-            this.expireTime = expireTime;
-        }
-
-        public Client getClient() {
-            return client;
-        }
-
-        public long getExpireTime() {
-            return expireTime;
-        }
-
-        /**
-         * 是否过期
-         *
-         * @return
-         */
-        public boolean isTimeout() {
-            return SystemClock.now() >= expireTime;
-        }
-    }
-
-    /**
      * 心跳策略
      */
     protected static class MyHeartbeatStrategy implements HeartbeatStrategy {
@@ -1140,6 +1031,222 @@ public class Node implements Shard {
         @Override
         public HeartbeatMode getHeartbeatMode() {
             return mode;
+        }
+    }
+
+    /**
+     * 节点任务
+     */
+    protected static abstract class NodeTask implements Timer.TimeTask {
+        /**
+         * 节点
+         */
+        protected Node node;
+        /**
+         * 版本
+         */
+        protected final long version;
+
+        /**
+         * 构造函数
+         *
+         * @param node
+         * @param version
+         */
+        public NodeTask(Node node, long version) {
+            this.node = node;
+            this.version = version;
+        }
+
+        @Override
+        public String getName() {
+            return this.getClass().getSimpleName() + " " + node.getName();
+        }
+
+        @Override
+        public long getTime() {
+            return SystemClock.now();
+        }
+
+        @Override
+        public void run() {
+            if (node.version.get() == version) {
+                doRun();
+            }
+        }
+
+        /**
+         * 执行
+         */
+        protected abstract void doRun();
+    }
+
+    /**
+     * 预热
+     */
+    protected static class WarmupTask extends NodeTask {
+
+        /**
+         * 构造函数
+         *
+         * @param node
+         * @param version
+         */
+        public WarmupTask(Node node, long version) {
+            super(node, version);
+        }
+
+        @Override
+        public long getTime() {
+            return SystemClock.now();
+        }
+
+        @Override
+        protected void doRun() {
+            if (node.warmup() != node.originWeight) {
+                timer().addLeastOneTick(this);
+            }
+        }
+    }
+
+    /**
+     * 面板快照任务
+     */
+    protected static class DashboardTask extends NodeTask {
+
+        /**
+         * 面板
+         */
+        protected Dashboard dashboard;
+        /**
+         * 上次快照时间
+         */
+        protected long lastSnapshotTime;
+        /**
+         * 下次快照时间
+         */
+        protected long time;
+
+        /**
+         * 构造函数
+         *
+         * @param node
+         * @param version
+         */
+        public DashboardTask(final Node node, final long version) {
+            super(node, version);
+            this.dashboard = node.dashboard;
+            //把集群指标过期分布到1秒钟以内，避免同时进行快照
+            this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
+            this.time = lastSnapshotTime + dashboard.getMetric().getWindowTime();
+            dashboard.setLastSnapshotTime(lastSnapshotTime);
+        }
+
+        @Override
+        public long getTime() {
+            return time;
+        }
+
+        @Override
+        protected void doRun() {
+            switch (node.state) {
+                case CONNECTED:
+                case WEAK:
+                    dashboard.snapshot();
+                    time = SystemClock.now() + dashboard.getMetric().getWindowTime();
+                    timer().addLeastOneTick(this);
+            }
+        }
+    }
+
+    /**
+     * 会话心跳
+     */
+    protected static class SessionbeatTask extends NodeTask {
+
+        /**
+         * 上次心跳时间
+         */
+        protected long lastTime;
+        /**
+         * 下次心跳时间
+         */
+        protected long time;
+
+        /**
+         * 构造函数
+         *
+         * @param node
+         * @param version
+         */
+        public SessionbeatTask(final Node node, final long version) {
+            super(node, version);
+            //随机打散心跳时间
+            this.lastTime = SystemClock.now() + ThreadLocalRandom.current().nextInt((int) node.sessionbeatInterval);
+            this.time = lastTime + node.sessionbeatInterval;
+        }
+
+        @Override
+        public long getTime() {
+            return time;
+        }
+
+        @Override
+        protected void doRun() {
+            switch (node.state) {
+                case CONNECTED:
+                case WEAK:
+                    node.sessionbeat();
+                    time = SystemClock.now() + node.sessionbeatInterval;
+                    timer().addLeastOneTick(this);
+            }
+        }
+    }
+
+    /**
+     * 服务端下线任务
+     */
+    protected static class OfflineTask implements Timer.TimeTask {
+        /**
+         * 节点
+         */
+        protected Node node;
+        /**
+         * 连接
+         */
+        protected Client client;
+
+        /**
+         * 构造函数
+         *
+         * @param node
+         * @param client
+         */
+        public OfflineTask(Node node, Client client) {
+            this.node = node;
+            this.client = client;
+        }
+
+        @Override
+        public String getName() {
+            return this.getClass().getSimpleName() + " " + node.getName();
+        }
+
+        @Override
+        public long getTime() {
+            //五秒关闭
+            return SystemClock.now() + 5000L;
+        }
+
+        @Override
+        public void run() {
+            switch (client.getStatus()) {
+                case CLOSED:
+                case CLOSING:
+                    break;
+                default:
+                    node.close(client, null);
+            }
         }
     }
 }

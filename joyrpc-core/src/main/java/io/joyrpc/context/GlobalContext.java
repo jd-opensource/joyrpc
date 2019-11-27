@@ -24,6 +24,7 @@ import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
+import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +50,8 @@ public class GlobalContext {
     protected static volatile Map<String, Object> context;
 
     protected static volatile Integer pid;
+
+    protected static volatile Timer timer;
 
     /**
      * 接口配置map<接口名，<key,value>>，
@@ -111,6 +114,23 @@ public class GlobalContext {
         }
     }
 
+    /**
+     * 获取默认的Timer
+     *
+     * @return
+     */
+    public static Timer timer() {
+        if (timer == null) {
+            synchronized (GlobalContext.class) {
+                if (timer == null) {
+                    Parametric parametric = asParametric();
+                    timer = new Timer("default", 200, 300,
+                            parametric.getPositive(TIMER_THREADS, 8));
+                }
+            }
+        }
+        return timer;
+    }
 
     /**
      * 获取进程号

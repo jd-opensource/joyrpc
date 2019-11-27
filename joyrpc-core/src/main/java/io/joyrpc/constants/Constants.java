@@ -371,15 +371,10 @@ public class Constants {
      * 隐藏属性的key: 指定调用IP
      */
     public static final String HIDDEN_KEY_PINPOINT = HIDE_KEY_PREFIX + "pinpoint";
-
     /**
-     * 集群管理线程数
+     * 定时器线程数
      */
-    public static final String CLUSTER_MANAGER_THREADS = "clusterManager.threads";
-    /**
-     * 集群管理检查时间间隔
-     */
-    public static final String CLUSTER_MANAGER_INTERVAL = "clusterManager.interval";
+    public static final String TIMER_THREADS = "timer.threads";
     /**
      * SERVICE_MESH的键名称
      */
@@ -575,7 +570,6 @@ public class Constants {
     public static final URLOption<Integer> MIN_SIZE_OPTION = new URLOption<>("minSize", 0);
     public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 30000L);
     public static final URLOption<Integer> CONNECT_TIMEOUT_OPTION = new URLOption<>("connectTimeout", 5000);
-    public static final URLOption<Integer> MAX_RECONNECTION_OPTION = new URLOption<>("maxReconnection", 3);
     public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", 64 * 1024);
     public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", 32 * 1024);
     public static final URLOption<Integer> SO_RECEIVE_BUF_OPTION = new URLOption<>("soRevBuf", 8192 * 128);

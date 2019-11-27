@@ -20,6 +20,8 @@ package io.joyrpc.extension;
  * #L%
  */
 
+import java.util.function.Supplier;
+
 /**
  * URL配置项
  *
@@ -33,7 +35,7 @@ public class URLOption<T> extends Option<T> {
     /**
      * 选项提供者
      */
-    protected OptionSupplier<T> supplier;
+    protected Supplier<T> supplier;
 
     /**
      * 默认构造函数
@@ -58,7 +60,7 @@ public class URLOption<T> extends Option<T> {
      * @param name
      * @param supplier
      */
-    public URLOption(String name, OptionSupplier<T> supplier) {
+    public URLOption(String name, Supplier<T> supplier) {
         this.name = name;
         this.supplier = supplier;
     }

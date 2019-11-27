@@ -52,6 +52,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.codec.Hex.encode;
 import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
@@ -267,8 +268,9 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
                 Encryptor encryptor = ENCRYPTOR.get(cryptoType);
                 //获取加密秘钥
                 String cryptoKey = parametric.getString(Constants.SETTING_SERVER_SUDO_CRYPTO_KEY, "");
+                byte[] cryptoKeyBytes = StringUtils.isEmpty(cryptoKey) ? DEFAULT_CRYPTO_KEY : cryptoKey.getBytes();
                 //校验
-                if (!Arrays.equals(encryptor.encrypt(password.getBytes(), cryptoKey.getBytes()), invokePassword.getBytes())) {
+                if (!invokePassword.equals(encode(encryptor.encrypt(password.getBytes(), cryptoKeyBytes)))) {
                     return new TelnetResponse("Wrong password [" + password + "], please check it");
                 }
                 return null;
@@ -277,5 +279,29 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
             }
         }
     }
+
+    private static final byte[] DEFAULT_CRYPTO_KEY = new byte[]{-84, -19, 0, 5, 115, 114, 0,
+            20, 106, 97, 118, 97, 46, 115, 101, 99, 117, 114, 105,
+            116, 121, 46, 75, 101, 121, 82, 101, 112, -67, -7, 79,
+            -77, -120, -102, -91, 67, 2, 0, 4, 76, 0, 9, 97, 108,
+            103, 111, 114, 105, 116, 104, 109, 116, 0, 18, 76, 106,
+            97, 118, 97, 47, 108, 97, 110, 103, 47, 83, 116, 114,
+            105, 110, 103, 59, 91, 0, 7, 101, 110, 99, 111, 100,
+            101, 100, 116, 0, 2, 91, 66, 76, 0, 6, 102, 111, 114,
+            109, 97, 116, 113, 0, 126, 0, 1, 76, 0, 4, 116, 121,
+            112, 101, 116, 0, 27, 76, 106, 97, 118, 97, 47, 115,
+            101, 99, 117, 114, 105, 116, 121, 47, 75, 101, 121, 82,
+            101, 112, 36, 84, 121, 112, 101, 59, 120, 112, 116, 0,
+            6, 68, 69, 83, 101, 100, 101, 117, 114, 0, 2, 91, 66,
+            -84, -13, 23, -8, 6, 8, 84, -32, 2, 0, 0, 120, 112, 0,
+            0, 0, 24, -15, 61, 52, 26, 38, 109, 67, -62, 59, 31,
+            42, 62, 49, -105, -2, -50, 25, 121, 62, -29, 52, -70,
+            -15, -56, 116, 0, 3, 82, 65, 87, 126, 114, 0, 25, 106,
+            97, 118, 97, 46, 115, 101, 99, 117, 114, 105, 116, 121,
+            46, 75, 101, 121, 82, 101, 112, 36, 84, 121, 112, 101,
+            0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 120, 114, 0, 14, 106,
+            97, 118, 97, 46, 108, 97, 110, 103, 46, 69, 110, 117,
+            109, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 120, 112, 116,
+            0, 6, 83, 69, 67, 82, 69, 84};
 
 }

@@ -118,7 +118,7 @@ public class Timer {
             return;
         }
         long nextTickTime = timeWheel.getNextTickTime();
-        add(new Task(name, (time < nextTickTime ? nextTickTime : time) + SystemClock.now(), runnable));
+        add(new Task(name, time < nextTickTime ? nextTickTime : time, runnable));
     }
 
     /**
@@ -229,18 +229,17 @@ public class Timer {
          * 添加任务到时间轮
          */
         public boolean add(final Task task) {
-            long time = task.getTime();
             long current = now;
-            //TODO 超时时间很短的情况是否邀增加到下一次
-            if (time < current + tickTime) {
+            long time = task.getTime() - current;
+            if (time < tickTime) {
                 //过期任务直接执行
                 return false;
-            } else if (time < current + duration) {
+            } else if (time < duration) {
                 //该任务在一个时间轮里面，则加入到对应的时间槽
                 long count = time / tickTime;
                 Slot slot = slots[(int) (count % ticks)];
                 //添加到槽里面，防止和boss线程并发执行冲突
-                switch (slot.add(task, slot.getExpiration(), count * tickTime)) {
+                switch (slot.add(task, slot.getExpiration(), current + count * tickTime)) {
                     case Slot.SUCCESS_FIRST:
                         queue.offer(slot);
                         return true;
@@ -408,7 +407,8 @@ public class Timer {
 
         @Override
         public long getDelay(final TimeUnit unit) {
-            return Math.max(0, unit.convert(expiration - SystemClock.now(), TimeUnit.MILLISECONDS));
+            long delayMs = expiration - SystemClock.now();
+            return Math.max(0, unit.convert(delayMs, TimeUnit.MILLISECONDS));
         }
 
         @Override

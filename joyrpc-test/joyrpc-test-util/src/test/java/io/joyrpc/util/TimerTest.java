@@ -1,0 +1,42 @@
+package io.joyrpc.util;
+
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.CountDownLatch;
+
+public class TimerTest {
+    protected static final Logger logger = LoggerFactory.getLogger(TimerTest.class);
+
+    @Test
+    public void testTimeWheel() throws InterruptedException {
+
+        Timer timer = new Timer("default", 100, 5, 3);
+        CountDownLatch latch = new CountDownLatch(6);
+        timer.addLeastOneTick("test", SystemClock.now(), new MyTask("1", latch));
+        timer.addLeastOneTick("test", SystemClock.now() + 200, new MyTask("2", latch));
+        timer.addLeastOneTick("test", SystemClock.now() + 200, new MyTask("3", latch));
+        timer.addLeastOneTick("test", SystemClock.now() + 600, new MyTask("4", latch));
+        timer.addLeastOneTick("test", SystemClock.now() + 1500, new MyTask("5", latch));
+        timer.addLeastOneTick("test", SystemClock.now() + 1500, new MyTask("6", latch));
+
+        latch.await();
+    }
+
+    protected static class MyTask implements Runnable {
+        protected String name;
+        protected CountDownLatch latch;
+
+        public MyTask(String name, CountDownLatch latch) {
+            this.name = name;
+            this.latch = latch;
+        }
+
+        @Override
+        public void run() {
+            logger.info(name + " is running");
+            latch.countDown();
+        }
+    }
+}

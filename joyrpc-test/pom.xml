@@ -18,6 +18,7 @@
         <module>joyrpc-test-serialization</module>
         <module>joyrpc-test-transport</module>
         <module>joyrpc-test-quickstart</module>
+        <module>joyrpc-test-util</module>
     </modules>
 
     <dependencies>

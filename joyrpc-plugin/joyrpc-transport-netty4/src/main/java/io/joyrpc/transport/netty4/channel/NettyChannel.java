@@ -45,19 +45,35 @@ import java.util.function.Supplier;
  * @date: 2019/1/15
  */
 public class NettyChannel implements Channel {
-
+    /**
+     * 通道接口
+     */
     protected io.netty.channel.Channel channel;
-
+    /**
+     * 消息ID
+     */
     protected AtomicInteger idGenerator = new AtomicInteger(0);
-
-    protected FutureManager<Integer, Message> futureManager = new FutureManager<>(() -> idGenerator.incrementAndGet());
-
+    /**
+     * Future管理器
+     */
+    protected FutureManager<Integer, Message> futureManager;
+    /**
+     * 会话管理器
+     */
     protected SessionManager sessionManager;
-
+    /**
+     * 是否是服务端
+     */
     protected boolean isServer;
 
+    /**
+     * 构造函数
+     *
+     * @param channel
+     */
     public NettyChannel(io.netty.channel.Channel channel) {
         this.channel = channel;
+        this.futureManager = new FutureManager<>(this, () -> idGenerator.incrementAndGet());
         this.isServer = Boolean.TRUE.equals(channel.attr(AttributeKey.valueOf(Channel.IS_SERVER)).get());
         this.sessionManager = new SessionManager(isServer);
         this.setAttribute(Channel.HEARTBEAT_FAILED_COUNT, new AtomicInteger(0));

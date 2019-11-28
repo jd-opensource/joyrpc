@@ -21,19 +21,14 @@ package io.joyrpc.transport.netty4.handler;
  */
 
 import io.joyrpc.event.Publisher;
-import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.EnhanceCompletableFuture;
 import io.joyrpc.transport.event.ActiveEvent;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
-import io.joyrpc.transport.message.Message;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 /**
  * 连接处理器
@@ -64,10 +59,7 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         try {
-            Map<Integer, EnhanceCompletableFuture<Integer, Message>> futures = channel.getFutureManager().close();
-            futures.forEach((id, future) ->
-                    future.completeExceptionally(new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress())));
-            futures.clear();
+            channel.getFutureManager().close();
         } finally {
             eventPublisher.offer(new InactiveEvent(channel));
             ctx.fireChannelInactive();

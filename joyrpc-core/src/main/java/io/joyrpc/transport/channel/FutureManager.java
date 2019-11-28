@@ -20,6 +20,7 @@ package io.joyrpc.transport.channel;
  * #L%
  */
 
+import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
@@ -37,11 +38,10 @@ import static io.joyrpc.context.GlobalContext.timer;
  * @date: 2019/1/14
  */
 public class FutureManager<I, M> {
-
     /**
-     * Future管理，有些连接并发很少不需要初始化
+     * 通道
      */
-    protected Map<I, EnhanceCompletableFuture<I, M>> futures = new ConcurrentHashMap<>();
+    protected Channel channel;
     /**
      * ID生成器
      */
@@ -50,15 +50,23 @@ public class FutureManager<I, M> {
      * 计数器
      */
     protected AtomicInteger counter = new AtomicInteger();
-
+    /**
+     * 消费者
+     */
     protected Consumer<I> consumer;
+    /**
+     * Future管理，有些连接并发很少不需要初始化
+     */
+    protected Map<I, EnhanceCompletableFuture<I, M>> futures = new ConcurrentHashMap<>();
 
     /**
      * 构造函数
      *
+     * @param channel
      * @param idGenerator
      */
-    public FutureManager(final Supplier<I> idGenerator) {
+    public FutureManager(final Channel channel, final Supplier<I> idGenerator) {
+        this.channel = channel;
         this.idGenerator = idGenerator;
         this.consumer = id -> {
             EnhanceCompletableFuture<I, M> future = futures.remove(id);
@@ -132,15 +140,17 @@ public class FutureManager<I, M> {
     }
 
     /**
-     * 清空这个manager下所有的Future
+     * 清空
      *
      * @return
      */
-    public Map<I, EnhanceCompletableFuture<I, M>> close() {
+    public void close() {
         Map<I, EnhanceCompletableFuture<I, M>> futures = this.futures;
         this.futures = new ConcurrentHashMap<>();
         this.counter = new AtomicInteger();
-        return futures;
+        Exception exception = new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress());
+        futures.forEach((id, future) -> future.cancel(exception));
+        futures.clear();
     }
 
     public I generateId() {

@@ -90,4 +90,14 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
         }
     }
 
+    /**
+     * 放弃过期检查任务
+     *
+     * @param exception
+     */
+    public void cancel(Throwable exception) {
+        cancel();
+        completeExceptionally(exception);
+    }
+
 }

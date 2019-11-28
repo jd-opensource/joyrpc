@@ -47,7 +47,7 @@ public class IdleHeartbeatHandler extends ChannelDuplexHandler {
                 heartbeatTrigger = attr != null ? attr.get() : null;
             }
             if (heartbeatTrigger != null) {
-                heartbeatTrigger.trigger();
+                heartbeatTrigger.run();
             }
         } else {
             super.userEventTriggered(ctx, evt);

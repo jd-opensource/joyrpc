@@ -9,9 +9,9 @@ package io.joyrpc.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -139,26 +139,6 @@ public class DecoratorClient<T extends ClientTransport> implements Client {
     @Override
     public InetSocketAddress getLocalAddress() {
         return transport.getLocalAddress();
-    }
-
-    @Override
-    public boolean disconnect() {
-        return transport.disconnect();
-    }
-
-    @Override
-    public void disconnect(final Consumer<AsyncResult<Channel>> consumer) {
-        transport.disconnect(consumer);
-    }
-
-    @Override
-    public void reconnect() throws ConnectionException, InterruptedException {
-        transport.reconnect();
-    }
-
-    @Override
-    public void reconnect(final BiConsumer<Channel, Throwable> action) {
-        transport.reconnect(action);
     }
 
     @Override

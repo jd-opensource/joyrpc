@@ -42,28 +42,30 @@ import java.util.function.Supplier;
 public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultHeartbeatTrigger.class);
-    //通道
-    protected Channel channel;
-    //URL
-    protected URL url;
-    //心跳策略
-    protected HeartbeatStrategy strategy;
-    //事件发布器
-    protected Publisher<TransportEvent> publisher;
-
+    /**
+     * 通道
+     */
+    protected final Channel channel;
+    /**
+     * URL
+     */
+    protected final URL url;
+    /**
+     * 心跳策略
+     */
+    protected final HeartbeatStrategy strategy;
+    /**
+     * 事件发布器
+     */
+    protected final Publisher<TransportEvent> publisher;
+    /**
+     * 失败次数
+     */
+    protected AtomicInteger fails;
     /**
      * 心跳应答
      */
-    protected BiConsumer<Message, Throwable> heartbeatAction = (msg, err) -> {
-        AtomicInteger failedCount = channel.getAttribute(Channel.HEARTBEAT_FAILED_COUNT);
-        if (err != null) {
-            failedCount.incrementAndGet();
-            publisher.offer(new HeartbeatEvent(channel, url, err));
-        } else {
-            failedCount.set(0);
-            publisher.offer(new HeartbeatEvent(msg, channel, url));
-        }
-    };
+    protected final BiConsumer<Message, Throwable> afterRun;
 
     /**
      * 构造函数
@@ -78,6 +80,16 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
         this.url = url;
         this.strategy = strategy;
         this.publisher = publisher;
+        this.fails = channel.getAttribute(Channel.HEARTBEAT_FAILED_COUNT, name -> new AtomicInteger(0));
+        this.afterRun = (msg, err) -> {
+            if (err != null) {
+                fails.incrementAndGet();
+                publisher.offer(new HeartbeatEvent(channel, url, err));
+            } else {
+                fails.set(0);
+                publisher.offer(new HeartbeatEvent(msg, channel, url));
+            }
+        };
     }
 
     @Override
@@ -86,7 +98,7 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
     }
 
     @Override
-    public void trigger() {
+    public void run() {
         Message hbMsg;
         Supplier<Message> heartbeat = strategy.getHeartbeat();
         if (heartbeat != null && (hbMsg = heartbeat.get()) != null) {
@@ -95,14 +107,15 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
                 //设置id
                 hbMsg.setMsgId(futureManager.generateId());
                 //创建future
-                CompletableFuture<Message> future = futureManager.create(hbMsg.getMsgId(), strategy.getTimeout()).whenComplete(heartbeatAction);
+                CompletableFuture<Message> future = futureManager.create(hbMsg.getMsgId(), strategy.getTimeout()).whenComplete(afterRun);
                 //发送消息
                 channel.send(hbMsg, r -> {
                     //心跳有应答消息，会触发future的complete
                     if (!r.isSuccess()) {
                         futureManager.remove(hbMsg.getMsgId());
                         future.completeExceptionally(r.getThrowable());
-                        logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:", Channel.toString(channel.getRemoteAddress())), r.getThrowable());
+                        logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:",
+                                Channel.toString(channel.getRemoteAddress())), r.getThrowable());
                     }
                 });
             } else {

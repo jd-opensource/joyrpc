@@ -9,9 +9,9 @@ package io.joyrpc;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,10 +42,10 @@ import io.joyrpc.config.Warmup;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.Configurator;
+import io.joyrpc.context.Environment;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.RespInjection;
 import io.joyrpc.context.injection.Transmit;
-import io.joyrpc.context.Environment;
 import io.joyrpc.event.EventBus;
 import io.joyrpc.extension.*;
 import io.joyrpc.filter.ConsumerFilter;
@@ -62,10 +62,8 @@ import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.thread.ThreadPool;
-import io.joyrpc.cluster.distribution.RateLimiter;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
-import io.joyrpc.transport.heartbeat.HeartbeatManagerFactory;
 import io.joyrpc.transport.http.HttpClient;
 import io.joyrpc.transport.telnet.TelnetHandler;
 import io.joyrpc.transport.transport.TransportFactory;
@@ -331,11 +329,6 @@ public interface Plugin {
     ExtensionPoint<TransportFactory, String> TRANSPORT_FACTORY = new ExtensionPointLazy<>(TransportFactory.class);
 
     ExtensionPoint<EndpointFactory, String> ENDPOINT_FACTORY = new ExtensionPointLazy<>(EndpointFactory.class);
-
-    /**
-     * 心跳管理器工程插件
-     */
-    ExtensionPoint<HeartbeatManagerFactory, String> HEARTBEAT_MANAGER_FACTORY = new ExtensionPointLazy<>(HeartbeatManagerFactory.class);
 
     /**
      * 候选者算法插件

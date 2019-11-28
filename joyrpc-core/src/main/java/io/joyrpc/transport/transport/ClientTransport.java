@@ -9,9 +9,9 @@ package io.joyrpc.transport.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,47 +21,16 @@ package io.joyrpc.transport.transport;
  */
 
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.Publisher;
-import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.transport.Endpoint;
-import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
-
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * 客户端通道
  */
 public interface ClientTransport extends ChannelTransport, Endpoint {
-
-    /**
-     * 重连
-     *
-     * @throws ConnectionException
-     * @throws InterruptedException
-     */
-    void reconnect() throws ConnectionException, InterruptedException;
-
-    /**
-     * 重连
-     */
-    void reconnect(BiConsumer<Channel, Throwable> action);
-
-    /**
-     * 断开连接
-     */
-    boolean disconnect();
-
-    /**
-     * 断开连接(异步)
-     *
-     * @param consumer
-     */
-    void disconnect(Consumer<AsyncResult<Channel>> consumer);
 
     /**
      * 设置心跳策略

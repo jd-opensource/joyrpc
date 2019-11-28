@@ -76,7 +76,6 @@ public class NettyChannel implements Channel {
         this.futureManager = new FutureManager<>(this, () -> idGenerator.incrementAndGet());
         this.isServer = Boolean.TRUE.equals(channel.attr(AttributeKey.valueOf(Channel.IS_SERVER)).get());
         this.sessionManager = new SessionManager(isServer);
-        this.setAttribute(Channel.HEARTBEAT_FAILED_COUNT, new AtomicInteger(0));
     }
 
     @Override
@@ -118,16 +117,6 @@ public class NettyChannel implements Channel {
     @Override
     public void close(final Consumer<AsyncResult<Channel>> consumer) {
         execute(channel::close, consumer);
-    }
-
-    @Override
-    public boolean disconnect() {
-        return execute(channel::disconnect);
-    }
-
-    @Override
-    public void disconnect(final Consumer<AsyncResult<Channel>> consumer) {
-        execute(channel::disconnect, consumer);
     }
 
     /**

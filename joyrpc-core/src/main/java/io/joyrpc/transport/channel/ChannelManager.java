@@ -9,9 +9,9 @@ package io.joyrpc.transport.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,10 +35,11 @@ public interface ChannelManager {
     /**
      * 异步获取channel
      *
-     * @param transport
-     * @param consumer
+     * @param transport 客户端通道
+     * @param consumer  消费者
+     * @param connector 连接器
      */
-    void getChannel(ClientTransport transport, Consumer<AsyncResult<Channel>> consumer, ChannelOpener opener);
+    void getChannel(ClientTransport transport, Consumer<AsyncResult<Channel>> consumer, Connector connector);
 
     /**
      * 获取存储channel的key
@@ -50,10 +51,10 @@ public interface ChannelManager {
 
 
     /**
-     * Channel创建的接口
+     * 连接器
      */
     @FunctionalInterface
-    interface ChannelOpener {
+    interface Connector {
 
         /**
          * 创建Channel
@@ -61,6 +62,6 @@ public interface ChannelManager {
          * @param consumer 事件回调
          * @throws TransportException
          */
-        void openChannel(Consumer<AsyncResult<Channel>> consumer);
+        void connect(Consumer<AsyncResult<Channel>> consumer);
     }
 }

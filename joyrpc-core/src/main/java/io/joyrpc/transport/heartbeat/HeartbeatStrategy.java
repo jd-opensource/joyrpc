@@ -9,9 +9,9 @@ package io.joyrpc.transport.heartbeat;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,8 @@ import java.util.function.Supplier;
  * 心跳策略
  */
 public interface HeartbeatStrategy {
+
+    int DEFAULT_INTERVAL = 10000;
 
     /**
      * 创建一条心跳信息的 supplier
@@ -51,7 +53,7 @@ public interface HeartbeatStrategy {
      * @return
      */
     default int getInterval() {
-        return 10000;
+        return DEFAULT_INTERVAL;
     }
 
     /**

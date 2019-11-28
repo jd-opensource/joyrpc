@@ -116,21 +116,6 @@ public interface Channel {
     void close(Consumer<AsyncResult<Channel>> consumer);
 
     /**
-     * 断开channel
-     *
-     * @return
-     */
-    boolean disconnect();
-
-    /**
-     * 异步断开channel
-     *
-     * @param consumer
-     * @return
-     */
-    void disconnect(Consumer<AsyncResult<Channel>> consumer);
-
-    /**
      * 获取本地地址
      *
      * @return

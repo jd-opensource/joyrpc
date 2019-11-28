@@ -27,7 +27,7 @@ import io.joyrpc.exception.SslException;
 import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelManager.ChannelOpener;
+import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy.HeartbeatMode;
 import io.joyrpc.transport.netty4.Plugin;
 import io.joyrpc.transport.netty4.binder.HandlerBinder;
@@ -70,8 +70,8 @@ public class NettyClientTransport extends AbstractClientTransport {
     }
 
     @Override
-    public ChannelOpener getChannelOpener() {
-        return this::doOpenChannel;
+    public Connector getConnector() {
+        return this::connect;
     }
 
     /**
@@ -79,7 +79,7 @@ public class NettyClientTransport extends AbstractClientTransport {
      *
      * @param consumer
      */
-    protected void doOpenChannel(final Consumer<AsyncResult<Channel>> consumer) {
+    protected void connect(final Consumer<AsyncResult<Channel>> consumer) {
         //consumer不会为空
         if (codec == null) {
             consumer.accept(new AsyncResult<>(error("codec can not be null!")));

@@ -26,7 +26,6 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -53,16 +52,6 @@ public class DecoratorChannel implements Channel {
     @Override
     public void close(final Consumer<AsyncResult<Channel>> consumer) {
         channel.close(consumer);
-    }
-
-    @Override
-    public boolean disconnect() {
-        return channel.disconnect();
-    }
-
-    @Override
-    public void disconnect(final Consumer<AsyncResult<Channel>> consumer) {
-        channel.disconnect(consumer);
     }
 
     @Override

@@ -22,65 +22,49 @@ package io.joyrpc.transport.channel;
 
 import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.Publisher;
-import io.joyrpc.exception.*;
+import io.joyrpc.exception.ChannelClosedException;
+import io.joyrpc.exception.ConnectionException;
+import io.joyrpc.exception.LafException;
+import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.transport.Endpoint;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.DefaultHeartbeatTrigger;
-import io.joyrpc.transport.heartbeat.HeartbeatManager;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
+import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
 import io.joyrpc.transport.transport.ClientTransport;
-import io.joyrpc.util.Shutdown;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.Timer;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
-import static io.joyrpc.Plugin.HEARTBEAT_MANAGER_FACTORY;
+import static io.joyrpc.context.GlobalContext.timer;
+import static io.joyrpc.transport.Endpoint.Status.*;
 
 /**
  * @date: 2019/3/7
  */
 public abstract class AbstractChannelManager implements ChannelManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractChannelManager.class);
-
-    protected static final Queue<ChannelCloser> CLOSERS = new ConcurrentLinkedQueue<>();
-    /**
-     * 线程池
-     */
-    protected static final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(new NamedThreadFactory("AbstractChannelManager", true));
     /**
      * channel
      */
     protected Map<String, PoolChannel> channels = new ConcurrentHashMap<>();
     /**
-     * 心跳管理器
+     * 关闭的消费者
      */
-    protected HeartbeatManager heartbeatManager;
+    protected Consumer<PoolChannel> beforeClose;
 
-    static {
-        scheduler.scheduleWithFixedDelay(() -> {
-                    List<ChannelCloser> retry = new LinkedList<>();
-                    while (!CLOSERS.isEmpty()) {
-                        ChannelCloser closer = CLOSERS.poll();
-                        if (!closer.close()) {
-                            retry.add(closer);
-                        }
-                    }
-                    //没有关闭成功的，添加回队列
-                    if (!retry.isEmpty()) {
-                        CLOSERS.addAll(retry);
-                    }
-                },
-                200, 200, TimeUnit.MILLISECONDS);
-        Shutdown.addHook(scheduler::shutdown);
-    }
 
     /**
      * 构造函数
@@ -88,36 +72,22 @@ public abstract class AbstractChannelManager implements ChannelManager {
      * @param url
      */
     protected AbstractChannelManager(URL url) {
-        this.heartbeatManager = HEARTBEAT_MANAGER_FACTORY.get().get(url);
+        this.beforeClose = o -> channels.remove(o.name);
     }
 
     @Override
-    public void getChannel(final ClientTransport transport, final Consumer<AsyncResult<Channel>> consumer, final ChannelOpener opener) {
-        if (opener == null) {
+    public void getChannel(final ClientTransport transport,
+                           final Consumer<AsyncResult<Channel>> consumer,
+                           final Connector connector) {
+        if (connector == null) {
             if (consumer != null) {
                 consumer.accept(new AsyncResult<>(new ConnectionException("opener can not be null.")));
             }
             return;
         }
-        //计数器
-        PoolChannel channel = channels.computeIfAbsent(transport.getChannelName(), o -> new PoolChannel(transport.getPublisher(), opener));
-        //Channel open成功，ChannelManager 处理consumer
-        Consumer<AsyncResult<Channel>> succeed = event -> {
-            if (event.isSuccess()) {
-                //transport计数累加
-                channel.addRef();
-                //channel设置key
-                channel.getAttribute(Channel.CHANNEL_KEY, o -> transport.getChannelName());
-                //添加心跳
-                HeartbeatStrategy heartbeatStrategy = transport.getHeartbeatStrategy();
-                if (heartbeatStrategy != null && heartbeatStrategy.getHeartbeat() != null) {
-                    heartbeatManager.add(channel, heartbeatStrategy,
-                            () -> new DefaultHeartbeatTrigger(channel, transport.getUrl(), heartbeatStrategy, transport.getPublisher()));
-                }
-            }
-        };
-        //执行open channel的操作
-        channel.open(consumer == null ? succeed : succeed.andThen(consumer));
+        //创建缓存通道
+        channels.computeIfAbsent(transport.getChannelName(),
+                o -> new PoolChannel(transport, connector, beforeClose)).connect(consumer);
     }
 
     @Override
@@ -126,11 +96,33 @@ public abstract class AbstractChannelManager implements ChannelManager {
     /**
      * 池化的通道
      */
-    protected class PoolChannel extends DecoratorChannel {
+    protected static class PoolChannel extends DecoratorChannel {
+        protected static final AtomicReferenceFieldUpdater<PoolChannel, Endpoint.Status> STATE_UPDATER =
+                AtomicReferenceFieldUpdater.newUpdater(PoolChannel.class, Endpoint.Status.class, "status");
+        /**
+         * 消息发布
+         */
+        protected Publisher<TransportEvent> publisher;
+        /**
+         * URL
+         */
+        protected URL url;
+        /**
+         * 名称
+         */
+        protected String name;
+        /**
+         * 心跳策略
+         */
+        protected HeartbeatStrategy strategy;
+        /**
+         * 心跳
+         */
+        protected HeartbeatTrigger trigger;
         /**
          * 打开
          */
-        protected ChannelOpener opener;
+        protected Connector connector;
         /**
          * 消费者
          */
@@ -138,26 +130,47 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 状态
          */
-        protected AtomicReference<Endpoint.Status> status = new AtomicReference<>(Endpoint.Status.CLOSED);
+        protected volatile Endpoint.Status status = CLOSED;
         /**
          * 计数器
          */
         protected AtomicLong counter = new AtomicLong(0);
         /**
-         * 消息发布
+         * 心跳失败次数
          */
-        protected Publisher<TransportEvent> publisher;
+        protected AtomicInteger heartbeatFails = new AtomicInteger(0);
+        /**
+         * 关闭回调
+         */
+        protected Consumer<PoolChannel> beforeClose;
+        /**
+         * 连接消费者
+         */
+        protected Consumer<AsyncResult<Channel>> afterConnect;
+
 
         /**
          * 构造函数
          *
-         * @param publisher
-         * @param opener
+         * @param transport
+         * @param connector
+         * @param beforeClose
          */
-        protected PoolChannel(Publisher<TransportEvent> publisher, ChannelOpener opener) {
+        protected PoolChannel(final ClientTransport transport,
+                              final Connector connector,
+                              final Consumer<PoolChannel> beforeClose) {
             super(null);
-            this.publisher = publisher;
-            this.opener = opener;
+            this.publisher = transport.getPublisher();
+            this.name = transport.getChannelName();
+            this.connector = connector;
+            this.beforeClose = beforeClose;
+            this.strategy = transport.getHeartbeatStrategy();
+
+            this.afterConnect = event -> {
+                if (event.isSuccess()) {
+                    addRef();
+                }
+            };
         }
 
         /**
@@ -165,40 +178,59 @@ public abstract class AbstractChannelManager implements ChannelManager {
          *
          * @param consumer
          */
-        protected void open(final Consumer<AsyncResult<Channel>> consumer) {
-            if (status.compareAndSet(Endpoint.Status.CLOSED, Endpoint.Status.OPENING)) {
+        protected void connect(Consumer<AsyncResult<Channel>> consumer) {
+            //连接成功处理器
+            consumer = consumer == null ? afterConnect : afterConnect.andThen(consumer);
+            //修改状态
+            if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
                 consumers.offer(consumer);
-                opener.openChannel(r -> {
+                connector.connect(r -> {
                             if (r.isSuccess()) {
                                 channel = r.getResult();
+                                channel.setAttribute(CHANNEL_KEY, name);
                                 channel.setAttribute(EVENT_PUBLISHER, publisher);
-                                //开启futrueManager
+                                channel.setAttribute(HEARTBEAT_FAILED_COUNT, heartbeatFails);
                                 channel.getFutureManager().open();
-                                status.set(Endpoint.Status.OPENED);
+                                STATE_UPDATER.set(this, OPENED);
+                                //后面添加心跳，防止心跳检查状态退出
+                                trigger = strategy == null || strategy.getHeartbeat() == null ? null :
+                                        new DefaultHeartbeatTrigger(this, url, strategy, publisher);
+                                if (trigger != null) {
+                                    switch (strategy.getHeartbeatMode()) {
+                                        case IDLE:
+                                            //利用Channel的Idle事件进行心跳检测
+                                            channel.setAttribute(Channel.IDLE_HEARTBEAT_TRIGGER, trigger);
+                                            break;
+                                        case TIMING:
+                                            //定时心跳
+                                            timer().add(new HeartbeatTask(this));
+                                    }
+                                }
+
                                 publisher.start();
-                                publish();
+                                publish(new AsyncResult<>(PoolChannel.this));
                             } else {
-                                status.set(Endpoint.Status.CLOSED);
-                                publish(r.getThrowable());
+                                STATE_UPDATER.set(this, CLOSED);
+                                publish(new AsyncResult<>(r.getThrowable()));
                             }
                         }
                 );
             } else {
-                switch (status.get()) {
+                switch (status) {
                     case OPENED:
                         consumer.accept(new AsyncResult(PoolChannel.this));
                         break;
                     case OPENING:
                         consumers.add(consumer);
                         //二次判断，防止并发
-                        switch (status.get()) {
+                        switch (status) {
                             case OPENING:
                                 break;
                             case OPENED:
-                                publish();
+                                publish(new AsyncResult<>(PoolChannel.this));
                                 break;
                             default:
-                                publish(new ConnectionException());
+                                publish(new AsyncResult<>(new ConnectionException()));
                                 break;
                         }
                         break;
@@ -211,27 +243,13 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         /**
          * 发布消息
-         */
-        protected void publish() {
-            while (!consumers.isEmpty()) {
-                Consumer<AsyncResult<Channel>> consumer = consumers.poll();
-                if (consumer != null) {
-                    consumer.accept(new AsyncResult<>(PoolChannel.this));
-                }
-            }
-        }
-
-        /**
-         * 发布异常消息
          *
-         * @param throwable
+         * @param result
          */
-        protected void publish(final Throwable throwable) {
-            while (!consumers.isEmpty()) {
-                Consumer<AsyncResult<Channel>> consumer = consumers.poll();
-                if (consumer != null) {
-                    consumer.accept(new AsyncResult<>(throwable));
-                }
+        protected void publish(final AsyncResult result) {
+            Consumer<AsyncResult<Channel>> consumer;
+            while ((consumer = consumers.poll()) != null) {
+                consumer.accept(result);
             }
         }
 
@@ -245,30 +263,33 @@ public abstract class AbstractChannelManager implements ChannelManager {
         }
 
         @Override
-        public void send(Object object, Consumer<SendResult> consumer) {
-            if (status.get() != Endpoint.Status.OPENED) {
-                LafException throwable = new ChannelClosedException(String.format("Send request exception, causing poolchannel is not opened. at  %s : %s",
-                        Channel.toString(this), object.toString()));
-                if (consumer != null) {
-                    consumer.accept(new SendResult(throwable, this));
-                } else {
-                    throw throwable;
-                }
-            } else {
-                super.send(object, consumer);
+        public void send(final Object object, final Consumer<SendResult> consumer) {
+            switch (status) {
+                case OPENED:
+                    super.send(object, consumer);
+                    break;
+                default:
+                    LafException throwable = new ChannelClosedException(
+                            String.format("Send request exception, causing channel is not opened. at  %s : %s",
+                                    Channel.toString(this), object.toString()));
+                    if (consumer != null) {
+                        consumer.accept(new SendResult(throwable, this));
+                    } else {
+                        throw throwable;
+                    }
             }
         }
 
         @Override
         public boolean isActive() {
-            return super.isActive() && status.get() == Endpoint.Status.OPENED;
+            return super.isActive() && status == OPENED;
         }
 
         @Override
         public boolean close() {
             CountDownLatch latch = new CountDownLatch(1);
             final Throwable[] err = new Throwable[1];
-            final boolean[] res = new boolean[]{true};
+            final boolean[] res = new boolean[]{false};
             try {
                 close(r -> {
                     if (r.getThrowable() != null) {
@@ -288,14 +309,28 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public void close(final Consumer<AsyncResult<Channel>> consumer) {
-            if (status.compareAndSet(Endpoint.Status.OPENED, Endpoint.Status.CLOSING)) {
-                if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
-                    //没有请求，或者channel已经不可以，立即关闭
-                    doClose(consumer);
+            if (counter.decrementAndGet() == 0) {
+                beforeClose.accept(this);
+                if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
+                    if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
+                        //没有请求，或者channel已经不可以，立即关闭
+                        doClose(consumer);
+                    } else {
+                        //异步关闭
+                        timer().add(new CloseChannelTask(this, consumer));
+                    }
                 } else {
-                    //异步关闭
-                    CLOSERS.add(new ChannelCloser(this, consumer));
+                    switch (status) {
+                        case OPENING:
+                        case OPENED:
+                            timer().add(new CloseChannelTask(this, consumer));
+                            break;
+                        default:
+                            Optional.ofNullable(consumer).ifPresent(o -> o.accept(new AsyncResult<>(this)));
+                    }
                 }
+            } else {
+                Optional.ofNullable(consumer).ifPresent(o -> o.accept(new AsyncResult<>(this)));
             }
         }
 
@@ -306,50 +341,23 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
             channel.close(r -> {
-                status.set(Endpoint.Status.CLOSED);
+                STATE_UPDATER.set(this, CLOSED);
                 publisher.close();
                 consumer.accept(r);
             });
         }
 
-        @Override
-        public boolean disconnect() {
-            if (counter.decrementAndGet() == 0) {
-                heartbeatManager.remove(this);
-                channels.remove(channel.getAttribute(CHANNEL_KEY));
-                return close();
-            }
-            return true;
-        }
-
-        @Override
-        public void disconnect(final Consumer<AsyncResult<Channel>> consumer) {
-            if (counter.decrementAndGet() == 0) {
-                heartbeatManager.remove(this);
-                channels.remove(channel.getAttribute(CHANNEL_KEY));
-                close(r -> {
-                    if (r.isSuccess()) {
-                        consumer.accept(new AsyncResult<>(this));
-                    } else {
-                        consumer.accept(new AsyncResult<>(this, r.getThrowable()));
-                    }
-                });
-            } else {
-                consumer.accept(new AsyncResult<>(this));
-            }
-        }
-
     }
 
     /**
-     * Channel关闭器
+     * 异步关闭Channel任务
      */
-    protected class ChannelCloser {
+    protected static class CloseChannelTask implements Timer.TimeTask {
+
         /**
          * Channel
          */
-        protected PoolChannel poolChannel;
-
+        protected PoolChannel channel;
         /**
          * 消费者
          */
@@ -358,43 +366,100 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 构造函数
          *
-         * @param poolChannel
+         * @param channel
          * @param consumer
          */
-        public ChannelCloser(PoolChannel poolChannel, Consumer<AsyncResult<Channel>> consumer) {
-            this.poolChannel = poolChannel;
+        public CloseChannelTask(PoolChannel channel, Consumer<AsyncResult<Channel>> consumer) {
+            this.channel = channel;
             this.consumer = consumer;
         }
 
+        @Override
+        public String getName() {
+            return "CloseChannelTask-" + channel.name;
+        }
+
+        @Override
+        public long getTime() {
+            return SystemClock.now() + 400L;
+        }
+
+        @Override
+        public void run() {
+            if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
+                //没有请求了,或channel已经不可用
+                channel.doClose(consumer);
+            } else {
+                //等等
+                timer().add(this);
+            }
+        }
+    }
+
+    /**
+     * 心跳任务
+     */
+    protected static class HeartbeatTask implements Timer.TimeTask {
+
         /**
-         * 关闭
+         * Channel
          */
-        public boolean close() {
-            if (poolChannel.status.get() == Endpoint.Status.OPENED) {
-                //重新打开了，不需要关闭，直接remove
-                return true;
-            } else if (poolChannel.getFutureManager().isEmpty() || !poolChannel.channel.isActive()) {
-                //没有请求了,或channl已经不可用
-                poolChannel.doClose(consumer);
-                return true;
-            }
-            return false;
+        protected PoolChannel channel;
+        /**
+         * 策略
+         */
+        protected final HeartbeatStrategy strategy;
+        /**
+         * 心跳触发器
+         */
+        protected final HeartbeatTrigger trigger;
+        /**
+         * 名称
+         */
+        protected final String name;
+        /**
+         * 心跳时间间隔
+         */
+        protected final int interval;
+        /**
+         * 心跳时间
+         */
+        protected long time;
+
+        /**
+         * 构造函数
+         *
+         * @param channel
+         */
+        public HeartbeatTask(final PoolChannel channel) {
+            this.channel = channel;
+            this.trigger = channel.trigger;
+            this.strategy = trigger.strategy();
+            this.interval = strategy.getInterval() <= 0 ? HeartbeatStrategy.DEFAULT_INTERVAL : strategy.getInterval();
+            this.time = SystemClock.now() + ThreadLocalRandom.current().nextInt(interval);
+            this.name = this.getClass().getSimpleName() + "-" + channel.name;
         }
 
         @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-            return Objects.equals(poolChannel, ((ChannelCloser) o).poolChannel);
+        public String getName() {
+            return name;
         }
 
         @Override
-        public int hashCode() {
-            return Objects.hash(poolChannel);
+        public long getTime() {
+            return time;
+        }
+
+        @Override
+        public void run() {
+            switch (channel.status) {
+                case OPENED:
+                    //只有在该状态下执行，手工关闭状态不要触发
+                    trigger.run();
+                    time = SystemClock.now() + interval;
+                    timer().add(this);
+
+            }
         }
     }
 

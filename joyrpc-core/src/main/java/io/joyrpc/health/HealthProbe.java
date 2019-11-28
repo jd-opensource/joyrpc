@@ -20,11 +20,14 @@ package io.joyrpc.health;
  * #L%
  */
 
-import io.joyrpc.util.Daemon;
+import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.function.Consumer;
+
 import static io.joyrpc.Plugin.DOCTOR;
+import static io.joyrpc.context.GlobalContext.timer;
 
 /**
  * 监控状态探针
@@ -43,12 +46,7 @@ public class HealthProbe {
      * 构造函数
      */
     protected HealthProbe() {
-        //启动一个线程定期检查
-        Daemon daemon = Daemon.builder().name("doctor").interval(5000)
-                .runnable(() -> state = diagnose())
-                .error(e -> logger.error("Error occurs while diagnose,caused by " + e.getMessage(), e))
-                .build();
-        daemon.start();
+        timer().add(new DiagnoseTask(s -> state = s));
     }
 
     public HealthState getState() {
@@ -72,23 +70,51 @@ public class HealthProbe {
     }
 
     /**
-     * 诊断健康状态
-     *
-     * @return
+     * 诊断任务
      */
-    protected HealthState diagnose() {
-        HealthState result = HealthState.HEALTHY;
-        HealthState state;
-        for (Doctor doctor : DOCTOR.extensions()) {
-            state = doctor.diagnose();
-            if (state.ordinal() > result.ordinal()) {
-                result = state;
-            }
-            if (state == HealthState.DEAD) {
-                break;
-            }
+    protected static class DiagnoseTask implements Timer.TimeTask {
+        /**
+         * 消费者
+         */
+        protected Consumer<HealthState> consumer;
+
+        /**
+         * 构造函数
+         *
+         * @param consumer
+         */
+        public DiagnoseTask(Consumer<HealthState> consumer) {
+            this.consumer = consumer;
         }
-        return result;
+
+        @Override
+        public String getName() {
+            return "DiagnoseTask";
+        }
+
+        @Override
+        public long getTime() {
+            return 5000L;
+        }
+
+        @Override
+        public void run() {
+            //调用插件进行诊断
+            HealthState result = HealthState.HEALTHY;
+            HealthState state;
+            for (Doctor doctor : DOCTOR.extensions()) {
+                state = doctor.diagnose();
+                if (state.ordinal() > result.ordinal()) {
+                    result = state;
+                }
+                if (state == HealthState.DEAD) {
+                    break;
+                }
+            }
+            consumer.accept(result);
+            //继续执行
+            timer().add(this);
+        }
     }
 
 }

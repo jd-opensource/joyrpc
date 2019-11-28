@@ -13,11 +13,11 @@ public class BootClient {
         ConfigurableApplicationContext run = SpringApplication.run(BootClient.class, args);
         DemoService consumer = run.getBean(DemoService.class);
         while (true) {
+
             try {
-                System.out.println(consumer.sayHello("helloWold"));
-                Thread.sleep(1000L);
-            } catch (InterruptedException e) {
-                break;
+                consumer.sayHello("helloWold");
+                //System.out.println(consumer.sayHello("helloWold"));
+                //Thread.sleep(1000L);
             } catch (Exception e) {
                 try {
                     Thread.sleep(1000L);

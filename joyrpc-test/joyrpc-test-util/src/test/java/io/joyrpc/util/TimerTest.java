@@ -14,12 +14,12 @@ public class TimerTest {
 
         Timer timer = new Timer("default", 100, 5, 3);
         CountDownLatch latch = new CountDownLatch(6);
-        timer.addLeastOneTick("test", SystemClock.now(), new MyTask("1", latch));
-        timer.addLeastOneTick("test", SystemClock.now() + 200, new MyTask("2", latch));
-        timer.addLeastOneTick("test", SystemClock.now() + 200, new MyTask("3", latch));
-        timer.addLeastOneTick("test", SystemClock.now() + 600, new MyTask("4", latch));
-        timer.addLeastOneTick("test", SystemClock.now() + 1500, new MyTask("5", latch));
-        timer.addLeastOneTick("test", SystemClock.now() + 1500, new MyTask("6", latch));
+        timer.add("test", SystemClock.now(), new MyTask("1", latch));
+        timer.add("test", SystemClock.now() + 200, new MyTask("2", latch));
+        timer.add("test", SystemClock.now() + 200, new MyTask("3", latch));
+        timer.add("test", SystemClock.now() + 600, new MyTask("4", latch));
+        timer.add("test", SystemClock.now() + 1500, new MyTask("5", latch));
+        timer.add("test", SystemClock.now() + 1500, new MyTask("6", latch));
 
         latch.await();
     }

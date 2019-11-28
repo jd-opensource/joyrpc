@@ -2,7 +2,10 @@ package io.joyrpc.util;
 
 import io.joyrpc.thread.NamedThreadFactory;
 
+import java.util.Queue;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -18,10 +21,6 @@ public class Timer {
      */
     protected TimeWheel timeWheel;
     /**
-     * 工作线程数
-     */
-    protected int workerThreads;
-    /**
      * 过期任务执行线程
      */
     protected ExecutorService workerPool;
@@ -29,6 +28,34 @@ public class Timer {
      * 轮询延迟队列获取过期任务线程
      */
     protected ExecutorService bossPool;
+    /**
+     * 放弃的任务
+     */
+    protected Queue<Task> cancels = new ConcurrentLinkedQueue<>();
+    /**
+     * 待分配的任务，防止并发
+     */
+    protected Queue<Task> flying = new ConcurrentLinkedQueue<>();
+    /**
+     * 待处理的任务计数
+     */
+    protected AtomicLong tasks = new AtomicLong(0);
+    /**
+     * 最大待处理任务
+     */
+    protected long maxTasks;
+    /**
+     * 任务执行完毕的消费者
+     */
+    protected Consumer<Task> afterRun;
+    /**
+     * 放弃的消费者
+     */
+    protected Consumer<Task> afterCancel;
+    /**
+     * 任务执行之前的消费者
+     */
+    protected Consumer<Task> beforeRun;
 
     /**
      * 构造函数
@@ -38,7 +65,7 @@ public class Timer {
      * @param workerThreads 工作线程数
      */
     public Timer(final long tickTime, final int ticks, final int workerThreads) {
-        this(null, tickTime, ticks, workerThreads);
+        this(null, tickTime, ticks, workerThreads, 0);
     }
 
     /**
@@ -50,6 +77,19 @@ public class Timer {
      * @param workerThreads 工作线程数
      */
     public Timer(final String name, final long tickTime, final int ticks, final int workerThreads) {
+        this(name, tickTime, ticks, workerThreads, 0);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param name          名称
+     * @param tickTime      每一跳时间
+     * @param ticks         时间轮有几条
+     * @param workerThreads 工作线程数
+     * @param maxTasks      最大待处理任务
+     */
+    public Timer(final String name, final long tickTime, final int ticks, final int workerThreads, final long maxTasks) {
         if (tickTime <= 0) {
             throw new IllegalArgumentException("tickTime must be greater than 0");
         } else if (ticks <= 0) {
@@ -57,7 +97,10 @@ public class Timer {
         } else if (workerThreads <= 0) {
             throw new IllegalArgumentException("workerThreads must be greater than 0");
         }
-        this.workerThreads = workerThreads;
+        this.maxTasks = maxTasks;
+        this.afterRun = o -> tasks.decrementAndGet();
+        this.afterCancel = this::cancel;
+        this.beforeRun = this::supply;
         this.queue = new DelayQueue<>();
         this.timeWheel = new TimeWheel(tickTime, ticks, SystemClock.now(), queue);
         String prefix = name == null || name.isEmpty() ? "timer" : name;
@@ -66,13 +109,22 @@ public class Timer {
         this.bossPool.submit(() -> {
             while (!Shutdown.isShutdown()) {
                 try {
-                    //停止的时候要及时中断，把timeWheel.getDuration()改成了1000ms
-                    Slot slot = queue.poll(1000L, TimeUnit.MILLISECONDS);
-                    if (slot != null && !Shutdown.isShutdown()) {
-                        //推进时间
-                        timeWheel.advance(slot.getExpiration());
-                        //执行任务
-                        slot.flush(this::add);
+                    //拉取一跳时间
+                    Slot slot = queue.poll(timeWheel.tickTime, TimeUnit.MILLISECONDS);
+                    if (!Shutdown.isShutdown()) {
+                        //处理放弃的任务
+                        cancel();
+                        //添加新增的任务，如果当前任务已经过期则立刻执行，否则放入后续的槽中
+                        supply();
+                        if (slot != null) {
+                            //推进一跳
+                            timeWheel.advance(slot.expiration);
+                            //执行任务
+                            slot.flush(beforeRun);
+                        } else {
+                            //推进一跳
+                            timeWheel.advance(timeWheel.now + timeWheel.tickTime);
+                        }
                     }
                 } catch (InterruptedException e) {
                     break;
@@ -82,27 +134,44 @@ public class Timer {
     }
 
     /**
-     * 添加任务
-     *
-     * @param name     名称
-     * @param time     任务执行时间
-     * @param runnable 执行任务
+     * 放弃任务
      */
-    public void add(final String name, final long time, final Runnable runnable) {
-        if (runnable == null) {
-            return;
+    protected void cancel() {
+        Task task;
+        //移除放弃的任务
+        while ((task = cancels.poll()) != null) {
+            //放弃任务，进入队列之前已经修改了计数器，这里不需要再处理。
+            task.remove();
         }
-        add(new Task(name, time, runnable));
+    }
+
+    /**
+     * 添加任务
+     */
+    protected void supply() {
+        Task task;
+        //添加任务，1跳最多10万次
+        for (int i = 0; i < 100000; i++) {
+            task = flying.poll();
+            if (task == null) {
+                break;
+            }
+            if (!task.isCancelled()) {
+                supply(task);
+            }
+        }
     }
 
     /**
      * 添加任务
      *
-     * @param task
+     * @param task 任务
+     * @return
      */
-    public void add(final TimeTask task) {
-        if (task != null) {
-            add(task.getName(), task.getTime(), task);
+    protected void supply(final Task task) {
+        //添加失败任务直接执行
+        if (!timeWheel.add(task)) {
+            workerPool.submit(task);
         }
     }
 
@@ -112,36 +181,45 @@ public class Timer {
      * @param name     名称
      * @param time     任务执行时间
      * @param runnable 执行任务
+     * @return
      */
-    public void addLeastOneTick(final String name, final long time, final Runnable runnable) {
-        if (runnable == null) {
-            return;
-        }
-        long nextTickTime = timeWheel.getNextTickTime();
-        add(new Task(name, time < nextTickTime ? nextTickTime : time, runnable));
+    public Timeout add(final String name, final long time, final Runnable runnable) {
+        return runnable == null ? null : add(new Task(name, timeWheel.getLeastOneTick(time), runnable, afterRun, afterCancel));
     }
 
     /**
      * 添加任务，至少需要一条
      *
      * @param task 任务
+     * @return
      */
-    public void addLeastOneTick(final TimeTask task) {
-        if (task != null) {
-            addLeastOneTick(task.getName(), task.getTime(), task);
-        }
+    public Timeout add(final TimeTask task) {
+        return task == null ? null : add(new Task(task.getName(), timeWheel.getLeastOneTick(task.getTime()), task, afterRun, afterCancel));
     }
 
     /**
      * 添加任务
      *
      * @param task 任务
+     * @return
      */
-    protected void add(final Task task) {
-        //添加失败任务直接执行
-        if (task != null && !timeWheel.add(task)) {
-            workerPool.submit(task);
+    protected Timeout add(final Task task) {
+        if (maxTasks > 0 && tasks.incrementAndGet() > maxTasks) {
+            tasks.decrementAndGet();
+            throw new RejectedExecutionException("the maximum of pending tasks is " + maxTasks);
         }
+        flying.add(task);
+        return task;
+    }
+
+    /**
+     * 放弃任务
+     *
+     * @param task
+     */
+    protected void cancel(final Task task) {
+        tasks.decrementAndGet();
+        cancels.add(task);
     }
 
     /**
@@ -163,7 +241,7 @@ public class Timer {
         /**
          * 当前时间，是tickTime的整数倍
          */
-        protected volatile long now;
+        protected long now;
         /**
          * 延迟队列
          */
@@ -175,7 +253,7 @@ public class Timer {
         /**
          * 下一层时间轮
          */
-        protected volatile TimeWheel next;
+        protected TimeWheel next;
 
         /**
          * 时间轮
@@ -207,46 +285,40 @@ public class Timer {
          */
         protected TimeWheel getNext() {
             if (next == null) {
-                synchronized (this) {
-                    if (next == null) {
-                        next = new TimeWheel(duration, ticks, now, queue);
-                    }
-                }
+                next = new TimeWheel(duration, ticks, now, queue);
             }
             return next;
         }
 
         /**
-         * 获取下一跳的时间
+         * 获取至少一跳的时间
          *
          * @return
          */
-        public long getNextTickTime() {
-            return now + tickTime;
+        public long getLeastOneTick(final long time) {
+            long result = SystemClock.now() + tickTime;
+            return time < result ? result : time;
         }
 
         /**
          * 添加任务到时间轮
          */
         public boolean add(final Task task) {
-            long current = now;
-            long time = task.getTime() - current;
+            long time = task.getTime() - now;
             if (time < tickTime) {
                 //过期任务直接执行
                 return false;
             } else if (time < duration) {
                 //该任务在一个时间轮里面，则加入到对应的时间槽
-                long count = time / tickTime;
-                Slot slot = slots[(int) (count % ticks)];
-                //添加到槽里面，防止和boss线程并发执行冲突
-                switch (slot.add(task, slot.getExpiration(), current + count * tickTime)) {
-                    case Slot.SUCCESS_FIRST:
+                int count = (int) (time / tickTime);
+                Slot slot = slots[count % ticks];
+                //添加到槽里面
+                switch (slot.add(task, now + count * tickTime)) {
+                    case Slot.HEAD:
                         queue.offer(slot);
                         return true;
-                    case Slot.SUCCESS:
-                        return true;
                     default:
-                        return false;
+                        return true;
                 }
             } else {
                 //放到下一层的时间轮
@@ -271,7 +343,13 @@ public class Timer {
     /**
      * 任务
      */
-    protected static class Task implements Runnable {
+    protected static class Task implements Runnable, Timeout {
+        protected static final int INIT = 0;
+        protected static final int CANCELLED = 1;
+        protected static final int EXPIRED = 2;
+        protected static final AtomicIntegerFieldUpdater<Task> STATE_UPDATER =
+                AtomicIntegerFieldUpdater.newUpdater(Task.class, "state");
+
         /**
          * 名称
          */
@@ -285,6 +363,14 @@ public class Timer {
          */
         protected Runnable runnable;
         /**
+         * 执行完毕的消费者
+         */
+        protected Consumer<Task> afterRun;
+        /**
+         * 放弃的消费者
+         */
+        protected Consumer<Task> afterCancel;
+        /**
          * 时间槽
          */
         protected Slot slot;
@@ -296,6 +382,11 @@ public class Timer {
          * 上一个节点
          */
         protected Task pre;
+        /**
+         * 状态
+         */
+        protected volatile int state = INIT;
+
 
         /**
          * 构造函数
@@ -303,17 +394,23 @@ public class Timer {
          * @param name
          * @param time
          * @param runnable
+         * @param afterRun
+         * @param afterCancel
          */
-        public Task(final String name, final long time, final Runnable runnable) {
+        public Task(final String name, final long time, final Runnable runnable,
+                    final Consumer<Task> afterRun,
+                    final Consumer<Task> afterCancel) {
             this.time = time;
             this.name = name;
             this.runnable = runnable;
+            this.afterRun = afterRun;
+            this.afterCancel = afterCancel;
             this.slot = null;
             this.next = null;
             this.pre = null;
         }
 
-        public long getTime() {
+        protected long getTime() {
             return time;
         }
 
@@ -324,7 +421,42 @@ public class Timer {
 
         @Override
         public void run() {
-            runnable.run();
+            if (STATE_UPDATER.compareAndSet(this, INIT, EXPIRED)) {
+                runnable.run();
+                if (afterRun != null) {
+                    afterRun.accept(this);
+                }
+            }
+        }
+
+        @Override
+        public boolean isExpired() {
+            return state == EXPIRED;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return state == CANCELLED;
+        }
+
+        @Override
+        public boolean cancel() {
+            if (STATE_UPDATER.compareAndSet(this, INIT, CANCELLED)) {
+                if (afterCancel != null) {
+                    afterCancel.accept(this);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * 移除
+         */
+        void remove() {
+            if (slot != null) {
+                slot.remove(this);
+            }
         }
     }
 
@@ -333,18 +465,17 @@ public class Timer {
      */
     protected static class Slot implements Delayed {
 
-        public static final int FAIL = 0;
-        public static final int SUCCESS_FIRST = 1;
-        public static final int SUCCESS = 2;
+        public static final int HEAD = 1;
+        public static final int TAIL = 2;
 
         /**
          * 过期时间
          */
-        protected volatile long expiration = -1L;
+        protected long expiration = -1L;
         /**
          * 根节点
          */
-        protected Task root = new Task("root", -1L, null);
+        protected Task root = new Task("root", -1L, null, null, null);
 
         /**
          * 构造函数
@@ -355,35 +486,37 @@ public class Timer {
         }
 
         /**
-         * 获取过期时间
+         * 新增任务
+         *
+         * @param task   任务
+         * @param expire 新的过期时间
+         * @return
          */
-        public long getExpiration() {
-            return expiration;
+        protected int add(final Task task, final long expire) {
+            task.slot = this;
+            Task tail = root.pre;
+            task.next = root;
+            task.pre = tail;
+            tail.next = task;
+            root.pre = task;
+            if (expiration == -1L) {
+                expiration = expire;
+                return HEAD;
+            }
+            return TAIL;
         }
 
         /**
-         * 新增任务
+         * 移除任务
          *
-         * @param task    任务
-         * @param version 当前槽的过期时间，防止和boss线程并发执行冲突
-         * @param expire  新的过期时间
-         * @return
+         * @param task
          */
-        public synchronized int add(final Task task, final long version, final long expire) {
-            if (expiration == version) {
-                task.slot = this;
-                Task tail = root.pre;
-                task.next = root;
-                task.pre = tail;
-                tail.next = task;
-                root.pre = task;
-                if (expiration != expire) {
-                    expiration = expire;
-                    return SUCCESS_FIRST;
-                }
-                return SUCCESS;
-            }
-            return FAIL;
+        protected void remove(final Task task) {
+            task.next.pre = task.pre;
+            task.pre.next = task.next;
+            task.slot = null;
+            task.next = null;
+            task.pre = null;
         }
 
         /**
@@ -391,14 +524,10 @@ public class Timer {
          *
          * @param consumer 消费者
          */
-        public synchronized void flush(final Consumer<Task> consumer) {
+        protected void flush(final Consumer<Task> consumer) {
             Task task = root.next;
             while (task != root) {
-                task.next.pre = task.pre;
-                task.pre.next = task.next;
-                task.slot = null;
-                task.next = null;
-                task.pre = null;
+                remove(task);
                 consumer.accept(task);
                 task = root.next;
             }
@@ -434,5 +563,32 @@ public class Timer {
          * @return
          */
         long getTime();
+    }
+
+    /**
+     * 超时对象
+     */
+    public interface Timeout {
+
+        /**
+         * 是否过期了
+         *
+         * @return
+         */
+        boolean isExpired();
+
+        /**
+         * 是否放弃了
+         *
+         * @return
+         */
+        boolean isCancelled();
+
+        /**
+         * 放弃
+         *
+         * @return
+         */
+        boolean cancel();
     }
 }

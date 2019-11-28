@@ -9,9 +9,9 @@ package io.joyrpc.transport.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,26 +21,28 @@ package io.joyrpc.transport.channel;
  */
 
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.Timer;
 
 import java.util.concurrent.CompletableFuture;
 
 /**
+ * 增强的CompletableFuture
+ *
  * @date: 2019/5/9
  */
 public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
     /**
      * 消息ID
      */
-    protected I messageId;
+    protected final I messageId;
     /**
      * 会话
      */
-    protected Session session;
+    protected final Session session;
     /**
      * 超时时间
      */
-    protected long expireTime;
+    protected final Timer.Timeout timeout;
     /**
      * 扩展属性
      */
@@ -51,24 +53,24 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      *
      * @param messageId
      * @param session
-     * @param expireTime
+     * @param timeout
      */
-    public EnhanceCompletableFuture(I messageId, Session session, long expireTime) {
+    public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout) {
         this.messageId = messageId;
         this.session = session;
-        this.expireTime = expireTime;
-    }
-
-    public Session getSession() {
-        return session;
+        this.timeout = timeout;
     }
 
     public I getMessageId() {
         return messageId;
     }
 
-    public long getExpireTime() {
-        return expireTime;
+    public Session getSession() {
+        return session;
+    }
+
+    public Timer.Timeout getTimeout() {
+        return timeout;
     }
 
     public Object getAttr() {
@@ -80,11 +82,12 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
     }
 
     /**
-     * 是否过期
-     *
-     * @return
+     * 放弃过期检查任务
      */
-    public boolean isExpire() {
-        return expireTime <= SystemClock.now();
+    public void cancel() {
+        if (timeout != null && !timeout.isExpired()) {
+            timeout.cancel();
+        }
     }
+
 }

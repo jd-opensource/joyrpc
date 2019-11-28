@@ -52,6 +52,11 @@ public class Shutdown {
     protected List<Hook> hooks = new CopyOnWriteArrayList<>();
 
     /**
+     * 注册
+     */
+    protected boolean register;
+
+    /**
      * 是否在关闭
      */
     protected boolean shutdown;
@@ -60,16 +65,7 @@ public class Shutdown {
      * 构造函数
      */
     protected Shutdown() {
-        // 增加jvm关闭事件
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                doShutdown().get(GlobalContext.asParametric().getPositiveLong(Constants.SHUTDOWN_TIMEOUT_OPTION),
-                        TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-            } catch (ExecutionException e) {
-            } catch (TimeoutException e) {
-            }
-        }, "Shutdown"));
+
     }
 
     /**
@@ -121,12 +117,35 @@ public class Shutdown {
     }
 
     /**
+     * 延迟注册，如果没有监听器则不用注册
+     */
+    protected synchronized void register() {
+        if (register) {
+            return;
+        }
+        register = true;
+        // 增加jvm关闭事件
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                doShutdown().get(GlobalContext.asParametric().getPositiveLong(Constants.SHUTDOWN_TIMEOUT_OPTION),
+                        TimeUnit.MILLISECONDS);
+            } catch (InterruptedException e) {
+            } catch (ExecutionException e) {
+            } catch (TimeoutException e) {
+            }
+        }, "Shutdown"));
+    }
+
+    /**
      * 添加系统钩子
      *
      * @param hook
      */
     public static void addHook(final Hook hook) {
         if (hook != null) {
+            if (!INSTANCE.register) {
+                INSTANCE.register();
+            }
             INSTANCE.hooks.add(hook);
         }
     }
@@ -138,7 +157,7 @@ public class Shutdown {
      */
     public static void addHook(final Runnable runnable) {
         if (runnable != null) {
-            INSTANCE.hooks.add(new HookAdapter(runnable));
+            addHook(new HookAdapter(runnable));
         }
     }
 

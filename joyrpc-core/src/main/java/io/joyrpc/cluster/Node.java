@@ -263,7 +263,7 @@ public class Node implements Shard {
         //优雅下线
         if (disconnect(client, false)) {
             //5秒后优雅关闭
-            timer().addLeastOneTick(new OfflineTask(this, client));
+            timer().add(new OfflineTask(this, client));
         }
     }
 
@@ -359,11 +359,11 @@ public class Node implements Shard {
             //每次连接后，获取目标节点的启动的时间戳，并初始化计算一次权重
             this.weight = warmup();
             //心跳定时任务
-            timer().addLeastOneTick(new SessionbeatTask(this, v));
+            timer().add(new SessionbeatTask(this, v));
             //预热定时任务
-            timer().addLeastOneTick(new WarmupTask(this, v));
+            timer().add(new WarmupTask(this, v));
             //面板刷新
-            Optional.ofNullable(dashboard).ifPresent(d -> timer().addLeastOneTick(new DashboardTask(this, v)));
+            Optional.ofNullable(dashboard).ifPresent(d -> timer().add(new DashboardTask(this, v)));
 
             //在client赋值之后绑定事件监听器
             client.addEventHandler(clientHandler);
@@ -1109,7 +1109,7 @@ public class Node implements Shard {
         @Override
         protected void doRun() {
             if (node.warmup() != node.originWeight) {
-                timer().addLeastOneTick(this);
+                timer().add(this);
             }
         }
     }
@@ -1159,7 +1159,7 @@ public class Node implements Shard {
                 case WEAK:
                     dashboard.snapshot();
                     time = SystemClock.now() + dashboard.getMetric().getWindowTime();
-                    timer().addLeastOneTick(this);
+                    timer().add(this);
             }
         }
     }
@@ -1203,7 +1203,7 @@ public class Node implements Shard {
                 case WEAK:
                     node.sessionbeat();
                     time = SystemClock.now() + node.sessionbeatInterval;
-                    timer().addLeastOneTick(this);
+                    timer().add(this);
             }
         }
     }

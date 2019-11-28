@@ -196,7 +196,7 @@ public class Cluster {
             clusterPublisher.start();
             Optional.ofNullable(metricPublisher).ifPresent(p -> p.start());
             //定期触发快照
-            Optional.ofNullable(dashboard).ifPresent(o -> timer().addLeastOneTick(new DashboardTask(this, opens.incrementAndGet())));
+            Optional.ofNullable(dashboard).ifPresent(o -> timer().add(new DashboardTask(this, opens.incrementAndGet())));
             registar.subscribe(url, clusterHandler);
             officer = new Officer(this, f);
             return f;
@@ -471,7 +471,7 @@ public class Cluster {
             }
         }
         if (first != null) {
-            timer().addLeastOneTick(new ReconnectTask(this, first));
+            timer().add(new ReconnectTask(this, first));
         }
     }
 
@@ -753,7 +753,7 @@ public class Cluster {
         switch (type) {
             case DISCONNECT:
                 //异步执行，防止死锁
-                timer().addLeastOneTick(new DisconnectTask(this, node));
+                timer().add(new DisconnectTask(this, node));
                 break;
         }
         clusterPublisher.offer(event);
@@ -806,10 +806,10 @@ public class Cluster {
             this.mail = cluster.mail;
             if (triggerWhen <= 0) {
                 //不需要等到初始化连接
-                timer().addLeastOneTick("ReadyTask " + cluster.name, SystemClock.now(), () -> future.complete(new AsyncResult(this)));
+                timer().add("ReadyTask " + cluster.name, SystemClock.now(), () -> future.complete(new AsyncResult(this)));
             } else if (initTimeout > 0 && !mail.get()) {
                 //超时检测
-                timer().addLeastOneTick("ReadyTask " + cluster.name, SystemClock.now() + initTimeout, this::timeout);
+                timer().add("ReadyTask " + cluster.name, SystemClock.now() + initTimeout, this::timeout);
             }
         }
 
@@ -910,7 +910,7 @@ public class Cluster {
             if (cluster.opens.get() == version && cluster.isOpened()) {
                 dashboard.snapshot();
                 time = SystemClock.now() + dashboard.getMetric().getWindowTime();
-                timer().addLeastOneTick(this);
+                timer().add(this);
             }
         }
     }

@@ -54,8 +54,6 @@ public interface Channel {
 
     String PAYLOAD = "PAYLOAD";
 
-    String IS_SERVER = "IS_SERVER";
-
     String EVENT_PUBLISHER = "EVENT_PUBLISHER";
 
     /**
@@ -255,22 +253,69 @@ public interface Channel {
      */
     SessionManager getSessionManager();
 
+    /**
+     * 是否是服务端
+     *
+     * @return
+     */
     boolean isServer();
 
-    default Session getSession(int sessionId) {
+    /**
+     * 获取会话
+     *
+     * @param sessionId
+     * @return
+     */
+    default Session getSession(final int sessionId) {
         return getSessionManager().get(sessionId);
     }
 
-    default Session addSession(int sessionId, Session session) {
+    /**
+     * 设置会话
+     *
+     * @param sessionId
+     * @param session
+     * @return
+     */
+    default Session addSession(final int sessionId, final Session session) {
         return getSessionManager().put(sessionId, session);
     }
 
-    default Session addIfAbsentSession(int sessionId, Session session) {
+    /**
+     * 添加会话
+     *
+     * @param sessionId
+     * @param session
+     * @return
+     */
+    default Session addIfAbsentSession(final int sessionId, final Session session) {
         return getSessionManager().putIfAbsent(sessionId, session);
     }
 
-    default Session removeSession(int sessionId) {
+    /**
+     * 删除会话
+     *
+     * @param sessionId
+     * @return
+     */
+    default Session removeSession(final int sessionId) {
         return getSessionManager().remove(sessionId);
+    }
+
+    /**
+     * 驱逐过期会话
+     */
+    default void evictSession() {
+        getSessionManager().evict();
+    }
+
+    /**
+     * 会话心跳
+     *
+     * @param sessionId
+     */
+    default boolean beatSession(final int sessionId) {
+        return getSessionManager().beat(sessionId);
     }
 
     /**

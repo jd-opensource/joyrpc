@@ -64,23 +64,23 @@ public class NettyChannel implements Channel {
     /**
      * 是否是服务端
      */
-    protected boolean isServer;
+    protected boolean server;
 
     /**
      * 构造函数
      *
      * @param channel
      */
-    public NettyChannel(io.netty.channel.Channel channel) {
+    public NettyChannel(io.netty.channel.Channel channel, boolean server) {
         this.channel = channel;
+        this.server = server;
         this.futureManager = new FutureManager<>(this, () -> idGenerator.incrementAndGet());
-        this.isServer = Boolean.TRUE.equals(channel.attr(AttributeKey.valueOf(Channel.IS_SERVER)).get());
-        this.sessionManager = new SessionManager(isServer);
+        this.sessionManager = new SessionManager(server);
     }
 
     @Override
     public void send(final Object object, final Consumer<SendResult> consumer) {
-        if (!this.isWritable()) {
+        if (!isWritable()) {
             LafException throwable;
             if (this.isActive()) {
                 throwable = new OverloadException(
@@ -245,7 +245,7 @@ public class NettyChannel implements Channel {
 
     @Override
     public boolean isServer() {
-        return isServer;
+        return server;
     }
 
     @Override

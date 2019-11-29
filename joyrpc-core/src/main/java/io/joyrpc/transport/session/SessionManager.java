@@ -9,9 +9,9 @@ package io.joyrpc.transport.session;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,92 +26,104 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 会话管理器
+ *
  * @date: 2019/5/15
  */
 public class SessionManager {
+    /**
+     * 会话
+     */
+    protected Map<Integer, Session> sessions = new ConcurrentHashMap<>();
+    /**
+     * 是否服务端会话
+     */
+    protected boolean server;
 
-    protected Map<Integer, SessionMeta> sessionMeats = new ConcurrentHashMap<>();
-
-    protected boolean isServer;
-
-    public SessionManager() {
-        this(false);
+    /**
+     * 构造函数
+     *
+     * @param server
+     */
+    public SessionManager(boolean server) {
+        this.server = server;
     }
 
-    public SessionManager(boolean isServer) {
-        this.isServer = isServer;
+    /**
+     * 获取会话
+     *
+     * @param sessionId
+     * @return
+     */
+    public Session get(final int sessionId) {
+        return sessions.get(sessionId);
     }
 
-    public Session get(int sessionId) {
-        SessionMeta meta = sessionMeats.get(sessionId);
-        return meta == null ? null : meta.session;
-    }
-
-    public Session putIfAbsent(int sessionId, Session session) {
+    /**
+     * 添加会话
+     *
+     * @param sessionId
+     * @param session
+     * @return
+     */
+    public Session putIfAbsent(final int sessionId, final Session session) {
         if (session == null) {
             return null;
         }
-        SessionMeta meta = sessionMeats.putIfAbsent(sessionId, new SessionMeta(session));
-        return meta == null ? null : meta.session;
+        session.setLastTime(SystemClock.now());
+        return sessions.putIfAbsent(sessionId, session);
     }
 
+    /**
+     * 修改会话
+     *
+     * @param sessionId
+     * @param session
+     * @return
+     */
     public Session put(int sessionId, Session session) {
         if (session == null) {
             return null;
         }
-        SessionMeta meta = sessionMeats.put(sessionId, new SessionMeta(session));
-        return meta == null ? null : meta.session;
-    }
-
-    public Session remove(int sessionId) {
-        SessionMeta meta = sessionMeats.remove(sessionId);
-        return meta == null ? null : meta.session;
-    }
-
-    public boolean sessionbeat(int sessionId) {
-        if (!isServer) {
-            return false;
-        }
-        SessionMeta meta = sessionMeats.get(sessionId);
-        if (meta == null) {
-            return false;
-        }
-        meta.sessionbeat();
-        return true;
-    }
-
-    public void clearExpires() {
-        if (!isServer) {
-            return;
-        }
-        sessionMeats.entrySet().removeIf(entry -> entry.getValue().isExpire());
+        session.setLastTime(SystemClock.now());
+        return sessions.put(sessionId, session);
     }
 
     /**
-     * 会话元数据
+     * 移除会话
+     *
+     * @param sessionId
+     * @return
      */
-    protected static class SessionMeta {
-        //会话
-        protected Session session;
+    public Session remove(int sessionId) {
+        return sessions.remove(sessionId);
+    }
 
-        //上次访问时间
-        protected long lastTime;
-
-        protected SessionMeta(Session session) {
-            this.session = session;
-            this.lastTime = SystemClock.now();
+    /**
+     * 心跳
+     *
+     * @param sessionId
+     * @return
+     */
+    public boolean beat(final int sessionId) {
+        if (!server) {
+            return false;
         }
-
-        protected Session getSession() {
-            return session;
+        Session meta = sessions.get(sessionId);
+        if (meta == null) {
+            return false;
         }
+        meta.setLastTime(SystemClock.now());
+        return true;
+    }
 
-        protected void sessionbeat() {
-            this.lastTime = SystemClock.now();
+    /**
+     * 驱逐过期的
+     */
+    public void evict() {
+        if (!server) {
+            return;
         }
-
-        protected boolean isExpire() {
-            return SystemClock.now() - lastTime > session.getTimeout();
-        }
+        sessions.entrySet().removeIf(entry -> entry.getValue().isExpire());
     }
 }

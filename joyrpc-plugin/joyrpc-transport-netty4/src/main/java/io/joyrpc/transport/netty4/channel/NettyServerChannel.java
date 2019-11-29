@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,25 +22,34 @@ package io.joyrpc.transport.netty4.channel;
 
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ServerChannel;
-import io.joyrpc.transport.channel.ServerChannelContext;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * @date: 2019/3/6
  */
 public class NettyServerChannel extends NettyChannel implements ServerChannel {
 
-    protected ServerChannelContext context;
+    /**
+     * 服务端上下文
+     */
+    protected Supplier<List<Channel>> supplier;
 
-    public NettyServerChannel(io.netty.channel.Channel channel, ServerChannelContext context) {
-        super(channel);
-        this.context = context;
+    /**
+     * 构造函数
+     *
+     * @param channel
+     * @param supplier
+     */
+    public NettyServerChannel(io.netty.channel.Channel channel, Supplier<List<Channel>> supplier) {
+        super(channel, true);
+        this.supplier = supplier;
     }
 
     @Override
     public List<Channel> getChannels() {
-        return context.getChannels();
+        return supplier.get();
     }
 
 }

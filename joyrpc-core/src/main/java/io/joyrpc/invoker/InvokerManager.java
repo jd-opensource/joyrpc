@@ -628,6 +628,7 @@ public class InvokerManager {
                     callbackManager.getProducer().removeCallback(transport);
                 }
             });
+            //每个server独立的线程池
             server.setBizThreadPool(getBizThreadPool(url));
             return new ShareServer(server, v -> servers.remove(v.getUrl().getPort()));
         });

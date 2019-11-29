@@ -130,11 +130,10 @@ public class NettyClientTransport extends AbstractClientTransport {
             @Override
             protected void initChannel(final SocketChannel ch) {
                 //及时发送 与 缓存发送
-                channels[0] = new NettyChannel(ch);
+                channels[0] = new NettyChannel(ch,false);
                 //设置
                 channels[0].setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD))
-                        .setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null)
-                        .setAttribute(Channel.IS_SERVER, false);
+                        .setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
                 //添加连接事件监听
                 ch.pipeline().addLast("connection", new ConnectionChannelHandler(channels[0], publisher));
                 //添加编解码和处理链

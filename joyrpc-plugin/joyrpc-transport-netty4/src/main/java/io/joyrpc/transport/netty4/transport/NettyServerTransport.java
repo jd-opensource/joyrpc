@@ -42,7 +42,6 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,11 +49,14 @@ import org.slf4j.LoggerFactory;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
+ * 服务端
+ *
  * @date: 2019/2/21
  */
 public class NettyServerTransport extends AbstractServerTransport {
@@ -62,39 +64,53 @@ public class NettyServerTransport extends AbstractServerTransport {
     private static final Logger logger = LoggerFactory.getLogger(NettyServerTransport.class);
 
     protected BiFunction<Channel, URL, ChannelTransport> function;
-
+    /**
+     * boss线程池
+     */
     protected EventLoopGroup bossGroup;
+    /**
+     * 工作线程池
+     */
     protected EventLoopGroup workerGroup;
 
+    /**
+     * 构造函数
+     *
+     * @param url
+     * @param function
+     */
     public NettyServerTransport(URL url, BiFunction<Channel, URL, ChannelTransport> function) {
         super(url);
         this.function = function;
     }
 
     @Override
-    protected void openChannel(final Consumer<AsyncResult<Channel>> consumer) {
+    protected void bind(final Consumer<AsyncResult<Channel>> consumer) {
         //消费者不会为空
         if (codec == null && adapter == null) {
-            consumer.accept(new AsyncResult<>(
+            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(
                     new ConnectionException("Failed opening server at " + url.toString(false, false) +
-                            ", codec or adapter can not be null!")));
+                            ", codec or adapter can not be null!"))));
         } else {
             try {
                 SslContext sslContext = SslContextManager.getServerSslContext(url);
                 bossGroup = EventLoopGroupFactory.getParentEventLoopGroup(url);
                 workerGroup = EventLoopGroupFactory.getChildEventLoopGroup(url);
-                ServerBootstrap serverBootstrap = configure(new ServerBootstrap(), sslContext);
+                ServerBootstrap bootstrap = configure(new ServerBootstrap(), sslContext);
 
                 String host = url.getString(Constants.BIND_IP_KEY, url.getHost());
                 String address = host + ":" + url.getPort();
                 // 绑定到全部网卡 或者 指定网卡
-                serverBootstrap.bind(new InetSocketAddress(host, url.getPort())).addListener((ChannelFutureListener) f -> {
+                bootstrap.bind(new InetSocketAddress(host, url.getPort())).addListener((ChannelFutureListener) f -> {
                     if (f.isSuccess()) {
                         logger.info(String.format("Success binding server to %s", address));
-                        consumer.accept(new AsyncResult<>(new NettyServerChannel(f.channel(), serverChannelContext)));
+                        Optional.ofNullable(consumer).ifPresent(c -> c.accept(
+                                new AsyncResult<>(new NettyServerChannel(f.channel(), NettyServerTransport.this::getChannels))));
                     } else {
                         logger.error(String.format("Failed binding server to %s", address));
-                        consumer.accept(new AsyncResult<>(new ConnectionException("Server start fail !", f.cause())));
+                        //自动解绑
+                        unbind(o -> Optional.ofNullable(consumer).ifPresent(c -> c.accept(
+                                new AsyncResult<>(new ConnectionException("Server start fail !", f.cause())))));
                     }
                 });
             } catch (SslException e) {
@@ -132,9 +148,8 @@ public class NettyServerTransport extends AbstractServerTransport {
     }
 
     @Override
-    public void closeChannel(final Consumer<AsyncResult<Channel>> consumer) {
+    public void unbind(final Consumer<AsyncResult<Channel>> consumer) {
         logger.info(String.format("destroy the server at port:%d now...", url.getPort()));
-        status.set(Status.CLOSING);
         List<Future> futures = new LinkedList<>();
         if (bossGroup != null) {
             futures.add(bossGroup.shutdownGracefully());
@@ -164,7 +179,6 @@ public class NettyServerTransport extends AbstractServerTransport {
                 });
             }
         }
-        status.set(Status.CLOSED);
     }
 
     /**
@@ -192,27 +206,21 @@ public class NettyServerTransport extends AbstractServerTransport {
         }
 
         @Override
-        protected void initChannel(final SocketChannel ch) throws Exception {
-            ch.attr(AttributeKey.valueOf(Channel.IS_SERVER)).set(true);
+        protected void initChannel(final SocketChannel ch) {
             //及时发送 与 缓存发送
-            Channel channel = new NettyChannel(ch);
-            //设置payload
-            channel.setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD));
-            //添加业务线程池到channel
-            if (bizThreadPool != null) {
-                channel.setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool);
-            }
-
+            Channel channel = new NettyChannel(ch, true);
+            //设置payload,添加业务线程池到channel
+            channel.setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD))
+                    .setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
             if (sslContext != null) {
                 ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
             }
-
-            ch.pipeline().addLast("connection", new ConnectionChannelHandler(channel, eventPublisher) {
-
+            ch.pipeline().addLast("connection", new ConnectionChannelHandler(channel, publisher) {
                 @Override
                 public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-                    serverChannelContext.removeChannel(channel);
+                    removeChannel(channel);
                     super.channelInactive(ctx);
+                    logger.info(String.format("disconnect %s", ctx.channel().remoteAddress()));
                 }
             });
 
@@ -220,13 +228,14 @@ public class NettyServerTransport extends AbstractServerTransport {
                 ch.pipeline().addLast("adapter", new ProtocolAdapterDecoder(adapter, channel));
             } else {
                 AdapterContext context = new ProtocolAdapterContext(channel, ch.pipeline());
-                context.bind(codec, handlerChain);
+                context.bind(codec, chain);
             }
 
             ChannelTransport transport = function.apply(channel, url);
             channel.setAttribute(Channel.CHANNEL_TRANSPORT, transport);
             channel.setAttribute(Channel.SERVER_CHANNEL, getServerChannel());
-            serverChannelContext.addChannel(channel, transport);
+            addChannel(channel, transport);
         }
     }
+
 }

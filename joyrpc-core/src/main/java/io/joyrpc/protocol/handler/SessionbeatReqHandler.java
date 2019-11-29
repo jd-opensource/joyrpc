@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,10 +38,10 @@ public class SessionbeatReqHandler implements MessageHandler {
     @Override
     public void handle(ChannelContext context, Message message) throws HandlerException {
         //sessionbeat是oneway发送，不需要应答
-        boolean res = context.getChannel().getSessionManager().sessionbeat(message.getSessionId());
+        boolean res = context.getChannel().beatSession(message.getSessionId());
         //session心跳不成功，说明session已经被清理，断开连接重新协商
         if (!res) {
-            logger.warn("The session has expired, but receive sessionbeat, session id is " + message.getSessionId());
+            logger.warn(String.format("The session %s has expired when receiving sessionbeat message.", message.getSessionId()));
         }
         context.end();
     }

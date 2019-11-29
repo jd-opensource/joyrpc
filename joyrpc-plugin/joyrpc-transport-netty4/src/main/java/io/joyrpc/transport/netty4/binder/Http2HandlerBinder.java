@@ -69,7 +69,7 @@ public class Http2HandlerBinder implements HandlerBinder {
     public void bind(ChannelPipeline pipeline, Codec codec, ChannelHandlerChain chain, Channel channel) {
         if (codec != null && codec instanceof Http2Codec) {
             Http2Codec http2Codec = (Http2Codec) codec;
-            if (channel.getAttribute(Channel.IS_SERVER)) {
+            if (channel.isServer()) {
                 Http2FrameLogger frameLogger = new Http2FrameLogger(LogLevel.DEBUG, Http2ServerCodecHandler.class);
                 int payload = channel.getAttribute(Channel.PAYLOAD);
 

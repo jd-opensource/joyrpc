@@ -136,8 +136,6 @@ public abstract class AbstractServerTransport implements ServerTransport {
             serverChannel = null;
             publisher.close();
             closeFuture.complete(c);
-            //TODO 如果外部注入的，最好由外部进行关闭
-            Optional.ofNullable(bizThreadPool).filter(p -> !p.isShutdown()).ifPresent(p -> p.shutdown());
             Optional.ofNullable(t).ifPresent(o -> o.accept(new AsyncResult<>(c)));
         };
     }

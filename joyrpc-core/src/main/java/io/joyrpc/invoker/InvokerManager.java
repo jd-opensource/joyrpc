@@ -50,6 +50,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.Shutdown;
@@ -684,7 +685,10 @@ public class InvokerManager {
                     refers = new ConcurrentHashMap<>();
                     callbackManager.close();
                     //关闭服务
-                    servers.forEach((o, r) -> r.close(null));
+                    servers.forEach((o, r) -> r.close(x -> {
+                        //在这里安全关闭外部线程池
+                        Close.close(r.getBizThreadPool(), 0);
+                    }));
                     servers = new ConcurrentHashMap<>();
                     //关闭系统内容消费者（如：注册中心消费者）
                     systems.forEach((o, r) -> r.close());

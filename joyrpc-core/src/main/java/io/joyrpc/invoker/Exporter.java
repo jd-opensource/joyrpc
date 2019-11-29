@@ -35,6 +35,7 @@ import io.joyrpc.permission.Authenticator;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.Server;
+import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.MethodOption;
 import org.slf4j.Logger;
@@ -178,7 +179,6 @@ public class Exporter<T> extends AbstractInvoker<T> {
 
     @Override
     protected CompletableFuture<Void> doClose() {
-
         CompletableFuture<Void> result = new CompletableFuture<>();
         if (closing != null) {
             closing.accept(this);
@@ -186,6 +186,8 @@ public class Exporter<T> extends AbstractInvoker<T> {
         //关闭服务
         if (server != null) {
             server.close(o -> {
+                //在这里安全关闭外部线程池
+                Close.close(server.getBizThreadPool(), 0);
                 if (o.isSuccess()) {
                     Futures.chain(deRegister(), result);
                 } else {

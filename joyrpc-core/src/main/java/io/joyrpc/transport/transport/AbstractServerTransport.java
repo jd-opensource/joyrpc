@@ -131,7 +131,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_SERVER_NAME,
                 String.valueOf(COUNTER.incrementAndGet()), EVENT_PUBLISHER_TRANSPORT_CONF);
         this.afterClose = (c, t) -> {
-            logger.info(String.format("Success destroying the server at %s:%d", host, url.getPort()));
+            logger.info(String.format("Success destroying server at %s:%d", host, url.getPort()));
             status = CLOSED;
             serverChannel = null;
             publisher.close();

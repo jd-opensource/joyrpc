@@ -23,8 +23,6 @@ package io.joyrpc.transport.netty4.transport;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.event.AsyncResult;
 import io.joyrpc.exception.ConnectionException;
-import io.joyrpc.exception.SslException;
-import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.AdapterContext;
@@ -42,17 +40,12 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.concurrent.Future;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * 服务端
@@ -61,17 +54,9 @@ import java.util.function.Consumer;
  */
 public class NettyServerTransport extends AbstractServerTransport {
 
-    private static final Logger logger = LoggerFactory.getLogger(NettyServerTransport.class);
+    protected final BiFunction<Channel, URL, ChannelTransport> function;
 
-    protected BiFunction<Channel, URL, ChannelTransport> function;
-    /**
-     * boss线程池
-     */
-    protected EventLoopGroup bossGroup;
-    /**
-     * 工作线程池
-     */
-    protected EventLoopGroup workerGroup;
+    protected final Supplier<List<Channel>> supplier;
 
     /**
      * 构造函数
@@ -82,38 +67,32 @@ public class NettyServerTransport extends AbstractServerTransport {
     public NettyServerTransport(URL url, BiFunction<Channel, URL, ChannelTransport> function) {
         super(url);
         this.function = function;
+        this.supplier = this::getChannels;
     }
 
     @Override
-    protected void bind(final Consumer<AsyncResult<Channel>> consumer) {
+    protected void bind(final String host, final int port, final Consumer<AsyncResult<Channel>> consumer) {
         //消费者不会为空
         if (codec == null && adapter == null) {
-            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(
+            consumer.accept(new AsyncResult<>(
                     new ConnectionException("Failed opening server at " + url.toString(false, false) +
-                            ", codec or adapter can not be null!"))));
+                            ", codec or adapter can not be null!")));
         } else {
             try {
                 SslContext sslContext = SslContextManager.getServerSslContext(url);
-                bossGroup = EventLoopGroupFactory.getParentEventLoopGroup(url);
-                workerGroup = EventLoopGroupFactory.getChildEventLoopGroup(url);
-                ServerBootstrap bootstrap = configure(new ServerBootstrap(), sslContext);
-
-                String host = url.getString(Constants.BIND_IP_KEY, url.getHost());
-                String address = host + ":" + url.getPort();
-                // 绑定到全部网卡 或者 指定网卡
-                bootstrap.bind(new InetSocketAddress(host, url.getPort())).addListener((ChannelFutureListener) f -> {
+                EventLoopGroup bossGroup = EventLoopGroupFactory.getParentEventLoopGroup(url);
+                EventLoopGroup workerGroup = EventLoopGroupFactory.getChildEventLoopGroup(url);
+                ServerBootstrap bootstrap = configure(new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
+                bootstrap.bind(new InetSocketAddress(host, port)).addListener((ChannelFutureListener) f -> {
+                    NettyServerChannel channel = new NettyServerChannel(f.channel(), bossGroup, workerGroup, supplier);
                     if (f.isSuccess()) {
-                        logger.info(String.format("Success binding server to %s", address));
-                        Optional.ofNullable(consumer).ifPresent(c -> c.accept(
-                                new AsyncResult<>(new NettyServerChannel(f.channel(), NettyServerTransport.this::getChannels))));
+                        consumer.accept(new AsyncResult<>(channel));
                     } else {
-                        logger.error(String.format("Failed binding server to %s", address));
                         //自动解绑
-                        unbind(o -> Optional.ofNullable(consumer).ifPresent(c -> c.accept(
-                                new AsyncResult<>(new ConnectionException("Server start fail !", f.cause())))));
+                        channel.close(o -> consumer.accept(new AsyncResult<>(new ConnectionException("Server start fail !", f.cause()))));
                     }
                 });
-            } catch (SslException e) {
+            } catch (Throwable e) {
                 consumer.accept(new AsyncResult<>(e));
             }
         }
@@ -129,8 +108,7 @@ public class NettyServerTransport extends AbstractServerTransport {
         boolean reusePort = url.getBoolean(Constants.REUSE_PORT_KEY, Constants.isLinux(url) ? Boolean.FALSE : Boolean.TRUE);
 
         //io.netty.bootstrap.Bootstrap - Unknown channel option 'SO_BACKLOG' for channel
-        bootstrap.group(bossGroup, workerGroup)
-                .channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
+        bootstrap.channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                 .childHandler(new MyChannelInitializer(url, sslContext))
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
                 .option(ChannelOption.SO_REUSEADDR, reusePort)   //disable this on windows, open it on linux
@@ -145,40 +123,6 @@ public class NettyServerTransport extends AbstractServerTransport {
                 .childOption(ChannelOption.ALLOCATOR, BufAllocator.create(url));
 
         return bootstrap;
-    }
-
-    @Override
-    public void unbind(final Consumer<AsyncResult<Channel>> consumer) {
-        logger.info(String.format("destroy the server at port:%d now...", url.getPort()));
-        List<Future> futures = new LinkedList<>();
-        if (bossGroup != null) {
-            futures.add(bossGroup.shutdownGracefully());
-        }
-        if (workerGroup != null) {
-            futures.add(workerGroup.shutdownGracefully());
-        }
-        if (consumer != null && futures.isEmpty()) {
-            //不需要等到
-            consumer.accept(new AsyncResult<>(getServerChannel()));
-        } else if (consumer != null) {
-            //等待线程关闭
-            LinkedList<Throwable> throwables = new LinkedList<>();
-            AtomicInteger counter = new AtomicInteger(futures.size());
-            for (Future future : futures) {
-                future.addListener(f -> {
-                    if (!f.isSuccess()) {
-                        throwables.add(f.cause() == null ? new TransportException(("unknown exception.")) : f.cause());
-                    }
-                    if (counter.decrementAndGet() == 0) {
-                        if (!throwables.isEmpty()) {
-                            consumer.accept(new AsyncResult<>(getServerChannel(), throwables.peek()));
-                        } else {
-                            consumer.accept(new AsyncResult<>(getServerChannel()));
-                        }
-                    }
-                });
-            }
-        }
     }
 
     /**

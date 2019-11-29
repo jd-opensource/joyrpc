@@ -21,6 +21,7 @@ package io.joyrpc.transport.transport;
  */
 
 
+import io.joyrpc.constants.Constants;
 import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
@@ -33,6 +34,8 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolAdapter;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -42,6 +45,7 @@ import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
@@ -53,6 +57,7 @@ import static io.joyrpc.util.Timer.timer;
  * 抽象的服务通道
  */
 public abstract class AbstractServerTransport implements ServerTransport {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractServerTransport.class);
     protected static final AtomicReferenceFieldUpdater<AbstractServerTransport, Status> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(AbstractServerTransport.class, Status.class, "status");
     /**
@@ -76,6 +81,10 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     protected URL url;
     /**
+     * 监听的IP
+     */
+    protected String host;
+    /**
      * 服务通道
      */
     protected ServerChannel serverChannel;
@@ -95,11 +104,6 @@ public abstract class AbstractServerTransport implements ServerTransport {
      * ID
      */
     protected int transportId = ID_GENERATOR.get();
-
-    /**
-     * 版本
-     */
-    protected AtomicLong version = new AtomicLong(0);
     /**
      * 打开的结果
      */
@@ -113,6 +117,9 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     protected volatile Status status = CLOSED;
 
+
+    protected BiConsumer<Channel, Consumer<AsyncResult<Channel>>> afterClose;
+
     /**
      * 构造函数
      *
@@ -120,8 +127,19 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     public AbstractServerTransport(URL url) {
         this.url = url;
+        this.host = url.getString(Constants.BIND_IP_KEY, url.getHost());
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_SERVER_NAME,
                 String.valueOf(COUNTER.incrementAndGet()), EVENT_PUBLISHER_TRANSPORT_CONF);
+        this.afterClose = (c, t) -> {
+            logger.info(String.format("Success destroying the server at %s:%d", host, url.getPort()));
+            status = CLOSED;
+            serverChannel = null;
+            publisher.close();
+            closeFuture.complete(c);
+            //TODO 如果外部注入的，最好由外部进行关闭
+            Optional.ofNullable(bizThreadPool).filter(p -> !p.isShutdown()).ifPresent(p -> p.shutdown());
+            Optional.ofNullable(t).ifPresent(o -> o.accept(new AsyncResult<>(c)));
+        };
     }
 
     @Override
@@ -156,31 +174,31 @@ public abstract class AbstractServerTransport implements ServerTransport {
     @Override
     public void open(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-            long ver = version.incrementAndGet();
-            final CompletableFuture<Channel> future = new CompletableFuture<>();
-            openFuture = future;
-            bind(r -> {
+            openFuture = new CompletableFuture<>();
+            bind(host, url.getPort(), r -> {
+                Channel channel = r.getResult();
                 if (r.isSuccess()) {
                     //成功，更新为打开状态
-                    if (ver != version.get() || !STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                        //版本变化，OPENING->CLOSE->OPENING，理论上存在，或者被关闭了
-                        unbind(o -> {
-                            r.getResult().close(null);
+                    if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                        //OPENING->CLOSING，立即释放
+                        channel.close(o -> {
                             Throwable e = new IllegalStateException();
-                            future.completeExceptionally(e);
+                            openFuture.completeExceptionally(e);
                             Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
                         });
                     } else {
+                        logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
+                        serverChannel = (ServerChannel) channel;
                         publisher.start();
-                        serverChannel = (ServerChannel) r.getResult();
-                        future.complete(r.getResult());
+                        openFuture.complete(channel);
                         Optional.ofNullable(consumer).ifPresent(c -> c.accept(r));
                     }
                 } else {
                     //失败
-                    Throwable e = ver != version.get() || !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
+                    logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
+                    Throwable e = !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
                             new IllegalStateException() : r.getThrowable();
-                    future.completeExceptionally(e);
+                    openFuture.completeExceptionally(e);
                     Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
                 }
             });
@@ -200,29 +218,20 @@ public abstract class AbstractServerTransport implements ServerTransport {
 
     @Override
     public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSED)) {
-            //状态从打开中到关闭，异步打开后会自动关闭。目的是为了可以快速关闭
-            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(true)));
+        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
+            //处理正在打开
+            closeFuture = new CompletableFuture<>();
+            openFuture.whenComplete((v, t) -> afterClose.accept(v, consumer));
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSE
             closeFuture = new CompletableFuture<>();
             openFuture.whenComplete((v, t) -> {
                 if (t == null) {
-                    unbind(e -> {
-                        status = CLOSED;
-                        serverChannel = null;
-                        publisher.close();
-                        closeFuture.complete(v);
-                        Optional.ofNullable(bizThreadPool).filter(p -> !p.isShutdown()).ifPresent(p -> p.shutdown());
-                        Optional.ofNullable(consumer).ifPresent(o -> consumer.accept(new AsyncResult<>(v)));
-                    });
+                    //关闭通道
+                    v.close(e -> afterClose.accept(v, consumer));
                 } else {
                     //通道没有创建成功
-                    status = CLOSED;
-                    publisher.close();
-                    closeFuture.complete(v);
-                    Optional.ofNullable(bizThreadPool).filter(p -> !p.isShutdown()).ifPresent(p -> p.shutdown());
-                    Optional.ofNullable(consumer).ifPresent(o -> o.accept(new AsyncResult<>(v)));
+                    afterClose.accept(v, consumer);
                 }
             });
         } else {
@@ -239,16 +248,11 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 启动服务
      *
+     * @param host     地址
+     * @param port     端口
      * @param consumer 消费者，不会为空
      */
-    protected abstract void bind(Consumer<AsyncResult<Channel>> consumer);
-
-    /**
-     * 终止服务
-     *
-     * @param consumer
-     */
-    protected abstract void unbind(Consumer<AsyncResult<Channel>> consumer);
+    protected abstract void bind(String host, int port, Consumer<AsyncResult<Channel>> consumer);
 
     @Override
     public Status getStatus() {

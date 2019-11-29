@@ -117,7 +117,6 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     protected volatile Status status = CLOSED;
 
-
     protected BiConsumer<Channel, Consumer<AsyncResult<Channel>>> afterClose;
 
     /**
@@ -135,8 +134,8 @@ public abstract class AbstractServerTransport implements ServerTransport {
             status = CLOSED;
             serverChannel = null;
             publisher.close();
-            closeFuture.complete(c);
             Optional.ofNullable(t).ifPresent(o -> o.accept(new AsyncResult<>(c)));
+            closeFuture.complete(c);
         };
     }
 
@@ -181,23 +180,23 @@ public abstract class AbstractServerTransport implements ServerTransport {
                         //OPENING->CLOSING，立即释放
                         channel.close(o -> {
                             Throwable e = new IllegalStateException();
-                            openFuture.completeExceptionally(e);
                             Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
+                            openFuture.completeExceptionally(e);
                         });
                     } else {
                         logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
                         serverChannel = (ServerChannel) channel;
                         publisher.start();
-                        openFuture.complete(channel);
                         Optional.ofNullable(consumer).ifPresent(c -> c.accept(r));
+                        openFuture.complete(channel);
                     }
                 } else {
                     //失败
                     logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
                     Throwable e = !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
                             new IllegalStateException() : r.getThrowable();
-                    openFuture.completeExceptionally(e);
                     Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
+                    openFuture.completeExceptionally(e);
                 }
             });
         } else if (consumer != null) {

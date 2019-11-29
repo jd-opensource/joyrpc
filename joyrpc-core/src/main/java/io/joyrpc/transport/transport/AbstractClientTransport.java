@@ -39,8 +39,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.CHANNEL_MANAGER_FACTORY;
@@ -88,10 +88,6 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
      */
     protected ClientProtocol protocol;
     /**
-     * 版本
-     */
-    protected AtomicLong version = new AtomicLong(0);
-    /**
      * 打开的结果
      */
     protected volatile CompletableFuture<Channel> openFuture;
@@ -104,6 +100,8 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
      */
     protected volatile Status status = CLOSED;
 
+    protected BiConsumer<Channel, Consumer<AsyncResult<Channel>>> afterClose;
+
     /**
      * 构造函数
      *
@@ -111,10 +109,16 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
      */
     public AbstractClientTransport(URL url) {
         super(url);
-        String channelManagerFactory = url.getString(CHANNEL_MANAGER_FACTORY_OPTION);
-        this.channelManager = CHANNEL_MANAGER_FACTORY.getOrDefault(channelManagerFactory).getChannelManager(url);
+        this.channelManager = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION)).getChannelManager(url);
         this.channelName = channelManager.getChannelKey(this);
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLIENT_NAME, channelName, EVENT_PUBLISHER_TRANSPORT_CONF);
+        this.afterClose = (c, t) -> {
+            Optional.ofNullable(c).ifPresent(o -> o.removeSession(transportId));
+            status = CLOSED;
+            channel = null;
+            Optional.ofNullable(t).ifPresent(o -> o.accept(new AsyncResult<>(c)));
+            closeFuture.complete(c);
+        };
     }
 
     @Override
@@ -151,31 +155,31 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     @Override
     public void open(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-            long ver = version.incrementAndGet();
-            final CompletableFuture<Channel> future = new CompletableFuture<>();
-            openFuture = future;
+            openFuture = new CompletableFuture<>();
             channelManager.getChannel(this, r -> {
                 //异步回调再次进行判断，在OPENING可以直接关闭
                 if (r.isSuccess()) {
                     //成功，更新为打开状态
-                    if (ver != version.get() || !STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                        //版本变化，OPENING->CLOSE->OPENING，理论上存在，或者被关闭了
-                        r.getResult().close(null);
-                        Throwable e = new IllegalStateException();
-                        future.completeExceptionally(e);
-                        Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
+                    Channel ch = r.getResult();
+                    if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                        //OPENING->CLOSING，自动关闭
+                        ch.close(o -> {
+                            Throwable e = new IllegalStateException();
+                            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
+                            openFuture.completeExceptionally(e);
+                        });
                     } else {
                         //设置连接，并触发通知
-                        channel = r.getResult();
-                        future.complete(r.getResult());
+                        channel = ch;
                         Optional.ofNullable(consumer).ifPresent(c -> c.accept(r));
+                        openFuture.complete(ch);
                     }
                 } else {
                     //失败
-                    Throwable e = ver != version.get() || !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
+                    Throwable e = !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
                             new IllegalStateException() : r.getThrowable();
-                    future.completeExceptionally(e);
                     Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
+                    openFuture.completeExceptionally(e);
                 }
             }, getConnector());
         } else if (consumer != null) {
@@ -194,26 +198,18 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
 
     @Override
     public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSED)) {
-            //状态从打开中到关闭，异步打开后会自动关闭。目的是为了可以快速关闭
-            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(true)));
+        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
+            closeFuture = new CompletableFuture<>();
+            openFuture.whenComplete((v, t) -> afterClose.accept(v, consumer));
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSE
             closeFuture = new CompletableFuture<>();
             openFuture.whenComplete((v, t) -> {
                 if (t == null) {
-                    v.close(e -> {
-                        v.removeSession(transportId);
-                        status = CLOSED;
-                        channel = null;
-                        closeFuture.complete(v);
-                        Optional.ofNullable(consumer).ifPresent(o -> consumer.accept(new AsyncResult<>(v)));
-                    });
+                    v.close(e -> afterClose.accept(v, consumer));
                 } else {
                     //通道没有创建成功
-                    status = CLOSED;
-                    closeFuture.complete(v);
-                    Optional.ofNullable(consumer).ifPresent(o -> o.accept(new AsyncResult<>(v)));
+                    afterClose.accept(v, consumer);
                 }
             });
         } else {

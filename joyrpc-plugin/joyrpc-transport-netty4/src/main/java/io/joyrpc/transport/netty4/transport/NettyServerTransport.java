@@ -74,9 +74,9 @@ public class NettyServerTransport extends AbstractServerTransport {
     protected void bind(final String host, final int port, final Consumer<AsyncResult<Channel>> consumer) {
         //消费者不会为空
         if (codec == null && adapter == null) {
-            consumer.accept(new AsyncResult<>(
-                    new ConnectionException("Failed opening server at " + url.toString(false, false) +
-                            ", codec or adapter can not be null!")));
+            consumer.accept(new AsyncResult<>(new ConnectionException(
+                    String.format("Failed binding server at %s:%d, caused by codec or adapter can not be null!",
+                            host, port))));
         } else {
             try {
                 SslContext sslContext = SslContextManager.getServerSslContext(url);
@@ -89,7 +89,11 @@ public class NettyServerTransport extends AbstractServerTransport {
                         consumer.accept(new AsyncResult<>(channel));
                     } else {
                         //自动解绑
-                        channel.close(o -> consumer.accept(new AsyncResult<>(new ConnectionException("Server start fail !", f.cause()))));
+                        Throwable error = f.cause();
+                        channel.close(o -> consumer.accept(new AsyncResult<>(
+                                new ConnectionException(
+                                        String.format("Failed binding server at %s:%d, caused by %s",
+                                                host, port, error.getMessage()), error))));
                     }
                 });
             } catch (Throwable e) {

@@ -71,7 +71,7 @@ import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.GlobalContext.timer;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * 节点

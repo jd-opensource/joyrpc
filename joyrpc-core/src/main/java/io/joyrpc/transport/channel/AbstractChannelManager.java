@@ -48,8 +48,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
-import static io.joyrpc.context.GlobalContext.timer;
 import static io.joyrpc.transport.Endpoint.Status.*;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * @date: 2019/3/7

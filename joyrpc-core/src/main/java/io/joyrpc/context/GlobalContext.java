@@ -53,8 +53,6 @@ public class GlobalContext {
 
     protected static volatile Integer pid;
 
-    protected static volatile Timer timer;
-
     /**
      * 接口配置map<接口名，<key,value>>，
      */
@@ -114,24 +112,6 @@ public class GlobalContext {
         } catch (Exception e) {
             logger.error("Error occurs while reading global config from " + resource, e);
         }
-    }
-
-    /**
-     * 获取默认的Timer
-     *
-     * @return
-     */
-    public static Timer timer() {
-        if (timer == null) {
-            synchronized (GlobalContext.class) {
-                if (timer == null) {
-                    Parametric parametric = asParametric();
-                    timer = new Timer("default", 200, 300,
-                            parametric.getPositive(TIMER_THREADS, 8));
-                }
-            }
-        }
-        return timer;
     }
 
     /**

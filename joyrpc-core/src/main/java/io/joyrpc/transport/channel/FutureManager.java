@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static io.joyrpc.context.GlobalContext.timer;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * @date: 2019/1/14

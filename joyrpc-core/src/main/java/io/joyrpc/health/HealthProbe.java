@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.DOCTOR;
-import static io.joyrpc.context.GlobalContext.timer;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * 监控状态探针

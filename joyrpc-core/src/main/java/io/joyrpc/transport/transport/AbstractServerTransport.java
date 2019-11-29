@@ -46,8 +46,8 @@ import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.GlobalContext.timer;
 import static io.joyrpc.transport.Endpoint.Status.*;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * 抽象的服务通道

@@ -1,5 +1,7 @@
 package io.joyrpc.util;
 
+import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.thread.NamedThreadFactory;
 
 import java.util.Queue;
@@ -8,10 +10,18 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import static io.joyrpc.Plugin.ENVIRONMENT;
+import static io.joyrpc.constants.Constants.TIMER_THREADS;
+
 /**
  * 时间轮调度器
  */
 public class Timer {
+    /**
+     * 默认定时器
+     */
+    protected static volatile Timer timer;
+
     /**
      * 延迟队列
      */
@@ -131,6 +141,24 @@ public class Timer {
                 }
             }
         });
+    }
+
+    /**
+     * 获取默认的Timer
+     *
+     * @return
+     */
+    public static Timer timer() {
+        if (timer == null) {
+            synchronized (Timer.class) {
+                if (timer == null) {
+                    Parametric parametric = GlobalContext.asParametric();
+                    timer = new Timer("default", 200, 300,
+                            parametric.getPositive(TIMER_THREADS, Math.min(ENVIRONMENT.get().cpuCores() * 2 + 2, 10)));
+                }
+            }
+        }
+        return timer;
     }
 
     /**

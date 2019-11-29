@@ -59,7 +59,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
-import static io.joyrpc.context.GlobalContext.timer;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * 集群

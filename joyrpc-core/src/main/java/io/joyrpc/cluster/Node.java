@@ -1401,6 +1401,10 @@ public class Node implements Shard {
      * 异步服务端优雅下线任务
      */
     protected static class OfflineTask extends NodeTask {
+        /**
+         * 起始时间
+         */
+        protected long startTime;
 
         /**
          * 构造函数
@@ -1410,22 +1414,31 @@ public class Node implements Shard {
          */
         public OfflineTask(final Node node, final Client client) {
             super(node, client);
+            startTime = SystemClock.now();
         }
 
         @Override
         public long getTime() {
             //五秒关闭
-            return SystemClock.now() + 5000L;
+            return SystemClock.now() + 200L;
         }
 
         @Override
         public void run() {
-            //5秒后关闭客户端
-            node.doClose(client, o -> {
-                if (node.state == ShardState.DISCONNECT && node.client == client) {
-                    node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
+            if (node.state == ShardState.DISCONNECT && node.client == client) {
+                //最大2秒后关闭客户端
+                if (client.getRequests() == 0 || SystemClock.now() - startTime > 2000L) {
+                    node.doClose(client, o -> {
+                        if (node.state == ShardState.DISCONNECT && node.client == client) {
+                            node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
+                        }
+                    });
+                } else {
+                    //重新添加
+                    timer().add(this);
                 }
-            });
+            }
+
         }
     }
 }

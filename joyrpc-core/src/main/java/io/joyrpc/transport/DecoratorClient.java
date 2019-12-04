@@ -239,4 +239,9 @@ public class DecoratorClient<T extends ClientTransport> implements Client {
         }
         return protocol;
     }
+
+    @Override
+    public long getRequests() {
+        return transport.getRequests();
+    }
 }

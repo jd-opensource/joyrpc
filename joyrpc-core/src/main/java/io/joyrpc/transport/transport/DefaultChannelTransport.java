@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 默认ChannelTransport实现
@@ -60,6 +61,10 @@ public class DefaultChannelTransport implements ChannelTransport {
      * 会话
      */
     protected Session session;
+    /**
+     * 计数器
+     */
+    protected AtomicLong requests = new AtomicLong();
 
     protected DefaultChannelTransport(URL url) {
         this.url = url;
@@ -88,7 +93,9 @@ public class DefaultChannelTransport implements ChannelTransport {
             message.setMsgId(channel.getFutureManager().generateId());
             message.setSessionId(transportId);
             message.setSession(session);
+            requests.incrementAndGet();
             channel.send(message, r -> {
+                requests.decrementAndGet();
                 if (r.isSuccess()) {
                     result.complete(null);
                 } else {
@@ -120,8 +127,9 @@ public class DefaultChannelTransport implements ChannelTransport {
             message.setSession(session);
             //创建 future
             future = futureManager.create(message.getMsgId(), timeout, session);
-
+            requests.incrementAndGet();
             channel.send(message, r -> {
+                requests.decrementAndGet();
                 if (!r.isSuccess()) {
                     Throwable throwable = r.getThrowable() == null
                             ? new ChannelSendException("unknown exception.")

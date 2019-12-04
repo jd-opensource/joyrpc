@@ -74,4 +74,11 @@ public interface ClientTransport extends ChannelTransport, Endpoint {
      */
     ClientProtocol getProtocol();
 
+    /**
+     * 获取正在处理的请求数
+     *
+     * @return
+     */
+    long getRequests();
+
 }

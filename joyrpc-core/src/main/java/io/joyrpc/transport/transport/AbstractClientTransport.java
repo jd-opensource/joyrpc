@@ -237,6 +237,11 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     protected abstract Connector getConnector();
 
     @Override
+    public long getRequests() {
+        return requests.get();
+    }
+
+    @Override
     public void setHeartbeatStrategy(final HeartbeatStrategy heartbeatStrategy) {
         this.heartbeatStrategy = heartbeatStrategy;
     }

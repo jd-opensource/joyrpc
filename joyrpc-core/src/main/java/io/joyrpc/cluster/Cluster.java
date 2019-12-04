@@ -631,8 +631,12 @@ public class Cluster {
             //确保不在选举和关闭中
             switch (type) {
                 case DISCONNECT:
-                    //异步执行，防止死锁
-                    offer(() -> onNodeDisconnect(node, cluster.getRetryTime(null)));
+                    offer(() -> node.close(r -> {
+                        //连接断开了，则进行关闭
+                        if (r.isSuccess()) {
+                            onNodeDisconnect(node, cluster.getRetryTime(null));
+                        }
+                    }));
                     break;
             }
             cluster.clusterPublisher.offer(event);
@@ -913,7 +917,7 @@ public class Cluster {
                 }
                 //如果没有备份节点了，则设置待补充节点数为0
                 int v = supplies.get();
-                if (backups.size() == 0) {
+                if (backups.size() == 0 && v > 0) {
                     supplies.compareAndSet(v, 0);
                 }
                 if (supplies.get() > 0) {
@@ -1102,7 +1106,9 @@ public class Cluster {
 
         @Override
         public long getDelay(TimeUnit unit) {
-            return unit.convert(node.getRetryTime(), TimeUnit.MILLISECONDS);
+            long duration = node.getRetryTime() - SystemClock.now();
+            duration = duration < 0 ? 0 : duration;
+            return unit.convert(duration, TimeUnit.MILLISECONDS);
         }
 
         @Override

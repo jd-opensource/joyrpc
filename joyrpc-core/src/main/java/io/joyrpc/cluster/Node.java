@@ -318,7 +318,8 @@ public class Node implements Shard {
                         //打开成功
                         c.accept(r);
                     } else {
-                        //打开失败，则主动关闭
+                        //打开失败，则主动关闭。这个时候在CONNECTING状态，close会等到openFuture结束，需要先完成openFuture
+                        openFuture.completeExceptionally(r.getThrowable());
                         close(o -> c.accept(new AsyncResult<>(this, r.getThrowable())));
                     }
                 });

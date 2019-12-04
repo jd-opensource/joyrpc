@@ -79,7 +79,7 @@ import static io.joyrpc.util.Timer.timer;
 /**
  * 节点
  */
-public class Node implements Shard{
+public class Node implements Shard {
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     protected static final String VERSION = "version";
     protected static final String DISCONNECT_WHEN_HEARTBEAT_FAILS = "disconnectWhenHeartbeatFails";
@@ -386,7 +386,7 @@ public class Node implements Shard{
                             //连续重连次数设置为0
                             retry.times = 0;
                             //若startTime为0，在session中获取远程启动时间
-                            startTime = startTime == 0 ? this.client.session().getRemoteStartTime() : this.startTime;
+                            startTime = startTime == 0 ?c.session().getRemoteStartTime() : startTime;
                             //每次连接后，获取目标节点的启动的时间戳，并初始化计算一次权重
                             weight = warmup();
                             client = c;
@@ -1342,6 +1342,7 @@ public class Node implements Shard{
         @Override
         protected void doRun() {
             switch (node.state) {
+                case CONNECTING:
                 case CONNECTED:
                 case WEAK:
                     dashboard.snapshot();
@@ -1386,6 +1387,7 @@ public class Node implements Shard{
         @Override
         protected void doRun() {
             switch (node.state) {
+                case CONNECTING:
                 case CONNECTED:
                 case WEAK:
                     node.sessionbeat();

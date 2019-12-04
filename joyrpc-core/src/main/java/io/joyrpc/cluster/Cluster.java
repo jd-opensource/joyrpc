@@ -154,7 +154,7 @@ public class Cluster {
     /**
      * 状态
      */
-    protected volatile Status state;
+    protected volatile Status state = CLOSED;
     /**
      * 打开的结果
      */

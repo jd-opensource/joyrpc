@@ -65,7 +65,6 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
 import static io.joyrpc.transport.Endpoint.Status.CLOSED;
-import static io.joyrpc.transport.Endpoint.Status.OPENED;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -447,7 +446,13 @@ public class Cluster {
      * @return
      */
     public boolean isOpened() {
-        return state == OPENED;
+        switch (state) {
+            case OPENING:
+            case OPENED:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /**

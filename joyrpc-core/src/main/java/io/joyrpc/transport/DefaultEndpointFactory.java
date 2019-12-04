@@ -9,9 +9,9 @@ package io.joyrpc.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,10 @@ package io.joyrpc.transport;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.transport.transport.ClientTransport;
 import io.joyrpc.transport.transport.TransportFactory;
+
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.TRANSPORT_FACTORY;
 import static io.joyrpc.constants.Constants.TRANSPORT_FACTORY_OPTION;
@@ -40,6 +43,16 @@ public class DefaultEndpointFactory implements EndpointFactory {
         }
         TransportFactory factory = getTransportFactory(url);
         return factory == null ? null : new DecoratorClient(url, factory.createClientTransport(url));
+    }
+
+    @Override
+    public Client createClient(URL url, Function<ClientTransport, Client> function) {
+        if (url == null) {
+            return null;
+        }
+        TransportFactory factory = getTransportFactory(url);
+        return factory == null ? null : (function == null ? new DecoratorClient(url, factory.createClientTransport(url))
+                : function.apply(factory.createClientTransport(url)));
     }
 
     @Override

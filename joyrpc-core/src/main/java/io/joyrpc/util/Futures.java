@@ -20,11 +20,14 @@ package io.joyrpc.util;
  * #L%
  */
 
+import io.joyrpc.event.AsyncResult;
+
 import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 /**
  * Future工具类
@@ -164,6 +167,44 @@ public class Futures {
         thread.start();
         future.whenComplete((v, t) -> latch.countDown());
         return future;
+    }
+
+    /**
+     * 把消费者和Future组合成链
+     *
+     * @param consumer 消费者
+     * @param future   Future
+     * @param <T>
+     * @return 消费者
+     */
+    public static <T> Consumer<AsyncResult<T>> chain(final Consumer<AsyncResult<T>> consumer, final CompletableFuture<T> future) {
+        Consumer<AsyncResult<T>> c = consumer == null ? r -> {
+        } : consumer;
+        return future == null ? c : c.andThen(o -> {
+            if (o.isSuccess()) {
+                future.complete(o.getResult());
+            } else {
+                future.completeExceptionally(o.getThrowable());
+            }
+        });
+    }
+
+    /**
+     * 把消费者和Future组合成链
+     *
+     * @param future   Future
+     * @param consumer 消费者
+     * @param <T>
+     * @return 消费者
+     */
+    public static <T> CompletableFuture<T> chain(final CompletableFuture<T> future, final Consumer<AsyncResult<T>> consumer) {
+        return consumer == null ? future : future.whenComplete((v, t) -> {
+            if (t == null) {
+                consumer.accept(new AsyncResult<>(v));
+            } else {
+                consumer.accept(new AsyncResult<>(v, t));
+            }
+        });
     }
 
 }

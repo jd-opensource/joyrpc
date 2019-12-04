@@ -449,7 +449,7 @@ public class Refer<T> extends AbstractInvoker<T> {
                 configure.unsubscribe(subscribeUrl, configHandler);
             }
             chain.close();
-            cluster.close();
+            cluster.close(null);
             if (closing != null) {
                 closing.accept(this, t);
             }

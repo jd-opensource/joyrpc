@@ -33,6 +33,7 @@ import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
+import io.joyrpc.util.Futures;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -40,7 +41,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.CHANNEL_MANAGER_FACTORY;
@@ -100,8 +100,6 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
      */
     protected volatile Status status = CLOSED;
 
-    protected BiConsumer<Channel, Consumer<AsyncResult<Channel>>> afterClose;
-
     /**
      * 构造函数
      *
@@ -112,13 +110,6 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
         this.channelManager = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION)).getChannelManager(url);
         this.channelName = channelManager.getChannelKey(this);
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLIENT_NAME, channelName, EVENT_PUBLISHER_TRANSPORT_CONF);
-        this.afterClose = (c, t) -> {
-            Optional.ofNullable(c).ifPresent(o -> o.removeSession(transportId));
-            status = CLOSED;
-            channel = null;
-            Optional.ofNullable(t).ifPresent(o -> o.accept(new AsyncResult<>(c)));
-            closeFuture.complete(c);
-        };
     }
 
     @Override
@@ -156,38 +147,15 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     public void open(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
             openFuture = new CompletableFuture<>();
-            channelManager.getChannel(this, r -> {
-                //异步回调再次进行判断，在OPENING可以直接关闭
-                if (r.isSuccess()) {
-                    //成功，更新为打开状态
-                    Channel ch = r.getResult();
-                    if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                        //OPENING->CLOSING，自动关闭
-                        ch.close(o -> {
-                            Throwable e = new IllegalStateException();
-                            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
-                            openFuture.completeExceptionally(e);
-                        });
-                    } else {
-                        //设置连接，并触发通知
-                        channel = ch;
-                        Optional.ofNullable(consumer).ifPresent(c -> c.accept(r));
-                        openFuture.complete(ch);
-                    }
-                } else {
-                    //失败
-                    Throwable e = !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
-                            new IllegalStateException() : r.getThrowable();
-                    Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
-                    openFuture.completeExceptionally(e);
-                }
-            }, getConnector());
+            doOpen(Futures.chain(consumer, openFuture));
         } else if (consumer != null) {
             switch (status) {
                 case OPENING:
+                    Futures.chain(openFuture, consumer);
+                    break;
                 case OPENED:
                     //可重入，没有并发调用
-                    openFuture.whenComplete((v, t) -> consumer.accept(t != null ? new AsyncResult<>(t) : new AsyncResult<>(v)));
+                    consumer.accept(new AsyncResult<>(channel));
                     break;
                 default:
                     //其它状态不应该并发执行
@@ -196,32 +164,70 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
         }
     }
 
+    /**
+     * 打开
+     *
+     * @param consumer 消费者
+     */
+    protected void doOpen(final Consumer<AsyncResult<Channel>> consumer) {
+        channelManager.getChannel(this, r -> {
+            //异步回调再次进行判断，在OPENING可以直接关闭
+            if (r.isSuccess()) {
+                //成功，更新为打开状态
+                Channel ch = r.getResult();
+                if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                    //OPENING->CLOSING，自动关闭
+                    ch.close(o -> consumer.accept(new AsyncResult<>(new IllegalStateException())));
+                } else {
+                    //设置连接，并触发通知
+                    channel = ch;
+                    consumer.accept(r);
+                }
+            } else {
+                //失败
+                consumer.accept(new AsyncResult<>(
+                        !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
+                                new IllegalStateException() :
+                                r.getThrowable()));
+            }
+        }, getConnector());
+    }
+
     @Override
     public void close(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
             closeFuture = new CompletableFuture<>();
-            openFuture.whenComplete((v, t) -> afterClose.accept(v, consumer));
+            Futures.chain(openFuture, o -> doClose(Futures.chain(consumer, closeFuture)));
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
-            //状态从打开到关闭中，该状态只能变更为CLOSE
+            //状态从打开到关闭中，该状态只能变更为CLOSED
             closeFuture = new CompletableFuture<>();
-            openFuture.whenComplete((v, t) -> {
-                if (t == null) {
-                    v.close(e -> afterClose.accept(v, consumer));
-                } else {
-                    //通道没有创建成功
-                    afterClose.accept(v, consumer);
-                }
-            });
-        } else {
+            doClose(Futures.chain(consumer, closeFuture));
+        } else if (consumer != null) {
             switch (status) {
                 case CLOSING:
-                    //可重入，无并发
-                    closeFuture.whenComplete((v, t) -> consumer.accept(new AsyncResult<>(v)));
-                default:
+                    Futures.chain(closeFuture, consumer);
+                    break;
+                case CLOSED:
                     consumer.accept(new AsyncResult<>(true));
+                    break;
+                default:
+                    consumer.accept(new AsyncResult<>(new IllegalStateException("status is illegal.")));
             }
         }
     }
+
+    /**
+     * 关闭
+     *
+     * @param consumer
+     */
+    protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
+        Optional.ofNullable(channel).ifPresent(o -> o.removeSession(transportId));
+        channel = null;
+        status = CLOSED;
+        consumer.accept(new AsyncResult<>(true));
+    }
+
 
     /**
      * 获取连接器

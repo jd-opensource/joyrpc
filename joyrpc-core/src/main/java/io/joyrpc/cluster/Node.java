@@ -46,6 +46,7 @@ import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.DecoratorClient;
 import io.joyrpc.transport.EndpointFactory;
+import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.HeartbeatEvent;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
@@ -53,7 +54,8 @@ import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.util.Switcher;
+import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -63,88 +65,127 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.Futures.chain;
 import static io.joyrpc.util.Timer.timer;
 
 /**
  * 节点
  */
-public class Node implements Shard {
+public class Node implements Shard{
     private static final Logger logger = LoggerFactory.getLogger(Node.class);
     protected static final String VERSION = "version";
     protected static final String DISCONNECT_WHEN_HEARTBEAT_FAILS = "disconnectWhenHeartbeatFails";
     public static final String START_TIMESTAMP = "startTime";
+    protected static final AtomicReferenceFieldUpdater<Node, ShardState> STATE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(Node.class, ShardState.class, "state");
 
-    //集群URL
+    /**
+     * 集群URL
+     */
     protected URL clusterUrl;
-    //集群名称
+    /**
+     * 集群名称
+     */
     protected String clusterName;
-    //分片
+    /**
+     * 分片
+     */
     protected Shard shard;
-    //心跳连续失败就断连的次数
+    /**
+     * 心跳连续失败就断连的次数
+     */
     protected int disconnectWhenHeartbeatFails;
-    //节点事件监听器
-    protected EventHandler<NodeEvent> nodeHandler;
-    //统计指标事件发布器
+    /**
+     * 节点事件监听器
+     */
+    protected NodeHandler nodeHandler;
+    /**
+     * 统计指标事件发布器
+     */
     protected Publisher<MetricEvent> publisher;
-    //客户端工厂类
+    /**
+     * 客户端工厂类
+     */
     protected EndpointFactory factory;
-    //分片的URL
+    /**
+     * 分片的URL
+     */
     protected URL url;
-    //授权认证提供者
+    /**
+     * 授权认证提供者
+     */
     protected Function<URL, Message> authorization;
-    //仪表盘
+    /**
+     * 仪表盘
+     */
     protected Dashboard dashboard;
-    //连接事件监听器
-    protected EventHandler<? extends TransportEvent> clientHandler;
-    //原始权重
+    /**
+     * 原始权重
+     */
     protected int originWeight;
-    //预热启动权重
+    /**
+     * 预热启动权重
+     */
     protected int warmupWeight;
-    //权重：经过预热计算后
+    /**
+     * 权重：经过预热计算后
+     */
     protected int weight;
-    //状态
+    /**
+     * 状态
+     */
     protected volatile ShardState state;
-    //客户端
+    /**
+     * 客户端
+     */
     protected volatile Client client;
-    //会话心跳间隔
+    /**
+     * 会话心跳间隔
+     */
     protected long sessionbeatInterval;
-    //超时时间
+    /**
+     * 超时时间
+     */
     protected long sessionTimeout;
-    //心跳
-    protected AtomicBoolean sessionbeating = new AtomicBoolean();
-    //开关
-    protected Switcher switcher = new Switcher();
-    //认证结果
+    /**
+     * 认证结果
+     */
     protected Response authorizationResponse;
-    //重试信息
+    /**
+     * 重试信息
+     */
     protected Retry retry = new Retry();
-    //预热加载时间
+    /**
+     * 预热加载时间
+     */
     protected int warmupDuration;
-    //当前节点启动的时间戳
+    /**
+     * 当前节点启动的时间戳
+     */
     protected long startTime;
     /**
-     * 集群版本
+     * 心跳连续失败次数
      */
-    protected long clusterVersion;
-    /**
-     * 当前节点版本
-     */
-    protected AtomicLong version = new AtomicLong(0);
-    //心跳连续失败次数
     protected AtomicLong successiveHeartbeatFails = new AtomicLong();
-    //指标事件处理器
+    /**
+     * 指标事件处理器
+     */
     protected EventHandler<MetricEvent> handler;
-    //前置条件
+    /**
+     * 前置条件
+     */
     protected CompletableFuture<Void> precondition;
-    //是否启用ssl
+    /**
+     * 是否启用ssl
+     */
     protected boolean sslEnable;
     /**
      * 别名
@@ -154,7 +195,14 @@ public class Node implements Shard {
      * 服务网格标识
      */
     protected boolean mesh;
-
+    /**
+     * 打开的结果
+     */
+    protected volatile CompletableFuture<Node> openFuture;
+    /**
+     * 关闭的结果
+     */
+    protected volatile CompletableFuture<Node> closeFuture;
 
     /**
      * 构造函数
@@ -164,27 +212,26 @@ public class Node implements Shard {
      * @param shard       分片
      */
     public Node(final String clusterName, final URL clusterUrl, final Shard shard) {
-        this(clusterName, clusterUrl, 0, shard, ENDPOINT_FACTORY.get(), null, null, null, null);
+        this(clusterName, clusterUrl, shard, ENDPOINT_FACTORY.get(), null, null, null, null);
     }
 
     /**
      * 构造函数
      *
-     * @param clusterName    集群名称
-     * @param clusterUrl     集群URL
-     * @param clusterVersion 集群版本
-     * @param shard          分片
-     * @param factory        连接工程
-     * @param authorization  授权
-     * @param nodeHandler    节点事件处理器
-     * @param dashboard      当前节点指标面板
-     * @param publisher      额外的指标事件监听器
+     * @param clusterName   集群名称
+     * @param clusterUrl    集群URL
+     * @param shard         分片
+     * @param factory       连接工程
+     * @param authorization 授权
+     * @param nodeHandler   节点事件处理器
+     * @param dashboard     当前节点指标面板
+     * @param publisher     额外的指标事件监听器
      */
-    public Node(final String clusterName, final URL clusterUrl, final long clusterVersion,
+    public Node(final String clusterName, final URL clusterUrl,
                 final Shard shard,
                 final EndpointFactory factory,
                 final Function<URL, Message> authorization,
-                final EventHandler<NodeEvent> nodeHandler,
+                final NodeHandler nodeHandler,
                 final Dashboard dashboard,
                 final Publisher<MetricEvent> publisher) {
         Objects.requireNonNull(clusterUrl, "clusterUrl can not be null.");
@@ -199,7 +246,6 @@ public class Node implements Shard {
             this.clusterUrl = clusterUrl;
         }
         this.clusterName = clusterName;
-        this.clusterVersion = clusterVersion;
         this.shard = shard;
         this.factory = factory;
         this.authorization = authorization;
@@ -227,179 +273,163 @@ public class Node implements Shard {
         this.warmupWeight = clusterUrl.getPositiveInt(Constants.WARMUP_ORIGIN_WEIGHT_OPTION);
         this.weight = warmupDuration > 0 ? warmupWeight : originWeight;
         this.state = shard.getState();
-        this.clientHandler = event -> {
-            if (event instanceof InactiveEvent) {
-                //当前节点连接断开
-                disconnect(client, true);
-            } else if (event instanceof HeartbeatEvent) {
-                onHeartbeat((HeartbeatEvent) event);
-            } else if (event instanceof OfflineEvent) {
-                onOffline((OfflineEvent) event);
-            } else if (event instanceof SessionLostEvent) {
-                //传入调用时候的client防止并发。
-                disconnect(((SessionLostEvent) event).getClient(), true);
-            }
-        };
         this.alias = url.getString(Constants.ALIAS_OPTION);
         this.mesh = url.getBoolean(SERVICE_MESH_OPTION);
     }
 
     /**
-     * 下线事件
-     *
-     * @param event
-     */
-    protected void onOffline(final OfflineEvent event) {
-        //传入调用时候的client防止并发。
-        //获取事件中的client，若事件中client为空，取事件中的channel，判断当前node中channl是否与事件中channel相同
-        Client client = event.getClient();
-        Client current = this.client;
-
-        if (client == null && event.getChannel() != null && current != null
-                && event.getChannel().getLocalAddress() == current.getChannel().getLocalAddress()
-                && event.getChannel().getRemoteAddress() == current.getChannel().getRemoteAddress()) {
-            client = current;
-        }
-        //优雅下线
-        if (disconnect(client, false)) {
-            //5秒后优雅关闭
-            timer().add(new OfflineTask(this, client));
-        }
-    }
-
-    /**
-     * 计算会话心跳时间
-     *
-     * @param sessionTimeout
-     * @return
-     */
-    protected long estimateSessionbeat(final long sessionTimeout) {
-        //sessionTimeout不能太短，否则会出异常
-        //15秒到30秒
-        return Math.min(Math.max(sessionTimeout / 4, 15000L), 30000L);
-    }
-
-    /**
-     * 打开节点，创建连接.<br/>
+     * 打开节点，创建连接
      *
      * @param consumer the consumer
      */
     protected void open(final Consumer<AsyncResult<Node>> consumer) {
         Objects.requireNonNull(consumer, "consumer can not be null.");
+        if (state.connecting(this::setState)) {
+            CompletableFuture<Node> future = new CompletableFuture<>();
+            openFuture = future;
+            Consumer<AsyncResult<Node>> c = chain(consumer, future);
+            if (precondition != null) {
+                //等待前置条件完成
+                precondition.whenComplete((v, t) -> {
+                    //再次判断状态
+                    if (future != openFuture || state != ShardState.CONNECTING) {
+                        //被重入了，放弃该次请求
+                        c.accept(new AsyncResult<>(this, new IllegalStateException("node state is illegal.")));
+                    } else if (t == null) {
+                        //前置条件成功完成
+                        doOpen(future, r -> {
+                            if (r.isSuccess()) {
+                                //打开成功
+                                c.accept(r);
+                            } else {
+                                //打开失败，则主动关闭
+                                close(o -> c.accept(new AsyncResult<>(this, r.getThrowable())));
+                            }
+                        });
+                    } else {
+                        //前置条件出现异常，则主动关闭
+                        close(o -> c.accept(new AsyncResult<>(this, t)));
+                    }
+                });
+                precondition = null;
+            } else {
+                doOpen(future, r -> {
+                    if (r.isSuccess()) {
+                        //打开成功
+                        c.accept(r);
+                    } else {
+                        //打开失败，则主动关闭
+                        close(o -> c.accept(new AsyncResult<>(this, r.getThrowable())));
+                    }
+                });
+            }
+        } else {
+            switch (state) {
+                case WEAK:
+                case CONNECTED:
+                    consumer.accept(new AsyncResult<>(this));
+                    break;
+                case CONNECTING:
+                    //可重入
+                    openFuture.whenComplete((v, t) -> consumer.accept(t != null ? new AsyncResult<>(t) : new AsyncResult<>(v)));
+                    break;
+                default:
+                    consumer.accept(new AsyncResult<>(new IllegalStateException("node state is illegal.")));
+            }
+        }
+
+    }
+
+    /**
+     * 打开
+     *
+     * @param future   打开的Future
+     * @param consumer 消费者
+     */
+    protected void doOpen(final CompletableFuture<Node> future, final Consumer<AsyncResult<Node>> consumer) {
         //若开关未打开，打开节点，若开关打开，重连节点
         successiveHeartbeatFails.set(0);
         //Cluster中确保调用该方法只有CONNECTING状态
-        Runnable runnable = () -> {
-            //拿到客户端协议
-            ClientProtocol protocol = CLIENT_PROTOCOL_SELECTOR.select(url);
-            if (protocol == null) {
-                state.disconnect(this::setState);
-                consumer.accept(new AsyncResult<>(this, new ProtocolException(String.format("protocol plugin %s is not found.",
-                        url.getString(VERSION, url.getProtocol())))));
-            } else if (state != ShardState.CONNECTING) {
-                consumer.accept(new AsyncResult<>(this, new IllegalStateException("node state is illegal.")));
+        //拿到客户端协议
+        ClientProtocol protocol = CLIENT_PROTOCOL_SELECTOR.select(url);
+        if (protocol == null) {
+            consumer.accept(new AsyncResult<>(this, new ProtocolException(String.format("protocol plugin %s is not found.",
+                    url.getString(VERSION, url.getProtocol())))));
+        } else {
+            //提供函数，减少一层包装
+            final Client c = factory.createClient(url,
+                    t -> publisher == null ?
+                            new NodeClient(url, t, v -> new MyEventHandler<>(this, v)) :
+                            new MetricClient(url, t, v -> new MyEventHandler<>(this, v),
+                                    this, clusterUrl, clusterName, publisher));
+            if (c == null) {
+                consumer.accept(new AsyncResult<>(this, new ProtocolException(
+                        String.format("transport factory plugin %s is not found.",
+                                url.getString(TRANSPORT_FACTORY_OPTION)))));
             } else {
-                final Client client = factory.createClient(url);
-                if (client == null) {
-                    state.disconnect(this::setState);
-                    consumer.accept(new AsyncResult<>(this, new ProtocolException(
-                            String.format("transport factory plugin %s is not found.",
-                                    url.getString(TRANSPORT_FACTORY_OPTION)))));
-                } else {
-                    try {
-                        client.setProtocol(protocol);
-                        final long v = version.incrementAndGet();
-                        open(client, result -> switcher.writer().run(() -> onOpened(client, v, result, consumer)));
-                    } catch (Throwable e) {
-                        //连接失败
-                        client.close(null);
-                        state.disconnect(this::setState);
-                        consumer.accept(new AsyncResult<>(this, e));
-                    }
+                try {
+                    c.setProtocol(protocol);
+                    doOpen(c, result -> {
+                        //防止重复调用，或者状态已经变更，例如被关闭了
+                        if (!result.isSuccess()) {
+                            c.close(o -> consumer.accept(new AsyncResult<>(this, result.getThrowable())));
+                        } else if (future != openFuture) {
+                            c.close(o -> consumer.accept(new AsyncResult<>(this, new IllegalStateException("node state is illegal."))));
+                        } else if (!c.getChannel().isActive()) {
+                            //再次判断连接状态，如果断开了，担心clientHandler收不到事件
+                            c.close(o -> consumer.accept(new AsyncResult<>(this, new ChannelClosedException("channel is closed."))));
+                        } else if (!state.connected(this::setState)) {
+                            c.close(o -> new AsyncResult<>(this, new IllegalStateException("node state is illegal.")));
+                        } else {
+                            //认证成功
+                            authorizationResponse = result.getResult();
+                            //连续重连次数设置为0
+                            retry.times = 0;
+                            //若startTime为0，在session中获取远程启动时间
+                            startTime = startTime == 0 ? this.client.session().getRemoteStartTime() : this.startTime;
+                            //每次连接后，获取目标节点的启动的时间戳，并初始化计算一次权重
+                            weight = warmup();
+                            client = c;
+                            //心跳定时任务
+                            timer().add(new SessionbeatTask(this, c));
+                            //预热定时任务
+                            timer().add(new WarmupTask(this, c));
+                            //面板刷新
+                            Optional.ofNullable(dashboard).ifPresent(d -> timer().add(new DashboardTask(this, c)));
+                            sendEvent(NodeEvent.EventType.CONNECT);
+                            consumer.accept(new AsyncResult<>(this));
+                        }
+                    });
+                } catch (Throwable e) {
+                    //连接失败
+                    c.close(o -> consumer.accept(new AsyncResult<>(this, e)));
                 }
             }
-        };
-        if (precondition != null) {
-            //等到前面节点关闭
-            precondition.whenComplete((t, r) -> switcher.open(runnable, runnable));
-            precondition = null;
-        } else {
-            switcher.open(runnable, runnable);
         }
     }
 
     /**
-     * 打开事件
+     * 创建并打开连接.
      *
      * @param client   客户端
-     * @param v        打开前的版本
-     * @param result   结果
      * @param consumer 消费者
      */
-    protected void onOpened(final Client client, final long v, final AsyncResult<Response> result, final Consumer<AsyncResult<Node>> consumer) {
-        //防止重复调用，或者状态已经变更，例如被关闭了
-        if (version.get() != v || state != ShardState.CONNECTING) {
-            client.close(null);
-            consumer.accept(new AsyncResult<>(this, new IllegalStateException("node state is illegal.")));
-        } else if (!result.isSuccess()) {
-            client.close(null);
-            state.disconnect(this::setState);
-            consumer.accept(new AsyncResult<>(this, result.getThrowable()));
-        } else {
-            //认证成功
-            authorizationResponse = result.getResult();
-            //连续重连次数设置为0
-            retry.times = 0;
-            //修改状态、触发消费者
-            state.connected(this::setState);
-            //可统计Metric的Client
-            this.client = publisher == null ? client : new MetricClient(client, this, clusterUrl, clusterName, publisher);
-            //若startTime为0，在session中获取远程启动时间
-            this.startTime = this.startTime == 0 ? this.client.session().getRemoteStartTime() : this.startTime;
-            //每次连接后，获取目标节点的启动的时间戳，并初始化计算一次权重
-            this.weight = warmup();
-            //心跳定时任务
-            timer().add(new SessionbeatTask(this, v));
-            //预热定时任务
-            timer().add(new WarmupTask(this, v));
-            //面板刷新
-            Optional.ofNullable(dashboard).ifPresent(d -> timer().add(new DashboardTask(this, v)));
-
-            //在client赋值之后绑定事件监听器
-            client.addEventHandler(clientHandler);
-            //再次判断连接状态，如果断开了，可能clientHandler收不到事件
-            if (!client.getChannel().isActive()) {
-                client.removeEventHandler(clientHandler);
-                client.close(null);
-                state.disconnect(this::setState);
-                consumer.accept(new AsyncResult<>(this, new ChannelClosedException("channel is closed.")));
+    protected void doOpen(final Client client, final Consumer<AsyncResult<Response>> consumer) {
+        ClientProtocol protocol = client.getProtocol();
+        //心跳间隔>0才需要绑定心跳策略
+        if (clusterUrl.getInteger(HEARTBEAT_INTERVAL_OPTION) > 0) {
+            client.setHeartbeatStrategy(new MyHeartbeatStrategy(client, clusterUrl));
+        }
+        client.setCodec(protocol.getCodec());
+        client.setChannelHandlerChain(protocol.buildChain());
+        client.open(event -> {
+            if (event.isSuccess()) {
+                //发起协商，如果协商失败，则关闭连接
+                negotiation(client, consumer);
             } else {
-                sendEvent(NodeEvent.EventType.CONNECT);
-                consumer.accept(new AsyncResult<>(this));
+                consumer.accept(new AsyncResult<>((Response) null, event.getThrowable()));
             }
-        }
-    }
-
-    /**
-     * 由Cluster进行关闭.
-     */
-    protected void close() {
-        close(null);
-    }
-
-    /**
-     * 内部关闭连接，可能重连
-     *
-     * @param client
-     * @param consumer
-     */
-    protected void close(final Client client, final Consumer<AsyncResult<Node>> consumer) {
-        if (client != null) {
-            client.removeEventHandler(clientHandler);
-            client.close(consumer == null ? null : o -> consumer.accept(new AsyncResult<>(o, this)));
-        } else if (consumer != null) {
-            consumer.accept(new AsyncResult<>(this));
-        }
+        });
     }
 
     /**
@@ -408,17 +438,48 @@ public class Node implements Shard {
      * @param consumer the consumer
      */
     protected void close(final Consumer<AsyncResult<Node>> consumer) {
-        switcher.close(() -> {
+        ShardState state = this.state;
+        if (state.closing(this::setState)) {
+            closeFuture = new CompletableFuture<>();
+            CompletableFuture<Node> future = state == ShardState.CONNECTING ? openFuture : CompletableFuture.completedFuture(this);
+            future.whenComplete((v, t) -> doClose(chain(consumer, closeFuture)));
+        } else {
+            CompletableFuture<Node> future = state == ShardState.CLOSING ? closeFuture :
+                    Futures.completeExceptionally(new IllegalStateException("node state is illegal."));
+            Futures.chain(future, consumer);
+        }
+    }
+
+    /**
+     * 关闭
+     *
+     * @param consumer 消费者
+     */
+    protected void doClose(final Consumer<AsyncResult<Node>> consumer) {
+        if (state.initial(this::setState)) {
             //移除Dashboard的监听器
-            if (publisher != null && handler != null) {
-                publisher.removeHandler(handler);
-            }
-            state.close(this::setState);
-            close(client, consumer);
+            Optional.ofNullable(publisher).ifPresent(o -> o.removeHandler(handler));
+            Client c = client;
             client = null;
             precondition = null;
-        });
+            doClose(c, consumer);
+        } else {
+            consumer.accept(new AsyncResult<>(new IllegalStateException("node state is illegal.")));
+        }
+    }
 
+    /**
+     * 内部关闭连接，可能重连
+     *
+     * @param client   客户端
+     * @param consumer 消费者
+     */
+    protected void doClose(final Client client, final Consumer<AsyncResult<Node>> consumer) {
+        if (client != null) {
+            client.close(consumer == null ? null : o -> consumer.accept(new AsyncResult<>(o, this)));
+        } else if (consumer != null) {
+            consumer.accept(new AsyncResult<>(this));
+        }
     }
 
     protected Retry getRetry() {
@@ -430,38 +491,8 @@ public class Node implements Shard {
         return state;
     }
 
-    protected void setState(ShardState state) {
-        this.state = state;
-    }
-
     public Client getClient() {
         return client;
-    }
-
-    /**
-     * 心跳事件返回服务端过载
-     */
-    protected void weak() {
-        if (state == ShardState.CONNECTED) {
-            switcher.writer().run(() -> {
-                if (state == ShardState.CONNECTED) {
-                    state.weak(this::setState);
-                }
-            });
-        }
-    }
-
-    /**
-     * 恢复健康
-     */
-    protected void healthy() {
-        if (state == ShardState.WEAK) {
-            switcher.writer().run(() -> {
-                if (state == ShardState.WEAK) {
-                    state.connected(this::setState);
-                }
-            });
-        }
     }
 
     @Override
@@ -492,6 +523,15 @@ public class Node implements Shard {
         return this.weight;
     }
 
+    /**
+     * 获取重试时间
+     *
+     * @return 重试时间
+     */
+    public long getRetryTime() {
+        return retry.retryTime;
+    }
+
     protected void setWeight(int weight) {
         this.weight = weight;
     }
@@ -518,19 +558,52 @@ public class Node implements Shard {
         return mesh;
     }
 
-    protected long getClusterVersion() {
-        return clusterVersion;
+    /**
+     * 设置状态
+     *
+     * @param source
+     * @param target
+     * @return
+     */
+    protected boolean setState(final ShardState source, final ShardState target) {
+        return STATE_UPDATER.compareAndSet(this, source, target);
     }
 
     /**
-     * 消息协商
+     * 心跳事件返回服务端过载
+     */
+    protected void weak() {
+        state.weak(this::setState);
+    }
+
+    /**
+     * 恢复健康
+     */
+    protected void healthy() {
+        state.connected(this::setState);
+    }
+
+    /**
+     * 计算会话心跳时间
      *
-     * @param session
-     * @param message
-     * @param compress
+     * @param sessionTimeout
      * @return
      */
-    protected Message negotiate(final Session session, final Message message, final boolean compress) {
+    protected long estimateSessionbeat(final long sessionTimeout) {
+        //sessionTimeout不能太短，否则会出异常
+        //15秒到30秒
+        return Math.min(Math.max(sessionTimeout / 4, 15000L), 30000L);
+    }
+
+    /**
+     * 构造认证消息
+     *
+     * @param session  会话
+     * @param message  消息
+     * @param compress 是否压缩
+     * @return 协商消息
+     */
+    protected Message authorize(final Session session, final Message message, final boolean compress) {
         if (message != null && session != null) {
             Header header = message.getHeader();
             header.setSerialization(session.getSerializationType());
@@ -550,10 +623,12 @@ public class Node implements Shard {
      */
     protected Message negotiate(final Client client) {
         Message message = client.getProtocol().negotiation(clusterUrl, client);
-        //设置协商协议的序列化方式
-        Header header = message.getHeader();
-        if (header.getSerialization() == 0) {
-            header.setSerialization((byte) Serialization.JAVA_ID);
+        if (message != null) {
+            //设置协商协议的序列化方式
+            Header header = message.getHeader();
+            if (header.getSerialization() == 0) {
+                header.setSerialization((byte) Serialization.JAVA_ID);
+            }
         }
         return message;
     }
@@ -562,7 +637,7 @@ public class Node implements Shard {
     /**
      * 广播事件
      *
-     * @param type
+     * @param type 类型
      */
     protected void sendEvent(final NodeEvent.EventType type) {
         if (nodeHandler != null) {
@@ -583,45 +658,23 @@ public class Node implements Shard {
     }
 
     /**
-     * 创建并打开连接.
-     *
-     * @param client   客户端
-     * @param consumer 消费者
-     */
-    protected void open(final Client client, final Consumer<AsyncResult<Response>> consumer) {
-        ClientProtocol protocol = client.getProtocol();
-        //心跳间隔>0才需要绑定心跳策略
-        if (clusterUrl.getInteger(HEARTBEAT_INTERVAL_OPTION) > 0) {
-            client.setHeartbeatStrategy(new MyHeartbeatStrategy(client, clusterUrl));
-        }
-        client.setCodec(protocol.getCodec());
-        client.setChannelHandlerChain(protocol.buildChain());
-        client.open(event -> {
-            if (event.isSuccess()) {
-                //发起协商，如果协商失败，则关闭连接
-                negotiation(client, consumer);
-            } else {
-                consumer.accept(new AsyncResult<>((Response) null, event.getThrowable()));
-            }
-        });
-    }
-
-    /**
      * 发送会话心跳信息
      */
     protected void sessionbeat() {
         //保留一份现场
-        Client client = this.client;
-        ClientProtocol protocol = client.getProtocol();
-        Session session = client.session();
-        if (client != null && protocol != null) {
-            Message message = protocol.sessionbeat(clusterUrl, client);
-            Header header = message.getHeader();
-            header.setSerialization(session.getSerialization().getTypeId());
-            header.setCompression(Compression.NONE);
-            header.setChecksum(Checksum.NONE);
-            if (message != null) {
-                client.oneway(message);
+        Client c = client;
+        if (c != null) {
+            ClientProtocol protocol = c.getProtocol();
+            Session session = c.session();
+            if (protocol != null && session != null) {
+                Message message = protocol.sessionbeat(clusterUrl, c);
+                if (message != null) {
+                    Header header = message.getHeader();
+                    header.setSerialization(session.getSerialization().getTypeId());
+                    header.setCompression(Compression.NONE);
+                    header.setChecksum(Checksum.NONE);
+                    c.oneway(message);
+                }
             }
         }
     }
@@ -648,30 +701,51 @@ public class Node implements Shard {
      * @param autoClose 是否关闭
      */
     protected boolean disconnect(final Client client, final Consumer<AsyncResult<Node>> consumer, final boolean autoClose) {
-        if (client == null || client != this.client) {
-            return false;
+        if (client != this.client) {
+            //客户端还没有赋值，不需要抛出异常
+            if (autoClose) {
+                client.close(o -> consumer.accept(new AsyncResult<>(this)));
+            } else {
+                consumer.accept(new AsyncResult<>(this));
+            }
+            return true;
+        } else if (state.disconnect(this::setState)) {
+            this.client = null;
+            if (autoClose) {
+                //抛出异常，触发cluster的自动重连
+                client.close(o -> consumer.accept(new AsyncResult<>(this, new ReconnectException())));
+            } else {
+                //不自动关闭，5秒后触发关闭事件
+                consumer.accept(new AsyncResult<>(this));
+            }
+            return true;
         }
-        //switcher的机制确保节点被关闭后不会执行重连
-        return switcher.writer().quiet(() -> {
-            if (client != this.client) {
-                return false;
+        return false;
+    }
+
+    /**
+     * 下线事件
+     *
+     * @param client 监听器的客户端
+     * @param event  事件
+     */
+    protected void onOffline(final Client client, final OfflineEvent event) {
+        //传入调用时候的client防止并发。
+        //获取事件中的client，若事件中client为空，取事件中的channel，判断当前node中channl是否与事件中channel相同
+        Client c = event.getClient();
+        Channel eChannel = event.getChannel();
+        if (c == null && eChannel != null) {
+            Channel cChannel = client.getChannel();
+            if (eChannel.getLocalAddress() == cChannel.getLocalAddress()
+                    && eChannel.getRemoteAddress() == cChannel.getRemoteAddress()) {
+                c = client;
             }
-            //合法的状态，Connecting,Connected,Weak,Disconnect
-            if (state.disconnect(this::setState)) {
-                if (client != null) {
-                    //优雅下线不会立即关闭当前client，会暂存起来等到channel关闭或超时关闭。
-                    //优雅下线，需要注销监听器，否则连接断开又触发Inactive事件
-                    client.removeEventHandler(clientHandler);
-                    if (autoClose) {
-                        client.close(null);
-                    }
-                }
-                this.client = null;
-                consumer.accept(new AsyncResult<>(this, new ReconnectException()));
-                return true;
-            }
-            return false;
-        });
+        }
+        //优雅下线
+        if (disconnect(c, false)) {
+            //5秒后优雅关闭
+            timer().add(new OfflineTask(this, c));
+        }
     }
 
     /**
@@ -679,8 +753,11 @@ public class Node implements Shard {
      *
      * @param event
      */
-    protected void onHeartbeat(final HeartbeatEvent event) {
-        if (!event.isSuccess()) {
+    protected void onHeartbeat(final Client client, final HeartbeatEvent event) {
+        if (client != this.client) {
+            //还没有赋值，则忽略掉
+        } else if (!event.isSuccess()) {
+            //心跳失败
             if (disconnectWhenHeartbeatFails > 0 && successiveHeartbeatFails.incrementAndGet() == disconnectWhenHeartbeatFails) {
                 disconnect(client, true);
             }
@@ -724,28 +801,33 @@ public class Node implements Shard {
                              final Function<Message, Throwable> function,
                              final Consumer<Message> next,
                              final Consumer<AsyncResult<Response>> result) {
-        try {
-            Message message = supplier.get();
-            if (message == null || !message.isRequest()) {
-                //需要异步处理，某些协议直接返回应答，会一致同步触发到对注册中心进行调用。
-                client.runAsync(() -> next.accept(message));
-            } else {
-                client.async(message, (msg, err) -> {
-                    Throwable throwable = err == null ? function.apply(msg) : err;
-                    if (throwable != null) {
-                        //网络异常，需要重试
-                        result.accept(new AsyncResult<>((Response) null, throwable));
-                    } else {
-                        try {
-                            next.accept(msg);
-                        } catch (Throwable e) {
-                            result.accept(new AsyncResult<>((Response) null, e));
+        if (state != ShardState.CONNECTING) {
+            //握手阶段，状态应该是连接中
+            client.runAsync(() -> result.accept(new AsyncResult<>(new IllegalStateException("node state is illegal."))));
+        } else {
+            try {
+                Message message = supplier.get();
+                if (message == null || !message.isRequest()) {
+                    //需要异步处理，某些协议直接返回应答，会一致同步触发到对注册中心进行调用。
+                    client.runAsync(() -> next.accept(message));
+                } else {
+                    client.async(message, (msg, err) -> {
+                        Throwable throwable = err == null ? function.apply(msg) : err;
+                        if (throwable != null) {
+                            //网络异常，需要重试
+                            result.accept(new AsyncResult<>((Response) null, throwable));
+                        } else {
+                            try {
+                                next.accept(msg);
+                            } catch (Throwable e) {
+                                result.accept(new AsyncResult<>((Response) null, e));
+                            }
                         }
-                    }
-                }, 3000);
+                    }, 3000);
+                }
+            } catch (Throwable e) {
+                client.runAsync(() -> result.accept(new AsyncResult<>((Response) null, e)));
             }
-        } catch (Throwable e) {
-            client.runAsync(() -> result.accept(new AsyncResult<>((Response) null, e)));
         }
     }
 
@@ -789,7 +871,7 @@ public class Node implements Shard {
      */
     protected void authorize(final Client client, final Consumer<AsyncResult<Response>> consumer) {
         handshake(client,
-                () -> negotiate(client.session(), authorization == null ? client.getProtocol().authorization(clusterUrl, client) :
+                () -> authorize(client.session(), authorization == null ? client.getProtocol().authorization(clusterUrl, client) :
                         authorization.apply(clusterUrl), false),
                 o -> {
                     SuccessResponse response = (SuccessResponse) o.getPayLoad();
@@ -825,7 +907,7 @@ public class Node implements Shard {
                 int duration = (int) (SystemClock.now() - startTime);
                 if (duration > 0 && duration < warmupDuration) {
                     int w = warmupWeight + Math.round(((float) duration / warmupDuration) * originWeight);
-                    result = w < 1 ? 1 : (w > originWeight ? originWeight : w);
+                    result = w < 1 ? 1 : Math.min(w, originWeight);
                 }
             }
         }
@@ -833,31 +915,84 @@ public class Node implements Shard {
     }
 
     /**
+     * 节点事件处理器
+     */
+    public interface NodeHandler extends EventHandler<NodeEvent> {
+
+    }
+
+    protected static class NodeClient extends DecoratorClient<ClientTransport> {
+        /**
+         * 处理器
+         */
+        protected EventHandler<? extends TransportEvent> handler;
+
+        /**
+         * 构造函数
+         *
+         * @param url
+         * @param transport
+         * @param handlerFunction
+         */
+        public NodeClient(final URL url, final ClientTransport transport,
+                          final Function<Client, EventHandler<? extends TransportEvent>> handlerFunction) {
+            super(url, transport);
+            this.handler = handlerFunction.apply(this);
+            this.addEventHandler(handler);
+        }
+
+        @Override
+        public void close() throws Exception {
+            //优雅下线，需要注销监听器，否则连接断开又触发Inactive事件
+            removeEventHandler(handler);
+            super.close();
+        }
+
+        @Override
+        public void close(Consumer<AsyncResult<Channel>> consumer) {
+            //优雅下线，需要注销监听器，否则连接断开又触发Inactive事件
+            removeEventHandler(handler);
+            super.close(consumer);
+        }
+    }
+
+    /**
      * 包装指标
      */
-    protected static class MetricClient extends DecoratorClient<Client> {
+    protected static class MetricClient extends NodeClient {
 
-        //节点
+        /**
+         * 节点
+         */
         protected final Node node;
-        //集群URL
+        /**
+         * 集群URL
+         */
         protected final URL clusterUrl;
-        //集群名称
+        /**
+         * 集群名称
+         */
         protected final String clusterName;
-        //统计指标事件发布器
+        /**
+         * 统计指标事件发布器
+         */
         protected final Publisher<MetricEvent> publisher;
 
         /**
          * 构造函数
          *
-         * @param client
+         * @param url
+         * @param transport
+         * @param handlerFunction
          * @param node
          * @param clusterUrl
+         * @param clusterName
          * @param publisher
          */
-        public MetricClient(final Client client, final Node node,
-                            final URL clusterUrl, final String clusterName,
-                            final Publisher<MetricEvent> publisher) {
-            super(client);
+        public MetricClient(final URL url, final ClientTransport transport,
+                            final Function<Client, EventHandler<? extends TransportEvent>> handlerFunction,
+                            final Node node, final URL clusterUrl, final String clusterName, final Publisher<MetricEvent> publisher) {
+            super(url, transport, handlerFunction);
             this.node = node;
             this.clusterUrl = clusterUrl;
             this.clusterName = clusterName;
@@ -896,12 +1031,62 @@ public class Node implements Shard {
     }
 
     /**
+     * 事件监听器
+     */
+    protected static class MyEventHandler<T extends TransportEvent> implements EventHandler<T> {
+
+        /**
+         * 节点
+         */
+        protected final Node node;
+        /**
+         * 客户端
+         */
+        protected final Client client;
+
+        /**
+         * 构造函数
+         *
+         * @param node   节点
+         * @param client 当前绑定的客户端
+         */
+        public MyEventHandler(final Node node, final Client client) {
+            this.node = node;
+            this.client = client;
+        }
+
+        @Override
+        public void handle(final T event) {
+            if (event instanceof InactiveEvent) {
+                //Channel断开了，需要关闭当前节点
+                node.disconnect(client, true);
+            } else if (event instanceof HeartbeatEvent) {
+                //Channel心跳事件
+                node.onHeartbeat(client, (HeartbeatEvent) event);
+            } else if (event instanceof OfflineEvent) {
+                //服务节点下线通知，整个Channel及其上的client都需要关闭
+                node.onOffline(client, (OfflineEvent) event);
+            } else if (event instanceof SessionLostEvent) {
+                //会话丢失，该Client需要关闭。
+                Client c = ((SessionLostEvent) event).getClient();
+                if (c == client) {
+                    node.disconnect(c, true);
+                }
+            }
+        }
+    }
+
+    /**
      * 重连信息
      */
     protected static class Retry {
-        //连续重试失败次数
+        /**
+         * 连续重试失败次数
+         */
         protected int times;
-        //下一次重试时间
+        /**
+         * 下一次重试时间
+         */
         protected long retryTime;
 
         public Retry() {
@@ -1043,9 +1228,9 @@ public class Node implements Shard {
          */
         protected Node node;
         /**
-         * 版本
+         * 客户端
          */
-        protected final long version;
+        protected final Client client;
         /**
          * 名称
          */
@@ -1054,13 +1239,13 @@ public class Node implements Shard {
         /**
          * 构造函数
          *
-         * @param node
-         * @param version
+         * @param node   节点
+         * @param client 客户端
          */
-        public NodeTask(Node node, long version) {
+        public NodeTask(Node node, Client client) {
             this.node = node;
-            this.version = version;
-            this.name = this.getClass().getSimpleName() + " " + node.getName();
+            this.client = client;
+            this.name = this.getClass().getSimpleName() + "-" + node.getName();
         }
 
         @Override
@@ -1075,7 +1260,7 @@ public class Node implements Shard {
 
         @Override
         public void run() {
-            if (node.version.get() == version) {
+            if (node.client == client) {
                 doRun();
             }
         }
@@ -1083,7 +1268,9 @@ public class Node implements Shard {
         /**
          * 执行
          */
-        protected abstract void doRun();
+        protected void doRun() {
+
+        }
     }
 
     /**
@@ -1094,11 +1281,11 @@ public class Node implements Shard {
         /**
          * 构造函数
          *
-         * @param node
-         * @param version
+         * @param node   节点
+         * @param client 客户端
          */
-        public WarmupTask(Node node, long version) {
-            super(node, version);
+        public WarmupTask(Node node, Client client) {
+            super(node, client);
         }
 
         @Override
@@ -1135,11 +1322,11 @@ public class Node implements Shard {
         /**
          * 构造函数
          *
-         * @param node
-         * @param version
+         * @param node   节点
+         * @param client 客户端
          */
-        public DashboardTask(final Node node, final long version) {
-            super(node, version);
+        public DashboardTask(final Node node, final Client client) {
+            super(node, client);
             this.dashboard = node.dashboard;
             //把集群指标过期分布到1秒钟以内，避免同时进行快照
             this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
@@ -1181,11 +1368,11 @@ public class Node implements Shard {
         /**
          * 构造函数
          *
-         * @param node
-         * @param version
+         * @param node   节点
+         * @param client 客户端
          */
-        public SessionbeatTask(final Node node, final long version) {
-            super(node, version);
+        public SessionbeatTask(final Node node, final Client client) {
+            super(node, client);
             //随机打散心跳时间
             this.lastTime = SystemClock.now() + ThreadLocalRandom.current().nextInt((int) node.sessionbeatInterval);
             this.time = lastTime + node.sessionbeatInterval;
@@ -1209,32 +1396,18 @@ public class Node implements Shard {
     }
 
     /**
-     * 服务端下线任务
+     * 异步服务端优雅下线任务
      */
-    protected static class OfflineTask implements Timer.TimeTask {
-        /**
-         * 节点
-         */
-        protected Node node;
-        /**
-         * 连接
-         */
-        protected Client client;
+    protected static class OfflineTask extends NodeTask {
 
         /**
          * 构造函数
          *
-         * @param node
-         * @param client
+         * @param node   节点
+         * @param client 客户端
          */
-        public OfflineTask(Node node, Client client) {
-            this.node = node;
-            this.client = client;
-        }
-
-        @Override
-        public String getName() {
-            return this.getClass().getSimpleName() + " " + node.getName();
+        public OfflineTask(final Node node, final Client client) {
+            super(node, client);
         }
 
         @Override
@@ -1250,7 +1423,12 @@ public class Node implements Shard {
                 case CLOSING:
                     break;
                 default:
-                    node.close(client, null);
+                    //5秒后关闭客户端
+                    node.doClose(client, o -> {
+                        if (node.state == ShardState.DISCONNECT && node.client == client) {
+                            node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
+                        }
+                    });
             }
         }
     }

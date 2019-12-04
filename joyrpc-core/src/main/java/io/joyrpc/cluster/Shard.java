@@ -9,9 +9,9 @@ package io.joyrpc.cluster;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 
 import java.util.concurrent.atomic.LongAdder;
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
 
 /**
  * 分片信息
@@ -104,9 +104,8 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         INITIAL(0, 4, "初始状态") {
             @Override
-            public boolean candidate(Consumer<ShardState> consumer) {
-                consumer.accept(CANDIDATE);
-                return true;
+            public boolean candidate(BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CANDIDATE);
             }
         },
 
@@ -115,9 +114,8 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         CANDIDATE(1, 3, "候选状态") {
             @Override
-            public boolean connecting(Consumer<ShardState> consumer) {
-                consumer.accept(CONNECTING);
-                return true;
+            public boolean connecting(BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CONNECTING);
             }
         },
 
@@ -126,15 +124,18 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         CONNECTING(2, 1, "连接中") {
             @Override
-            public boolean connected(final Consumer<ShardState> consumer) {
-                consumer.accept(CONNECTED);
-                return true;
+            public boolean connected(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CONNECTED);
             }
 
             @Override
-            public boolean disconnect(final Consumer<ShardState> consumer) {
-                consumer.accept(DISCONNECT);
-                return true;
+            public boolean disconnect(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, DISCONNECT);
+            }
+
+            @Override
+            public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CLOSING);
             }
         },
 
@@ -143,15 +144,18 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         CONNECTED(3, 0, "健康的") {
             @Override
-            public boolean weak(final Consumer<ShardState> consumer) {
-                consumer.accept(WEAK);
-                return true;
+            public boolean weak(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, WEAK);
             }
 
             @Override
-            public boolean disconnect(final Consumer<ShardState> consumer) {
-                consumer.accept(DISCONNECT);
-                return true;
+            public boolean disconnect(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, DISCONNECT);
+            }
+
+            @Override
+            public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CLOSING);
             }
 
         },
@@ -161,43 +165,46 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         WEAK(4, 2, "亚健康的") {
             @Override
-            public boolean connected(final Consumer<ShardState> consumer) {
-                consumer.accept(CONNECTED);
-                return true;
+            public boolean connected(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CONNECTED);
             }
 
             @Override
-            public boolean disconnect(final Consumer<ShardState> consumer) {
-                consumer.accept(DISCONNECT);
-                return true;
+            public boolean disconnect(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, DISCONNECT);
+            }
+
+            @Override
+            public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CLOSING);
             }
 
         },
 
         /**
-         * 连接断开，可以重连.
+         * 连接断开.
          */
         DISCONNECT(5, 5, "死亡的") {
             @Override
-            public boolean initial(final Consumer<ShardState> consumer) {
-                //新加的节点，原有死亡状态可以切换到初始状态
-                consumer.accept(INITIAL);
-                return true;
+            public boolean initial(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, INITIAL);
             }
 
             @Override
-            public boolean connecting(final Consumer<ShardState> consumer) {
-                consumer.accept(CONNECTING);
-                return true;
+            public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CLOSING);
             }
+        },
 
+        /**
+         * 关闭中
+         */
+        CLOSING(6, 6, "关闭中") {
             @Override
-            public boolean disconnect(Consumer<ShardState> consumer) {
-                consumer.accept(DISCONNECT);
-                return true;
+            public boolean initial(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, INITIAL);
             }
         };
-
 
         private int type;
         private int order;
@@ -232,74 +239,73 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
         }
 
         /**
-         * set Initial State.
+         * 初始化
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean initial(Consumer<ShardState> consumer) {
+        public boolean initial(BiFunction<ShardState, ShardState, Boolean> function) {
             return false;
         }
 
         /**
-         * set Candidate State.
+         * 候选者
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean candidate(Consumer<ShardState> consumer) {
+        public boolean candidate(BiFunction<ShardState, ShardState, Boolean> function) {
             return false;
         }
 
         /**
-         * set Connecting State.
+         * 连接中
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean connecting(Consumer<ShardState> consumer) {
+        public boolean connecting(BiFunction<ShardState, ShardState, Boolean> function) {
             return false;
         }
 
         /**
-         * set Connected State.
+         * 已连接
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean connected(Consumer<ShardState> consumer) {
+        public boolean connected(BiFunction<ShardState, ShardState, Boolean> function) {
             return false;
         }
 
         /**
-         * set Weak State.
+         * 亚健康
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean weak(Consumer<ShardState> consumer) {
+        public boolean weak(BiFunction<ShardState, ShardState, Boolean> function) {
             return false;
         }
 
         /**
-         * set Disconnect State.
+         * 断开连接
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean disconnect(Consumer<ShardState> consumer) {
+        public boolean disconnect(BiFunction<ShardState, ShardState, Boolean> function) {
             return false;
         }
 
         /**
-         * set Disconnect State 关闭状态.
+         * 关闭中.
          *
-         * @param consumer the consumer
+         * @param function the function
          * @return the boolean
          */
-        public boolean close(Consumer<ShardState> consumer) {
-            consumer.accept(DISCONNECT);
-            return true;
+        public boolean closing(BiFunction<ShardState, ShardState, Boolean> function) {
+            return false;
         }
 
     }

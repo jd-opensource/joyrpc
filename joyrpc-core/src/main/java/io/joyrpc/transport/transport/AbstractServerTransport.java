@@ -33,6 +33,7 @@ import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolAdapter;
 import io.joyrpc.transport.event.TransportEvent;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,11 +42,9 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
@@ -117,8 +116,6 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     protected volatile Status status = CLOSED;
 
-    protected BiConsumer<Channel, Consumer<AsyncResult<Channel>>> afterClose;
-
     /**
      * 构造函数
      *
@@ -129,14 +126,6 @@ public abstract class AbstractServerTransport implements ServerTransport {
         this.host = url.getString(Constants.BIND_IP_KEY, url.getHost());
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_SERVER_NAME,
                 String.valueOf(COUNTER.incrementAndGet()), EVENT_PUBLISHER_TRANSPORT_CONF);
-        this.afterClose = (c, t) -> {
-            logger.info(String.format("Success destroying server at %s:%d", host, url.getPort()));
-            status = CLOSED;
-            serverChannel = null;
-            publisher.close();
-            Optional.ofNullable(t).ifPresent(o -> o.accept(new AsyncResult<>(c)));
-            closeFuture.complete(c);
-        };
     }
 
     @Override
@@ -172,39 +161,15 @@ public abstract class AbstractServerTransport implements ServerTransport {
     public void open(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
             openFuture = new CompletableFuture<>();
-            bind(host, url.getPort(), r -> {
-                Channel channel = r.getResult();
-                if (r.isSuccess()) {
-                    //成功，更新为打开状态
-                    if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                        //OPENING->CLOSING，立即释放
-                        channel.close(o -> {
-                            Throwable e = new IllegalStateException();
-                            Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
-                            openFuture.completeExceptionally(e);
-                        });
-                    } else {
-                        logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
-                        serverChannel = (ServerChannel) channel;
-                        publisher.start();
-                        Optional.ofNullable(consumer).ifPresent(c -> c.accept(r));
-                        openFuture.complete(channel);
-                    }
-                } else {
-                    //失败
-                    logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
-                    Throwable e = !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
-                            new IllegalStateException() : r.getThrowable();
-                    Optional.ofNullable(consumer).ifPresent(c -> c.accept(new AsyncResult<>(e)));
-                    openFuture.completeExceptionally(e);
-                }
-            });
+            doOpen(Futures.chain(consumer, openFuture));
         } else if (consumer != null) {
             switch (status) {
                 case OPENING:
+                    Futures.chain(openFuture, consumer);
+                    break;
                 case OPENED:
-                    //可重入，没有并发调用
-                    openFuture.whenComplete((v, t) -> consumer.accept(t != null ? new AsyncResult<>(t) : new AsyncResult<>(v)));
+                    //重入，没有并发调用
+                    consumer.accept(new AsyncResult<>(serverChannel));
                     break;
                 default:
                     //其它状态不应该并发执行
@@ -213,33 +178,71 @@ public abstract class AbstractServerTransport implements ServerTransport {
         }
     }
 
+    /**
+     * 打开
+     *
+     * @param consumer 消费者
+     */
+    protected void doOpen(final Consumer<AsyncResult<Channel>> consumer) {
+        bind(host, url.getPort(), r -> {
+            Channel channel = r.getResult();
+            if (r.isSuccess()) {
+                //成功，更新为打开状态
+                if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                    //OPENING->CLOSING，立即释放
+                    channel.close(o -> consumer.accept(new AsyncResult<>(new IllegalStateException())));
+                } else {
+                    logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
+                    serverChannel = (ServerChannel) channel;
+                    publisher.start();
+                    consumer.accept(r);
+                }
+            } else {
+                //失败
+                logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
+                consumer.accept(new AsyncResult<>(
+                        !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
+                                new IllegalStateException() :
+                                r.getThrowable()));
+            }
+        });
+    }
+
     @Override
     public void close(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
             //处理正在打开
             closeFuture = new CompletableFuture<>();
-            openFuture.whenComplete((v, t) -> afterClose.accept(v, consumer));
+            Futures.chain(openFuture, o -> doClose(Futures.chain(consumer, closeFuture)));
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSE
             closeFuture = new CompletableFuture<>();
-            openFuture.whenComplete((v, t) -> {
-                if (t == null) {
-                    //关闭通道
-                    v.close(e -> afterClose.accept(v, consumer));
-                } else {
-                    //通道没有创建成功
-                    afterClose.accept(v, consumer);
-                }
-            });
-        } else {
+            doClose(Futures.chain(consumer, closeFuture));
+        } else if (consumer != null) {
             switch (status) {
                 case CLOSING:
-                    //可重入，无并发
-                    closeFuture.whenComplete((v, t) -> consumer.accept(new AsyncResult<>(v)));
-                default:
+                    Futures.chain(closeFuture, consumer);
+                    break;
+                case CLOSED:
                     consumer.accept(new AsyncResult<>(true));
+                    break;
+                default:
+                    consumer.accept(new AsyncResult<>(new IllegalStateException("status is illegal.")));
             }
         }
+    }
+
+    /**
+     * 关闭
+     *
+     * @param consumer
+     */
+    protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
+        logger.info(String.format("Success destroying server at %s:%d", host, url.getPort()));
+        serverChannel = null;
+        publisher.close();
+        status = CLOSED;
+        consumer.accept(new AsyncResult<>(true));
     }
 
     /**

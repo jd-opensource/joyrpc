@@ -273,7 +273,7 @@ public class Cluster {
         //修改状态
         if (STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.CLOSING)) {
             closeFuture = new CompletableFuture<>();
-            //让在等等就绪的线程超时
+            //让在等待就绪的线程超时
             snapshot.fire();
             Futures.chain(openFuture, o -> doClose(Futures.chain(consumer, closeFuture)));
         } else if (STATE_UPDATER.compareAndSet(this, Status.OPENED, Status.CLOSING)) {
@@ -323,6 +323,106 @@ public class Cluster {
         return candidature.candidate(url, Candidate.builder().cluster(this).
                 region(registar).nodes(candidates).size(minSize).
                 build());
+    }
+
+    /**
+     * 判断协议支持的候选者，过滤掉SSL不匹配的节点
+     *
+     * @param nodes      节点
+     * @param candidates 候选者
+     * @param discards   不支持协议的节点
+     */
+    protected void filter(final Collection<Node> nodes, final List<Node> candidates, final List<Node> discards) {
+        //遍历节点，过滤掉SSL不匹配的节点
+        for (Node node : nodes) {
+            if (sslEnable == node.sslEnable) {
+                candidates.add(node);
+            } else {
+                discards.add(node);
+            }
+        }
+        if (candidates.isEmpty() && !discards.isEmpty()) {
+            //非ssl连接ssl会直接断开连接
+            logger.warn(String.format("there is not any %s provider ", sslEnable ? "ssl" : "none ssl"));
+        }
+    }
+
+    /**
+     * 是否发生变更
+     *
+     * @param shard
+     * @param previous
+     * @return
+     */
+    protected boolean isChanged(final Shard shard, final Node previous) {
+        if (previous != null && (previous.originWeight == shard.getWeight()
+                && Objects.equals(previous.getName(), shard.getName())
+                && Objects.equals(previous.getRegion(), shard.getRegion())
+                && Objects.equals(previous.getDataCenter(), shard.getDataCenter())
+                && Objects.equals(previous.getProtocol(), shard.getProtocol())
+                && Objects.equals(previous.getUrl(), shard.getUrl()))) {
+            //没有发生变化
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 获取重试时间
+     *
+     * @param throwable
+     * @return
+     */
+    protected long getRetryTime(final Throwable throwable) {
+        if (throwable == null) {
+            return SystemClock.now() + reconnectInterval + ThreadLocalRandom.current().nextInt(1000);
+        } else if (throwable instanceof ProtocolException) {
+            //协商失败，最少20秒重连
+            return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
+        } else if (throwable instanceof AuthenticationException) {
+            //认证失败，最少20秒重连
+            return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
+        } else if (detectDead(throwable)) {
+            //目标节点不存在了，最少20秒重连
+            return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
+        } else {
+            return SystemClock.now() + reconnectInterval + ThreadLocalRandom.current().nextInt(1000);
+        }
+    }
+
+    /**
+     * 检查目标节点是否已经不存活了
+     *
+     * @param throwable
+     * @return
+     */
+    protected boolean detectDead(Throwable throwable) {
+        if (throwable == null) {
+            return false;
+        }
+        Queue<Throwable> queue = new LinkedList<>();
+        queue.add(throwable);
+        Throwable t;
+        while (!queue.isEmpty()) {
+            t = queue.poll();
+            t = t instanceof ConnectionException ? t.getCause() : t;
+            if (t instanceof NoRouteToHostException) {
+                //没有路由
+                return true;
+            } else if (t instanceof ConnectException) {
+                //连接异常
+                String msg = t.getMessage().toLowerCase();
+                for (String deadMsg : DEAD_MSG) {
+                    if (msg.contains(deadMsg)) {
+                        return true;
+                    }
+                }
+                return false;
+            } else if (t.getCause() != null) {
+                queue.add(t.getCause());
+            }
+        }
+        return false;
     }
 
     /**
@@ -407,7 +507,6 @@ public class Cluster {
      * 避免锁，集群事件，节点事件和节点打开回调都放入队列，由定时器单线程执行。<br/>
      * 集群关闭和定时器存在并发访问节点问题
      */
-    //TODO 补充是否应该异步处理
     protected static class Snapshot {
         /**
          * 集群
@@ -417,14 +516,6 @@ public class Cluster {
          * 版本
          */
         protected final long version;
-        /**
-         * 重连时间间隔
-         */
-        protected final long reconnectInterval;
-        /**
-         * 是否启用SSL
-         */
-        protected final boolean sslEnable;
         /**
          * 任务队列
          */
@@ -469,6 +560,10 @@ public class Cluster {
          * 节点事件处理器
          */
         protected final NodeHandler nodeHandler = this::onNodeEvent;
+        /**
+         * 补充节点的名称
+         */
+        protected final String supplyTask;
 
         /**
          * 构造函数
@@ -480,8 +575,7 @@ public class Cluster {
         public Snapshot(final Cluster cluster, final long version, final Consumer<AsyncResult<Snapshot>> ready) {
             this.cluster = cluster;
             this.version = version;
-            this.reconnectInterval = cluster.reconnectInterval;
-            this.sslEnable = cluster.sslEnable;
+            this.supplyTask = "SupplyTask-" + cluster.name;
             if (cluster.initSize <= 0) {
                 //不需要等到初始化连接
                 ready.accept(new AsyncResult<>(this));
@@ -533,7 +627,7 @@ public class Cluster {
             switch (type) {
                 case DISCONNECT:
                     //异步执行，防止死锁
-                    offer(() -> onNodeDisconnect(node));
+                    offer(() -> onNodeDisconnect(node, cluster.getRetryTime(null)));
                     break;
             }
             cluster.clusterPublisher.offer(event);
@@ -575,7 +669,10 @@ public class Cluster {
          * 删除所有分片事件，如果注册中心权限认证失败会收到该事件
          */
         protected void onClearEvent() {
-            clear();
+            backups.clear();
+            connects.clear();
+            readys = new ArrayList<>(0);
+            close();
         }
 
         /**
@@ -687,24 +784,25 @@ public class Cluster {
             //冷备节点，已经在算法里面做了最优打散
             backups.clear();
             List<Node> candidates = new LinkedList<>();
-            List<Node> notSupportProtocols = new LinkedList<>();
-            recommend(candidates, notSupportProtocols);
+            List<Node> discards = new LinkedList<>();
+            //过滤掉不支持的协议
+            cluster.filter(nodes.values(), candidates, discards);
             //用最新的参数进行更新
             Candidature.Result result = cluster.candidate(candidates);
             int size = result.getSize();
             if (size > 0) {
                 Optional.ofNullable(trigger).ifPresent(o -> o.adjustSemaphore(size));
             }
-            if (!notSupportProtocols.isEmpty()) {
-                result.getDiscards().addAll(notSupportProtocols);
+            if (!discards.isEmpty()) {
+                result.getDiscards().addAll(discards);
             }
-//        logger.info(String.format("cluster url:%s, candidate result, candidates:%d, standbys:%d, backups:%d, discards:%d",
-//                url.toString(false, true, "alias", "initTimeout", "region", "datacenter"),
-//                result.getCandidates().size(),
-//                result.getStandbys().size(),
-//                result.getBackups().size(),
-//                result.getDiscards().size()
-//        ));
+            /*logger.info(String.format("cluster url:%s, candidate result, candidates:%d, standbys:%d, backups:%d, discards:%d",
+                    cluster.url.toString(false, true, "alias", "initTimeout", "region", "datacenter"),
+                    result.getCandidates().size(),
+                    result.getStandbys().size(),
+                    result.getBackups().size(),
+                    result.getDiscards().size()
+            ));*/
             //命中节点建立连接
             candidate(result.getCandidates(), (s, n) -> connect(n), s -> s.getWeight());
             //热备节点建立连接
@@ -715,29 +813,6 @@ public class Cluster {
             candidate(result.getDiscards(), (s, n) -> discard(n), null);
             //重置可用节点，因为有些节点可能在这次选举中被放弃了
             readys = new ArrayList<>(connects.values());
-        }
-
-        /**
-         * 判断协议支持的候选者，过滤掉SSL不匹配的节点
-         *
-         * @param candidates          候选者
-         * @param notSupportProtocols 不支持协议的节点
-         */
-        protected void recommend(final List<Node> candidates, final List<Node> notSupportProtocols) {
-            Node node;
-            //遍历节点，过滤掉SSL不匹配的节点
-            for (Map.Entry<String, Node> entry : nodes.entrySet()) {
-                node = entry.getValue();
-                if (sslEnable == node.sslEnable) {
-                    candidates.add(node);
-                } else {
-                    notSupportProtocols.add(node);
-                }
-            }
-            if (candidates.isEmpty() && !notSupportProtocols.isEmpty()) {
-                //非ssl连接ssl会直接断开连接
-                logger.warn(String.format("there is not any %s provider ", sslEnable ? "ssl" : "none ssl"));
-            }
         }
 
         /**
@@ -799,9 +874,9 @@ public class Cluster {
             }
             //把初始化状态改成候选状态
             node.getState().candidate(node::setState);
+            //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
             switch (node.getState()) {
                 case CANDIDATE:
-                    //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
                     node.open(r -> {
                         //如果已经关闭了，则关闭该节点
                         if (!isOpened() && r.isSuccess()) {
@@ -823,16 +898,24 @@ public class Cluster {
             if (isOpened() && supplies.get() > 0
                     && (!owner || supplyOwner.compareAndSet(false, true))) {
                 DelayedNode delay;
-                while ((delay = backups.poll()) != null && !exists(delay.getNode())) {
-                    supply(delay.getNode());
-                    if (supplies.decrementAndGet() == 0) {
-                        break;
+                while ((delay = backups.poll()) != null) {
+                    if (exists(delay.getNode())) {
+                        supply(delay.getNode());
+                        if (supplies.decrementAndGet() <= 0) {
+                            break;
+                        }
                     }
                 }
+                //如果没有备份节点了，则设置待补充节点数为0
+                int v = supplies.get();
+                if (backups.size() == 0) {
+                    supplies.compareAndSet(v, 0);
+                }
                 if (supplies.get() > 0) {
-                    timer().add("SupplyTask-" + cluster.name, SystemClock.now() + 1000, () -> supply(false));
+                    timer().add(supplyTask, SystemClock.now() + 1000, () -> supply(false));
                 } else {
                     supplyOwner.set(false);
+                    supply(true);
                 }
             }
         }
@@ -869,17 +952,13 @@ public class Cluster {
                 onNodeConnected(node);
                 logger.info(String.format("Success connecting node %s.", node.getName()));
             } else {
-                Throwable throwable = result.getThrowable();
-                logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), throwable == null ? "Unknown error." : StringUtils.toString(throwable)));
-                if (throwable != null && (throwable instanceof ProtocolException || throwable instanceof AuthenticationException)) {
-                    //协商失败或认证失败，最少20秒重连
-                    onNodeDisconnect(result.getResult(), SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000));
-                } else if (detectDead(throwable)) {
-                    //目标节点不存在了，最少20秒重连
-                    onNodeDisconnect(result.getResult(), SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000));
+                Throwable e = result.getThrowable();
+                if (e == null) {
+                    logger.warn(String.format("Failed connecting node %s.", node.getName()));
                 } else {
-                    onNodeDisconnect(result.getResult());
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
                 }
+                onNodeDisconnect(result.getResult(), cluster.getRetryTime(e));
             }
         }
 
@@ -908,16 +987,6 @@ public class Cluster {
         /**
          * 连接断开
          *
-         * @param node 节点
-         */
-        protected void onNodeDisconnect(final Node node) {
-            //下次重试时间
-            onNodeDisconnect(node, SystemClock.now() + reconnectInterval + ThreadLocalRandom.current().nextInt(1000));
-        }
-
-        /**
-         * 连接断开
-         *
          * @param node      节点
          * @param retryTime 重连时间
          */
@@ -938,63 +1007,6 @@ public class Cluster {
                 //补充新节点
                 supply(true);
             }
-        }
-
-        /**
-         * 检查目标节点是否已经不存活了
-         *
-         * @param throwable
-         * @return
-         */
-        protected boolean detectDead(Throwable throwable) {
-            if (throwable == null) {
-                return false;
-            }
-            Queue<Throwable> queue = new LinkedList<>();
-            queue.add(throwable);
-            Throwable t;
-            while (!queue.isEmpty()) {
-                t = queue.poll();
-                t = t instanceof ConnectionException ? t.getCause() : t;
-                if (t instanceof NoRouteToHostException) {
-                    //没有路由
-                    return true;
-                } else if (t instanceof ConnectException) {
-                    //连接异常
-                    String msg = t.getMessage().toLowerCase();
-                    for (String deadMsg : DEAD_MSG) {
-                        if (msg.contains(deadMsg)) {
-                            return true;
-                        }
-                    }
-                    return false;
-                } else if (t.getCause() != null) {
-                    queue.add(t.getCause());
-                }
-            }
-            return false;
-        }
-
-        /**
-         * 关闭的时候或接收到清理事件的时候清理节点
-         */
-        protected CompletableFuture<Cluster> clear() {
-            CompletableFuture<Cluster> result = new CompletableFuture<>();
-            backups.clear();
-            connects.clear();
-            readys = new ArrayList<>(0);
-
-            List<Node> copy = new LinkedList<>(nodes.values());
-            nodes.clear();
-            final AtomicInteger counter = new AtomicInteger(copy.size());
-            final Consumer<AsyncResult<Node>> consumer = r -> {
-                if (counter.decrementAndGet() == 0) {
-                    result.complete(cluster);
-                }
-            };
-            copy.forEach(o -> o.close(consumer));
-            copy.clear();
-            return result;
         }
 
         /**
@@ -1032,7 +1044,7 @@ public class Cluster {
             }
             Node previous = nodes.get(shard.getName());
             //比较是否发生变化
-            if (!isChanged(shard, previous)) {
+            if (!cluster.isChanged(shard, previous)) {
                 return false;
             }
 
@@ -1058,31 +1070,7 @@ public class Cluster {
             //新增节点初始化状态
             node.getState().initial(node::setState);
             return true;
-
-
         }
-
-        /**
-         * 是否发生变更
-         *
-         * @param shard
-         * @param previous
-         * @return
-         */
-        protected boolean isChanged(final Shard shard, final Node previous) {
-            if (previous != null && (previous.originWeight == shard.getWeight()
-                    && Objects.equals(previous.getName(), shard.getName())
-                    && Objects.equals(previous.getRegion(), shard.getRegion())
-                    && Objects.equals(previous.getDataCenter(), shard.getDataCenter())
-                    && Objects.equals(previous.getProtocol(), shard.getProtocol())
-                    && Objects.equals(previous.getUrl(), shard.getUrl()))) {
-                //没有发生变化
-                return false;
-            }
-            return true;
-        }
-
-
     }
 
     /**

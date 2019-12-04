@@ -386,7 +386,7 @@ public class Node implements Shard {
                             //连续重连次数设置为0
                             retry.times = 0;
                             //若startTime为0，在session中获取远程启动时间
-                            startTime = startTime == 0 ?c.session().getRemoteStartTime() : startTime;
+                            startTime = startTime == 0 ? c.session().getRemoteStartTime() : startTime;
                             //每次连接后，获取目标节点的启动的时间戳，并初始化计算一次权重
                             weight = warmup();
                             client = c;
@@ -710,7 +710,7 @@ public class Node implements Shard {
             }
             return true;
         } else if (state.disconnect(this::setState)) {
-            this.client = null;
+            //不能把节点的客户端设置为空，否则会报空异常
             if (autoClose) {
                 //抛出异常，触发cluster的自动重连
                 client.close(o -> consumer.accept(new AsyncResult<>(this, new ReconnectException())));
@@ -1420,18 +1420,12 @@ public class Node implements Shard {
 
         @Override
         public void run() {
-            switch (client.getStatus()) {
-                case CLOSED:
-                case CLOSING:
-                    break;
-                default:
-                    //5秒后关闭客户端
-                    node.doClose(client, o -> {
-                        if (node.state == ShardState.DISCONNECT && node.client == client) {
-                            node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
-                        }
-                    });
-            }
+            //5秒后关闭客户端
+            node.doClose(client, o -> {
+                if (node.state == ShardState.DISCONNECT && node.client == client) {
+                    node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
+                }
+            });
         }
     }
 }

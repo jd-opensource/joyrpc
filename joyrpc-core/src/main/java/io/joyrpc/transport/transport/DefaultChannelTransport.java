@@ -109,8 +109,8 @@ public class DefaultChannelTransport implements ChannelTransport {
             future.completeExceptionally(new NullPointerException("message can not be null."));
         } else if (!channel.isActive()) {
             future = new CompletableFuture<>();
-            future.completeExceptionally(new ChannelSendException(String.format("Send message exception, because channel is not available, causing channel is not available. at %s : %s",
-                    Channel.toString(channel), message.toString())));
+            future.completeExceptionally(new ChannelSendException(String.format("Failed sending message, caused by channel is not active. at %s",
+                    Channel.toString(channel))));
         } else {
             int timeout = timeoutMillis <= 0 ? Constants.SEND_TIMEOUT_OPTION.get() : timeoutMillis;
             FutureManager<Integer, Message> futureManager = channel.getFutureManager();

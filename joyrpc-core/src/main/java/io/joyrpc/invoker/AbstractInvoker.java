@@ -120,14 +120,12 @@ public abstract class AbstractInvoker<T> implements Invoker {
 
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-        //在关闭判断之前增加计数器，确保安全
-        requests.incrementAndGet();
         if ((Shutdown.isShutdown() || closed) && !system) {
-            //系统服务允许执行，例如注册中心再关闭的时候进行注销操作
-            requests.decrementAndGet();
+            //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
             return CompletableFuture.completedFuture(new Result(request.getContext(), shutdownException()));
         }
-
+        //在关闭判断之前增加计数器，确保安全
+        requests.incrementAndGet();
         //执行调用链，减少计数器
         return doInvoke(request).whenComplete((r, t) -> {
             if (requests.decrementAndGet() == 0 && flyingFuture != null) {

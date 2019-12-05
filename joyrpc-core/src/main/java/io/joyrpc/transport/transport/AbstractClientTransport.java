@@ -35,7 +35,6 @@ import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.util.Futures;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -222,10 +221,17 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
      * @param consumer
      */
     protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
-        Optional.ofNullable(channel).ifPresent(o -> o.removeSession(transportId));
-        channel = null;
-        status = CLOSED;
-        consumer.accept(new AsyncResult<>(true));
+        if (channel != null) {
+            channel.close(r -> {
+                channel.removeSession(transportId);
+                channel = null;
+                status = CLOSED;
+                consumer.accept(r);
+            });
+        } else {
+            status = CLOSED;
+            consumer.accept(new AsyncResult<>(true));
+        }
     }
 
 

@@ -239,10 +239,18 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
         logger.info(String.format("Success destroying server at %s:%d", host, url.getPort()));
-        serverChannel = null;
-        publisher.close();
-        status = CLOSED;
-        consumer.accept(new AsyncResult<>(true));
+        if (serverChannel != null) {
+            serverChannel.close(r -> {
+                publisher.close();
+                serverChannel = null;
+                status = CLOSED;
+                consumer.accept(r);
+            });
+        } else {
+            publisher.close();
+            status = CLOSED;
+            consumer.accept(new AsyncResult<>(true));
+        }
     }
 
     /**

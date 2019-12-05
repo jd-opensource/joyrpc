@@ -483,6 +483,19 @@ public class Node implements Shard {
         }
     }
 
+    /**
+     * 关闭连接，并广播断连事件
+     *
+     * @param client 客户端
+     */
+    protected void doCloseAndPublish(final Client client) {
+        doClose(client, o -> {
+            if (state == ShardState.DISCONNECT && client == this.client) {
+                sendEvent(NodeEvent.EventType.DISCONNECT, client);
+            }
+        });
+    }
+
     protected Retry getRetry() {
         return retry;
     }
@@ -744,8 +757,13 @@ public class Node implements Shard {
         }
         //优雅下线
         if (disconnect(c, false)) {
-            //5秒后优雅关闭
-            timer().add(new OfflineTask(this, c));
+            //下线的时候没有请求，则直接关闭连接，并广播断连事件
+            if (client.getRequests() == 0) {
+                doCloseAndPublish(c);
+            } else {
+                //优雅关闭，定时器检测没有请求后或超过2秒关闭
+                timer().add(new OfflineTask(this, c));
+            }
         }
     }
 
@@ -1429,11 +1447,7 @@ public class Node implements Shard {
             if (node.state == ShardState.DISCONNECT && node.client == client) {
                 //最大2秒后关闭客户端
                 if (client.getRequests() == 0 || SystemClock.now() - startTime > 2000L) {
-                    node.doClose(client, o -> {
-                        if (node.state == ShardState.DISCONNECT && node.client == client) {
-                            node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
-                        }
-                    });
+                    node.doCloseAndPublish(client);
                 } else {
                     //重新添加
                     timer().add(this);

@@ -448,9 +448,10 @@ public class Refer<T> extends AbstractInvoker<T> {
         final CompletableFuture<Void> future = new CompletableFuture();
         //注销节点事件
         cluster.removeHandler(config);
-        //从注册中心注销，取消配置订阅
+        //从注册中心注销，最多重试2次
         deregister().whenComplete((v, t) -> {
             logger.info("Success deregister consumer config " + name);
+            //取消配置订阅
             unsubscribe().whenComplete((o, e) -> {
                 logger.info("Success unsubscribe consumer config " + name);
                 cluster.close(r -> {
@@ -498,7 +499,7 @@ public class Refer<T> extends AbstractInvoker<T> {
         if (url.getBoolean(Constants.REGISTER_OPTION)) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
             //TODO 要确保各个注册中心实现在服务有问题的情况下，能快速的注销掉
-            registry.deregister(registerUrl).whenComplete((r, t) -> future.complete(null));
+            registry.deregister(registerUrl, 2).whenComplete((r, t) -> future.complete(null));
         } else {
             future.complete(null);
         }

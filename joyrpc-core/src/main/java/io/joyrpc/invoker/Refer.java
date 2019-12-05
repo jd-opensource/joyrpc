@@ -485,6 +485,8 @@ public class Refer<T> extends AbstractInvoker<T> {
                     result.completeExceptionally(t);
                 }
             });
+        } else {
+            result.complete(null);
         }
         return result;
     }

@@ -24,6 +24,7 @@ package io.joyrpc.config;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.constants.Constants;
+import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.InvokerManager;
@@ -41,7 +42,7 @@ import static io.joyrpc.Plugin.REGISTRY;
 /**
  * 消费者配置
  */
-public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Serializable {
+public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Serializable, EventHandler<NodeEvent> {
     private final static Logger logger = LoggerFactory.getLogger(ConsumerConfig.class);
     /**
      * Refer对象
@@ -155,12 +156,8 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
         future.complete(null);
     }
 
-    /**
-     * 节点事件
-     *
-     * @param event
-     */
-    public void onNodeEvent(final NodeEvent event) {
+    @Override
+    public void handle(final NodeEvent event) {
         eventHandlers.forEach(h -> h.handle(event));
     }
 

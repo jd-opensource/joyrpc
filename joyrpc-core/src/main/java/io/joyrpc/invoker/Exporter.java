@@ -189,13 +189,13 @@ public class Exporter<T> extends AbstractInvoker<T> {
                 //在这里安全关闭外部线程池
                 Close.close(server.getBizThreadPool(), 0);
                 if (o.isSuccess()) {
-                    Futures.chain(deRegister(), result);
+                    Futures.chain(deregister(), result);
                 } else {
-                    deRegister().whenComplete((v, t) -> result.completeExceptionally(o.getThrowable()));
+                    deregister().whenComplete((v, t) -> result.completeExceptionally(o.getThrowable()));
                 }
             });
         } else {
-            Futures.chain(deRegister(), result);
+            Futures.chain(deregister(), result);
         }
         return result;
     }
@@ -285,7 +285,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
      *
      * @return
      */
-    protected CompletableFuture<Void> deRegister() {
+    protected CompletableFuture<Void> deregister() {
         logger.info(String.format("deregister provider config : %s", url.toString(false, false)));
         if (registries == null || registries.isEmpty()) {
             return CompletableFuture.completedFuture(null);

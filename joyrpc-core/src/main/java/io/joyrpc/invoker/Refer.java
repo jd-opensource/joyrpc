@@ -185,7 +185,7 @@ public class Refer<T> extends AbstractInvoker<T> {
         //接口级别的隐藏参数，保留以"."开头
         this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
         this.options = new MethodOption(interfaceClass, interfaceName, url);
-        this.cluster.addHandler(config::onNodeEvent);
+        this.cluster.addHandler(config);
         this.distribution = buildDistribution(buildRouter(url, interfaceClass), buildRoute(url, loadBalance));
         //处理链
         this.chain = FilterChain.consumer(this, this::distribute);
@@ -440,22 +440,37 @@ public class Refer<T> extends AbstractInvoker<T> {
 
     @Override
     protected CompletableFuture<Void> doClose() {
-        logger.info(String.format("Unrefer consumer config : %s", url.toString(false, false)));
-        CompletableFuture<Void> future = new CompletableFuture();
-        future.whenComplete((v, t) -> {
-            //订阅
-            if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
-                // todo 不能保证执行成功
-                configure.unsubscribe(subscribeUrl, configHandler);
-            }
-            chain.close();
-            cluster.close(null);
-            if (closing != null) {
-                closing.accept(this, t);
-            }
+        String path = url.toString(false, true, "alias");
+        logger.info("Start unrefer consumer config " + path);
+        final CompletableFuture<Void> future = new CompletableFuture();
+        //注销节点事件
+        cluster.removeHandler(config);
+        //从注册中心注销，取消配置订阅
+        deregister().whenComplete((v, t) -> {
+            logger.info("Success deregister consumer config " + path);
+            unsubscribe().whenComplete((o, e) -> {
+                logger.info("Success unsubscribe consumer config " + path);
+                cluster.close(r -> {
+                    logger.info("Success close cluster " + path);
+                    chain.close();
+                    if (closing != null) {
+                        closing.accept(this, t);
+                    }
+                    logger.info("Success unrefer consumer config " + path);
+                    future.complete(null);
+                });
+            });
         });
+        return future;
+    }
 
-        cluster.removeHandler(config::onNodeEvent);
+    /**
+     * 从注册中心注销
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> deregister() {
+        CompletableFuture<Void> future = new CompletableFuture();
         if (url.getBoolean(Constants.REGISTER_OPTION)) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
             //TODO 要确保各个注册中心实现在服务有问题的情况下，能快速的注销掉
@@ -463,6 +478,22 @@ public class Refer<T> extends AbstractInvoker<T> {
         } else {
             future.complete(null);
         }
+        return future;
+    }
+
+    /**
+     * 取消配置订阅
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> unsubscribe() {
+        CompletableFuture<Void> future = new CompletableFuture();
+        //订阅
+        if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
+            // todo 不能保证执行成功
+            configure.unsubscribe(subscribeUrl, configHandler);
+        }
+        future.complete(null);
         return future;
     }
 

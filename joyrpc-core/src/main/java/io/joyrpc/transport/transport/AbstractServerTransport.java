@@ -173,7 +173,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
                     break;
                 default:
                     //其它状态不应该并发执行
-                    consumer.accept(new AsyncResult<>(serverChannel, new IllegalStateException()));
+                    consumer.accept(new AsyncResult<>(serverChannel, new ConnectionException("state is illegal.")));
             }
         }
     }
@@ -202,7 +202,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
                 logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
                 consumer.accept(new AsyncResult<>(
                         !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
-                                new IllegalStateException() :
+                                new ConnectionException("state is illegal.") :
                                 r.getThrowable()));
             }
         });

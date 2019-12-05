@@ -178,12 +178,12 @@ public abstract class AbstractChannelManager implements ChannelManager {
          *
          * @param consumer
          */
-        protected void connect(Consumer<AsyncResult<Channel>> consumer) {
+        protected void connect(final Consumer<AsyncResult<Channel>> consumer) {
             //连接成功处理器
-            consumer = consumer == null ? afterConnect : afterConnect.andThen(consumer);
+            final Consumer<AsyncResult<Channel>> c = consumer == null ? afterConnect : afterConnect.andThen(consumer);
             //修改状态
             if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-                consumers.offer(consumer);
+                consumers.offer(c);
                 connector.connect(r -> {
                             if (r.isSuccess()) {
                                 channel = r.getResult();
@@ -218,10 +218,10 @@ public abstract class AbstractChannelManager implements ChannelManager {
             } else {
                 switch (status) {
                     case OPENED:
-                        consumer.accept(new AsyncResult(PoolChannel.this));
+                        c.accept(new AsyncResult(PoolChannel.this));
                         break;
                     case OPENING:
-                        consumers.add(consumer);
+                        consumers.add(c);
                         //二次判断，防止并发
                         switch (status) {
                             case OPENING:
@@ -235,7 +235,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
                         }
                         break;
                     default:
-                        consumer.accept(new AsyncResult<>(new ConnectionException()));
+                        c.accept(new AsyncResult<>(new ConnectionException()));
 
                 }
             }

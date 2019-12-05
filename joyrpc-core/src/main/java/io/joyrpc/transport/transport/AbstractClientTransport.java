@@ -156,7 +156,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
                     break;
                 default:
                     //其它状态不应该并发执行
-                    consumer.accept(new AsyncResult<>(channel, new IllegalStateException()));
+                    consumer.accept(new AsyncResult<>(channel, new ConnectionException("state is illegal.")));
             }
         }
     }
@@ -174,7 +174,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
                 Channel ch = r.getResult();
                 if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
                     //OPENING->CLOSING，自动关闭
-                    ch.close(o -> consumer.accept(new AsyncResult<>(new IllegalStateException())));
+                    ch.close(o -> consumer.accept(new AsyncResult<>(new ConnectionException("state is illegal."))));
                 } else {
                     //设置连接，并触发通知
                     channel = ch;
@@ -184,7 +184,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
                 //失败
                 consumer.accept(new AsyncResult<>(
                         !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
-                                new IllegalStateException() :
+                                new ConnectionException("state is illegal.") :
                                 r.getThrowable()));
             }
         }, getConnector());

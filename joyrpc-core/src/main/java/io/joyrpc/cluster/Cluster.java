@@ -33,10 +33,7 @@ import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.PublisherConfig;
-import io.joyrpc.exception.AuthenticationException;
-import io.joyrpc.exception.ConnectionException;
-import io.joyrpc.exception.InitializationException;
-import io.joyrpc.exception.ProtocolException;
+import io.joyrpc.exception.*;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.metric.Dashboard;
@@ -965,6 +962,8 @@ public class Cluster {
                 Throwable e = result.getThrowable();
                 if (e == null) {
                     logger.warn(String.format("Failed connecting node %s.", node.getName()));
+                } else if (e instanceof TransportException) {
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
                 } else {
                     logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
                 }

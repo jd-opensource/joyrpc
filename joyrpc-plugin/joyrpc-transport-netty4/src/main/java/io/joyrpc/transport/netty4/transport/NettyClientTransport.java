@@ -130,7 +130,7 @@ public class NettyClientTransport extends AbstractClientTransport {
             @Override
             protected void initChannel(final SocketChannel ch) {
                 //及时发送 与 缓存发送
-                channels[0] = new NettyChannel(ch,false);
+                channels[0] = new NettyChannel(ch, false);
                 //设置
                 channels[0].setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD))
                         .setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
@@ -188,7 +188,7 @@ public class NettyClientTransport extends AbstractClientTransport {
      * @return
      */
     protected Throwable error(final String message) {
-        return new ConnectionException("Failed to connect " + url.toString(false, false) + ". Cause by: " + message);
+        return message == null || message.isEmpty() ? new ConnectionException("Unknown error.") : new ConnectionException(message);
     }
 
     /**
@@ -198,8 +198,9 @@ public class NettyClientTransport extends AbstractClientTransport {
      * @return
      */
     protected Throwable error(final Throwable throwable) {
-        return new ConnectionException("Failed to connect " + url.toString(false, false)
-                + (throwable != null ? ". Cause by: " + throwable : "."), throwable);
+        return throwable == null ?
+                new ConnectionException("Unknown error.") :
+                new ConnectionException(throwable.getMessage(), throwable);
     }
 
     @Override

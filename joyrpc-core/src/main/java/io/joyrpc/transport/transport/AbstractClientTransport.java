@@ -123,12 +123,10 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
                         if (throwable instanceof ConnectionException) {
                             ex[0] = (ConnectionException) throwable;
                         } else {
-                            ex[0] = new ConnectionException("Failed to connect " + url.toString(false, false)
-                                    + ". Cause by: Remote and local address are the same", r.getThrowable());
+                            ex[0] = new ConnectionException(throwable.getMessage(), throwable);
                         }
                     } else {
-                        ex[0] = new ConnectionException("Failed to connect " + url.toString(false, false)
-                                + ". Cause by: Remote and local address are the same");
+                        ex[0] = new ConnectionException("Unknown error.");
                     }
                 }
             } finally {

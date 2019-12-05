@@ -625,10 +625,10 @@ public class Cluster {
             }
             Node node = event.getNode();
             NodeEvent.EventType type = event.getType();
-            logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
             //确保不在选举和关闭中
             switch (type) {
                 case DISCONNECT:
+                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
                     offer(() -> node.close(r -> {
                         //连接断开了，则进行关闭
                         if (r.isSuccess()) {

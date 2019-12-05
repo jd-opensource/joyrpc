@@ -594,7 +594,7 @@ public class Constants {
     public static final URLOption<Boolean> BUFFER_POOLED_OPTION = new URLOption<>("buffer.pooled", false);
     public static final URLOption<Integer> INIT_SIZE_OPTION = new URLOption<>("initSize", 5);
     public static final URLOption<Integer> MIN_SIZE_OPTION = new URLOption<>("minSize", 0);
-    public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 30000L);
+    public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 0L);
     public static final URLOption<Integer> CONNECT_TIMEOUT_OPTION = new URLOption<>("connectTimeout", 5000);
     public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", 64 * 1024);
     public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", 32 * 1024);

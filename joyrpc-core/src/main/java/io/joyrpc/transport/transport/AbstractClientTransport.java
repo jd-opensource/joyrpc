@@ -143,8 +143,31 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     @Override
     public void open(final Consumer<AsyncResult<Channel>> consumer) {
         if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-            openFuture = new CompletableFuture<>();
-            doOpen(Futures.chain(consumer, openFuture));
+            final CompletableFuture<Channel> future = new CompletableFuture<>();
+            final Consumer<AsyncResult<Channel>> c = Futures.chain(consumer, openFuture);
+            openFuture = future;
+            channelManager.getChannel(this, r -> {
+                //异步回调再次进行判断，在OPENING可以直接关闭
+                if (r.isSuccess()) {
+                    //成功，更新为打开状态
+                    Channel ch = r.getResult();
+                    if (openFuture != future || !STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                        //OPENING->CLOSING，自动关闭
+                        ch.close(o -> c.accept(new AsyncResult<>(new ConnectionException("state is illegal."))));
+                    } else {
+                        //设置连接，并触发通知
+                        channel = ch;
+                        c.accept(r);
+                    }
+                } else if (openFuture != future) {
+                    //失败
+                    c.accept(r);
+                } else {
+                    //失败关闭
+                    future.completeExceptionally(r.getThrowable());
+                    close(o -> consumer.accept(r));
+                }
+            }, getConnector());
         } else if (consumer != null) {
             switch (status) {
                 case OPENING:
@@ -159,35 +182,6 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
                     consumer.accept(new AsyncResult<>(channel, new ConnectionException("state is illegal.")));
             }
         }
-    }
-
-    /**
-     * 打开
-     *
-     * @param consumer 消费者
-     */
-    protected void doOpen(final Consumer<AsyncResult<Channel>> consumer) {
-        channelManager.getChannel(this, r -> {
-            //异步回调再次进行判断，在OPENING可以直接关闭
-            if (r.isSuccess()) {
-                //成功，更新为打开状态
-                Channel ch = r.getResult();
-                if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                    //OPENING->CLOSING，自动关闭
-                    ch.close(o -> consumer.accept(new AsyncResult<>(new ConnectionException("state is illegal."))));
-                } else {
-                    //设置连接，并触发通知
-                    channel = ch;
-                    consumer.accept(r);
-                }
-            } else {
-                //失败
-                consumer.accept(new AsyncResult<>(
-                        !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
-                                new ConnectionException("state is illegal.") :
-                                r.getThrowable()));
-            }
-        }, getConnector());
     }
 
     @Override

@@ -234,7 +234,7 @@ public class Cluster {
                     c.accept(new AsyncResult<>(this));
                 } else {
                     //失败主动关闭
-                    openFuture.completeExceptionally(r.getThrowable());
+                    future.completeExceptionally(r.getThrowable());
                     close(o -> c.accept(new AsyncResult<>(r.getThrowable())));
                 }
             });

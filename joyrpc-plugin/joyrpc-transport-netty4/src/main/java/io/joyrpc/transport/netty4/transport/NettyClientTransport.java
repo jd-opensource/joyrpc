@@ -84,13 +84,6 @@ public class NettyClientTransport extends AbstractClientTransport {
         if (codec == null) {
             consumer.accept(new AsyncResult<>(error("codec can not be null!")));
         } else {
-            //建连失败，关闭ioGroup
-            Consumer<AsyncResult<Channel>> callback = r -> {
-                if (!r.isSuccess()) {
-                    close(null);
-                }
-                consumer.accept(r);
-            };
             try {
                 ioGroup = EventLoopGroupFactory.getClientEventLoopGroup(url);
                 //获取SSL上下文
@@ -101,18 +94,18 @@ public class NettyClientTransport extends AbstractClientTransport {
                 // Bind and start to accept incoming connections.
                 bootstrap.connect(url.getHost(), url.getPort()).addListener((ChannelFutureListener) f -> {
                     if (f.isSuccess()) {
-                        callback.accept(new AsyncResult<>(channels[0]));
+                        consumer.accept(new AsyncResult<>(channels[0]));
                     } else {
-                        callback.accept(new AsyncResult<>(error(f.cause())));
+                        consumer.accept(new AsyncResult<>(error(f.cause())));
                     }
                 });
             } catch (SslException e) {
                 consumer.accept(new AsyncResult<>(e));
             } catch (ConnectionException e) {
-                callback.accept(new AsyncResult<>(e));
+                consumer.accept(new AsyncResult<>(e));
             } catch (Throwable e) {
                 //捕获Throwable，防止netty报错
-                callback.accept(new AsyncResult<>(error(e)));
+                consumer.accept(new AsyncResult<>(error(e)));
             }
         }
     }

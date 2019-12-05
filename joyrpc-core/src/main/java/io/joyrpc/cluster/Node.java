@@ -285,9 +285,9 @@ public class Node implements Shard {
     protected void open(final Consumer<AsyncResult<Node>> consumer) {
         Objects.requireNonNull(consumer, "consumer can not be null.");
         if (state.connecting(this::setState)) {
-            CompletableFuture<Node> future = new CompletableFuture<>();
+            final CompletableFuture<Node> future = new CompletableFuture<>();
             openFuture = future;
-            Consumer<AsyncResult<Node>> c = chain(consumer, future);
+            final Consumer<AsyncResult<Node>> c = chain(consumer, future);
             if (precondition != null) {
                 //等待前置条件完成
                 precondition.whenComplete((v, t) -> {
@@ -319,7 +319,7 @@ public class Node implements Shard {
                         c.accept(r);
                     } else {
                         //打开失败，则主动关闭。这个时候在CONNECTING状态，close会等到openFuture结束，需要先完成openFuture
-                        openFuture.completeExceptionally(r.getThrowable());
+                        future.completeExceptionally(r.getThrowable());
                         close(o -> c.accept(new AsyncResult<>(this, r.getThrowable())));
                     }
                 });

@@ -8,9 +8,13 @@
 
 - 如果服务提供者没有配置服务的IP，则起来绑定的地址为0.0.0.0
 
-- 完全去掉Cluster和Node的锁
-
 - 消费者启动默认等待建连不超时
+
+### Bugfixes
+
+- Cluster
+
+  - 完全去掉Cluster和Node的锁，防止死锁
 
 ## 1.0.4-SNAPSHOT
 

@@ -216,7 +216,8 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
         if (channel != null) {
             channel.close(r -> {
                 channel.removeSession(transportId);
-                channel = null;
+                //channel不设置为null，防止正在处理的请求报空指针错误
+                //channel = null;
                 status = CLOSED;
                 consumer.accept(r);
             });

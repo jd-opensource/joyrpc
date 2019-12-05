@@ -242,7 +242,8 @@ public abstract class AbstractServerTransport implements ServerTransport {
         if (serverChannel != null) {
             serverChannel.close(r -> {
                 publisher.close();
-                serverChannel = null;
+                //channel不设置为null，防止正在处理的请求报空指针错误
+                //serverChannel = null;
                 status = CLOSED;
                 consumer.accept(r);
             });

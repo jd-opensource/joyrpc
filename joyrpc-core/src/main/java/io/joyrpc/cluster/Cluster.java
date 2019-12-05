@@ -964,6 +964,10 @@ public class Cluster {
                     logger.warn(String.format("Failed connecting node %s.", node.getName()));
                 } else if (e instanceof TransportException) {
                     logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
+                } else if (e instanceof ProtocolException) {
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
+                } else if (e instanceof AuthenticationException) {
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
                 } else {
                     logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
                 }

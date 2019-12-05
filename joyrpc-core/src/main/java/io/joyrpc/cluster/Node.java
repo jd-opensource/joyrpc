@@ -460,10 +460,10 @@ public class Node implements Shard {
         if (state.initial(this::setState)) {
             //移除Dashboard的监听器
             Optional.ofNullable(publisher).ifPresent(o -> o.removeHandler(handler));
-            Client c = client;
-            client = null;
+            //不设置client为null，防止潜在的空指针异常
+            //client = null;
             precondition = null;
-            doClose(c, consumer);
+            doClose(client, consumer);
         } else {
             consumer.accept(new AsyncResult<>(new IllegalStateException("node state is illegal.")));
         }

@@ -429,7 +429,7 @@ public class Refer<T> extends AbstractInvoker<T> {
                 logger.info("Success register consumer config " + name);
             }
         });
-        //打开集群不需要等到注册成功。打开之前，已经提前进行了订阅获取全局配置
+        //打开集群不需要等到注册成功，因为可以从本地文件恢复。打开之前，已经提前进行了订阅获取全局配置
         cluster.open(o -> {
             if (o.isSuccess()) {
                 result.complete(null);

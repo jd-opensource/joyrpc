@@ -863,7 +863,7 @@ public class Node implements Shard {
                 o -> {
                     //协商成功
                     NegotiationResponse response = (NegotiationResponse) o.getPayLoad();
-                    logger.info(String.format("success negotiating with node(%s) of shard(%s),serialization=%s,compression=%s,checksum=%s.",
+                    logger.info(String.format("Success negotiating with node(%s) of shard(%s),serialization=%s,compression=%s,checksum=%s.",
                             client.getUrl().getAddress(), shard.getName(),
                             response.getSerialization(), response.getCompression(), response.getChecksum()));
                     Session session = client.getProtocol().session(clusterUrl, client);
@@ -910,7 +910,7 @@ public class Node implements Shard {
     protected void onAuthorized(final Client client,
                                 final Response response,
                                 final Consumer<AsyncResult<Response>> consumer) {
-        logger.info(String.format("success authenticating with node(%s) of shard(%s)", client.getUrl().getAddress(), shard.getName()));
+        logger.info(String.format("Success authenticating with node(%s) of shard(%s)", client.getUrl().getAddress(), shard.getName()));
         consumer.accept(new AsyncResult<>(response));
     }
 

@@ -425,18 +425,16 @@ public class Refer<T> extends AbstractInvoker<T> {
         CompletableFuture<Void> result = new CompletableFuture<>();
         //注册
         register().whenComplete((v, t) -> {
-            if (t != null) {
-                result.completeExceptionally(t);
-            } else {
+            if (t == null) {
                 logger.info("Success register consumer config " + name);
-                //打开之前，已经提前进行了订阅获取全局配置
-                cluster.open(o -> {
-                    if (o.isSuccess()) {
-                        result.complete(null);
-                    } else {
-                        result.completeExceptionally(o.getThrowable());
-                    }
-                });
+            }
+        });
+        //打开集群不需要等到注册成功。打开之前，已经提前进行了订阅获取全局配置
+        cluster.open(o -> {
+            if (o.isSuccess()) {
+                result.complete(null);
+            } else {
+                result.completeExceptionally(o.getThrowable());
             }
         });
         return result;

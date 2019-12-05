@@ -424,15 +424,19 @@ public class Refer<T> extends AbstractInvoker<T> {
     protected CompletableFuture<Void> doOpen() {
         CompletableFuture<Void> result = new CompletableFuture<>();
         //注册
-        if (url.getBoolean(Constants.REGISTER_OPTION) == true) {
-            //URL里面注册的类是实际的interfaceClass，不是proxyClass
-            registry.register(url);
-        }
-        cluster.open(o -> {
-            if (o.isSuccess()) {
-                result.complete(null);
+        register().whenComplete((v, t) -> {
+            if (t != null) {
+                result.completeExceptionally(t);
             } else {
-                result.completeExceptionally(o.getThrowable());
+                logger.info("Success register consumer config " + name);
+                //打开之前，已经提前进行了订阅获取全局配置
+                cluster.open(o -> {
+                    if (o.isSuccess()) {
+                        result.complete(null);
+                    } else {
+                        result.completeExceptionally(o.getThrowable());
+                    }
+                });
             }
         });
         return result;
@@ -440,28 +444,48 @@ public class Refer<T> extends AbstractInvoker<T> {
 
     @Override
     protected CompletableFuture<Void> doClose() {
-        String path = url.toString(false, true, "alias");
-        logger.info("Start unrefer consumer config " + path);
+        logger.info("Start unrefer consumer config " + name);
         final CompletableFuture<Void> future = new CompletableFuture();
         //注销节点事件
         cluster.removeHandler(config);
         //从注册中心注销，取消配置订阅
         deregister().whenComplete((v, t) -> {
-            logger.info("Success deregister consumer config " + path);
+            logger.info("Success deregister consumer config " + name);
             unsubscribe().whenComplete((o, e) -> {
-                logger.info("Success unsubscribe consumer config " + path);
+                logger.info("Success unsubscribe consumer config " + name);
                 cluster.close(r -> {
-                    logger.info("Success close cluster " + path);
+                    logger.info("Success close cluster " + name);
                     chain.close();
                     if (closing != null) {
                         closing.accept(this, t);
                     }
-                    logger.info("Success unrefer consumer config " + path);
+                    logger.info("Success unrefer consumer config " + name);
                     future.complete(null);
                 });
             });
         });
         return future;
+    }
+
+    /**
+     * 注册
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> register() {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        //注册
+        if (url.getBoolean(Constants.REGISTER_OPTION) == true) {
+            //URL里面注册的类是实际的interfaceClass，不是proxyClass
+            registry.register(url).whenComplete((v, t) -> {
+                if (t == null) {
+                    result.complete(null);
+                } else {
+                    result.completeExceptionally(t);
+                }
+            });
+        }
+        return result;
     }
 
     /**

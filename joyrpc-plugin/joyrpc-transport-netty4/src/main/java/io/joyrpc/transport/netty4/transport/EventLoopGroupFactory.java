@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -109,11 +109,11 @@ public class EventLoopGroupFactory {
     protected static ShareEventLoopGroup create(final String name, final URL url, final String threadName, URLOption<Integer> ioThread) {
         int threads = url.getPositiveInt(ioThread);
         if (isUseEpoll(url)) {
-            logger.info("EventLoopGroupFactory create eventLoopGroup, threadsKey:" + ioThread.getName() + " threads:" + threads + " isUseEpoll:true");
+            logger.info(String.format("Success creating eventLoopGroup. name:%s, threads:%d, epoll:true. ", ioThread.getName(), threads));
             return new ShareEventLoopGroup(name,
                     new EpollEventLoopGroup(threads, new NamedThreadFactory(threadName, true)), groups);
         } else {
-            logger.info("EventLoopGroupFactory create eventLoopGroup, threadsKey:" + ioThread.getName() + " threads:" + threads + " isUseEpoll:false");
+            logger.info(String.format("Success creating eventLoopGroup. name:%s, threads:%d, epoll:false. ", ioThread.getName(), threads));
             return new ShareEventLoopGroup(name,
                     new NioEventLoopGroup(threads, new NamedThreadFactory(threadName, true)), groups);
         }

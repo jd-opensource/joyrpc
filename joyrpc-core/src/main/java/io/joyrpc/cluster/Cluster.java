@@ -1031,7 +1031,7 @@ public class Cluster {
             String name = shard.getName();
             Node node = nodes.remove(name);
             if (node != null) {
-                logger.info(String.format("delete shard %s when cluster event", shard.getName()));
+                logger.info(String.format("delete shard %s", shard.getName()));
                 //由于注册中心的事件晚于服务端直接发送的下线命令，所以这里可以做到优雅关闭节点
                 node.close(null);
                 if (connects.remove(name) != null) {
@@ -1062,7 +1062,7 @@ public class Cluster {
             }
 
             if (logger.isInfoEnabled()) {
-                logger.info(String.format("add shard %s (region=%s,dataCenter=%s,protocol=%s,version=%s,weight=%d) when cluster event for %s",
+                logger.info(String.format("add shard %s(region=%s,dataCenter=%s,protocol=%s,version=%s,weight=%d) for cluster %s",
                         shard.getName(),
                         shard.getRegion(),
                         shard.getDataCenter(),

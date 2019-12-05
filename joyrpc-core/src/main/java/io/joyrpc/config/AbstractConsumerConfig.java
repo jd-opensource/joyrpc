@@ -283,7 +283,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             Futures.completeExceptionally(future, e);
             return null;
         }
-        logger.info(String.format("Refer consumer config : %s with bean id %s", name(), getId()));
+        logger.info(String.format("Start refer consumer config : %s with bean id %s", name(), getId()));
         //同步调用，会在doRefer里面创建好stub
         CompletableFuture<Void> result = switcher.open(f -> {
             //直连，则生成FixRegistry，非直连，使用配置的注册中心，若配置的注册中心为空，则生成默认注册中心

@@ -737,6 +737,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             Map<String, String> updates = event.changed(Constants.ALTERABLE_ATTR, o -> serviceUrl.getString(o));
             if (waitingConfig != null && !waitingConfig.isDone()) {
                 //触发URL变化
+                logger.info("Success subscribe global config " + name());
                 switcher.writer().run(() -> waitingConfig.complete(serviceUrl.add(updates)));
             } else if (updates == null || updates.isEmpty()) {
                 return;

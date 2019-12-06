@@ -38,6 +38,7 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.Server;
+import io.joyrpc.transport.transport.ServerTransport;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.MethodOption;
@@ -217,11 +218,19 @@ public class Exporter<T> extends AbstractInvoker<T> {
     protected CompletableFuture<Void> configAware() {
         if (server instanceof ConfigAware) {
             return ((ConfigAware) server).setup(config);
-        } else if (server instanceof DecoratorServer && ((DecoratorServer) server).getTransport() instanceof ConfigAware) {
-            return ((ConfigAware) ((DecoratorServer) server).getTransport()).setup(config);
-        } else {
-            return CompletableFuture.completedFuture(null);
+        } else if (server instanceof DecoratorServer) {
+            ServerTransport transport = ((DecoratorServer) server).getTransport();
+            while (transport != null) {
+                if (transport instanceof ConfigAware) {
+                    return ((ConfigAware) transport).setup(config);
+                } else if (!(transport instanceof DecoratorServer)) {
+                    return CompletableFuture.completedFuture(null);
+                } else {
+                    transport = ((DecoratorServer) transport).getTransport();
+                }
+            }
         }
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

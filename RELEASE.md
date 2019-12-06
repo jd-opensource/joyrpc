@@ -12,7 +12,7 @@
 
 - Dependency
 
-  - 升级Springboot为2.2.0-RELEASE版本
+  - 升级Springboot为2.2.1.RELEASE版本
 
   - 升级Spring为5.2.1.RELEASE版本
 

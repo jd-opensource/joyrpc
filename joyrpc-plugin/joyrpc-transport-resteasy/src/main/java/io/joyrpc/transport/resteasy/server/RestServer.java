@@ -71,15 +71,6 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
         super(url, null);
         this.transport = factory.createServerTransport(url, this::beforeOpen, this::afterClose);
         this.deployment = new ResteasyDeployment();
-        ResteasyProviderFactory providerFactory = deployment.getProviderFactory();
-        String root = url.getString(REST_ROOT);
-        root = REST_ROOT.getValue().equals(root) ? "" : root;
-        Map<Class<?>, ExceptionMapper> mapperMap = providerFactory.getExceptionMappers();
-        mapperMap.put(ApplicationException.class, ApplicationExceptionMapper.mapper);
-        mapperMap.put(ClientErrorException.class, ClientErrorExceptionMapper.mapper);
-        mapperMap.put(IllegalArgumentException.class, IllegalArgumentExceptionMapper.mapper);
-        transport.setCodec(new ResteasyCodec(root,
-                new RequestDispatcher((SynchronousDispatcher) deployment.getDispatcher(), providerFactory, null)));
     }
 
     /**
@@ -92,6 +83,15 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
         CompletableFuture<Void> result = new CompletableFuture<>();
         try {
             deployment.start();
+            ResteasyProviderFactory providerFactory = deployment.getProviderFactory();
+            String root = url.getString(REST_ROOT);
+            root = REST_ROOT.getValue().equals(root) ? "" : root;
+            Map<Class<?>, ExceptionMapper> mapperMap = providerFactory.getExceptionMappers();
+            mapperMap.put(ApplicationException.class, ApplicationExceptionMapper.mapper);
+            mapperMap.put(ClientErrorException.class, ClientErrorExceptionMapper.mapper);
+            mapperMap.put(IllegalArgumentException.class, IllegalArgumentExceptionMapper.mapper);
+            transport.setCodec(new ResteasyCodec(root,
+                    new RequestDispatcher((SynchronousDispatcher) deployment.getDispatcher(), providerFactory, null)));
             result.complete(null);
         } catch (Throwable e) {
             result.completeExceptionally(e);

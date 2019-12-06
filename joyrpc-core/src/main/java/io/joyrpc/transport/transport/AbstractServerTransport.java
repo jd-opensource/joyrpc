@@ -46,6 +46,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.constants.Constants.*;
@@ -100,6 +101,14 @@ public abstract class AbstractServerTransport implements ServerTransport {
      */
     protected Publisher<TransportEvent> publisher;
     /**
+     * 打开
+     */
+    protected Function<ServerTransport, CompletableFuture<Void>> beforeOpen;
+    /**
+     * 关闭
+     */
+    protected Function<ServerTransport, CompletableFuture<Void>> afterClose;
+    /**
      * ID
      */
     protected int transportId = ID_GENERATOR.get();
@@ -122,10 +131,25 @@ public abstract class AbstractServerTransport implements ServerTransport {
      * @param url
      */
     public AbstractServerTransport(URL url) {
+        this(url, null, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param url
+     * @param beforeOpen
+     * @param afterClose
+     */
+    public AbstractServerTransport(final URL url,
+                                   final Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
+                                   final Function<ServerTransport, CompletableFuture<Void>> afterClose) {
         this.url = url;
         this.host = url.getString(Constants.BIND_IP_KEY, url.getHost());
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_SERVER_NAME,
                 String.valueOf(COUNTER.incrementAndGet()), EVENT_PUBLISHER_TRANSPORT_CONF);
+        this.beforeOpen = beforeOpen;
+        this.afterClose = afterClose;
     }
 
     @Override
@@ -181,31 +205,47 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 打开
      *
+     * @return
+     */
+    protected CompletableFuture<Void> beforeOpen() {
+        return beforeOpen != null ? beforeOpen.apply(this) : CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 打开
+     *
      * @param consumer 消费者
      */
     protected void doOpen(final Consumer<AsyncResult<Channel>> consumer) {
-        bind(host, url.getPort(), r -> {
-            Channel channel = r.getResult();
-            if (r.isSuccess()) {
-                //成功，更新为打开状态
-                if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                    //OPENING->CLOSING，立即释放
-                    channel.close(o -> consumer.accept(new AsyncResult<>(new IllegalStateException())));
-                } else {
-                    logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
-                    serverChannel = (ServerChannel) channel;
-                    publisher.start();
-                    consumer.accept(r);
-                }
+        beforeOpen().whenComplete((v, t) -> {
+            if (t != null) {
+                consumer.accept(new AsyncResult<>(t));
             } else {
-                //失败
-                logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
-                consumer.accept(new AsyncResult<>(
-                        !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
-                                new ConnectionException("state is illegal.") :
-                                r.getThrowable()));
+                bind(host, url.getPort(), r -> {
+                    Channel channel = r.getResult();
+                    if (r.isSuccess()) {
+                        //成功，更新为打开状态
+                        if (!STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                            //OPENING->CLOSING，立即释放
+                            channel.close(o -> consumer.accept(new AsyncResult<>(new IllegalStateException())));
+                        } else {
+                            logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
+                            serverChannel = (ServerChannel) channel;
+                            publisher.start();
+                            consumer.accept(r);
+                        }
+                    } else {
+                        //失败
+                        logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
+                        consumer.accept(new AsyncResult<>(
+                                !STATE_UPDATER.compareAndSet(this, OPENING, CLOSED) ?
+                                        new ConnectionException("state is illegal.") :
+                                        r.getThrowable()));
+                    }
+                });
             }
         });
+
     }
 
     @Override
@@ -235,6 +275,15 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 关闭
      *
+     * @return
+     */
+    protected CompletableFuture<Void> afterClose() {
+        return afterClose != null ? afterClose.apply(this) : CompletableFuture.completedFuture(null);
+    }
+
+    /**
+     * 关闭
+     *
      * @param consumer
      */
     protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
@@ -244,8 +293,10 @@ public abstract class AbstractServerTransport implements ServerTransport {
                 publisher.close();
                 //channel不设置为null，防止正在处理的请求报空指针错误
                 //serverChannel = null;
-                status = CLOSED;
-                consumer.accept(r);
+                afterClose().whenComplete((v, t) -> {
+                    status = CLOSED;
+                    consumer.accept(r);
+                });
             });
         } else {
             publisher.close();

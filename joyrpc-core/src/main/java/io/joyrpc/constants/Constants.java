@@ -792,4 +792,6 @@ public class Constants {
      * ss5密码
      */
     public static final URLOption<String> SS5_PASSWORD = new URLOption<>("ss5.password", (String) null);
+
+    public static final URLOption<String> REST_ROOT = new URLOption<>("restRoot", "/");
 }

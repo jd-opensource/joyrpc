@@ -23,12 +23,9 @@ package io.joyrpc.transport.resteasy.server;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConfigAware;
 import io.joyrpc.config.ProviderConfig;
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.extension.URLOption;
 import io.joyrpc.transport.DecoratorServer;
-import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolAdapter;
@@ -37,6 +34,7 @@ import io.joyrpc.transport.resteasy.mapper.ApplicationExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.ClientErrorExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.IllegalArgumentExceptionMapper;
 import io.joyrpc.transport.transport.ServerTransport;
+import io.joyrpc.transport.transport.TransportFactory;
 import io.joyrpc.util.Futures;
 import org.jboss.resteasy.core.SynchronousDispatcher;
 import org.jboss.resteasy.plugins.server.netty.RequestDispatcher;
@@ -50,61 +48,72 @@ import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.ext.ExceptionMapper;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
-import static io.joyrpc.transport.Endpoint.Status.CLOSED;
+import static io.joyrpc.constants.Constants.REST_ROOT;
 
 /**
  * Rest服务
  */
 public class RestServer extends DecoratorServer<ServerTransport> implements ConfigAware {
 
-    protected static final URLOption<String> REST_ROOT = new URLOption<>("restRoot", "/");
-
-    protected Codec codec;
-
-    protected String root;
-
+    /**
+     * 部署
+     */
     protected ResteasyDeployment deployment;
 
-    protected RequestDispatcher dispatcher;
-
-    public RestServer(URL url, ServerTransport transport) {
-        super(url, transport);
+    /**
+     * 构造函数
+     *
+     * @param url
+     * @param factory
+     */
+    public RestServer(final URL url, final TransportFactory factory) {
+        super(url, null);
+        this.transport = factory.createServerTransport(url, this::beforeOpen, this::afterClose);
         this.deployment = new ResteasyDeployment();
-        this.root = url.getString(REST_ROOT);
-        if (REST_ROOT.getValue().equals(root)) {
-            this.root = "";
-        }
+        ResteasyProviderFactory providerFactory = deployment.getProviderFactory();
+        String root = url.getString(REST_ROOT);
+        root = REST_ROOT.getValue().equals(root) ? "" : root;
+        Map<Class<?>, ExceptionMapper> mapperMap = providerFactory.getExceptionMappers();
+        mapperMap.put(ApplicationException.class, ApplicationExceptionMapper.mapper);
+        mapperMap.put(ClientErrorException.class, ClientErrorExceptionMapper.mapper);
+        mapperMap.put(IllegalArgumentException.class, IllegalArgumentExceptionMapper.mapper);
+        transport.setCodec(new ResteasyCodec(root,
+                new RequestDispatcher((SynchronousDispatcher) deployment.getDispatcher(), providerFactory, null)));
     }
 
-    @Override
-    public void open(final Consumer<AsyncResult<Channel>> consumer) {
-        Status status = getStatus();
-        if (status == CLOSED) {
+    /**
+     * 启动前钩子
+     *
+     * @param transport
+     * @return
+     */
+    protected CompletableFuture<Void> beforeOpen(final ServerTransport transport) {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        try {
             deployment.start();
-            ResteasyProviderFactory providerFactory = deployment.getProviderFactory();
-            Map<Class<?>, ExceptionMapper> mapperMap = providerFactory.getExceptionMappers();
-            mapperMap.put(ApplicationException.class, ApplicationExceptionMapper.mapper);
-            mapperMap.put(ClientErrorException.class, ClientErrorExceptionMapper.mapper);
-            mapperMap.put(IllegalArgumentException.class, IllegalArgumentExceptionMapper.mapper);
-            this.dispatcher = new RequestDispatcher((SynchronousDispatcher) deployment.getDispatcher(), providerFactory, null);
-            this.codec = new ResteasyCodec(root, dispatcher);
-            this.transport.setCodec(codec);
+            result.complete(null);
+        } catch (Throwable e) {
+            result.completeExceptionally(e);
         }
-        super.open(r -> {
-            if (!r.isSuccess()) {
-                deployment.stop();
-            } else {
-                consumer.accept(r);
-            }
-        });
+        return result;
     }
 
-    @Override
-    public void close(Consumer consumer) {
-        deployment.stop();
-        super.close(consumer);
+    /**
+     * 关闭后钩子
+     *
+     * @param transport
+     * @return
+     */
+    protected CompletableFuture<Void> afterClose(final ServerTransport transport) {
+        CompletableFuture<Void> result = new CompletableFuture<>();
+        try {
+            deployment.stop();
+            result.complete(null);
+        } catch (Throwable e) {
+            result.completeExceptionally(e);
+        }
+        return result;
     }
 
     @Override
@@ -137,14 +146,5 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
                 return CompletableFuture.completedFuture(null);
             }
         }
-    }
-
-
-    public ResteasyDeployment getDeployment() {
-        return deployment;
-    }
-
-    public RequestDispatcher getDispatcher() {
-        return dispatcher;
     }
 }

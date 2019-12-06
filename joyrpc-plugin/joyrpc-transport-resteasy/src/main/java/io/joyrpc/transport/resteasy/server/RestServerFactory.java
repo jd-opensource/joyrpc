@@ -27,7 +27,7 @@ import io.joyrpc.transport.Client;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.transport.ClientTransport;
-import io.joyrpc.transport.transport.ServerTransport;
+import io.joyrpc.transport.transport.TransportFactory;
 
 import java.util.function.Function;
 
@@ -52,7 +52,7 @@ public class RestServerFactory implements EndpointFactory {
 
     @Override
     public Server createServer(URL url) {
-        ServerTransport serverTransport = TRANSPORT_FACTORY.getOrDefault(url.getString(TRANSPORT_FACTORY_OPTION)).createServerTransport(url);
-        return new RestServer(url, serverTransport);
+        TransportFactory factory = TRANSPORT_FACTORY.getOrDefault(url.getString(TRANSPORT_FACTORY_OPTION));
+        return new RestServer(url, factory);
     }
 }

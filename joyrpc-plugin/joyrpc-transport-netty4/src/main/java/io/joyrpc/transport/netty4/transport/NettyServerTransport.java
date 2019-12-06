@@ -34,6 +34,7 @@ import io.joyrpc.transport.netty4.handler.ProtocolAdapterDecoder;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
 import io.joyrpc.transport.transport.AbstractServerTransport;
 import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.transport.ServerTransport;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -43,8 +44,10 @@ import io.netty.handler.ssl.SslContext;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -56,7 +59,7 @@ public class NettyServerTransport extends AbstractServerTransport {
 
     protected final BiFunction<Channel, URL, ChannelTransport> function;
 
-    protected final Supplier<List<Channel>> supplier;
+    protected final Supplier<List<Channel>> supplier = this::getChannels;
 
     /**
      * 构造函数
@@ -64,10 +67,26 @@ public class NettyServerTransport extends AbstractServerTransport {
      * @param url
      * @param function
      */
-    public NettyServerTransport(URL url, BiFunction<Channel, URL, ChannelTransport> function) {
+    public NettyServerTransport(final URL url,
+                                final BiFunction<Channel, URL, ChannelTransport> function) {
         super(url);
         this.function = function;
-        this.supplier = this::getChannels;
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param url
+     * @param beforeOpen
+     * @param afterClose
+     * @param function
+     */
+    public NettyServerTransport(final URL url,
+                                final Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
+                                final Function<ServerTransport, CompletableFuture<Void>> afterClose,
+                                final BiFunction<Channel, URL, ChannelTransport> function) {
+        super(url, beforeOpen, afterClose);
+        this.function = function;
     }
 
     @Override

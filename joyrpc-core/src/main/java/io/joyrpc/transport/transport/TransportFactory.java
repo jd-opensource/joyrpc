@@ -24,6 +24,9 @@ import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
 /**
  * 传输通道工厂类
  */
@@ -45,6 +48,18 @@ public interface TransportFactory {
      * @return
      */
     ServerTransport createServerTransport(URL url);
+
+    /**
+     * 构造服务端Transport对象
+     *
+     * @param url        URL
+     * @param beforeOpen
+     * @param afterClose
+     * @return
+     */
+    ServerTransport createServerTransport(URL url,
+                                          Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
+                                          Function<ServerTransport, CompletableFuture<Void>> afterClose);
 
     /**
      * 构造Channel的Transport对象

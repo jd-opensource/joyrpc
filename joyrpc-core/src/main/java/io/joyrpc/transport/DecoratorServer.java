@@ -34,7 +34,6 @@ import io.joyrpc.transport.transport.ServerTransport;
 
 import java.net.InetSocketAddress;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Consumer;
 
@@ -47,12 +46,10 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
     protected T transport;
 
     public DecoratorServer(T server) {
-        this(server == null ? null : server.getUrl(), (T) server);
+        this(server == null ? null : server.getUrl(), server);
     }
 
     public DecoratorServer(URL url, T transport) {
-        Objects.requireNonNull(url, "url can not be null.");
-        Objects.requireNonNull(transport, "transport can not be null.");
         this.url = url;
         this.transport = transport;
     }

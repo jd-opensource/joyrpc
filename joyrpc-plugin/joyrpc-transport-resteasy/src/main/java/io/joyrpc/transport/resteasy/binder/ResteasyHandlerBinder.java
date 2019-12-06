@@ -9,9 +9,9 @@ package io.joyrpc.transport.resteasy.binder;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -69,7 +69,7 @@ public class ResteasyHandlerBinder implements HandlerBinder {
         String root = resteasyCodec.getRoot();
         RequestDispatcher dispatcher = resteasyCodec.getDispatcher();
         pipeline.addLast(DECODER, new HttpRequestDecoder());
-        pipeline.addLast(HTTP_AGGREGATOR, new HttpObjectAggregator(65535));
+        pipeline.addLast(HTTP_AGGREGATOR, new HttpObjectAggregator(channel.getAttribute(Channel.PAYLOAD)));
         pipeline.addLast(ENCODER, new HttpResponseEncoder());
         pipeline.addLast(RESTEASY_HTTP_DECODER, new RestEasyHttpRequestDecoder(dispatcher.getDispatcher(), root, RestEasyHttpRequestDecoder.Protocol.HTTP));
         pipeline.addLast(RESTEASY_HTTP_ENCODER, new RestEasyHttpResponseEncoder(dispatcher));

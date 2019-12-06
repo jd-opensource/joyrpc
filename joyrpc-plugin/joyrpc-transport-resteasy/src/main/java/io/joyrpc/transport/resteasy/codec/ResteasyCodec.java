@@ -9,9 +9,9 @@ package io.joyrpc.transport.resteasy.codec;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,9 +32,9 @@ import org.jboss.resteasy.plugins.server.netty.RequestDispatcher;
  */
 public class ResteasyCodec implements Codec {
 
-    protected String root;
+    protected final String root;
 
-    protected RequestDispatcher dispatcher;
+    protected final RequestDispatcher dispatcher;
 
     public ResteasyCodec(String root, RequestDispatcher dispatcher) {
         this.root = root;
@@ -60,15 +60,8 @@ public class ResteasyCodec implements Codec {
         return root;
     }
 
-    public void setRoot(String root) {
-        this.root = root;
-    }
-
     public RequestDispatcher getDispatcher() {
         return dispatcher;
     }
 
-    public void setDispatcher(RequestDispatcher dispatcher) {
-        this.dispatcher = dispatcher;
-    }
 }

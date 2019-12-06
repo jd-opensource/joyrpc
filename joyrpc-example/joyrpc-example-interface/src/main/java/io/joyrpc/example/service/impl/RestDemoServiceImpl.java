@@ -1,4 +1,4 @@
-package io.joyrpc.example.rest.service;
+package io.joyrpc.example.service.impl;
 
 import io.joyrpc.example.service.DemoService;
 

@@ -3,7 +3,7 @@ package io.joyrpc.example.rest;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
-import io.joyrpc.example.rest.service.RestDemoServiceImpl;
+import io.joyrpc.example.service.impl.RestDemoServiceImpl;
 import io.joyrpc.example.service.DemoService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -9,9 +9,9 @@ package io.joyrpc.transport.resteasy.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ package io.joyrpc.transport.resteasy.handler;
  */
 
 import io.joyrpc.context.RequestContext;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -63,25 +64,15 @@ public class ResteasyBizHandler extends SimpleChannelInboundHandler {
                 HttpResponse response = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
                 ctx.writeAndFlush(response);
                 return;
-            }
-
-            if (request.is100ContinueExpected()) {
-                send100Continue(ctx);
+            } else if (request.is100ContinueExpected()) {
+                HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
+                ctx.writeAndFlush(response);
             }
 
             NettyHttpResponse response = request.getResponse();
             try {
                 // 获取远程ip 兼容nignx转发和vip等
-                HttpHeaders httpHeaders = request.getHttpHeaders();
-                String remoteip = httpHeaders.getHeaderString("X-Forwarded-For");
-                if (remoteip == null) {
-                    remoteip = httpHeaders.getHeaderString("X-Real-IP");
-                }
-                if (remoteip != null) {
-                    RequestContext.getContext().setRemoteAddress(InetSocketAddress.createUnresolved(remoteip, 0));
-                } else { // request取不到就从channel里取
-                    RequestContext.getContext().setRemoteAddress((InetSocketAddress) ctx.channel().remoteAddress());
-                }
+                RequestContext.getContext().setRemoteAddress(getRemoteAddress(request.getHttpHeaders(), ctx.channel()));
                 // 设置本地地址
                 RequestContext.getContext().setLocalAddress((InetSocketAddress) ctx.channel().localAddress());
 
@@ -102,9 +93,29 @@ public class ResteasyBizHandler extends SimpleChannelInboundHandler {
         }
     }
 
-    private void send100Continue(ChannelHandlerContext ctx) {
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
-        ctx.writeAndFlush(response);
+    /**
+     * 获取远端地址
+     *
+     * @param headers
+     * @param channel
+     * @return
+     */
+    protected InetSocketAddress getRemoteAddress(final HttpHeaders headers, final Channel channel) {
+        String remoteIp = headers.getHeaderString("X-Forwarded-For");
+        if (remoteIp == null) {
+            remoteIp = headers.getHeaderString("X-Real-IP");
+        }
+        if (remoteIp != null) {
+            // 可能是vip nginx等转发后的ip，多次转发用逗号分隔
+            int pos = remoteIp.indexOf(',');
+            remoteIp = pos > 0 ? remoteIp.substring(0, pos).trim() : remoteIp.trim();
+        }
+        InetSocketAddress remote = (InetSocketAddress) channel.remoteAddress();
+        if (remoteIp != null && !remoteIp.isEmpty()) {
+            return InetSocketAddress.createUnresolved(remoteIp, remote.getPort());
+        } else { // request取不到就从channel里取
+            return remote;
+        }
     }
 
     @Override

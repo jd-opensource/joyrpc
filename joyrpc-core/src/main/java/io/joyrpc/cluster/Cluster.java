@@ -144,9 +144,9 @@ public class Cluster {
      */
     protected AtomicLong versions = new AtomicLong(0);
     /**
-     * 快照
+     * 控制器
      */
-    protected volatile Snapshot snapshot;
+    protected volatile Controller controller;
     /**
      * 状态
      */
@@ -222,10 +222,10 @@ public class Cluster {
             final long version = versions.incrementAndGet();
             final CompletableFuture<Cluster> future = new CompletableFuture<>();
             final Consumer<AsyncResult<Cluster>> c = Futures.chain(consumer, future);
-            final Snapshot s = new Snapshot(this, version, r -> {
+            final Controller s = new Controller(this, version, r -> {
                 if (future != openFuture || !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
                     //被关闭或重入了，取消订阅并清理节点
-                    Snapshot res = r.getResult();
+                    Controller res = r.getResult();
                     registar.unsubscribe(url, res.getClusterHandler());
                     //不用等待所有节点关闭，这样可以快速关闭
                     res.close();
@@ -239,11 +239,11 @@ public class Cluster {
                 }
             });
             openFuture = future;
-            snapshot = s;
+            controller = s;
             clusterPublisher.start();
             //启动事件监听器
             Optional.ofNullable(metricPublisher).ifPresent(Publisher::start);
-            //定期触发快照
+            //定期触发控制器
             Optional.ofNullable(dashboard).ifPresent(o -> timer().add(new DashboardTask(this, version)));
             //订阅集群
             registar.subscribe(url, s.getClusterHandler());
@@ -271,7 +271,7 @@ public class Cluster {
         if (STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.CLOSING)) {
             closeFuture = new CompletableFuture<>();
             //让在等待就绪的线程超时
-            snapshot.fire();
+            controller.fire();
             Futures.chain(openFuture, o -> doClose(Futures.chain(consumer, closeFuture)));
         } else if (STATE_UPDATER.compareAndSet(this, Status.OPENED, Status.CLOSING)) {
             closeFuture = new CompletableFuture<>();
@@ -296,8 +296,8 @@ public class Cluster {
      * @param consumer 消费者
      */
     protected void doClose(final Consumer<AsyncResult<Cluster>> consumer) {
-        Snapshot s = snapshot;
-        snapshot = null;
+        Controller s = controller;
+        controller = null;
         Close.close(clusterPublisher);
         Close.close(metricPublisher);
         if (s != null) {
@@ -479,7 +479,7 @@ public class Cluster {
      * @return the nodes
      */
     public List<Node> getNodes() {
-        Snapshot snapshot = this.snapshot;
+        Controller snapshot = this.controller;
         return snapshot == null ? new ArrayList<>(0) : snapshot.readys;
     }
 
@@ -506,11 +506,11 @@ public class Cluster {
 
 
     /**
-     * 快照<br/>
+     * 控制器<br/>
      * 避免锁，集群事件，节点事件和节点打开回调都放入队列，由定时器单线程执行。<br/>
      * 集群关闭和定时器存在并发访问节点问题
      */
-    protected static class Snapshot {
+    protected static class Controller {
         /**
          * 集群
          */
@@ -575,7 +575,7 @@ public class Cluster {
          * @param version 版本
          * @param ready   就绪事件
          */
-        public Snapshot(final Cluster cluster, final long version, final Consumer<AsyncResult<Snapshot>> ready) {
+        public Controller(final Cluster cluster, final long version, final Consumer<AsyncResult<Controller>> ready) {
             this.cluster = cluster;
             this.version = version;
             this.supplyTask = "SupplyTask-" + cluster.name;
@@ -751,7 +751,7 @@ public class Cluster {
         }
 
         protected boolean isOpened() {
-            return cluster.isOpened() & cluster.snapshot == this;
+            return cluster.isOpened() & cluster.controller == this;
         }
 
         /**
@@ -1228,7 +1228,7 @@ public class Cluster {
     }
 
     /**
-     * 面板快照任务
+     * 面板控制器任务
      */
     protected static class DashboardTask implements Timer.TimeTask {
         /**
@@ -1244,11 +1244,11 @@ public class Cluster {
          */
         protected final long version;
         /**
-         * 上次快照时间
+         * 上次控制器时间
          */
         protected long lastSnapshotTime;
         /**
-         * 下次快照时间
+         * 下次控制器时间
          */
         protected long time;
         /**
@@ -1267,7 +1267,7 @@ public class Cluster {
             this.cluster = cluster;
             this.dashboard = cluster.dashboard;
             this.version = version;
-            //把集群指标过期分布到1秒钟以内，避免同时进行快照
+            //把集群指标过期分布到1秒钟以内，避免同时进行控制器
             this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
             this.time = lastSnapshotTime + dashboard.getMetric().getWindowTime();
             this.dashboard.setLastSnapshotTime(lastSnapshotTime);

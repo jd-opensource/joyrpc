@@ -822,7 +822,9 @@ public class Node implements Shard {
                              final Consumer<AsyncResult<Response>> result) {
         if (state != ShardState.CONNECTING) {
             //握手阶段，状态应该是连接中
-            client.runAsync(() -> result.accept(new AsyncResult<>(new IllegalStateException("node state is illegal."))));
+            //Cluster目前是异步处理打开
+            result.accept(new AsyncResult<>(new IllegalStateException("node state is illegal.")));
+            //client.runAsync(() -> result.accept(new AsyncResult<>(new IllegalStateException("node state is illegal."))));
         } else {
             try {
                 Message message = supplier.get();
@@ -845,7 +847,9 @@ public class Node implements Shard {
                     }, 3000);
                 }
             } catch (Throwable e) {
-                client.runAsync(() -> result.accept(new AsyncResult<>((Response) null, e)));
+                //Cluster目前是异步处理打开
+                result.accept(new AsyncResult<>(e));
+                //client.runAsync(() -> result.accept(new AsyncResult<>((Response) null, e)));
             }
         }
     }

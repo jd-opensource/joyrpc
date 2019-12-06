@@ -38,7 +38,6 @@ import io.joyrpc.codec.crypto.Encryptor;
 import io.joyrpc.codec.crypto.Signature;
 import io.joyrpc.codec.digester.Digester;
 import io.joyrpc.codec.serialization.*;
-import io.joyrpc.config.Warmup;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.Configurator;
@@ -144,11 +143,6 @@ public interface Plugin {
      * 面板工程类
      */
     ExtensionPoint<DashboardFactory, String> DASHBOARD_FACTORY = new ExtensionPointLazy<>(DashboardFactory.class);
-
-    /**
-     * 预热插件
-     */
-    ExtensionPoint<Warmup, String> WARMUP = new ExtensionPointLazy<>(Warmup.class);
 
     /**
      * 分发异常处理

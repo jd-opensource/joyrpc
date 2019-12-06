@@ -1,4 +1,4 @@
-package io.joyrpc.transport.resteasy.expmapper;
+package io.joyrpc.transport.resteasy.mapper;
 
 /*-
  * #%L
@@ -25,18 +25,18 @@ import org.jboss.resteasy.logging.Logger;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 
-import static javax.ws.rs.core.Response.Status.BAD_REQUEST;
+import static javax.ws.rs.core.Response.Status.INTERNAL_SERVER_ERROR;
 
 /**
- * IllegalArgumentException异常处理Mapper
+ * ApplicationException异常处理Mapper
  */
-public class IllegalArgumentExceptionMapper implements ExceptionMapper {
+public class ApplicationExceptionMapper implements ExceptionMapper {
 
-    private final static Logger logger = Logger.getLogger(IllegalArgumentExceptionMapper.class);
+    private final static Logger logger = Logger.getLogger(ApplicationExceptionMapper.class);
 
-    public static IllegalArgumentExceptionMapper mapper = new IllegalArgumentExceptionMapper();
+    public static ApplicationExceptionMapper mapper = new ApplicationExceptionMapper();
 
-    private IllegalArgumentExceptionMapper() {
+    private ApplicationExceptionMapper() {
 
     }
 
@@ -45,8 +45,8 @@ public class IllegalArgumentExceptionMapper implements ExceptionMapper {
 
         logger.error("Unexpected", throwable);
 
-        String errorMsg = "{\"code\":400, \"message\":\"" + throwable.getMessage() + "\"}";
-        Response response = Response.status(BAD_REQUEST).entity(errorMsg).build();
+        String errorMsg = "{\"code\":500, \"message\":\"" + throwable.getMessage() + "\"}";
+        Response response = Response.status(INTERNAL_SERVER_ERROR).entity(errorMsg).build();
         return response;
     }
 }

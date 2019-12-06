@@ -444,7 +444,6 @@ public class Constants {
     public static final URLOption<String> ROLE_OPTION = new URLOption<>("side", SIDE_CONSUMER);
     public static final URLOption<Boolean> ENABLE_VALIDATOR_OPTION = new URLOption<>("enableValidator", true);
     public static final URLOption<String> INTERFACE_VALIDATOR_OPTION = new URLOption<>("interfaceValidator", "standard");
-    public static final URLOption<String> WARMUP_OPTION = new URLOption<>("warmup", "standard");
 
     /*------------------------ consumer配置 ------------------------*/
     public static final URLOption<Boolean> GENERIC_OPTION = new URLOption<>("generic", false);

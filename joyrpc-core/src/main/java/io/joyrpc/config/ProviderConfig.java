@@ -100,6 +100,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected String interfaceValidator;
 
     /**
+     * 预热插件
+     */
+    protected transient Warmup warmup;
+
+    /**
      * 已发布
      */
     protected transient volatile Exporter<T> exporter;
@@ -111,11 +116,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 注册中心
      */
     protected transient List<Registry> registries = new ArrayList<>(3);
-
-    /**
-     * 预热插件
-     */
-    protected String warmup;
 
     @Override
     protected void validate() {
@@ -143,7 +143,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                     "This is not an instance of " + interfaceClazz
                             + " in provider config with key " + name() + " !", ExceptionCode.PROVIDER_REF_NO_FOUND);
         }
-        checkExtension(WARMUP, Warmup.class, "warmup", warmup);
     }
 
     /**
@@ -400,12 +399,10 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
         addElement2Map(params, Constants.WEIGHT_OPTION, weight);
-
         addElement2Map(params, Constants.DYNAMIC_OPTION, dynamic);
         addElement2Map(params, Constants.DELAY_OPTION, delay);
         addElement2Map(params, Constants.ROLE_OPTION, Constants.SIDE_PROVIDER);
         addElement2Map(params, Constants.TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
-        addElement2Map(params, Constants.WARMUP_OPTION, warmup);
         addElement2Map(params, Constants.ENABLE_VALIDATOR_OPTION, enableValidator);
         addElement2Map(params, Constants.INTERFACE_VALIDATOR_OPTION, interfaceValidator);
         //从serverConfig获取SSL_ENABLE配置
@@ -564,11 +561,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         return registries;
     }
 
-    public String getWarmup() {
+    public Warmup getWarmup() {
         return warmup;
     }
 
-    public void setWarmup(String warmup) {
+    public void setWarmup(Warmup warmup) {
         this.warmup = warmup;
     }
 
@@ -638,18 +635,4 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         }
     }
 
-    /**
-     * 预热
-     *
-     * @return
-     */
-    protected CompletableFuture<Void> warmup() {
-        if (warmup != null && !warmup.isEmpty()) {
-            Warmup wm = WARMUP.get(warmup);
-            if (wm != null) {
-                return wm.setup(this);
-            }
-        }
-        return CompletableFuture.completedFuture(null);
-    }
 }

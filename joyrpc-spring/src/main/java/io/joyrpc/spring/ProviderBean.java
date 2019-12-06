@@ -25,6 +25,7 @@ import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
+import io.joyrpc.config.Warmup;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.Switcher;
@@ -82,6 +83,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected transient String refName;
     /**
+     * 预热引用
+     */
+    protected transient String warmupName;
+    /**
      * 配置中心名称
      */
     protected String configureName;
@@ -130,21 +135,58 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void afterPropertiesSet() {
-        //如果没有配置网络参数
-        if (serverConfig == null) {
-            //判断是否有引用对象配置
-            if (!StringUtils.isEmpty(serverName)) {
-                serverConfig = applicationContext.getBean(serverName, ServerConfig.class);
+        setupServer();
+        setupRegistry();
+        setupConfigure();
+        setupRef();
+        setupWarmup();
+        //先输出服务，并没有打开，服务不可用
+        exportFuture = export();
+    }
+
+    /**
+     * 设置预热
+     */
+    protected void setupWarmup() {
+        //接口实现
+        if (warmup == null && !StringUtils.isEmpty(warmupName)) {
+            warmup = applicationContext.getBean(warmupName, Warmup.class);
+        }
+    }
+
+    /**
+     * 设置实现对象
+     */
+    protected void setupRef() {
+        //接口实现
+        if (ref == null && !StringUtils.isEmpty(refName)) {
+            ref = (T) applicationContext.getBean(refName);
+        }
+    }
+
+    /**
+     * 设置配置中心
+     */
+    protected void setupConfigure() {
+        //判断是否设置了配置中心
+        if (configure == null) {
+            if (!StringUtils.isEmpty(configureName)) {
+                configure = applicationContext.getBean(configureName, Configure.class);
             } else {
-                Map<String, ServerConfig> beans = applicationContext.getBeansOfType(ServerConfig.class, false, false);
+                Map<String, Configure> beans = applicationContext.getBeansOfType(Configure.class, false, false);
                 if (beans != null && !beans.isEmpty()) {
-                    setServerConfig(beans.values().iterator().next());
-                    Map.Entry<String, ServerConfig> entry = beans.entrySet().iterator().next();
-                    setServerConfig(entry.getValue());
-                    logger.info(String.format("detect serverConfig: %s for %s", entry.getKey(), getId()));
+                    Map.Entry<String, Configure> entry = beans.entrySet().iterator().next();
+                    configure = entry.getValue();
+                    logger.info(String.format("detect configure: %s for %s", entry.getKey(), getId()));
                 }
             }
         }
+    }
+
+    /**
+     * 设置注册中心
+     */
+    protected void setupRegistry() {
         //如果没有配置注册中心，则默认发布到全部注册中心
         if (StringUtils.isEmpty(registry)) {
             if (!StringUtils.isEmpty(registryNames)) {
@@ -163,25 +205,27 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                 }
             }
         }
-        //判断是否设置了配置中心
-        if (configure == null) {
-            if (!StringUtils.isEmpty(configureName)) {
-                configure = applicationContext.getBean(configureName, Configure.class);
+    }
+
+    /**
+     * 设置服务参数
+     */
+    protected void setupServer() {
+        //如果没有配置网络参数
+        if (serverConfig == null) {
+            //判断是否有引用对象配置
+            if (!StringUtils.isEmpty(serverName)) {
+                serverConfig = applicationContext.getBean(serverName, ServerConfig.class);
             } else {
-                Map<String, Configure> beans = applicationContext.getBeansOfType(Configure.class, false, false);
+                Map<String, ServerConfig> beans = applicationContext.getBeansOfType(ServerConfig.class, false, false);
                 if (beans != null && !beans.isEmpty()) {
-                    Map.Entry<String, Configure> entry = beans.entrySet().iterator().next();
-                    configure = entry.getValue();
-                    logger.info(String.format("detect configure: %s for %s", entry.getKey(), getId()));
+                    setServerConfig(beans.values().iterator().next());
+                    Map.Entry<String, ServerConfig> entry = beans.entrySet().iterator().next();
+                    setServerConfig(entry.getValue());
+                    logger.info(String.format("detect serverConfig: %s for %s", entry.getKey(), getId()));
                 }
             }
         }
-        //接口实现
-        if (ref == null && !StringUtils.isEmpty(refName)) {
-            ref = (T) applicationContext.getBean(refName);
-        }
-        //先输出服务，并没有打开，服务不可用
-        exportFuture = export();
     }
 
     @Override
@@ -230,6 +274,15 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     @Alias("ref")
     public void setRefName(String refName) {
         this.refName = refName;
+    }
+
+    public String getWarmupName() {
+        return warmupName;
+    }
+
+    @Alias("warmup")
+    public void setWarmupName(String warmupName) {
+        this.warmupName = warmupName;
     }
 
     public String getConfigureName() {

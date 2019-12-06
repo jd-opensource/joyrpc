@@ -1,4 +1,4 @@
-package io.joyrpc.transport.resteasy.expmapper;
+package io.joyrpc.transport.resteasy.mapper;
 
 /*-
  * #%L

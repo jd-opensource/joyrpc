@@ -24,6 +24,7 @@ import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
+import io.joyrpc.config.ConfigAware;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.Warmup;
 import io.joyrpc.constants.Constants;
@@ -51,7 +52,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static io.joyrpc.Plugin.AUTHENTICATOR;
-import static io.joyrpc.Plugin.WARMUP;
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
@@ -113,11 +113,14 @@ public class Exporter<T> extends AbstractInvoker<T> {
      * 订阅配置的注册中心
      */
     protected Registry subscribe;
-
     /**
      * 认证插件
      */
     protected Authenticator authenticator;
+    /**
+     * 预热
+     */
+    protected Warmup warmup;
 
     /**
      * 构造函数
@@ -151,6 +154,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
         //保留全局的配置变更处理器，订阅和取消订阅对象一致
         this.configHandler = config.getConfigHandler();
         this.ref = config.getRef();
+        this.warmup = config.getWarmup();
         this.port = url.getPort();
         this.compress = url.getString(Constants.COMPRESS_OPTION.getName());
         //接口透传参数
@@ -179,8 +183,15 @@ public class Exporter<T> extends AbstractInvoker<T> {
                     if (!r.isSuccess()) {
                         result.completeExceptionally(new InitializationException(String.format("Error occurs while open server : %s error", name), r.getThrowable()));
                     } else {
-                        //注册服务
-                        Futures.chain(doRegister(registries), result);
+                        //如果服务感知配置
+                        configAware().whenComplete((o, s) -> {
+                            if (s != null) {
+                                result.completeExceptionally(new InitializationException(String.format("Error occurs while setup server : %s error", name), r.getThrowable()));
+                            } else {
+                                //注册服务
+                                Futures.chain(doRegister(registries), result);
+                            }
+                        });
                     }
                 });
             }
@@ -194,14 +205,16 @@ public class Exporter<T> extends AbstractInvoker<T> {
      * @return
      */
     protected CompletableFuture<Void> warmup() {
-        String warmup = url.getString(Constants.WARMUP_OPTION);
-        if (warmup != null && !warmup.isEmpty()) {
-            Warmup wm = WARMUP.get(warmup);
-            if (wm != null) {
-                return wm.setup(config);
-            }
-        }
-        return CompletableFuture.completedFuture(null);
+        return warmup == null ? CompletableFuture.completedFuture(null) : warmup.setup(config);
+    }
+
+    /**
+     * 配置感知
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> configAware() {
+        return server instanceof ConfigAware ? ((ConfigAware) server).setup(config) : CompletableFuture.completedFuture(null);
     }
 
     @Override

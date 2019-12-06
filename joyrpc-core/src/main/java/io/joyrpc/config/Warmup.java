@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
  * 启动后的预热插件
  */
 @Extensible(value = "warmup")
+@FunctionalInterface
 public interface Warmup {
 
     /**

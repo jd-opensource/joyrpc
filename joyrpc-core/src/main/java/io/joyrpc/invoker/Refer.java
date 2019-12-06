@@ -443,27 +443,27 @@ public class Refer<T> extends AbstractInvoker<T> {
     @Override
     protected CompletableFuture<Void> doClose() {
         logger.info("Start unrefer consumer config " + name);
-        final CompletableFuture<Void> future = new CompletableFuture();
         //注销节点事件
         cluster.removeHandler(config);
-        //从注册中心注销，最多重试2次
-        deregister().whenComplete((v, t) -> {
-            logger.info("Success deregister consumer config " + name);
-            //取消配置订阅
-            unsubscribe().whenComplete((o, e) -> {
-                logger.info("Success unsubscribe consumer config " + name);
-                cluster.close(r -> {
-                    logger.info("Success close cluster " + name);
-                    chain.close();
-                    if (closing != null) {
-                        closing.accept(this, t);
-                    }
-                    logger.info("Success unrefer consumer config " + name);
-                    future.complete(null);
-                });
-            });
+        //从注册中心注销，最多重试1次
+        CompletableFuture<Void> future1 = deregister().whenComplete((v, t) -> logger.info("Success deregister consumer config " + name));
+        //取消配置订阅
+        CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe consumer config " + name));
+        //关闭集群
+        final CompletableFuture<Void> future3 = new CompletableFuture();
+        cluster.close(r -> {
+            logger.info("Success close cluster " + name);
+            future3.complete(null);
         });
-        return future;
+        //关闭过滤链
+        CompletableFuture<Void> future4 = chain.close().whenComplete((v, t) -> logger.info("Success close filter chain " + name));
+
+        return CompletableFuture.allOf(future1, future2, future3, future4).whenComplete((v, t) -> {
+            if (closing != null) {
+                closing.accept(this, null);
+            }
+            logger.info("Success unrefer consumer config " + name);
+        });
     }
 
     /**
@@ -499,7 +499,7 @@ public class Refer<T> extends AbstractInvoker<T> {
         if (url.getBoolean(Constants.REGISTER_OPTION)) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
             //TODO 要确保各个注册中心实现在服务有问题的情况下，能快速的注销掉
-            registry.deregister(registerUrl, 2).whenComplete((r, t) -> future.complete(null));
+            registry.deregister(registerUrl, 1).whenComplete((r, t) -> future.complete(null));
         } else {
             future.complete(null);
         }

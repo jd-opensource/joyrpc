@@ -179,25 +179,26 @@ public class Exporter<T> extends AbstractInvoker<T> {
 
     @Override
     protected CompletableFuture<Void> doClose() {
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        if (closing != null) {
-            closing.accept(this);
-        }
+        CompletableFuture<Void> future1 = deregister().whenComplete((v, t) -> logger.info("Success deregister provider config " + name));
+        CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe provider config " + name));
         //关闭服务
+        CompletableFuture<Void> future3 = new CompletableFuture();
         if (server != null) {
             server.close(o -> {
                 //在这里安全关闭外部线程池
                 Close.close(server.getBizThreadPool(), 0);
-                if (o.isSuccess()) {
-                    Futures.chain(deregister(), result);
-                } else {
-                    deregister().whenComplete((v, t) -> result.completeExceptionally(o.getThrowable()));
-                }
+                future3.complete(null);
             });
         } else {
-            Futures.chain(deregister(), result);
+            future3.complete(null);
         }
-        return result;
+        return CompletableFuture.allOf(future1, future2, future3).whenComplete((v, t) -> {
+            if (closing != null) {
+                closing.accept(this);
+            }
+            logger.info("Success close provider config " + name);
+        });
+
     }
 
     @Override
@@ -281,6 +282,20 @@ public class Exporter<T> extends AbstractInvoker<T> {
     }
 
     /**
+     * 取消配置订阅
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> unsubscribe() {
+        if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
+            //取消订阅
+            // todo 不能保证执行成功
+            configure.unsubscribe(subscribeUrl, configHandler);
+        }
+        return CompletableFuture.completedFuture(null);
+    }
+
+    /**
      * 注销
      *
      * @return
@@ -291,14 +306,9 @@ public class Exporter<T> extends AbstractInvoker<T> {
             return CompletableFuture.completedFuture(null);
         } else {
             CompletableFuture<URL>[] futures = new CompletableFuture[registries.size()];
-            if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
-                //取消订阅
-                // todo 不能保证执行成功
-                configure.unsubscribe(subscribeUrl, configHandler);
-            }
-            //取消注册
+            //取消注册，最多重试1次
             for (int i = 0; i < registries.size(); i++) {
-                futures[i] = registries.get(i).deregister(registerUrls.get(i));
+                futures[i] = registries.get(i).deregister(registerUrls.get(i), 1);
             }
             return CompletableFuture.allOf(futures);
         }

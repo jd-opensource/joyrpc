@@ -20,25 +20,21 @@ package io.joyrpc.annotation;
  * #L%
  */
 
-
 import java.lang.annotation.*;
 
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.TYPE;
-
 /**
- * 别名
+ * 方法暴露的注解。<br/>
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({TYPE, METHOD})
+@Target({ElementType.METHOD})
 @Inherited
-public @interface Alias {
+public @interface Export {
 
     /**
-     * 名称
+     * 是否输出
      *
      * @return
      */
-    String value();
+    boolean value() default true;
 }

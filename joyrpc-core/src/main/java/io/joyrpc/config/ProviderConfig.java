@@ -20,6 +20,7 @@ package io.joyrpc.config;
  * #L%
  */
 
+import io.joyrpc.annotation.Export;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.discovery.registry.RegistryFactory;
 import io.joyrpc.config.validator.InterfaceValidator;
@@ -31,6 +32,7 @@ import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
@@ -39,14 +41,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 
 /**
@@ -99,10 +103,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 已发布
      */
     protected transient volatile Exporter<T> exporter;
-    /**
-     * 方法名称：是否可调用
-     */
-    protected transient volatile ConcurrentHashMap<String, Boolean> methodsLimit;
     /**
      * 注册中心URL
      */
@@ -401,8 +401,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
         addElement2Map(params, Constants.WEIGHT_OPTION, weight);
-        addElement2Map(params, Constants.METHOD_INCLUDE_OPTION, include);
-        addElement2Map(params, Constants.METHOD_EXCLUDE_OPTION, exclude);
+
         addElement2Map(params, Constants.DYNAMIC_OPTION, dynamic);
         addElement2Map(params, Constants.DELAY_OPTION, delay);
         addElement2Map(params, Constants.ROLE_OPTION, Constants.SIDE_PROVIDER);
@@ -413,7 +412,59 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         //从serverConfig获取SSL_ENABLE配置
         String sslEnable = serverConfig.parameters == null ? "false" : serverConfig.parameters.getOrDefault(SSL_ENABLE.getName(), String.valueOf(SSL_ENABLE.getValue()));
         addElement2Map(params, SSL_ENABLE, sslEnable);
+        //分析过滤的方法
+        Set<String> excludes = new HashSet<>();
+        Set<String> includes = new HashSet<>();
+        limit(excludes, includes);
+        if (!includes.isEmpty()) {
+            addElement2Map(params, Constants.METHOD_INCLUDE_OPTION, String.join(",", includes));
+        }
+        if (!excludes.isEmpty()) {
+            addElement2Map(params, Constants.METHOD_EXCLUDE_OPTION, String.join(",", excludes));
+        }
+
         return params;
+    }
+
+    /**
+     * 方法输出限制
+     *
+     * @param excludes
+     * @param includes
+     */
+    protected void limit(final Set<String> excludes, final Set<String> includes) {
+        //根据注解获取默认配置
+        if (ref != null) {
+            List<Method> methods = ClassUtils.getPublicMethod(ref.getClass());
+            Export export;
+            for (Method method : methods) {
+                export = method.getAnnotation(Export.class);
+                if (export != null) {
+                    //判断是否输出
+                    if (!export.value()) {
+                        excludes.add(method.getName());
+                    } else {
+                        includes.add(method.getName());
+                    }
+                }
+            }
+        }
+        //手动静态配置覆盖默认注解配置
+        if (include != null && !include.isEmpty()) {
+            String[] names = split(include, SEMICOLON_COMMA_WHITESPACE);
+            for (String name : names) {
+                //如果手动开启了，则删除默认禁用
+                excludes.remove(name);
+                includes.add(name);
+            }
+        }
+        //黑名单优先级高
+        if (exclude != null && !exclude.isEmpty()) {
+            String[] names = split(exclude, SEMICOLON_COMMA_WHITESPACE);
+            for (String name : names) {
+                excludes.add(name);
+            }
+        }
     }
 
     public List<RegistryConfig> getRegistry() {

@@ -95,6 +95,8 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
         super.open(r -> {
             if (!r.isSuccess()) {
                 deployment.stop();
+            } else {
+                consumer.accept(r);
             }
         });
     }

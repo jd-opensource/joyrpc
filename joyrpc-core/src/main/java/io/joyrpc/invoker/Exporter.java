@@ -36,6 +36,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.permission.Authenticator;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.Server;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
@@ -214,7 +215,13 @@ public class Exporter<T> extends AbstractInvoker<T> {
      * @return
      */
     protected CompletableFuture<Void> configAware() {
-        return server instanceof ConfigAware ? ((ConfigAware) server).setup(config) : CompletableFuture.completedFuture(null);
+        if (server instanceof ConfigAware) {
+            return ((ConfigAware) server).setup(config);
+        } else if (server instanceof DecoratorServer && ((DecoratorServer) server).getTransport() instanceof ConfigAware) {
+            return ((ConfigAware) ((DecoratorServer) server).getTransport()).setup(config);
+        } else {
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
     @Override

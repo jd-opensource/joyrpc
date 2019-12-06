@@ -108,7 +108,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         if (event instanceof ConsumerReferDoneEvent || (event instanceof ContextRefreshedEvent && REFERS.get() == 0)) {
             //需要先判断条件，再打开
             switcher.open(() -> {
-                logger.info(String.format("open provider with beanName %s after spring context refreshed.", id));
+                logger.info(String.format("Start provider with beanName %s after spring context refreshed.", id));
                 exportFuture.whenComplete((v, t) -> {
                     if (t != null) {
                         logger.error(String.format("Error occurs while export provider %s", id), t);

@@ -233,7 +233,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                     logger.error(String.format("Error occurs while export %s with bean id %s,caused by. ", name(), getId()), t);
                     Futures.chain(unexport(), f);
                 } else {
-                    warmup();
                     f.complete(v);
                     logger.info(String.format("Success exporting %s with bean id %s", name(), getId()));
                 }
@@ -641,13 +640,16 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
 
     /**
      * 预热
+     *
+     * @return
      */
-    protected void warmup() {
+    protected CompletableFuture<Void> warmup() {
         if (warmup != null && !warmup.isEmpty()) {
             Warmup wm = WARMUP.get(warmup);
             if (wm != null) {
-                wm.setup(this);
+                return wm.setup(this);
             }
         }
+        return CompletableFuture.completedFuture(null);
     }
 }

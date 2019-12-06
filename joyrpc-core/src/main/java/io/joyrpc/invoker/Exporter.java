@@ -25,6 +25,7 @@ import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.config.ProviderConfig;
+import io.joyrpc.config.Warmup;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.RequestContext;
@@ -50,6 +51,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static io.joyrpc.Plugin.AUTHENTICATOR;
+import static io.joyrpc.Plugin.WARMUP;
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
@@ -166,15 +168,40 @@ public class Exporter<T> extends AbstractInvoker<T> {
     @Override
     protected CompletableFuture<Void> doOpen() {
         CompletableFuture<Void> result = new CompletableFuture<>();
-        server.open(r -> {
-            if (!r.isSuccess()) {
-                result.completeExceptionally(new InitializationException(String.format("Open server : %s error", url), r.getThrowable()));
+
+        warmup().whenComplete((v, t) -> {
+            if (t != null) {
+                //预热失败，则自动退出
+                result.completeExceptionally(t);
             } else {
-                //注册服务
-                Futures.chain(doRegister(registries), result);
+                logger.info("Success warmuping provider " + name);
+                server.open(r -> {
+                    if (!r.isSuccess()) {
+                        result.completeExceptionally(new InitializationException(String.format("Error occurs while open server : %s error", name), r.getThrowable()));
+                    } else {
+                        //注册服务
+                        Futures.chain(doRegister(registries), result);
+                    }
+                });
             }
         });
         return result;
+    }
+
+    /**
+     * 预热
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> warmup() {
+        String warmup = url.getString(Constants.WARMUP_OPTION);
+        if (warmup != null && !warmup.isEmpty()) {
+            Warmup wm = WARMUP.get(warmup);
+            if (wm != null) {
+                return wm.setup(config);
+            }
+        }
+        return CompletableFuture.completedFuture(null);
     }
 
     @Override

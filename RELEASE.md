@@ -14,6 +14,8 @@
   
   - 如果服务提供者没有配置服务的IP，则起来绑定的地址为0.0.0.0
   
+  - 预热接口改成异步，并且在Exporter的open方法做
+  
 - Dependency
 
   - 升级Springboot为2.2.1.RELEASE版本

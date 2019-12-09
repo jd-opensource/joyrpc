@@ -27,6 +27,7 @@ import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.codec.Codec;
+import io.joyrpc.util.Status;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
@@ -140,27 +141,4 @@ public interface Endpoint extends AutoCloseable {
         }
     }
 
-    /**
-     * 状态
-     *
-     * @date: 2019/1/14
-     */
-    enum Status {
-        /**
-         * 关闭
-         */
-        CLOSED,
-        /**
-         * 打开中
-         */
-        OPENING,
-        /**
-         * 打开
-         */
-        OPENED,
-        /**
-         * 关闭中
-         */
-        CLOSING
-    }
 }

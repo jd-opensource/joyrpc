@@ -17,7 +17,6 @@
         <module>joyrpc-example-api</module>
         <module>joyrpc-example-interface</module>
         <module>joyrpc-example-boot</module>
-        <module>joyrcp-example-rest</module>
     </modules>
 
     <build>

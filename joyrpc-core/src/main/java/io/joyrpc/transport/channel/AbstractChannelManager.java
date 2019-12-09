@@ -27,12 +27,12 @@ import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.Endpoint;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.DefaultHeartbeatTrigger;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
 import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.util.Status;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 
@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
-import static io.joyrpc.transport.Endpoint.Status.*;
+import static io.joyrpc.util.Status.*;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -97,8 +97,8 @@ public abstract class AbstractChannelManager implements ChannelManager {
      * 池化的通道
      */
     protected static class PoolChannel extends DecoratorChannel {
-        protected static final AtomicReferenceFieldUpdater<PoolChannel, Endpoint.Status> STATE_UPDATER =
-                AtomicReferenceFieldUpdater.newUpdater(PoolChannel.class, Endpoint.Status.class, "status");
+        protected static final AtomicReferenceFieldUpdater<PoolChannel, Status> STATE_UPDATER =
+                AtomicReferenceFieldUpdater.newUpdater(PoolChannel.class, Status.class, "status");
         /**
          * 消息发布
          */
@@ -130,7 +130,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 状态
          */
-        protected volatile Endpoint.Status status = CLOSED;
+        protected volatile Status status = CLOSED;
         /**
          * 计数器
          */

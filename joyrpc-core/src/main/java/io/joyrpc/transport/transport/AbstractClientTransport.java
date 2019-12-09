@@ -34,6 +34,7 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.util.Futures;
+import io.joyrpc.util.Status;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -45,7 +46,7 @@ import java.util.function.Consumer;
 import static io.joyrpc.Plugin.CHANNEL_MANAGER_FACTORY;
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.transport.Endpoint.Status.*;
+import static io.joyrpc.util.Status.*;
 
 /**
  * 抽象的客户端通道，不支持并发打开关闭

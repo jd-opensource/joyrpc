@@ -39,7 +39,6 @@ import io.joyrpc.extension.URLOption;
 import io.joyrpc.metric.Dashboard;
 import io.joyrpc.metric.Dashboard.DashboardType;
 import io.joyrpc.metric.DashboardFactory;
-import io.joyrpc.transport.Endpoint.Status;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.util.Timer;
@@ -61,7 +60,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
-import static io.joyrpc.transport.Endpoint.Status.CLOSED;
+import static io.joyrpc.util.Status.CLOSED;
 import static io.joyrpc.util.Timer.timer;
 
 /**

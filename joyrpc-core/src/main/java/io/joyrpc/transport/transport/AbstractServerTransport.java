@@ -34,6 +34,7 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolAdapter;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.util.Futures;
+import io.joyrpc.util.Status;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,7 +51,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.transport.Endpoint.Status.*;
+import static io.joyrpc.util.Status.*;
 import static io.joyrpc.util.Timer.timer;
 
 /**

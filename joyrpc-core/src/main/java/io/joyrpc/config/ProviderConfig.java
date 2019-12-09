@@ -552,10 +552,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         this.dynamic = dynamic;
     }
 
-    public List<URL> getRegistryUrls() {
-        return registryUrls;
-    }
-
     public List<Registry> getRegistries() {
         return registries;
     }

@@ -27,6 +27,7 @@ import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.config.Warmup;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
@@ -46,6 +47,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static io.joyrpc.spring.ConsumerSpring.REFERS;
@@ -292,5 +294,28 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     @Alias("configure")
     public void setConfigureName(String configureName) {
         this.configureName = configureName;
+    }
+
+    /**
+     * 获取接口类
+     *
+     * @param supplier
+     * @return
+     */
+    public Class getInterfaceClass(final Supplier<Class> supplier) {
+        if (interfaceClass == null) {
+            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
+                interfaceClass = supplier.get();
+                interfaceClazz = interfaceClass != null ? interfaceClass.getName() : interfaceClazz;
+            } else {
+                try {
+                    interfaceClass = ClassUtils.forName(interfaceClazz);
+                } catch (ClassNotFoundException e) {
+                    interfaceClass = supplier.get();
+                    interfaceClazz = interfaceClass != null ? interfaceClass.getName() : interfaceClazz;
+                }
+            }
+        }
+        return interfaceClass;
     }
 }

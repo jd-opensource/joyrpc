@@ -357,7 +357,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 //检查动态配置是否修改了别名，需要重新订阅
                 resubscribe(serviceUrl, url);
                 try {
-                    exporter = InvokerManager.export(this, configureRef, subscribeUrl);
+                    exporter = InvokerManager.export(this, configureRef, serviceUrl, subscribeUrl);
                     future.complete(null);
                 } catch (Exception ex) {
                     future.completeExceptionally(ex);
@@ -488,7 +488,10 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     @Override
     public String name() {
         if (name == null) {
-            name = interfaceClazz + "/" + Constants.ALIAS_OPTION.getName() + "=" + alias + "&" + Constants.ROLE_OPTION.getName() + "=" + Constants.SIDE_PROVIDER;
+            name = new StringBuilder(100).append(interfaceClazz).append("/")
+                    .append(Constants.ALIAS_OPTION.getName()).append("=").append(alias).append("&")
+                    .append(Constants.ROLE_OPTION.getName()).append("=").append(Constants.SIDE_PROVIDER)
+                    .toString();
         }
         return name;
     }
@@ -547,10 +550,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
 
     public void setDynamic(Boolean dynamic) {
         this.dynamic = dynamic;
-    }
-
-    public URL getServiceUrl() {
-        return serviceUrl;
     }
 
     public List<URL> getRegistryUrls() {

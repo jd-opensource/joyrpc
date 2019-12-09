@@ -206,14 +206,16 @@ public class InvokerManager {
     /**
      * 创建引用对象
      *
-     * @param config
-     * @param configure
-     * @param subscribeUrl
+     * @param config       服务配置
+     * @param configure    动态配置
+     * @param url          服务URL
+     * @param subscribeUrl 订阅URL
      * @param <T>
      * @return
      */
-    public static <T> Exporter export(final ProviderConfig<T> config, final Configure configure, final URL subscribeUrl) {
-        return INSTANCE.doExport(config, config.getServiceUrl(), configure, subscribeUrl);
+    public static <T> Exporter export(final ProviderConfig<T> config, final Configure configure,
+                                      final URL url, final URL subscribeUrl) {
+        return INSTANCE.doExport(config, url, configure, subscribeUrl);
     }
 
     /**

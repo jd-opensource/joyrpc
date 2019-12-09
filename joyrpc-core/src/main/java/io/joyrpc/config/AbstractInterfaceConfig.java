@@ -47,7 +47,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
@@ -59,124 +58,98 @@ import static io.joyrpc.constants.Constants.REGISTRY_NAME_KEY;
 public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     private final static Logger logger = LoggerFactory.getLogger(AbstractInterfaceConfig.class);
 
-    /*-------------配置项开始----------------*/
     /**
      * 不管普通调用和泛化调用，都是设置实际的接口类名称
      */
     protected String interfaceClazz;
-
     /**
      * 服务别名
      */
     protected String alias;
-
     /**
      * 过滤器配置，多个用逗号隔开
      */
     protected String filter;
-
     /**
      * 方法配置，可配置多个
      */
     protected Map<String, MethodConfig> methods;
-
     /**
      * 是否注册，如果是false只订阅不注册，默认为true
      */
     protected boolean register = true;
-
     /**
      * 是否订阅服务，默认为true
      */
     protected boolean subscribe = true;
-
     /**
      * 远程调用超时时间(毫秒)
      */
     protected Integer timeout;
-
     /**
      * 代理类型
      */
     protected String proxy;
-
     /**
      * 自定义参数
      */
     protected Map<String, String> parameters;
-
     /**
      * 接口下每方法的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制
      */
     protected Integer concurrency = -1;
-
     /**
      * 是否开启参数验证(jsr303)
      */
     protected Boolean validation;
-
     /**
      * 压缩算法，为空则不压缩
      */
     protected String compress;
-
     /**
      * 是否启动结果缓存
      */
     protected Boolean cache;
-
     /**
      * 结果缓存插件名称
      */
     protected String cacheProvider;
-
     /**
      * cache key 生成器
      */
     protected String cacheKeyGenerator;
-
     /**
      * cache过期时间
      */
     protected Long cacheExpireTime;
-
     /**
      * cache最大容量
      */
     protected Integer cacheCapacity;
-
     /**
      * 缓存值是否可空
      */
     protected Boolean cacheNullable;
-
     /**
      * 外部注入的配置中心
      */
     protected Configure configure;
-
-    /*-------------配置项结束----------------*/
-
     /**
      * 代理接口类，和T对应，主要针对泛化调用
      */
     protected transient volatile Class interfaceClass;
-
     /**
      * 名称
      */
     protected transient volatile String name;
-
     /**
      * 服务地址
      */
     protected transient URL serviceUrl;
-
     /**
      * 订阅的URL
      */
     protected transient URL subscribeUrl;
-
     /**
      * 配置事件监听器
      */
@@ -251,26 +224,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                 interfaceClass = ClassUtils.forName(interfaceClazz);
             } catch (ClassNotFoundException e) {
                 throw new IllegalConfigureException(String.format("class is not found \"%s\"", interfaceClazz), ExceptionCode.COMMON_CLASS_NOT_FOUND);
-            }
-        }
-        return interfaceClass;
-    }
-
-    /**
-     * 获取接口类
-     *
-     * @param supplier
-     * @return
-     */
-    public Class getInterfaceClass(final Supplier<Class> supplier) {
-        if (interfaceClass == null) {
-            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
-                interfaceClass = supplier.get();
-            }
-            try {
-                interfaceClass = ClassUtils.forName(interfaceClazz);
-            } catch (ClassNotFoundException e) {
-                interfaceClass = supplier.get();
             }
         }
         return interfaceClass;

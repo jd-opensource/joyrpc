@@ -244,15 +244,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 开启服务
      */
     public CompletableFuture<Void> open() {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        exporter.open().whenComplete((v, t) -> {
-            if (t == null) {
-                future.complete(null);
-            } else {
-                future.completeExceptionally(t);
-            }
-        });
-        return future;
+        return exporter.open();
     }
 
     /**

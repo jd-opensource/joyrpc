@@ -23,11 +23,25 @@ package io.joyrpc.example.service.impl;
 import io.joyrpc.annotation.Provider;
 import io.joyrpc.example.service.DemoService;
 
-@Provider(name = "provider-bootService", alias = "2.0-Boot")
+import javax.annotation.Resource;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+
+/**
+ * 服务同时支持JSF&Restful调用
+ */
+@Resource
+@Path("rest")
+@Consumes
+@Provider(name = "provider-demoService", alias = "2.0-Boot")
 public class DemoServiceImpl implements DemoService {
 
+    @GET
+    @Path(value = "/hello/{name}")
     @Override
-    public String sayHello(String str) {
+    public String sayHello(@PathParam("name") String str) {
         System.out.println("Hi " + str + ", request from consumer.");
         return "Hi " + str + ", response from provider. ";
     }

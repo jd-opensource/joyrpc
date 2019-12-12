@@ -128,7 +128,7 @@ public class NettyServerTransport extends AbstractServerTransport {
      * @param sslContext
      */
     protected ServerBootstrap configure(final ServerBootstrap bootstrap, final SslContext sslContext) {
-        boolean reusePort = url.getBoolean(Constants.REUSE_PORT_KEY, Constants.isLinux(url) ? Boolean.FALSE : Boolean.TRUE);
+        boolean reusePort = url.getBoolean(Constants.REUSE_PORT_KEY, Constants.isLinux(url) ? Boolean.TRUE : Boolean.FALSE);
 
         //io.netty.bootstrap.Bootstrap - Unknown channel option 'SO_BACKLOG' for channel
         bootstrap.channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)

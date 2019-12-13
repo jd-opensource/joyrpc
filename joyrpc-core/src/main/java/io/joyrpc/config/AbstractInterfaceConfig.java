@@ -902,6 +902,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             //本地接口静态配置,数据中心和区域在注册中心里面会动态更新到全局上下文里面
             Configurator.update(url.getParameters(), result, CONFIG_ALLOWED);
             //注册中心下发的接口动态配置
+            //TODO 配置的接口名称
             Configurator.update(GlobalContext.getInterfaceConfig(config.getInterfaceClazz()), result, GLOBAL_ALLOWED);
             //调用插件
             CONFIGURATOR.extensions().forEach(o -> Configurator.update(o.configure(config.getInterfaceClazz()), result, CONFIG_ALLOWED));

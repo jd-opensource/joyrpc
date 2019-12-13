@@ -24,6 +24,10 @@
 
   - 处理启动时候的几个Warn信息
   
+- Handler
+
+  - 服务提供者在收到调用请求，如果本地没有请求指定的服务抛出ShutdownExecption，让客户端主动断开连接
+  
 - Dependency
 
   - 升级Springboot为2.2.1.RELEASE版本

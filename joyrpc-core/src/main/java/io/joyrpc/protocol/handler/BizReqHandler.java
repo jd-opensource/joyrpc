@@ -101,7 +101,8 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             //根据请求参数获取输出的服务，依赖于会话恢复的信息
             exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
             if (exporter == null) {
-                throw new RpcException(error(invocation, channel, " exporter is not found"));
+                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
+                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
             }
 
             ChannelTransport transport = channel.getAttribute(Channel.CHANNEL_TRANSPORT);

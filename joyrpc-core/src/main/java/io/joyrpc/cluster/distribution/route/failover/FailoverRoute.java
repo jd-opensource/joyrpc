@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.route.failover;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,7 +32,6 @@ import io.joyrpc.util.Futures;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static io.joyrpc.cluster.distribution.Route.FAIL_OVER;
@@ -49,26 +48,40 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
      */
     protected FailoverPolicy retryPolicy;
     /**
-     * 超过最大次数
-     */
-    protected Function<Integer, Throwable> overloadFunction = (maxRetry) -> new FailoverException(String.format("Maximum number %d of retries reached", maxRetry));
-
-    /**
-     * 负责均衡没有选择出合适的节点
-     */
-    protected BiFunction<Integer, Boolean, Throwable> emptyFunction = (count, retry) -> new FailoverException(String.format("there is not any node after retrying %d", count), retry);
-    /**
      * 重试函数
      */
     protected Function<T, FailoverPolicy> retryFunction = (request) -> retryPolicy;
 
+    /**
+     * 构建过载异常
+     *
+     * @param maxRetry
+     * @return
+     */
+    protected Throwable createOverloadException(final int maxRetry) {
+        return new FailoverException(String.format("Maximum number %d of retries reached", maxRetry));
+    }
+
+    /**
+     * 构建没有节点异常
+     *
+     * @param count
+     * @param candidates
+     * @param retry
+     * @return
+     */
+    protected Throwable createEmptyException(final int count, final int candidates, final boolean retry) {
+        return new FailoverException(String.format("there is not any suitable node after retrying %d. candidates size %d", count, candidates), retry);
+    }
+
+
     @Override
-    public void setRetryFunction(Function<T, FailoverPolicy> retryFunction) {
+    public void setRetryFunction(final Function<T, FailoverPolicy> retryFunction) {
         this.retryFunction = retryFunction;
     }
 
     @Override
-    public CompletableFuture<R> invoke(T request, Candidate candidate) {
+    public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
         //获取重试策略
         FailoverPolicy policy = retryFunction.apply(request);
         //判断是否需要重试
@@ -77,7 +90,7 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
             //不重试
             Node node = loadBalance.select(candidate, request);
             return node != null ? function.apply(node, request) :
-                    Futures.completeExceptionally(emptyFunction.apply(0, true));
+                    Futures.completeExceptionally(createEmptyException(0, candidate.getSize(), true));
         }
         CompletableFuture<R> result = new CompletableFuture<>();
         retry(request, candidate, 0, policy == null ? retryPolicy : policy, candidate.getNodes(), result);
@@ -102,7 +115,7 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
         final Node node = loadBalance.select(candidate, request);
         //调用，如果节点不存在，则抛出Failover异常。
         CompletableFuture<R> result = node != null ? function.apply(node, request) :
-                Futures.completeExceptionally(emptyFunction.apply(retry, candidate.getNodes().size() != origins.size()));
+                Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
         result.whenComplete((r, t) -> {
             ExceptionPolicy<R> exceptionPolicy = policy.getExceptionPolicy();
             t = t == null && exceptionPolicy != null ? exceptionPolicy.getThrowable(r) : t;
@@ -119,14 +132,14 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                     future.completeExceptionally(t);
                 } else if (retry >= policy.getMaxRetry()) {
                     //超过重试次数
-                    future.completeExceptionally(overloadFunction.apply(policy.getMaxRetry()));
+                    future.completeExceptionally(createOverloadException(policy.getMaxRetry()));
                 } else {
                     //删除失败的节点进行重试
                     List<Node> shards = candidate.getNodes();
                     int size = shards.size();
                     if (size == 1 && policy.isOnlyOncePerNode()) {
                         //每个节点只重试一次
-                        Futures.completeExceptionally(future, emptyFunction.apply(retry, false));
+                        Futures.completeExceptionally(future, createEmptyException(retry, origins.size(), false));
                     } else {
                         FailoverSelector selector = policy.getRetrySelector();
                         if (selector == null) {

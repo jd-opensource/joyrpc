@@ -37,9 +37,9 @@ public class RpcAutoConfiguration {
 
     @ConditionalOnMissingBean
     @Bean(name = RpcDefinitionPostProcessor.BEAN_NAME)
-    public RpcDefinitionPostProcessor rpcDefinitionPostProcessor(ApplicationContext applicationContext,
-                                                                 ConfigurableEnvironment environment,
-                                                                 ResourceLoader resourceLoader) {
+    public static RpcDefinitionPostProcessor rpcDefinitionPostProcessor(ApplicationContext applicationContext,
+                                                                        ConfigurableEnvironment environment,
+                                                                        ResourceLoader resourceLoader) {
 
         return new RpcDefinitionPostProcessor(applicationContext, environment, resourceLoader);
     }

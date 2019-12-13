@@ -16,6 +16,14 @@
   
   - 预热接口改成异步，并且在Exporter的open方法做
   
+  - 采用JSR303来进行配置验证
+  
+  - 配置只支持全量更新
+  
+- Springboot
+
+  - 处理启动时候的几个Warn信息
+  
 - Dependency
 
   - 升级Springboot为2.2.1.RELEASE版本
@@ -27,6 +35,10 @@
 - Cluster
 
   - 完全去掉Cluster和Node的锁，防止死锁
+  
+- Bootstrap
+
+  - ConsumerConfig和ProviderConfig移除配置监听器方法，没有正确移除
 
 ## 1.0.4-SNAPSHOT
 

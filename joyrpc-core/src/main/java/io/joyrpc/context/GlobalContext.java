@@ -90,7 +90,7 @@ public class GlobalContext {
                     if (logger.isInfoEnabled()) {
                         String line = System.getProperty("line.separator");
                         StringBuilder builder = new StringBuilder(1000).append("default context:").append(line);
-                        map.forEach((k, v) -> builder.append(k).append('=').append(v.toString()).append(line));
+                        map.forEach((k, v) -> builder.append("\t").append(k).append('=').append(v.toString()).append(line));
                         logger.info(builder.toString());
                     }
                     context = map;

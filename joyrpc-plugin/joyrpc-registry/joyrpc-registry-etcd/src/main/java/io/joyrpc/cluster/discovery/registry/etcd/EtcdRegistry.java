@@ -386,7 +386,7 @@ public class EtcdRegistry extends AbstractRegistry {
             //修改全局配置
             GlobalContext.put(className, datum);
             //TODO 是否需要实例配置
-            handler.handle(new ConfigEvent(EtcdRegistry.this, null, FULL, revision, new HashMap<>()));
+            handler.handle(new ConfigEvent(EtcdRegistry.this, null, revision, new HashMap<>()));
         }
 
     }

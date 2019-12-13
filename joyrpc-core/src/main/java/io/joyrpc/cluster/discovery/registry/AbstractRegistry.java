@@ -1447,7 +1447,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             if (publisher.addHandler(handler)) {
                 //有全量数据
                 if (full) {
-                    publisher.offer(new ConfigEvent(this, handler, UpdateType.FULL, version, datum));
+                    publisher.offer(new ConfigEvent(this, handler, version, datum));
                 }
                 return true;
             }
@@ -1457,40 +1457,15 @@ public abstract class AbstractRegistry implements Registry, Configure {
         @Override
         public synchronized void handle(final ConfigEvent event) {
             lastEventTime = SystemClock.now();
-            boolean old = full;
-            if (datum == null) {
-                datum = event.getDatum();
+            //都是全量数据更新
+            if (datum == null || event.getVersion() > version) {
+                datum = event.getDatum() == null ? new HashMap<>() : event.getDatum();
                 version = event.getVersion();
-                full = event.getType() == UpdateType.FULL;
-            } else if (version >= event.getVersion()) {
-                //版本低，如果是全量数据，考虑进行合并
-                if (event.getType() == UpdateType.FULL && !full) {
-                    Map<String, String> map = new HashMap<>(event.getDatum());
-                    map.putAll(datum);
-                    datum = map;
-                    full = true;
-                } else {
-                    //丢掉过期数据
-                    return;
-                }
-            } else if (event.getType() == UpdateType.FULL) {
-                datum = event.getDatum();
                 full = true;
-                version = event.getVersion();
-            } else {
-                //复制一份，防止在并发读取
-                Map<String, String> map = new HashMap<>(datum);
-                map.putAll(event.getDatum());
-                datum = map;
-                version = event.getVersion();
-            }
-            //有完整的数据
-            if (full) {
                 //是否准备好，适用于多个配置来源合并通知
                 if (ready()) {
                     //判断是全量数据初始化还是增量更新
-                    publisher.offer(new ConfigEvent(this, null,
-                            !old ? UpdateType.FULL : UpdateType.UPDATE, version, !old ? datum : event.getDatum()));
+                    publisher.offer(new ConfigEvent(this, null, version, datum));
                 }
                 //保存数据
                 dirty();

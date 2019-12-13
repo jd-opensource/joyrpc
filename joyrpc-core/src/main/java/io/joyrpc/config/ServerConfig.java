@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,19 +21,20 @@ package io.joyrpc.config;
  */
 
 
+import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.transport.TransportFactory;
 import io.joyrpc.util.network.Ipv4;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.joyrpc.Plugin.*;
+import static io.joyrpc.constants.Constants.*;
 
 
 /**
@@ -59,6 +60,8 @@ public class ServerConfig extends AbstractIdConfig implements Serializable {
     /**
      * 监听端口
      */
+    @Min(value = Ipv4.MIN_USER_PORT, message = "port must be between " + Ipv4.MIN_USER_PORT + " and " + Ipv4.MAX_USER_PORT)
+    @Max(value = Ipv4.MAX_USER_PORT, message = "port must be between " + Ipv4.MIN_USER_PORT + " and " + Ipv4.MAX_USER_PORT)
     protected Integer port;
     /**
      * 基本路径 默认"/"
@@ -71,6 +74,7 @@ public class ServerConfig extends AbstractIdConfig implements Serializable {
     /**
      * 业务线程池类型
      */
+    @ValidatePlugin(extensible = ThreadPool.class, name = "THREAD_POOL", defaultValue = DEFAULT_THREADPOOL)
     protected String threadPool;
     /**
      * 业务线程池core大小
@@ -91,6 +95,7 @@ public class ServerConfig extends AbstractIdConfig implements Serializable {
     /**
      * 服务端允许客户端建立的连接数
      */
+    @Min(value = 1, message = "accepts must be greater than 0")
     protected Integer accepts;
     /**
      * IO的buffer大小
@@ -103,10 +108,12 @@ public class ServerConfig extends AbstractIdConfig implements Serializable {
     /**
      * 客户端和服务端工厂插件
      */
+    @ValidatePlugin(extensible = EndpointFactory.class, name = "ENDPOINT_FACTORY", defaultValue = DEFAULT_ENDPOINT_FACTORY)
     protected String endpointFactory;
     /**
      * 传输实现工厂插件
      */
+    @ValidatePlugin(extensible = TransportFactory.class, name = "TRANSPORT_FACTORY", defaultValue = DEFAULT_TRANSPORT_FACTORY)
     protected String transportFactory;
     /**
      * The Parameters. 自定义参数
@@ -289,22 +296,6 @@ public class ServerConfig extends AbstractIdConfig implements Serializable {
     @Override
     public String toString() {
         return "ServerConfig [port=" + port + ", host=" + host + "]";
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-        checkPositiveInteger(Constants.CONNECTION_ACCEPTS.getName(), accepts);
-        if (port != null && !Ipv4.isValidUserPort(port)) {
-            throw new IllegalConfigureException(
-                    Constants.PORT_OPTION.getName(),
-                    String.valueOf(port),
-                    String.format("port must between %d and %d", Ipv4.MIN_USER_PORT, Ipv4.MAX_USER_PORT),
-                    ExceptionCode.COMMON_SERVER_PORT_ILLEGAL);
-        }
-        checkExtension(THREAD_POOL, ThreadPool.class, "threadPool", threadPool);
-        checkExtension(ENDPOINT_FACTORY, EndpointFactory.class, "endpointFactory", endpointFactory);
-        checkExtension(TRANSPORT_FACTORY, TransportFactory.class, "transportFactory", transportFactory);
     }
 
     @Override

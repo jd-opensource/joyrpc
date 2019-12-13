@@ -1,4 +1,4 @@
-package io.joyrpc.util;
+package io.joyrpc.config.validator;
 
 /*-
  * #%L
@@ -20,43 +20,21 @@ package io.joyrpc.util;
  * #L%
  */
 
-/**
- * 服务状态
- */
-public enum Status {
-    /**
-     * 关闭
-     */
-    CLOSED {
-        @Override
-        public boolean isClose() {
-            return true;
-        }
-    },
-    /**
-     * 打开中
-     */
-    OPENING,
-    /**
-     * 打开
-     */
-    OPENED,
-    /**
-     * 关闭中
-     */
-    CLOSING {
-        @Override
-        public boolean isClose() {
-            return true;
-        }
-    };
+import javax.validation.Constraint;
+import javax.validation.Payload;
+import java.lang.annotation.*;
 
-    /**
-     * 是否关闭
-     *
-     * @return
-     */
-    public boolean isClose() {
-        return false;
-    }
+@Constraint(validatedBy = KeyValidator.class)
+@Target({ElementType.FIELD})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+public @interface ValidateKey {
+
+    String message() default "";
+
+    Class<?>[] groups() default {};
+
+    Class<? extends Payload>[] payload() default {};
+
 }

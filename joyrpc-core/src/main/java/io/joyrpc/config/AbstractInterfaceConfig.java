@@ -24,37 +24,48 @@ import io.joyrpc.annotation.Alias;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
+import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.codec.compression.Compression;
+import io.joyrpc.config.validator.*;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.ExceptionCode;
+import io.joyrpc.context.Configurator;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.filter.cache.CacheKeyGenerator;
 import io.joyrpc.proxy.ProxyFactory;
-import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.StringUtils;
-import io.joyrpc.util.Switcher;
+import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.validation.Valid;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
-import static io.joyrpc.Plugin.*;
-import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
-import static io.joyrpc.constants.Constants.REGISTRY_NAME_KEY;
+import static io.joyrpc.Plugin.CONFIGURATOR;
+import static io.joyrpc.Plugin.PROXY;
+import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.Configurator.CONFIG_ALLOWED;
+import static io.joyrpc.context.Configurator.GLOBAL_ALLOWED;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * 抽象接口配置
  */
+@ValidateAlias
+@ValidateInterface
+@ValidateFilter
 public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     private final static Logger logger = LoggerFactory.getLogger(AbstractInterfaceConfig.class);
 
@@ -73,6 +84,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 方法配置，可配置多个
      */
+    @Valid
     protected Map<String, MethodConfig> methods;
     /**
      * 是否注册，如果是false只订阅不注册，默认为true
@@ -89,10 +101,12 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 代理类型
      */
+    @ValidatePlugin(extensible = ProxyFactory.class, name = "PROXY", defaultValue = DEFAULT_PROXY)
     protected String proxy;
     /**
      * 自定义参数
      */
+    @ValidateParameter
     protected Map<String, String> parameters;
     /**
      * 接口下每方法的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制
@@ -105,6 +119,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 压缩算法，为空则不压缩
      */
+    @ValidatePlugin(extensible = Compression.class, name = "COMPRESSION")
     protected String compress;
     /**
      * 是否启动结果缓存
@@ -113,10 +128,12 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 结果缓存插件名称
      */
+    @ValidatePlugin(extensible = CacheFactory.class, name = "CACHE")
     protected String cacheProvider;
     /**
      * cache key 生成器
      */
+    @ValidatePlugin(extensible = CacheKeyGenerator.class, name = "CACHE_KEY_GENERATOR")
     protected String cacheKeyGenerator;
     /**
      * cache过期时间
@@ -133,7 +150,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 外部注入的配置中心
      */
-    protected Configure configure;
+    protected transient Configure configure;
     /**
      * 代理接口类，和T对应，主要针对泛化调用
      */
@@ -143,43 +160,9 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     protected transient volatile String name;
     /**
-     * 服务地址
-     */
-    protected transient URL serviceUrl;
-    /**
-     * 订阅的URL
-     */
-    protected transient URL subscribeUrl;
-    /**
      * 配置事件监听器
      */
-    protected transient List<ConfigHandler> configHandlers;
-
-    /**
-     * 开关
-     */
-    protected transient Switcher switcher = new Switcher();
-
-    /**
-     * 配置变更计数器，每次发送变化URL上的counter计数器加一
-     */
-    protected transient AtomicLong counter = new AtomicLong(0);
-
-    /**
-     * consumer bean 计数
-     */
-    protected transient CompletableFuture<URL> waitingConfig;
-
-    /**
-     * 实际的配置中心，如果没有注入配置中心则使用注册中心的配置
-     */
-    protected transient Configure configureRef;
-
-    /**
-     * 自身的配置变化监听器
-     */
-    protected transient ConfigHandler configHandler = this::onConfigEvent;
-
+    protected transient List<ConfigHandler> configHandlers = new CopyOnWriteArrayList<>();
 
     public AbstractInterfaceConfig() {
     }
@@ -215,22 +198,16 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      * @return
      */
     public Class getInterfaceClass() {
-        if (interfaceClass == null) {
-            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
-                throw new IllegalConfigureException("interfaceClazz", "null",
-                        "interfaceClazz must be not null", ExceptionCode.COMMON_NOT_RIGHT_INTERFACE);
-            }
-            try {
-                interfaceClass = ClassUtils.forName(interfaceClazz);
-            } catch (ClassNotFoundException e) {
-                throw new IllegalConfigureException(String.format("class is not found \"%s\"", interfaceClazz), ExceptionCode.COMMON_CLASS_NOT_FOUND);
-            }
-        }
         return interfaceClass;
     }
 
     public void setInterfaceClass(Class interfaceClass) {
         this.interfaceClass = interfaceClass;
+        if (interfaceClass != null) {
+            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
+                interfaceClazz = interfaceClass.getName();
+            }
+        }
     }
 
     /**
@@ -355,16 +332,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     /**
-     * 得到方法名对应的方法配置
-     *
-     * @param methodName 方法名，不支持重载
-     * @return method config
-     */
-    public MethodConfig getMethodConfig(final String methodName) {
-        return methods == null || methodName == null ? null : methods.get(methodName);
-    }
-
-    /**
      * Sets parameter.
      *
      * @param key   the key
@@ -390,7 +357,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      * @param value the value
      */
     public void setParameter(final String key, final Number value) {
-        setParameter(key, (String) (value == null ? null : value.toString()));
+        setParameter(key, value == null ? null : value.toString());
     }
 
     /**
@@ -467,10 +434,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         this.configure = configure;
     }
 
-    public ConfigHandler getConfigHandler() {
-        return configHandler;
-    }
-
     /**
      * 添加事件监听器
      *
@@ -478,9 +441,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     public void addEventHandler(final ConfigHandler handler) {
         if (handler != null) {
-            if (configHandlers == null) {
-                configHandlers = new ArrayList<>();
-            }
             configHandlers.add(handler);
         }
     }
@@ -492,40 +452,9 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     public void removeEventHandler(final ConfigHandler handler) {
         if (handler != null) {
-            if (configHandlers != null) {
-                configHandlers.add(handler);
-            }
+            configHandlers.remove(handler);
         }
     }
-
-    @Override
-    protected void validate() {
-        super.validate();
-        //验证别名
-        validateAlias();
-        //验证方法配置
-        if (methods != null) {
-            for (Map.Entry<String, MethodConfig> entry : methods.entrySet()) {
-                entry.getValue().validate();
-            }
-        }
-        //验证扩展点
-        checkExtension(CACHE, CacheFactory.class, "cacheProvider", cacheProvider);
-        checkExtension(CACHE_KEY_GENERATOR, CacheKeyGenerator.class, "cacheKeyGenerator", cacheKeyGenerator);
-        checkExtension(COMPRESSION, Compression.class, "compress", compress);
-        checkExtension(PROXY, ProxyFactory.class, "proxy", proxy);
-    }
-
-    /**
-     * 验证别名，消费组可以配置多个别名，可以运行有逗号，使用方法便于覆盖
-     */
-    protected void validateAlias() {
-        if (alias == null || alias.isEmpty()) {
-            throw new IllegalConfigureException("alias can not be empty.", ExceptionCode.COMMON_VALUE_ILLEGAL);
-        }
-        checkNormalWithColon("alias", alias);
-    }
-
 
     /**
      * 获取代理工厂类
@@ -533,16 +462,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      * @return
      */
     protected ProxyFactory getProxyFactory() {
-        String name = proxy == null || proxy.isEmpty() ? Constants.PROXY_OPTION.getValue() : proxy;
-        ProxyFactory proxyFactory = PROXY.get(name);
-        if (proxyFactory == null) {
-            proxyFactory = PROXY.get();
-            if (proxyFactory == null) {
-                logger.warn(String.format("proxyFactory %s is not found. use default.", name));
-                throw new InitializationException("there is not any proxyFactory implement.");
-            }
-        }
-        return proxyFactory;
+        return PROXY.getOrDefault(proxy == null || proxy.isEmpty() ? DEFAULT_PROXY : proxy);
     }
 
     /**
@@ -550,7 +470,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      *
      * @param remoteUrls
      */
-    protected String getLocalHost(String remoteUrls) {
+    protected static String getLocalHost(String remoteUrls) {
         InetSocketAddress remote = null;
         if (!remoteUrls.isEmpty()) {
             int nodeEnd = remoteUrls.indexOf(",");
@@ -572,12 +492,48 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     /**
+     * 获取本地服务地址
+     *
+     * @param config 服务配置
+     * @param remote 注册中心远程地址，用于检测本地出口地址
+     * @return
+     */
+    protected static ProviderConfig.ServerAddress getAddress(final ServerConfig config, final String remote) {
+        String host;
+        String bindIp = null;
+        if (Ipv4.isLocalHost(config.getHost())) {
+            //拿到本机地址
+            host = getLocalHost(remote);
+            //绑定地址
+            bindIp = "0.0.0.0";
+        } else {
+            host = config.getHost();
+        }
+        int port = config.getPort() == null ? PORT_OPTION.getValue() : config.getPort();
+        return new ProviderConfig.ServerAddress(host, bindIp, port);
+    }
+
+    /**
+     * 获取注册中心地址
+     *
+     * @param configs
+     * @return
+     */
+    protected static List<URL> parse(final List<RegistryConfig> configs) {
+        List<URL> result = new ArrayList<>(configs.size());
+        for (RegistryConfig config : configs) {
+            result.add(parse(config));
+        }
+        return result;
+    }
+
+    /**
      * 获取注册中心地址
      *
      * @param config
      * @return
      */
-    protected URL parse(final RegistryConfig config) {
+    protected static URL parse(final RegistryConfig config) {
         Map<String, String> parameters = new HashMap<>();
 
         if (StringUtils.isNotEmpty(config.getId())) {
@@ -592,23 +548,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         config.addAttribute2Map(parameters);
         //返回注册中心url
         return new URL(config.getRegistry(), Ipv4.ANYHOST, 0, parameters);
-    }
-
-    /**
-     * 获取注册中心地址
-     *
-     * @param configs
-     * @return
-     */
-    protected List<URL> parse(final List<RegistryConfig> configs) {
-        if (configs == null || configs.isEmpty()) {
-            throw new IllegalConfigureException("Value of registry is empty, interfaceClazz: " + interfaceClazz + ".", ExceptionCode.REGISTRY_NOT_CONFIG);
-        }
-        List<URL> result = new ArrayList<>(configs.size());
-        for (RegistryConfig config : configs) {
-            result.add(parse(config));
-        }
-        return result;
     }
 
     @Override
@@ -646,71 +585,355 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     /**
-     * 配置发生变化
-     *
-     * @param newUrl  新的服务URL
-     * @param version 版本
-     */
-    protected void onChanged(final URL newUrl, final long version) {
-
-    }
-
-    /**
-     * 判断别名是否发生变化，重新订阅配置
-     *
-     * @param oldUrl
-     * @param newUrl
-     */
-    protected void resubscribe(final URL oldUrl, final URL newUrl) {
-        //对象相同，没有订阅
-        if (oldUrl == newUrl || configure == null) {
-            return;
-        }
-        //连接注册中心
-        boolean subscribe = oldUrl.getBoolean(Constants.SUBSCRIBE_OPTION);
-        String oldAlias = oldUrl.getString(Constants.ALIAS_OPTION.getName());
-        String newAlias = newUrl.getString(Constants.ALIAS_OPTION.getName());
-        if (subscribe && !Objects.equals(oldAlias, newAlias)) {
-            //动态配置修改了别名，需要重新订阅
-            configureRef.unsubscribe(oldUrl, configHandler);
-            configureRef.subscribe(newUrl, configHandler);
-        }
-    }
-
-    /**
-     * 事件变更
+     * 广播配置变更消息
      *
      * @param event
      */
-    public void onConfigEvent(final ConfigEvent event) {
-        if (!switcher.isOpened()) {
-            return;
+    protected void publish(final ConfigEvent event) {
+        if (event != null && !configHandlers.isEmpty()) {
+            for (ConfigHandler handler : configHandlers) {
+                try {
+                    handler.handle(event);
+                } catch (Throwable e) {
+                    logger.error("Error occurs while publish config event. caused by " + e.getMessage(), e);
+                }
+            }
         }
-        try {
-            Map<String, String> updates = event.changed(Constants.ALTERABLE_ATTR, o -> serviceUrl.getString(o));
-            if (waitingConfig != null && !waitingConfig.isDone()) {
+    }
+
+    /**
+     * 是否在关闭
+     *
+     * @return
+     */
+    protected boolean isClose() {
+        return Shutdown.isShutdown();
+    }
+
+    /**
+     * 抽象的控制器
+     *
+     * @param <T>
+     */
+    protected abstract static class AbstractController<T extends AbstractInterfaceConfig> {
+        //TODO 检查别名，订阅URL
+        /**
+         * 配置
+         */
+        protected T config;
+        /**
+         * 服务原始地址
+         */
+        protected URL url;
+        /**
+         * 服务地址
+         */
+        protected volatile URL serviceUrl;
+        /**
+         * 订阅的URL
+         */
+        protected volatile URL subscribeUrl;
+        /**
+         * consumer bean 计数
+         */
+        protected CompletableFuture<URL> waitingConfig = new CompletableFuture<>();
+        /**
+         * 实际的配置中心，如果没有注入配置中心则使用注册中心的配置
+         */
+        protected Configure configureRef;
+        /**
+         * 自身的配置变化监听器
+         */
+        protected ConfigHandler configHandler = this::onConfigEvent;
+        /**
+         * 更新配置的拥有者
+         */
+        protected final AtomicBoolean updateOwner = new AtomicBoolean(false);
+        /**
+         * 事件队列
+         */
+        protected AtomicReference<Map<String, String>> events = new AtomicReference<>();
+        /**
+         * 更新任务名称2
+         */
+        protected String updateTask;
+        /**
+         * 配置属性
+         */
+        protected Map<String, String> attributes;
+        /**
+         * 数据版本
+         */
+        protected long version = Long.MIN_VALUE;
+
+        public AbstractController(T config) {
+            this.config = config;
+            this.updateTask = "UpdateTask-" + config.name();
+        }
+
+        /**
+         * 中断
+         */
+        public void broken() {
+            if (!waitingConfig.isDone()) {
+                waitingConfig.completeExceptionally(new InitializationException("Unexport interrupted waiting config."));
+            }
+        }
+
+        /**
+         * 判断是否关闭
+         *
+         * @return
+         */
+        protected boolean isClose() {
+            return config.isClose();
+        }
+
+        /**
+         * 是否打开了
+         *
+         * @return
+         */
+        protected abstract boolean isOpened();
+
+        /**
+         * 是否修改
+         *
+         * @param updates
+         * @return
+         */
+        protected boolean isChanged(final Map<String, String> updates) {
+            if (updates.isEmpty()) {
+                return attributes != null && !attributes.isEmpty();
+            } else {
+                return attributes == null || attributes.size() != updates.size() || !updates.equals(attributes);
+            }
+        }
+
+        /**
+         * 配置变更事件，每次都是全量更新
+         *
+         * @param event
+         */
+        protected void onConfigEvent(final ConfigEvent event) {
+            if (isClose()) {
+                return;
+            }
+            if (event.getVersion() <= version) {
+                //丢弃过期数据
+                return;
+            }
+            //每次都是全量更新
+            Map<String, String> updates = event.getDatum();
+            if (!waitingConfig.isDone()) {
                 //触发URL变化
-                logger.info("Success subscribe global config " + name());
-                switcher.writer().run(() -> waitingConfig.complete(serviceUrl.add(updates)));
-            } else if (updates == null || updates.isEmpty()) {
+                logger.info("Success subscribe global config " + config.name());
+                attributes = updates;
+                //加上全局配置和接口配置，再添加实例配置
+                waitingConfig.complete(configure(updates));
+            } else if (!isChanged(updates)) {
+                //没有变化
                 return;
             } else {
+                //有变化，则
                 String alias = updates.get(Constants.ALIAS_OPTION.getName());
                 if (alias == null || alias.isEmpty()) {
                     return;
                 }
-                //添加计数器参数，用于生成
-                long version = counter.incrementAndGet();
-                updates.put(Constants.COUNTER, String.valueOf(version));
-                //服务端可以切换别名
-                switcher.writer().run(() -> onChanged(serviceUrl.add(updates), version));
+                //备份一份，防止添加参数后前面的判断是否修改失效。
+                attributes = new HashMap<>(updates);
+                //添加计数器参数，用于生成唯一的Invoker名称
+                updates.put(Constants.COUNTER, String.valueOf(event.getVersion()));
+                events.set(updates);
+                if (isOpened()) {
+                    //只有在打开的情况下在触发更新，避免其它情况并发
+                    update();
+                }
             }
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-        } finally {
-            if (configHandlers != null && !configHandlers.isEmpty()) {
-                configHandlers.forEach(h -> h.handle(event));
+            config.publish(event);
+        }
+
+        /**
+         * 链
+         *
+         * @param source
+         * @param target
+         * @param consumer
+         */
+        protected <T> void chain(final CompletableFuture<T> source, final CompletableFuture<Void> target, final Consumer<T> consumer) {
+            source.whenComplete((v, e) -> {
+                if (e != null) {
+                    target.completeExceptionally(e);
+                } else if (isClose()) {
+                    target.completeExceptionally(new InitializationException("Status is illegal."));
+                } else if (consumer != null) {
+                    consumer.accept(v);
+                } else {
+                    target.complete(null);
+                }
+            });
+        }
+
+        /**
+         * 更新配置
+         */
+        protected void update() {
+            //判断是否启动了更新任务
+            if (!isClose() && events.get() != null && updateOwner.compareAndSet(false, true)) {
+                //下一跳进行更新
+                timer().add(updateTask, SystemClock.now() + 200, () -> {
+                    //获取最后的事件
+                    Map<String, String> updates = events.get();
+                    if (!isClose() && updates != null) {
+                        //使用原始URL添加变更
+                        update(configure(updates)).whenComplete((v, t) -> {
+                            events.compareAndSet(updates, null);
+                            updateOwner.set(false);
+                            if (!isClose()) {
+                                if (t != null) {
+                                    logger.error(String.format("Error occurs while updating attribute. caused by %s. %s", t.getMessage(), config.name()));
+                                }
+                                //再次判断是否更新
+                                update();
+                            }
+                        });
+                    }
+                });
             }
         }
+
+        /**
+         * 配置发生变化
+         *
+         * @param newUrl 变化的URL
+         */
+        protected abstract CompletableFuture<Void> update(final URL newUrl);
+
+        /**
+         * 订阅，打开注册中心
+         *
+         * @param registry
+         * @param subscribed
+         */
+        protected CompletableFuture<Void> subscribe(final Registry registry, final AtomicBoolean subscribed) {
+            final CompletableFuture<Void> future = new CompletableFuture<>();
+            if (!config.subscribe && !config.register) {
+                future.complete(null);
+            } else if (!config.register && configureRef != null && configureRef != registry) {
+                //不注册，需要订阅配置，并且有注入配置中心
+                if (subscribed.compareAndSet(false, true)) {
+                    subscribeUrl = buildSubscribedUrl(configureRef, serviceUrl);
+                    configureRef.subscribe(subscribeUrl, configHandler);
+                }
+                future.complete(null);
+            } else {
+                registry.open().whenComplete((v, t) -> {
+                    if (t != null) {
+                        future.completeExceptionally(new InitializationException(
+                                String.format("Registry open error. %s", registry.getUrl().toString(false, false))));
+                    } else if (subscribed.compareAndSet(false, true)) {
+                        //保存订阅注册中心
+                        if (configureRef == null) {
+                            configureRef = config.configure == null ? registry : config.configure;
+                        }
+                        //订阅配置
+                        if (config.subscribe) {
+                            subscribeUrl = buildSubscribedUrl(configureRef, serviceUrl);
+                            configureRef.subscribe(subscribeUrl, configHandler);
+                        }
+                        future.complete(null);
+                    }
+                });
+            }
+            return future;
+        }
+
+        /**
+         * 判断别名是否发生变化，重新订阅配置
+         *
+         * @param newUrl 新的订阅URL
+         * @param force  是否要强制修改
+         */
+        protected boolean resubscribe(final URL newUrl, final boolean force) {
+            URL oldUrl = subscribeUrl;
+            //对象相同，没有订阅
+            if (configureRef == null || oldUrl == newUrl) {
+                return false;
+            }
+            //连接注册中心
+            boolean oldSubscribe = oldUrl == null ? false : oldUrl.getBoolean(Constants.SUBSCRIBE_OPTION);
+            String oldAlias = oldUrl == null ? null : oldUrl.getString(Constants.ALIAS_OPTION.getName());
+            boolean newSubscribe = newUrl == null ? false : newUrl.getBoolean(Constants.SUBSCRIBE_OPTION);
+            String newAlias = newUrl == null ? null : newUrl.getString(Constants.ALIAS_OPTION.getName());
+            if (newSubscribe && oldSubscribe && !force && Objects.equals(oldAlias, newAlias)) {
+                //都需要订阅，分组没有变化
+                return false;
+            } else if (newSubscribe) {
+                //当前要订阅
+                if (oldSubscribe) {
+                    //原来也订阅了
+                    configureRef.unsubscribe(oldUrl, configHandler);
+                }
+                configureRef.subscribe(newUrl, configHandler);
+                subscribeUrl = newUrl;
+                return true;
+            } else if (oldSubscribe) {
+                configureRef.unsubscribe(oldUrl, configHandler);
+                subscribeUrl = null;
+                return true;
+            } else {
+                subscribeUrl = null;
+                return false;
+            }
+        }
+
+        /**
+         * 动态配置
+         *
+         * @param updates 当前动态配置
+         * @return
+         */
+        protected URL configure(final Map<String, String> updates) {
+            Map<String, String> result = new HashMap<>(32);
+            //本地全局静态配置
+            Configurator.update(GlobalContext.getContext(), result, GLOBAL_ALLOWED);
+            //注册中心下发的全局动态配置，主要是一些开关
+            Configurator.update(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), result, GLOBAL_ALLOWED);
+            //本地接口静态配置,数据中心和区域在注册中心里面会动态更新到全局上下文里面
+            Configurator.update(url.getParameters(), result, CONFIG_ALLOWED);
+            //注册中心下发的接口动态配置
+            Configurator.update(GlobalContext.getInterfaceConfig(config.getInterfaceClazz()), result, GLOBAL_ALLOWED);
+            //调用插件
+            CONFIGURATOR.extensions().forEach(o -> Configurator.update(o.configure(config.getInterfaceClazz()), result, CONFIG_ALLOWED));
+            //动态配置
+            Configurator.update(updates, result, CONFIG_ALLOWED);
+
+            return new URL(url.getProtocol(), url.getUser(), url.getPassword(), url.getHost(), url.getPort(), url.getPath(), result);
+        }
+
+        /**
+         * 获取注册的URL
+         *
+         * @param url
+         * @return
+         */
+        protected URL buildRegisteredUrl(final Registry registry, final URL url) {
+            return registry == null ? null : registry.normalize(url);
+        }
+
+        /**
+         * 获取订阅配置的URL
+         *
+         * @param url
+         * @return
+         */
+        protected URL buildSubscribedUrl(final Configure configure, final URL url) {
+            return configure == null ? null : configure.normalize(url);
+        }
+
+        public URL getServiceUrl() {
+            return serviceUrl;
+        }
     }
+
 }

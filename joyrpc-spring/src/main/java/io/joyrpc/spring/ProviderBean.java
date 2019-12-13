@@ -115,7 +115,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         if (event instanceof ConsumerReferDoneEvent || (event instanceof ContextRefreshedEvent && REFERS.get() == 0)) {
             //需要先判断条件，再打开
             switcher.open(() -> {
-                logger.info(String.format("Start provider with beanName %s after spring context refreshed.", id));
                 exportFuture.whenComplete((v, t) -> {
                     if (t != null) {
                         logger.error(String.format("Error occurs while export provider %s", id), t);
@@ -142,6 +141,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         setupConfigure();
         setupRef();
         setupWarmup();
+        validate();
         //先输出服务，并没有打开，服务不可用
         exportFuture = export();
     }
@@ -233,7 +233,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     @Override
     public void destroy() {
         if (!Shutdown.isShutdown()) {
-            logger.info(String.format("destroy provider with beanName %s", id));
             unexport();
         }
     }

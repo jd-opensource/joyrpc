@@ -5,7 +5,6 @@ import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanNameAware;
@@ -18,6 +17,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -70,7 +70,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     /**
      * 开关
      */
-    protected Switcher switcher = new Switcher();
+    protected transient AtomicBoolean started = new AtomicBoolean(false);
 
     /**
      * 构造函数
@@ -162,6 +162,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         }
         //记录消费者的数量
         REFERS.incrementAndGet();
+        config.validate();
         //生成代理，并创建引用
         config.refer().whenComplete((v, t) -> {
             if (t != null) {
@@ -176,7 +177,6 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public void destroy() {
         if (!Shutdown.isShutdown()) {
-            logger.info("destroy consumer group with bean name : {}", config.getId());
             config.unrefer();
         }
     }
@@ -184,17 +184,16 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
         //刷新事件会多次，防止重入
-        switcher.open(() -> {
+        if (started.compareAndSet(false, true)) {
             try {
                 latch.await();
                 if (referThrowable != null) {
-                    logger.error(String.format("Error occurs while referring consumer bean %s", config.getId()), referThrowable);
                     System.exit(1);
                 } else if (REFERS.decrementAndGet() == 0) {
                     applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));
                 }
             } catch (InterruptedException e) {
             }
-        });
+        }
     }
 }

@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.registry.http;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,6 @@ import io.joyrpc.cluster.discovery.naming.http.HttpProvider;
 import io.joyrpc.cluster.discovery.naming.http.HttpRegistrar;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.ConfigEvent;
-import io.joyrpc.event.UpdateEvent;
 import io.joyrpc.extension.URL;
 
 import java.util.HashMap;
@@ -116,13 +115,13 @@ public class HttpRegistry implements Registry {
 
     @Override
     public boolean subscribe(URL url, ConfigHandler handler) {
-        handler.handle(new ConfigEvent(this, null, UpdateEvent.UpdateType.FULL, -1, new HashMap<>()));
+        handler.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
         return true;
     }
 
     @Override
     public boolean unsubscribe(URL url, ConfigHandler handler) {
-        handler.handle(new ConfigEvent(this, null, UpdateEvent.UpdateType.FULL, -1, new HashMap<>()));
+        handler.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
         return true;
     }
 }

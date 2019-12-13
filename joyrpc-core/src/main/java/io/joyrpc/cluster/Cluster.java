@@ -221,29 +221,31 @@ public class Cluster {
             final long version = versions.incrementAndGet();
             final CompletableFuture<Cluster> future = new CompletableFuture<>();
             final Consumer<AsyncResult<Cluster>> c = Futures.chain(consumer, future);
+            //提前赋值，避免Controller的通知提前到达
+            openFuture = future;
+            clusterPublisher.start();
+            //启动事件监听器
+            Optional.ofNullable(metricPublisher).ifPresent(Publisher::start);
+            //定期触发控制器
+            Optional.ofNullable(dashboard).ifPresent(o -> timer().add(new DashboardTask(this, version)));
+            //当initSize<=0，改成了异步触发
             final Controller s = new Controller(this, version, r -> {
-                if (future != openFuture || !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
+                if (future != openFuture || r.isSuccess() && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
                     //被关闭或重入了，取消订阅并清理节点
                     Controller res = r.getResult();
                     registar.unsubscribe(url, res.getClusterHandler());
                     //不用等待所有节点关闭，这样可以快速关闭
                     res.close();
                     c.accept(new AsyncResult<>(this, new InitializationException("cluster state is illegal.")));
-                } else if (r.isSuccess()) {
-                    c.accept(new AsyncResult<>(this));
-                } else {
+                } else if (!r.isSuccess()) {
                     //失败主动关闭
                     future.completeExceptionally(r.getThrowable());
                     close(o -> c.accept(new AsyncResult<>(r.getThrowable())));
+                } else {
+                    c.accept(new AsyncResult<>(this));
                 }
             });
-            openFuture = future;
             controller = s;
-            clusterPublisher.start();
-            //启动事件监听器
-            Optional.ofNullable(metricPublisher).ifPresent(Publisher::start);
-            //定期触发控制器
-            Optional.ofNullable(dashboard).ifPresent(o -> timer().add(new DashboardTask(this, version)));
             //订阅集群
             registar.subscribe(url, s.getClusterHandler());
         } else if (consumer != null) {
@@ -579,8 +581,8 @@ public class Cluster {
             this.version = version;
             this.supplyTask = "SupplyTask-" + cluster.name;
             if (cluster.initSize <= 0) {
-                //不需要等到初始化连接
-                ready.accept(new AsyncResult<>(this));
+                //不需要等到初始化连接，异步通知，避免在Open线程里面触发
+                timer().add("ReadyTask " + cluster.name, SystemClock.now(), () -> ready.accept(new AsyncResult<>(this)));
             } else {
                 this.trigger = new Trigger("ReadyTask " + cluster.name, cluster.initSize, cluster.initTimeout,
                         () -> ready.accept(new AsyncResult<>(this)),

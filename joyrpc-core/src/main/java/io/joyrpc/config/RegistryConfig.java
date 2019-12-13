@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.cluster.discovery.registry.RegistryFactory;
+import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 
@@ -29,7 +30,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static io.joyrpc.Plugin.REGISTRY;
 import static io.joyrpc.constants.Constants.REGISTRY_ADDRESS_KEY;
 import static io.joyrpc.constants.Constants.REGISTRY_PROTOCOL_KEY;
 
@@ -43,8 +43,9 @@ public class RegistryConfig extends AbstractIdConfig implements Serializable {
             GlobalContext.getString(REGISTRY_ADDRESS_KEY));
 
     /**
-     * 扩展点名称
+     * 注册中心实现
      */
+    @ValidatePlugin(extensible = RegistryFactory.class, name = "REGISTRY")
     protected String registry;
 
     /**
@@ -134,12 +135,6 @@ public class RegistryConfig extends AbstractIdConfig implements Serializable {
 
     public void setBackupPath(String backupPath) {
         this.backupPath = backupPath;
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-        checkExtension(REGISTRY, RegistryFactory.class, "registry", registry);
     }
 
     @Override

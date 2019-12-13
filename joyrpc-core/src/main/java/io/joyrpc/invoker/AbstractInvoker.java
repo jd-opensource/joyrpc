@@ -22,23 +22,26 @@ package io.joyrpc.invoker;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.cluster.discovery.Normalizer;
 import io.joyrpc.cluster.discovery.config.Configure;
-import io.joyrpc.constants.Constants;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
+import io.joyrpc.util.Status;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import static io.joyrpc.util.Status.*;
 
 /**
  * 抽象调用器
  */
 public abstract class AbstractInvoker<T> implements Invoker {
+    protected static final AtomicReferenceFieldUpdater<AbstractInvoker, Status> STATE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractInvoker.class, Status.class, "status");
 
     /**
      * 代理的接口类
@@ -78,6 +81,10 @@ public abstract class AbstractInvoker<T> implements Invoker {
      */
     protected AtomicLong requests = new AtomicLong(0);
     /**
+     * 打开的结果
+     */
+    protected volatile CompletableFuture<Void> openFuture;
+    /**
      * 关闭Future
      */
     protected volatile CompletableFuture<Void> closeFuture;
@@ -86,12 +93,12 @@ public abstract class AbstractInvoker<T> implements Invoker {
      */
     protected volatile CompletableFuture<Void> flyingFuture;
     /**
-     * 是否关闭了
+     * 状态
      */
-    protected volatile boolean closed;
+    protected volatile Status status = CLOSED;
 
     public URL getUrl() {
-        return this.url;
+        return url;
     }
 
     @Override
@@ -120,7 +127,7 @@ public abstract class AbstractInvoker<T> implements Invoker {
 
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-        if ((Shutdown.isShutdown() || closed) && !system) {
+        if ((Shutdown.isShutdown() || status != Status.OPENED) && !system) {
             //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
             return CompletableFuture.completedFuture(new Result(request.getContext(), shutdownException()));
         }
@@ -149,40 +156,73 @@ public abstract class AbstractInvoker<T> implements Invoker {
      *
      * @return
      */
-    public synchronized CompletableFuture<Void> open() {
-        closed = false;
-        closeFuture = null;
-        flyingFuture = null;
-        return doOpen();
+    public CompletableFuture<Void> open() {
+        if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
+            final CompletableFuture<Void> future = new CompletableFuture<>();
+            openFuture = future;
+            closeFuture = null;
+            flyingFuture = null;
+            doOpen().whenComplete((v, t) -> {
+                if (openFuture != future || t == null && !STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
+                    future.completeExceptionally(new IllegalStateException("state is illegal."));
+                } else if (t != null) {
+                    //出现了异常
+                    future.completeExceptionally(t);
+                    //自动关闭
+                    close();
+                } else {
+                    future.complete(null);
+                }
+            });
+            return future;
+        } else {
+            switch (status) {
+                case OPENING:
+                case OPENED:
+                    //可重入，没有并发调用
+                    return openFuture;
+                default:
+                    //其它状态不应该并发执行
+                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
+            }
+        }
     }
 
     @Override
-    public synchronized CompletableFuture<Void> close() {
-        return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
-    }
-
-    /**
-     * 关闭
-     *
-     * @param gracefully 是否优雅关闭
-     * @return
-     */
-    public synchronized CompletableFuture<Void> close(boolean gracefully) {
-        if (!closed) {
-            closed = true;
-            if (gracefully) {
-                closeFuture = new CompletableFuture<>();
-                flyingFuture = new CompletableFuture<>();
-                flyingFuture.whenComplete((v, t) -> Futures.chain(doClose(), closeFuture));
-                //判断是否请求已经完成
-                if (requests.get() == 0) {
-                    flyingFuture.complete(null);
-                }
-            } else {
-                closeFuture = doClose();
+    public CompletableFuture<Void> close(final boolean gracefully) {
+        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            //请求数肯定为0
+            closeFuture = future;
+            openFuture.whenComplete((v, t) -> {
+                status = CLOSED;
+                future.complete(null);
+            });
+            return future;
+        } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
+            //状态从打开到关闭中，该状态只能变更为CLOSED
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            closeFuture = future;
+            flyingFuture = new CompletableFuture<>();
+            flyingFuture.whenComplete((v, t) -> doClose().whenComplete((o, s) -> {
+                status = CLOSED;
+                future.complete(null);
+            }));
+            //判断是否请求已经完成
+            if (!gracefully || requests.get() == 0) {
+                flyingFuture.complete(null);
+            }
+            return future;
+        } else {
+            switch (status) {
+                case CLOSING:
+                case CLOSED:
+                    return closeFuture;
+                default:
+                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
             }
         }
-        return closeFuture;
+
     }
 
     /**
@@ -198,17 +238,5 @@ public abstract class AbstractInvoker<T> implements Invoker {
      * @return
      */
     protected abstract CompletableFuture<Void> doClose();
-
-    /**
-     * 标准化
-     *
-     * @param normalizer
-     * @param url
-     * @param clazz
-     * @return
-     */
-    protected URL normalize(final Normalizer normalizer, final URL url, final Class<?> clazz) {
-        return normalizer.normalize(url);
-    }
 
 }

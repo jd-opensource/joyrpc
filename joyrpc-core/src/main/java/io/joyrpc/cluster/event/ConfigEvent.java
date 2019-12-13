@@ -22,15 +22,11 @@ package io.joyrpc.cluster.event;
 
 import io.joyrpc.event.UpdateEvent;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.function.Predicate;
 
 
 /**
- * 配置变更事件
+ * 配置变更事件，只支持全量
  */
 public class ConfigEvent extends UpdateEvent<Map<String, String>> {
 
@@ -39,13 +35,11 @@ public class ConfigEvent extends UpdateEvent<Map<String, String>> {
      *
      * @param source
      * @param target
-     * @param type
      * @param version
      * @param datum
      */
-    public ConfigEvent(final Object source, final Object target, final UpdateType type,
-                       final long version, final Map<String, String> datum) {
-        super(source, target, type, version, datum);
+    public ConfigEvent(final Object source, final Object target, final long version, final Map<String, String> datum) {
+        super(source, target, UpdateType.FULL, version, datum);
     }
 
     /**
@@ -55,32 +49,6 @@ public class ConfigEvent extends UpdateEvent<Map<String, String>> {
      */
     public boolean isEmpty() {
         return datum == null || datum.isEmpty();
-    }
-
-    /**
-     * 获取修改的值
-     *
-           * @param predicate 过滤掉的Key
-     * @param old       获取老的值
-     * @return
-     */
-    public Map<String, String> changed(final Predicate<String> predicate, final Function<String, String> old) {
-        int size = datum == null ? 0 : datum.size();
-        Map<String, String> result = new HashMap<>(size);
-        if (size > 0) {
-            String key;
-            String newValue;
-            for (Map.Entry<String, String> entry : datum.entrySet()) {
-                key = entry.getKey();
-                newValue = entry.getValue();
-                if (predicate == null || predicate.test(key)) {
-                    if (!Objects.equals(old.apply(key), newValue)) {
-                        result.put(key, newValue);
-                    }
-                }
-            }
-        }
-        return result;
     }
 
 }

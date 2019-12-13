@@ -307,7 +307,9 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * @param registry
      */
     protected void register(final ConsumerBean config, final BeanDefinitionRegistry registry, final String defRegName) {
-        BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config);
+        BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config)
+                .setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
+        //这些不需要被再次Proxy，设置成ROLE_INFRASTRUCTURE，忽略Spring的警告
         if (config.getRegistry() == null
                 && StringUtils.isEmpty(config.getRegistryName())
                 && !StringUtils.isEmpty(defRegName)) {
@@ -326,7 +328,9 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      */
     protected void register(final ProviderBean config, final BeanDefinitionRegistry registry, final String defRegName,
                             final String defServerName) {
-        BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> config);
+        //这些不需要被再次Proxy，设置成ROLE_INFRASTRUCTURE，忽略Spring的警告
+        BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> config)
+                .setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
         //判断是否设置了注册中心配置
         if (CollectionUtils.isEmpty(config.getRegistry())
                 && CollectionUtils.isEmpty(config.getRegistryNames())
@@ -552,7 +556,10 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
             beanName = defName;
         }
         if (!registry.containsBeanDefinition(beanName)) {
-            registry.registerBeanDefinition(beanName, new RootBeanDefinition((Class<T>) config.getClass(), () -> config));
+            RootBeanDefinition definition = new RootBeanDefinition((Class<T>) config.getClass(), () -> config);
+            //避免Spring警告信息
+            definition.setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
+            registry.registerBeanDefinition(beanName, definition);
         } else {
             throw new BeanInitializationException("duplication bean name " + beanName);
         }

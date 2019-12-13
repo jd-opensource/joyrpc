@@ -21,9 +21,10 @@ package io.joyrpc.spring;
  */
 
 import io.joyrpc.config.ParameterConfig;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import org.springframework.beans.factory.InitializingBean;
+
+import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 
 /**
  * 全局参数
@@ -34,9 +35,14 @@ public class GlobalParameterBean extends ParameterConfig implements Initializing
 
     @Override
     public void afterPropertiesSet() {
+        validate();
         if (key != null && !key.isEmpty() && value != null) {
             if (hide) {
-                GlobalContext.putIfAbsent(Constants.HIDE_KEY_PREFIX + key, value);
+                if (key.charAt(0) != HIDE_KEY_PREFIX) {
+                    GlobalContext.putIfAbsent(HIDE_KEY_PREFIX + key, value);
+                } else {
+                    GlobalContext.putIfAbsent(key, value);
+                }
             } else {
                 GlobalContext.putIfAbsent(key, value);
             }

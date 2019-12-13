@@ -26,12 +26,8 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.function.Predicate;
 
-import static io.joyrpc.Plugin.CONFIG_EVENT_HANDLER;
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.context.Environment.OS_TYPE;
 
@@ -143,48 +139,6 @@ public class Constants {
     public final static String COMMA_SEPARATOR = ",";
     public final static String EQUAL_SIGN_SEPARATOR = "=";
     public final static String AND_SEPARATOR = "&";
-
-    /**
-     * 过滤掉不能修改和动态变更的属性
-     */
-    public static final Predicate<String> ALTERABLE_ATTR = new Predicate<String>() {
-
-        protected Set<String> excludes;
-
-        @Override
-        public boolean test(String name) {
-            if (excludes == null) {
-                synchronized (this) {
-                    if (excludes == null) {
-                        excludes = new HashSet<>(30);
-                        excludes.add("id");
-                        excludes.add("interfaceClazz");
-                        excludes.add("ref");
-                        excludes.add("server");
-                        excludes.add("delay");
-                        excludes.add("proxy");
-                        excludes.add("registry");
-                        excludes.add("generic");
-                        excludes.add("dynamic");
-                        excludes.add("register");
-                        excludes.add("subscribe");
-                        excludes.add("interfaceValidator");
-                        CONFIG_EVENT_HANDLER.extensions().forEach(o -> {
-                            String[] keys = o.getKeys();
-                            if (keys != null) {
-                                for (String key : keys) {
-                                    excludes.add(key);
-                                }
-                            }
-                        });
-                    }
-                }
-            }
-
-            return !excludes.contains(name);
-        }
-    };
-
 
     /*======================= Registration center configuration information item name =======================*/
     /**
@@ -449,10 +403,24 @@ public class Constants {
     public static final URLOption<Boolean> GENERIC_OPTION = new URLOption<>("generic", false);
     public static final URLOption<Boolean> SYSTEM_OPTION = new URLOption<>("system.service", false);
     public static final URLOption<Boolean> ASYNC_OPTION = new URLOption<>("async", false);
+    /**
+     * 默认分发算法
+     */
+    public static final String DEFAULT_ROUTE = "failover";
+    /**
+     * 分发选项
+     */
     public static final URLOption<String> ROUTE_OPTION = new URLOption<>("route", "failover");
     public static final URLOption<String> FAILOVER_WHEN_THROWABLE_OPTION = new URLOption<>("failoverWhenThrowable", "");
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
+    /**
+     * 默认连接工厂
+     */
+    public static final String DEFAULT_HANNEL_FACTORY = "shared";
+    /**
+     * 连接工厂选项
+     */
     public static final URLOption<String> CHANNEL_FACTORY_OPTION = new URLOption<>("channelFactory", "shared");
     public static final URLOption<String> AUTHENTICATION_OPTION = new URLOption<>("authentication", "");
 
@@ -481,23 +449,57 @@ public class Constants {
      * 重试目标节点选择器
      */
     public static final URLOption<String> FAILOVER_SELECTOR_OPTION = new URLOption<>("failoverSelector", "simple");
-
+    /**
+     * 默认负载均衡算法
+     */
+    public static final String DEFAULT_LOADBALANCE = "randomWeight";
+    /**
+     * 负载均衡选项
+     */
     public static final URLOption<String> LOADBALANCE_OPTION = new URLOption<>("loadbalance", "randomWeight");
     public static final URLOption<Boolean> STICKY_OPTION = new URLOption<>("sticky", false);
     public static final URLOption<Boolean> IN_JVM_OPTION = new URLOption<>("injvm", true);
     public static final URLOption<Boolean> CHECK_OPTION = new URLOption<>("check", false);
-    public static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", "hessian");
-    public static final URLOption<String> PROXY_OPTION = new URLOption<>("proxy", "bytebuddy");
+    /**
+     * 默认序列化算法
+     */
+    public static final String DEFAULT_SERIALIZATION = "hessian";
+    /**
+     * 序列化选项
+     */
+    public static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", DEFAULT_SERIALIZATION);
+    /**
+     * 代理工厂默认值
+     */
+    public static final String DEFAULT_PROXY = "bytebuddy";
+    /**
+     * 代理工厂选项
+     */
+    public static final URLOption<String> PROXY_OPTION = new URLOption<>("proxy", DEFAULT_PROXY);
     public static final URLOption<Boolean> VALIDATION_OPTION = new URLOption<>("validation", false);
     public static final URLOption<String> ROUTER_OPTION = new URLOption<>("router", (String) null);
     //默认不压缩
     public static final URLOption<String> COMPRESS_OPTION = new URLOption<>("compress", (String) null);
-    public static final URLOption<String> CANDIDATURE_OPTION = new URLOption<>("candidature", "region");
+    /**
+     * 默认候选者算法
+     */
+    public static final String DEFAULT_CANDIDATURE = "region";
+    /**
+     * 候选者选项
+     */
+    public static final URLOption<String> CANDIDATURE_OPTION = new URLOption<>("candidature", DEFAULT_CANDIDATURE);
 
     /*------------------------ consumer group配置 ------------------------*/
     public static final URLOption<String> ALIAS_ADAPTIVE_OPTION = new URLOption<>("aliasAdaptive", "");
     public static final URLOption<Integer> DST_PARAM_OPTION = new URLOption<>("dstParam", (Integer) null);
     public static final URLOption<Boolean> MOCK_OPTION = new URLOption<>("mock", true);
+    /**
+     * 默认分组路由算法
+     */
+    public static final String DEFAULT_GROUP_ROUTER = "parameter";
+    /**
+     * 分组路由选项
+     */
     public static final URLOption<String> GROUP_ROUTER_OPTION = new URLOption<>("groupRouter", "parameter");
 
     /*------------------------ Provider配置 ------------------------*/
@@ -534,18 +536,32 @@ public class Constants {
      */
     public static final URLOption<Integer> PORT_OPTION = new URLOption<>("port", 22000);
     /**
-     * 客户端和服务端创建工厂
+     * 默认客户端和服务端创建工厂
      */
-    public static final URLOption<String> ENDPOINT_FACTORY_OPTION = new URLOption<>("endpointFactory", "default");
+    public static final String DEFAULT_ENDPOINT_FACTORY = "default";
     /**
-     * 传输实现工厂
+     * 客户端和服务端创建工厂选项
      */
-    public static final URLOption<String> TRANSPORT_FACTORY_OPTION = new URLOption<>("transportFactory", "netty4");
+    public static final URLOption<String> ENDPOINT_FACTORY_OPTION = new URLOption<>("endpointFactory", DEFAULT_ENDPOINT_FACTORY);
+    /**
+     * 默认传输实现工厂
+     */
+    public static final String DEFAULT_TRANSPORT_FACTORY = "netty4";
+    /**
+     * 传输实现工厂选项
+     */
+    public static final URLOption<String> TRANSPORT_FACTORY_OPTION = new URLOption<>("transportFactory", DEFAULT_TRANSPORT_FACTORY);
 
     public static final URLOption<Integer> CONNECTION_ACCEPTS = new URLOption<>("accepts", Integer.MAX_VALUE);
 
-    /*------------------------ 业务线程池配置 ------------------------*/
-    public static final URLOption<String> THREADPOOL_OPTION = new URLOption<>("threadpool", "adaptive");
+    /**
+     * 默认线程池
+     */
+    public static final String DEFAULT_THREADPOOL = "adaptive";
+    /**
+     * 线程池选项
+     */
+    public static final URLOption<String> THREADPOOL_OPTION = new URLOption<>("threadpool", DEFAULT_THREADPOOL);
     public static final URLBiOption<Integer> CORE_SIZE_OPTION = new URLBiOption<>("thread.coreSize", "core.size", 20);
     public static final URLBiOption<Integer> MAX_SIZE_OPTION = new URLBiOption<>("thread.maxSize", "max.Size", 200);
     public static final URLOption<Integer> KEEP_ALIVE_TIME_OPTION = new URLOption<>("thread.keepAliveTime", 60000);
@@ -561,10 +577,23 @@ public class Constants {
     public static final URLOption<Long> TASK_RETRY_INTERVAL_OPTION = new URLOption<>("taskRetryInterval", 5000L);
 
 
-    /*------------------------ cache配置 ------------------------*/
     public static final URLOption<Boolean> CACHE_OPTION = new URLOption<>("cache", false);
-    public static final URLOption<String> CACHE_PROVIDER_OPTION = new URLOption<>("cacheProvider", "caffeine");
-    public static final URLOption<String> CACHE_KEY_GENERATOR_OPTION = new URLOption<>("cacheKeyGenerator", "default");
+    /**
+     * 默认缓存提供者
+     */
+    public static final String DEFAULT_CACHE_PROVIDER = "caffeine";
+    /**
+     * 缓存提供者选项
+     */
+    public static final URLOption<String> CACHE_PROVIDER_OPTION = new URLOption<>("cacheProvider", DEFAULT_CACHE_PROVIDER);
+    /**
+     * 默认缓存键生成算法
+     */
+    public static final String DEFAULT_CACHE_KEY_GENERATOR = "default";
+    /**
+     * 缓存键生成算法选项
+     */
+    public static final URLOption<String> CACHE_KEY_GENERATOR_OPTION = new URLOption<>("cacheKeyGenerator", DEFAULT_CACHE_KEY_GENERATOR);
     public static final URLOption<Integer> CACHE_EXPIRE_TIME_OPTION = new URLOption<>("cacheExpireTime", -1);
     public static final URLOption<Integer> CACHE_CAPACITY_OPTION = new URLOption<>("cacheCapacity", 10000);
     public static final URLOption<Boolean> CACHE_NULLABLE_OPTION = new URLOption<>("cacheNullable", Boolean.FALSE);

@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,77 +21,66 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.filter.cache.CacheKeyGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.joyrpc.Plugin.CACHE;
-import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
-import static io.joyrpc.constants.Constants.METHOD_KEY;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 方法配置，用于指定方法下的配置，覆盖接口配置
  */
 public class MethodConfig extends AbstractConfig {
 
-    /*-------------配置项开始----------------*/
     /**
      * 方法名称，无法做到重载方法的配置
      */
     protected String name;
-
     /**
      * The Parameters. 自定义参数
      */
     protected Map<String, String> parameters;
-
     /**
      * The Timeout. 远程调用超时时间(毫秒)
      */
     protected Integer timeout;
-
     /**
      * The Retries. 失败后重试次数
      */
     protected Integer retries;
-
     /**
      * The Validation. 是否jsr303验证
      */
     protected Boolean validation;
-
     /**
      * The concurrency. 最大并发执行（不管服务端还是客户端）
      */
     protected Integer concurrency;
-
     /**
      * 结果缓存插件名称
      */
+    @ValidatePlugin(extensible = CacheFactory.class, name = "CACHE", defaultValue = DEFAULT_CACHE_PROVIDER)
     protected String cacheProvider;
-
     /**
      * cache key 生成器
      */
+    @ValidatePlugin(extensible = CacheKeyGenerator.class, name = "CACHE_KEY_GENERATOR", defaultValue = DEFAULT_CACHE_KEY_GENERATOR)
     protected String cacheKeyGenerator;
-
     /**
      * 是否启动结果缓存
      */
     protected Boolean cache;
-
     /**
      * cache过期时间
      */
-    private Long cacheExpireTime;
-
+    protected Long cacheExpireTime;
     /**
      * cache最大容量
      */
-    private Integer cacheCapacity;
-
+    protected Integer cacheCapacity;
     /**
      * 是否启动压缩
      */
@@ -106,8 +95,6 @@ public class MethodConfig extends AbstractConfig {
      * 缓存值是否可空
      */
     protected Boolean cacheNullable;
-
-    /*-------------配置项结束----------------*/
 
     public String getName() {
         return name;
@@ -219,13 +206,6 @@ public class MethodConfig extends AbstractConfig {
 
     public void setCacheProvider(String cacheProvider) {
         this.cacheProvider = cacheProvider;
-    }
-
-    @Override
-    protected void validate() {
-        super.validate();
-        checkExtension(CACHE, CacheFactory.class, "cacheProvider", cacheProvider);
-        checkExtension(CACHE_KEY_GENERATOR, CacheKeyGenerator.class, "cacheKeyGenerator", cacheKeyGenerator);
     }
 
     /**

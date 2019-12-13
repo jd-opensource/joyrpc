@@ -20,9 +20,8 @@ package io.joyrpc.config;
  * #L%
  */
 
+import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.exception.InitializationException;
 import io.joyrpc.invoker.GroupInvoker;
 import io.joyrpc.proxy.ConsumerInvokeHandler;
 
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GROUP_ROUTE;
+import static io.joyrpc.constants.Constants.DEFAULT_GROUP_ROUTER;
 import static io.joyrpc.constants.Constants.FROM_GROUP_OPTION;
 
 /**
@@ -49,11 +49,8 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     /**
      * 分组路由插件配置
      */
+    @ValidatePlugin(extensible = GroupInvoker.class, name = "GROUP_ROUTE", defaultValue = DEFAULT_GROUP_ROUTER)
     protected String groupRouter;
-    /**
-     * 分组调用
-     */
-    protected transient GroupInvoker route;
 
     public Integer getDstParam() {
         return dstParam;
@@ -88,46 +85,8 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     }
 
     @Override
-    protected void validateAlias() {
-        if (alias == null || alias.isEmpty()) {
-            throw new InitializationException("Value of \"alias\" is not specified in consumer" +
-                    " config with key " + name() + " !", ExceptionCode.CONSUMER_ALIAS_IS_NULL);
-        }
-        //比普通的alias多允许逗号
-        checkNormalWithCommaColon("alias", alias);
-        //检查路由插件配置
-        checkExtension(GROUP_ROUTE, GroupInvoker.class, "groupRouter", groupRouter);
-    }
-
-    @Override
-    protected void doRefer(final CompletableFuture<Void> future) {
-        //创建分组调用
-        Class<T> proxyClass;
-        try {
-            proxyClass = getProxyClass();
-        } catch (Exception e) {
-            future.completeExceptionally(e);
-            return;
-        }
-        route = GROUP_ROUTE.get(groupRouter, Constants.GROUP_ROUTER_OPTION.getValue());
-        route.setAliasAdaptive(aliasAdaptive);
-        route.setUrl(serviceUrl);
-        route.setAlias(alias);
-        route.setClass(proxyClass);
-        route.setClassName(interfaceClazz);
-        route.setConfigFunction(this::createGroupConfig);
-        route.setup();
-        //创建桩
-        invokeHandler = new ConsumerInvokeHandler(route, interfaceClass);
-        proxy();
-        //创建消费者
-        route.refer().whenComplete((v, t) -> {
-            if (t == null) {
-                future.complete(null);
-            } else {
-                future.completeExceptionally(t);
-            }
-        });
+    protected ConsumerGroupController<T> create() {
+        return new ConsumerGroupController<>(this);
     }
 
     /**
@@ -143,19 +102,56 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         return result;
     }
 
-    @Override
-    protected void doUnRefer(final CompletableFuture<Void> future) {
-        if (invokeHandler == null) {
-            future.complete(null);
+    /**
+     * 消费者控制器
+     */
+    public static class ConsumerGroupController<T> extends AbstractConsumerController<T, ConsumerGroupConfig> {
+        /**
+         * 分组调用
+         */
+        protected transient GroupInvoker route;
+
+        public ConsumerGroupController(ConsumerGroupConfig config) {
+            super(config);
         }
-        invokeHandler = null;
-        route.close().whenComplete((v, t) -> {
-            if (t == null) {
-                future.complete(null);
+
+        @Override
+        protected CompletableFuture<Void> doOpen() {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            route = GROUP_ROUTE.get(config.groupRouter, Constants.GROUP_ROUTER_OPTION.getValue());
+            route.setAliasAdaptive(config.aliasAdaptive);
+            route.setUrl(serviceUrl);
+            route.setAlias(config.alias);
+            route.setClass(config.getProxyClass());
+            route.setClassName(config.interfaceClazz);
+            route.setConfigFunction(config::createGroupConfig);
+            route.setup();
+            //创建桩
+            invokeHandler = new ConsumerInvokeHandler(route, config.getProxyClass(), serviceUrl);
+            config.proxy();
+            //创建消费者
+            route.refer().whenComplete((v, t) -> {
+                if (t == null) {
+                    future.complete(null);
+                } else {
+                    future.completeExceptionally(t);
+                }
+            });
+            return future;
+        }
+
+        @Override
+        public CompletableFuture<Void> close(boolean gracefully) {
+            CompletableFuture future = new CompletableFuture();
+            invokeHandler = null;
+            if (route != null) {
+                route.close().whenComplete((v, t) -> future.complete(null));
             } else {
-                future.completeExceptionally(t);
+                future.complete(null);
             }
-        });
+            return future;
+        }
+
     }
 
 }

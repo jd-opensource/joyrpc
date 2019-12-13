@@ -142,7 +142,7 @@ public class MemoryRegistry extends AbstractRegistry {
             if (ref.compareAndSet(oldDatum, newDatum)) {
                 ConfigMeta meta = configs.get(key);
                 if (meta != null) {
-                    meta.handle((new ConfigEvent(this, null, UpdateType.FULL, version, datum)));
+                    meta.handle((new ConfigEvent(this, null, version, datum)));
                 }
                 return;
             }
@@ -235,7 +235,7 @@ public class MemoryRegistry extends AbstractRegistry {
             Config config = ref != null ? ref.get() : null;
             long version = config == null ? 0 : config.getVersion();
             Map<String, String> data = config != null ? config.getData() : new HashMap<>();
-            meta.handle(new ConfigEvent(this, null, UpdateType.FULL, version, data));
+            meta.handle(new ConfigEvent(this, null, version, data));
         }
         return CompletableFuture.completedFuture(null);
     }

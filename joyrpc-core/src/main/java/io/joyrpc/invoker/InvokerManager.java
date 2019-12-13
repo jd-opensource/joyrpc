@@ -22,6 +22,7 @@ package io.joyrpc.invoker;
 
 import io.joyrpc.InvokerAware;
 import io.joyrpc.cluster.Cluster;
+import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.LoadBalance;
@@ -171,68 +172,47 @@ public class InvokerManager {
      * 创建引用对象
      *
      * @param config
-     * @param registry
-     * @param configure
-     * @param subscribeUrl
-     * @param <T>
-     * @return
-     */
-    public static <T> Refer refer(final ConsumerConfig<T> config,
-                                  final Registry registry,
-                                  final Configure configure,
-                                  final URL subscribeUrl) {
-        return INSTANCE.doRefer(config, config.getServiceUrl(), registry, configure, subscribeUrl);
-    }
-
-    /**
-     * 创建引用对象
-     *
-     * @param config
      * @param url
      * @param registry
+     * @param registerUrl
      * @param configure
      * @param subscribeUrl
+     * @param configHandler
      * @param <T>
      * @return
      */
-    public static <T> Refer refer(final ConsumerConfig<T> config,
-                                  final URL url,
+    public static <T> Refer refer(final URL url,
+                                  final ConsumerConfig<T> config,
                                   final Registry registry,
+                                  final URL registerUrl,
                                   final Configure configure,
-                                  final URL subscribeUrl) {
-        return INSTANCE.doRefer(config, url, registry, configure, subscribeUrl);
+                                  final URL subscribeUrl,
+                                  final ConfigHandler configHandler) {
+        return INSTANCE.doRefer(url, config, registry, registerUrl, configure, subscribeUrl, configHandler);
     }
+
 
     /**
      * 创建引用对象
      *
-     * @param config       服务配置
-     * @param configure    动态配置
-     * @param url          服务URL
-     * @param subscribeUrl 订阅URL
+     * @param url           服务URL
+     * @param config        服务配置
+     * @param registries    注册中心
+     * @param registerUrls  注册URL
+     * @param configure     动态配置
+     * @param subscribeUrl  订阅配置URL
+     * @param configHandler 配置变更处理器
      * @param <T>
      * @return
      */
-    public static <T> Exporter export(final ProviderConfig<T> config, final Configure configure,
-                                      final URL url, final URL subscribeUrl) {
-        return INSTANCE.doExport(config, url, configure, subscribeUrl);
-    }
-
-    /**
-     * 创建引用对象
-     *
-     * @param config
-     * @param url
-     * @param configure
-     * @param subscribeUrl
-     * @param <T>
-     * @return
-     */
-    public static <T> Exporter export(final ProviderConfig<T> config,
-                                      final URL url,
+    public static <T> Exporter export(final URL url,
+                                      final ProviderConfig<T> config,
+                                      final List<Registry> registries,
+                                      final List<URL> registerUrls,
                                       final Configure configure,
-                                      final URL subscribeUrl) {
-        return INSTANCE.doExport(config, url, configure, subscribeUrl);
+                                      final URL subscribeUrl,
+                                      final ConfigHandler configHandler) {
+        return INSTANCE.doExport(url, config, registries, registerUrls, configure, subscribeUrl, configHandler);
     }
 
     /**
@@ -416,46 +396,53 @@ public class InvokerManager {
     /**
      * 创建引用对象
      *
-     * @param config
      * @param url
+     * @param config
      * @param registry
+     * @param registerUrl
      * @param configure
      * @param subscribeUrl
+     * @param configHandler
      * @param <T>
      * @return
      */
-    protected <T> Refer doRefer(final ConsumerConfig<T> config,
-                                final URL url,
+    protected <T> Refer doRefer(final URL url,
+                                final ConsumerConfig<T> config,
                                 final Registry registry,
+                                final URL registerUrl,
                                 final Configure configure,
-                                final URL subscribeUrl) {
-        return doRefer(config, url, registry, configure, subscribeUrl, url.getBoolean(Constants.SYSTEM_REFER_OPTION) ? systems : refers);
+                                final URL subscribeUrl,
+                                final ConfigHandler configHandler) {
+        return doRefer(url, config, registry, registerUrl, configure, subscribeUrl, configHandler,
+                url.getBoolean(Constants.SYSTEM_REFER_OPTION) ? systems : refers);
     }
 
     /**
      * 创建引用对象
      *
-     * @param config
-     * @param url
-     * @param registry
-     * @param configure
-     * @param subscribeUrl
+     * @param url           服务URL
+     * @param config        配置
+     * @param registry      注册中心
+     * @param registerUrl   注册URL
+     * @param configure     配置中心
+     * @param subscribeUrl  配置订阅URL
+     * @param configHandler 配置变更处理器
      * @param refers
      * @param <T>
      * @return
      */
-    protected <T> Refer doRefer(final ConsumerConfig<T> config,
-                                final URL url,
+    protected <T> Refer doRefer(final URL url,
+                                final ConsumerConfig<T> config,
                                 final Registry registry,
+                                final URL registerUrl,
                                 final Configure configure,
                                 final URL subscribeUrl,
+                                final ConfigHandler configHandler,
                                 final Map<String, Refer> refers) {
-        //配置器
-        URL u = configure(url);
         //一个服务接口可以注册多次，每个的参数不一样
-        String key = u.toString(false, true);
+        String key = url.toString(false, true);
         //添加hashCode参数，去掉HOST减少字符串
-        String clusterName = u.add(HASH_CODE, key.hashCode()).setHost(null).
+        String clusterName = url.add(HASH_CODE, key.hashCode()).setHost(null).
                 toString(false, true, Constants.ALIAS_OPTION.getName(), Constants.COUNTER, HASH_CODE);
 
         if (refers.containsKey(clusterName)) {
@@ -466,12 +453,12 @@ public class InvokerManager {
 
         return refers.computeIfAbsent(clusterName, o -> {
             //负载均衡
-            LoadBalance loadBalance = buildLoadbalance(config, u);
+            LoadBalance loadBalance = buildLoadbalance(config, url);
             //面板工厂
             DashboardFactory dashboardFactory = buildDashboardFactory(loadBalance);
             //集群的名字是服务名称+别名+配置变更计数器，确保相同接口引用的集群名称不一样
             final Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
-            final Cluster cluster = new Cluster(clusterName, u, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
+            final Cluster cluster = new Cluster(clusterName, url, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
             //判断是否有回调，如果注册成功，说明有回调方法，需要往Cluster注册事件，监听节点断开事件
             CallbackContainer container = null;
             boolean callback = callbackManager.register(config.getProxyClass());
@@ -495,7 +482,7 @@ public class InvokerManager {
             }
             serializationRegister(config.getProxyClass(), callbackManager);
             //refer的名称和key保持一致，便于删除
-            return new Refer<T>(clusterName, u, config, registry, configure, subscribeUrl, cluster, loadBalance, container,
+            return new Refer<T>(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler, cluster, loadBalance, container,
                     (v, t) -> {
                         //关闭回调，移除集群和引用
                         refers.remove(v.getName());
@@ -565,35 +552,26 @@ public class InvokerManager {
         registrations.forEach(r -> r.register(registerClass));
     }
 
-
-    /**
-     * 动态配置
-     *
-     * @param url
-     * @return
-     */
-    protected URL configure(final URL url) {
-        URL[] urls = new URL[1];
-        urls[0] = url;
-        CONFIGURATOR.extensions().forEach(o -> urls[0] = o.configure(urls[0]));
-        return urls[0];
-    }
-
     /**
      * 创建引用对象
      *
-     * @param config
-     * @param url
-     * @param configure
-     * @param subscribeUrl
+     * @param url           服务URL
+     * @param config        服务提供者配置
+     * @param registries    注册中心
+     * @param registerUrls  注册的URL
+     * @param configure     配置中心
+     * @param subscribeUrl  订阅配置的URL
+     * @param configHandler 配置处理器
      * @param <T>
      * @return
      */
-    protected <T> Exporter<T> doExport(final ProviderConfig<T> config,
-                                       final URL url,
+    protected <T> Exporter<T> doExport(final URL url,
+                                       final ProviderConfig<T> config,
+                                       final List<Registry> registries,
+                                       final List<URL> registerUrls,
                                        final Configure configure,
-                                       final URL subscribeUrl) {
-        final URL u = configure(url);
+                                       final URL subscribeUrl,
+                                       final ConfigHandler configHandler) {
         final String name = NAME.apply(config.getInterfaceClazz(), config.getAlias());
         Map<Integer, Exporter> ports = exports.get(name);
         if (ports != null && ports.containsKey(url.getPort())) {
@@ -601,16 +579,17 @@ public class InvokerManager {
                     String.format("Duplicate provider config with key %s has been exported.", name),
                     PROVIDER_DUPLICATE_EXPORT);
         }
-        return exports.computeIfAbsent(name, o -> new ConcurrentHashMap<>()).computeIfAbsent(u.getPort(),
+        return exports.computeIfAbsent(name, o -> new ConcurrentHashMap<>()).computeIfAbsent(url.getPort(),
                 o -> {
                     callbackManager.register(config.getProxyClass());
                     serializationRegister(config.getProxyClass(), callbackManager);
-                    return new Exporter<>(name, u, config, configure, subscribeUrl, getServer(u), c -> {
-                        Map<Integer, Exporter> map = exports.get(c.getName());
-                        if (map != null) {
-                            map.remove(c.getPort());
-                        }
-                    });
+                    return new Exporter<>(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler, getServer(url),
+                            c -> {
+                                Map<Integer, Exporter> map = exports.get(c.getName());
+                                if (map != null) {
+                                    map.remove(c.getPort());
+                                }
+                            });
                 });
     }
 
@@ -746,12 +725,12 @@ public class InvokerManager {
         List<CompletableFuture<Void>> futures = new LinkedList<>();
         //关闭消费者和服务提供者
         exports.forEach((k, v) -> v.forEach((t, o) -> {
-            futures.add(o.close(gracefully));
+            futures.add(o.getConfig().unexport(gracefully));
             registries.addAll(o.getRegistries());
         }));
         //非注册中心消费者
         refers.forEach((k, v) -> {
-            futures.add(v.close(gracefully));
+            futures.add(v.getConfig().unrefer(gracefully));
             registries.add(v.getRegistry());
         });
         return gracefully ? Futures.allOf(futures) : CompletableFuture.completedFuture(null);

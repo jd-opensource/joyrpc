@@ -66,31 +66,21 @@ public class ConsumerInvokeHandler implements InvocationHandler {
      */
     protected Class iface;
     /**
-     * consumer serviceUrl
-     */
-    protected URL serviceUrl;
-    /**
      * 是否为异步
      */
     protected boolean async;
 
     /**
-     * Instantiates a new Consumer telnet.
+     * 构造函数
      *
-     * @param invoker the invoker
+     * @param invoker
+     * @param iface
+     * @param serviceUrl
      */
-    public ConsumerInvokeHandler(Invoker invoker, Class iface) {
+    public ConsumerInvokeHandler(final Invoker invoker, final Class iface, final URL serviceUrl) {
         this.invoker = invoker;
         this.iface = iface;
-    }
-
-    public void setServiceUrl(URL serviceUrl) {
         this.async = serviceUrl.getBoolean(Constants.ASYNC_OPTION);
-        this.serviceUrl = serviceUrl;
-    }
-
-    public void setInvoker(Invoker invoker) {
-        this.invoker = invoker;
     }
 
     @Override

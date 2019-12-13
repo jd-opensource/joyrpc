@@ -9,9 +9,9 @@ package io.joyrpc.config;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,10 +20,7 @@ package io.joyrpc.config;
  * #L%
  */
 
-import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.RequestContext;
-import io.joyrpc.exception.IllegalConfigureException;
+import io.joyrpc.config.validator.ValidateKey;
 
 /**
  * 自定义参数配置，可出现在registry，server，provider，consumer，method下面<br>
@@ -33,6 +30,7 @@ public class ParameterConfig extends AbstractConfig {
     /**
      * 关键字
      */
+    @ValidateKey
     protected String key;
 
     /**
@@ -49,16 +47,7 @@ public class ParameterConfig extends AbstractConfig {
         return key;
     }
 
-    /**
-     * Sets key.
-     *
-     * @param key the key
-     */
     public void setKey(String key) {
-        if (!RequestContext.VALID_KEY.test(key)) {
-            throw new IllegalConfigureException("param.key", key, "key can not start with "
-                    + Constants.HIDE_KEY_PREFIX + " and " + Constants.INTERNAL_KEY_PREFIX, ExceptionCode.COMMON_ABUSE_HIDE_KEY);
-        }
         this.key = key;
     }
 

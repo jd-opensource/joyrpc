@@ -42,13 +42,15 @@ public class Futures {
      * @param <T>
      */
     public static <T> void chain(final CompletableFuture<T> future, final CompletableFuture<T> then) {
-        future.whenComplete((v, t) -> {
-            if (t == null) {
-                then.complete(v);
-            } else {
-                then.completeExceptionally(t);
-            }
-        });
+        if (then != null) {
+            future.whenComplete((v, t) -> {
+                if (t == null) {
+                    then.complete(v);
+                } else {
+                    then.completeExceptionally(t);
+                }
+            });
+        }
     }
 
     /**

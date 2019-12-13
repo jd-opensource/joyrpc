@@ -23,19 +23,15 @@ package io.joyrpc.config;
 
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.NodeEvent;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.event.EventHandler;
-import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.invoker.Refer;
 import io.joyrpc.proxy.ConsumerInvokeHandler;
-import io.joyrpc.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.joyrpc.Plugin.REGISTRY;
 
@@ -43,15 +39,6 @@ import static io.joyrpc.Plugin.REGISTRY;
  * 消费者配置
  */
 public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Serializable, EventHandler<NodeEvent> {
-    private final static Logger logger = LoggerFactory.getLogger(ConsumerConfig.class);
-    /**
-     * Refer对象
-     */
-    protected transient volatile Refer<T> refer;
-    /**
-     * 注册中心
-     */
-    protected transient Registry registryRef;
 
     public ConsumerConfig() {
     }
@@ -69,91 +56,8 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
     }
 
     @Override
-    protected void doRefer(final CompletableFuture<Void> future) {
-        //构造代理类
-        Class<T> proxyClass;
-        try {
-            proxyClass = getProxyClass();
-        } catch (Exception e) {
-            future.completeExceptionally(e);
-            return;
-        }
-        //创建注册中心
-        registryRef = REGISTRY.get(registryUrl.getProtocol()).getRegistry(registryUrl);
-        //如果提前注入了其它配置中心
-        configureRef = configure == null ? registryRef : configure;
-        //订阅的URL
-        subscribeUrl = configureRef.normalize(serviceUrl);
-        //连接注册中心
-        CompletableFuture<Void> f = !register && !subscribe && StringUtils.isEmpty(url) ? CompletableFuture.completedFuture(null) : registryRef.open();
-        f.whenComplete((s, t) -> {
-            if (t == null) {
-                //订阅
-                if (serviceUrl.getBoolean(Constants.SUBSCRIBE_OPTION)) {
-                    configureRef.subscribe(subscribeUrl, configHandler);
-                } else {
-                    //没有订阅的时候，主动complete
-                    waitingConfig.complete(serviceUrl);
-                }
-            } else {
-                waitingConfig.completeExceptionally(t);
-            }
-        });
-        //构建调用器
-        invokeHandler = new ConsumerInvokeHandler(refer, proxyClass);
-        //构建代理
-        proxy();
-
-        //等待订阅的初始化配置
-        waitingConfig.whenComplete((url, e) -> {
-            if (e != null) {
-                future.completeExceptionally(e);
-            } else {
-                //检查动态配置是否修改了别名，需要重新订阅
-                resubscribe(serviceUrl, url);
-                serviceUrl = url;
-                try {
-                    refer = InvokerManager.refer(this, registryRef, configureRef, subscribeUrl);
-                    invokeHandler.setInvoker(refer);
-                    invokeHandler.setServiceUrl(refer.getUrl());
-                    //open
-                    refer.open().whenComplete(((v, t) -> {
-                        if (t == null) {
-                            future.complete(null);
-                        } else {
-                            future.completeExceptionally(t);
-                        }
-                    }));
-                } catch (Throwable ex) {
-                    future.completeExceptionally(ex);
-                }
-            }
-        });
-    }
-
-    @Override
-    protected void doUnRefer(final CompletableFuture<Void> future) {
-        if (invokeHandler != null) {
-            logger.info(String.format("Unrefer consumer config : %s with bean id %s", name(), getId()));
-            invokeHandler = null;
-            if (!waitingConfig.isDone()) {
-                waitingConfig.completeExceptionally(new InitializationException("Unrefer interrupted waiting config."));
-            }
-            //有可能初始化还在等待配置，没有创建Refer
-            if (refer != null) {
-                refer.close().whenComplete(((v, t) -> {
-                    if (t == null) {
-                        future.complete(null);
-                    } else {
-                        future.completeExceptionally(t);
-                    }
-                }));
-                refer = null;
-            }
-            configureRef = null;
-            registryRef = null;
-        }
-        future.complete(null);
+    protected ConsumerController<T> create() {
+        return new ConsumerController<>(this);
     }
 
     @Override
@@ -162,44 +66,123 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
     }
 
     public URL getServiceUrl() {
-        return serviceUrl;
-    }
-
-    public URL getRegistryUrl() {
-        return registryUrl;
+        return controller == null ? null : controller.getServiceUrl();
     }
 
     public Refer getRefer() {
-        return refer;
+        return controller == null ? null : ((ConsumerController) controller).getRefer();
     }
 
-    @Override
-    protected void onChanged(final URL newUrl, final long version) {
-        Refer oldRefer = refer;
-        //更新 consumer config refer
-        Refer newRefer = InvokerManager.refer(this, newUrl, registryRef, configureRef, subscribeUrl);
-        newRefer.open().whenComplete((v, t) -> {
-            if (t == null) {
-                //异步并发，需要进行版本比较
-                synchronized (counter) {
-                    long newVersion = counter.get();
-                    if (newVersion == version) {
-                        //检查动态配置是否修改了别名，需要重新订阅
-                        resubscribe(serviceUrl, newUrl);
-                        invokeHandler.setInvoker(newRefer);
-                        refer = newRefer;
-                        serviceUrl = newUrl;
-                        oldRefer.close(true);
-                    } else {
-                        logger.info(String.format("Discard out-of-date config. old=%d, current=%d", version, newVersion));
-                        newRefer.close();
-                    }
+    /**
+     * 消费者控制器
+     *
+     * @param <T>
+     */
+    protected static class ConsumerController<T> extends AbstractConsumerController<T, ConsumerConfig> {
+        /**
+         * 注册中心
+         */
+        protected Registry registryRef;
+        /**
+         * Refer对象
+         */
+        protected volatile Refer<T> refer;
+
+        /**
+         * 构造函数
+         *
+         * @param config
+         */
+        public ConsumerController(ConsumerConfig config) {
+            super(config);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doOpen() {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            //创建注册中心
+            registryRef = REGISTRY.get(registryUrl.getProtocol()).getRegistry(registryUrl);
+            //构建代理
+            config.proxy();
+            //订阅，等到初始化配置
+            chain(subscribe(), future, (v) -> chain(waitingConfig, future, (url) -> {
+                //检查动态配置是否修改了别名，需要重新订阅
+                serviceUrl = url;
+                registerUrl = config.register ? buildRegisteredUrl(registryRef, url) : null;
+                resubscribe(buildSubscribedUrl(configureRef, url), false);
+                try {
+                    refer = InvokerManager.refer(url, config, registryRef, registerUrl, configureRef, subscribeUrl, configHandler);
+                    //打开
+                    chain(refer.open(), future, s -> {
+                        //构建调用器
+                        invokeHandler = new ConsumerInvokeHandler(refer, proxyClass, refer.getUrl());
+                        future.complete(null);
+                    });
+                } catch (Throwable ex) {
+                    future.completeExceptionally(ex);
                 }
+            }));
+            return future;
+        }
+
+        @Override
+        public CompletableFuture<Void> close(final boolean gracefully) {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            //拒绝新请求
+            invokeHandler = null;
+            if (refer != null) {
+                refer.close(gracefully).whenComplete((v, t) -> future.complete(null));
             } else {
-                //出现异常
-                logger.error("Error occurs while referring after attribute changed", t);
-                newRefer.close();
+                future.complete(null);
             }
-        });
+            return future;
+        }
+
+        /**
+         * 订阅，打开注册中心
+         *
+         * @return
+         */
+        protected CompletableFuture<Void> subscribe() {
+            //等待注册中心初始化
+            CompletableFuture<Void> result = subscribe(registryRef, new AtomicBoolean(false));
+            if (!config.subscribe) {
+                //不订阅配置
+                waitingConfig.complete(serviceUrl);
+            }
+            return result;
+        }
+
+        @Override
+        protected CompletableFuture<Void> update(final URL newUrl) {
+            //只在opened状态触发
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            Refer oldRefer = refer;
+            URL newRegisterUrl = config.register ? buildRegisteredUrl(registryRef, newUrl) : null;
+            URL newSubscribeUrl = config.subscribe ? buildSubscribedUrl(configureRef, newUrl) : null;
+            Refer newRefer = InvokerManager.refer(newUrl, config, registryRef, newRegisterUrl, configureRef, newSubscribeUrl, configHandler);
+            chain(newRefer.open(), future, v -> {
+                if (!isClose()) {
+                    //检查动态配置是否修改了别名，需要重新订阅
+                    resubscribe(newSubscribeUrl, true);
+                    serviceUrl = newUrl;
+                    registerUrl = newRegisterUrl;
+                    invokeHandler = new ConsumerInvokeHandler(refer, proxyClass, newRefer.getUrl());
+                    refer = newRefer;
+                    oldRefer.close(true);
+                    //再次判断是否在关闭，防止前面复制的
+                    if (isClose()) {
+                        newRefer.close(true);
+                    }
+                } else {
+                    newRefer.close(false);
+                }
+            });
+            return future;
+        }
+
+        public Refer<T> getRefer() {
+            return refer;
+        }
     }
 }

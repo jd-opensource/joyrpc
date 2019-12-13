@@ -560,7 +560,7 @@ public class ZKRegistry extends AbstractRegistry {
                             datum = new HashMap<>();
                         }
                     }
-                    handler.handle(new ConfigEvent(ZKRegistry.this, null, FULL, version.incrementAndGet(), datum));
+                    handler.handle(new ConfigEvent(ZKRegistry.this, null, version.incrementAndGet(), datum));
                 });
                 nodeCache.start();
                 status = Status.STARTED;

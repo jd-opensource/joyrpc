@@ -30,8 +30,6 @@ import static io.joyrpc.util.StringUtils.split;
  */
 public class AnnotationConfig extends AbstractIdConfig implements Serializable {
 
-    /*---------- 参数配置项开始 ------------*/
-
     /**
      * 包的基本路径（前缀）
      */
@@ -46,8 +44,6 @@ public class AnnotationConfig extends AbstractIdConfig implements Serializable {
      * 是否扫描consumer
      */
     protected boolean consumer = true;
-
-    /*---------- 参数配置项结束 ------------*/
 
     /**
      * 解析出来的各个包

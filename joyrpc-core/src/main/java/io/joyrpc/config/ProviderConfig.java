@@ -23,31 +23,31 @@ package io.joyrpc.config;
 import io.joyrpc.annotation.Export;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.discovery.registry.RegistryFactory;
-import io.joyrpc.config.validator.InterfaceValidator;
+import io.joyrpc.config.validator.ValidateInterface;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
-import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-import static io.joyrpc.Plugin.*;
+import static io.joyrpc.Plugin.REGISTRY;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
@@ -56,20 +56,27 @@ import static io.joyrpc.util.StringUtils.split;
 /**
  * 服务发布者配置
  */
+@ValidateInterface
 public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serializable {
-    private final static Logger logger = LoggerFactory.getLogger(ProviderConfig.class);
+    protected static final AtomicReferenceFieldUpdater<ProviderConfig, Status> STATE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(ProviderConfig.class, Status.class, "status");
+    private static final Logger logger = LoggerFactory.getLogger(ProviderConfig.class);
 
     /**
      * 注册中心配置，可配置多个
      */
+    @Valid
     protected List<RegistryConfig> registry;
     /**
      * 接口实现类引用
      */
+    @NotNull(message = "ref can not be null.")
     protected transient T ref;
     /**
      * 配置的协议列表
      */
+    @NotNull(message = "serverConfig can not be null.")
+    @Valid
     protected ServerConfig serverConfig;
     /**
      * 服务发布延迟,单位毫秒，默认0，配置为-1代表spring加载完毕（通过spring才生效）
@@ -91,90 +98,49 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 是否动态注册，默认为true，配置为false代表不主动发布，需要到管理端进行上线操作
      */
     protected Boolean dynamic;
-
+    /**
+     * 是否启用验证
+     */
     protected Boolean enableValidator = true;
-
     /**
      * 接口验证器插件
      */
     protected String interfaceValidator;
-
     /**
      * 预热插件
      */
     protected transient Warmup warmup;
+    /**
+     * 控制器
+     */
+    protected transient volatile Controller<T> controller;
 
     /**
-     * 已发布
+     * 暴露服务的结果
      */
-    protected transient volatile Exporter<T> exporter;
+    protected transient volatile CompletableFuture<Void> exportFuture;
     /**
-     * 注册中心URL
+     * 打开的结果
      */
-    protected transient List<URL> registryUrls;
+    protected transient volatile CompletableFuture<Void> openFuture;
     /**
-     * 注册中心
+     * 关闭Future
      */
-    protected transient List<Registry> registries = new ArrayList<>(3);
+    protected transient volatile CompletableFuture<Void> closeFuture = CompletableFuture.completedFuture(null);
+    /**
+     * 状态
+     */
+    protected transient volatile Status status = Status.CLOSED;
 
     @Override
-    protected void validate() {
+    public void validate() {
+        registry = registry != null && !registry.isEmpty() ? registry : Arrays.asList(RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get());
         super.validate();
-        //验证接口
-        if (enableValidator) {
-            validateInterface(getProxyClass());
-        }
-        checkFilterConfig(name(), filter, PROVIDER_FILTER);
-        //验证注册中心
-        if (registry != null) {
-            for (RegistryConfig config : registry) {
-                config.validate();
-            }
-        }
-        //验证服务配置
-        if (serverConfig == null) {
-            throw new InitializationException("Value of \"server\" is null in provider" +
-                    " config with interfaceClazz " + interfaceClazz + " !", ExceptionCode.PROVIDER_SERVER_IS_NULL);
-        }
-        serverConfig.validate();
-        // 检查注入的ref是否接口实现类
-        if (!getProxyClass().isInstance(ref)) {
-            throw new IllegalConfigureException("provider.ref", ref.getClass().getName(),
-                    "This is not an instance of " + interfaceClazz
-                            + " in provider config with key " + name() + " !", ExceptionCode.PROVIDER_REF_NO_FOUND);
-        }
     }
-
-    /**
-     * 验证接口规范
-     *
-     * @param clazz
-     */
-    protected void validateInterface(final Class clazz) {
-        //确保是接口
-        if (!clazz.isInterface()) {
-            throw new IllegalConfigureException("interfaceClazz", clazz.getName(),
-                    "interfaceClazz must be a interface", ExceptionCode.COMMON_NOT_RIGHT_INTERFACE);
-        }
-        if (StringUtils.isBlank(interfaceValidator)) {
-            interfaceValidator = Constants.INTERFACE_VALIDATOR_OPTION.get();
-        }
-
-        if (interfaceValidator != null && !interfaceValidator.isEmpty()) {
-            InterfaceValidator validator = checkExtension(INTERFACE_VALIDATOR, InterfaceValidator.class,
-                    "interfaceValidator", interfaceValidator);
-            validator.validate(clazz);
-        }
-    }
-
 
     @Override
-    protected void validateAlias() {
-        if (alias == null || alias.isEmpty()) {
-            throw new InitializationException("The alias must not be empty of provider " + name(),
-                    ExceptionCode.PROVIDER_ALIAS_IS_NULL);
-        }
-        checkNormalWithColon("alias", alias);
+    protected boolean isClose() {
+        return status.isClose() || super.isClose();
     }
 
     /**
@@ -195,196 +161,197 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     }
 
     /**
+     * 延迟加载
+     *
+     * @return
+     */
+    protected CompletableFuture<Void> delay() {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        // 延迟加载,单位毫秒
+        if (null == delay || delay <= 0) {
+            future.complete(null);
+        } else {
+            Thread thread = new Thread(() -> {
+                try {
+                    Thread.sleep(delay);
+                    future.complete(null);
+                    //run会检查打开状态
+                } catch (InterruptedException e) {
+                    future.completeExceptionally(new InitializationException("InterruptedException " + name()));
+                }
+            });
+            thread.setDaemon(true);
+            thread.setName("DelayExportThread");
+            thread.start();
+        }
+        return future;
+    }
+
+    /**
      * 订阅全局配置并创建服务，不开启服务
      */
     public CompletableFuture<Void> export() {
-        //验证
-        try {
-            validate();
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            return Futures.completeExceptionally(e);
-        }
-        //发布服务
-        return switcher.open(f -> {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            // 延迟加载,单位毫秒
-            if (null == delay || delay <= 0) {
-                doExport(future);
-            } else {
-                Thread thread = new Thread(() -> {
-                    try {
-                        Thread.sleep(delay);
-                        //run会检查打开状态
-                        if (!switcher.writer().run(() -> doExport(future))) {
-                            f.completeExceptionally(new InitializationException("illegal state. " + name()));
-                        }
-                    } catch (InterruptedException e) {
-                        f.completeExceptionally(new InitializationException("InterruptedException " + name()));
-                    }
-                });
-                thread.setDaemon(true);
-                thread.setName("DelayExportThread");
-                thread.start();
-            }
-            future.whenComplete((v, t) -> {
-                if (t != null) {
-                    logger.error(String.format("Error occurs while export %s with bean id %s,caused by. ", name(), getId()), t);
-                    Futures.chain(unexport(), f);
+        if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.EXPORTING)) {
+            GlobalContext.getContext();
+            logger.info("Start exporting provider " + name());
+            final CompletableFuture<Void> future = new CompletableFuture<>();
+            exportFuture = future;
+            openFuture = new CompletableFuture<>();
+            controller = new Controller(this);
+            //延迟加载
+            delay().whenComplete((v, t) -> {
+                if (status != Status.EXPORTING || future != exportFuture) {
+                    future.completeExceptionally(new InitializationException("state is illegal."));
+                    logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", name()));
+                } else if (t != null) {
+                    future.completeExceptionally(t);
+                    logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
+                    unexport();
                 } else {
-                    f.complete(v);
-                    logger.info(String.format("Success exporting %s with bean id %s", name(), getId()));
+                    //开始创建服务
+                    controller.export().whenComplete((o, s) -> {
+                        if (future != exportFuture || s == null && !STATE_UPDATER.compareAndSet(this, Status.EXPORTING, Status.EXPORTED)) {
+                            future.completeExceptionally(new InitializationException("state is illegal."));
+                            logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", name()));
+                        } else if (s != null) {
+                            //export失败会自动关闭
+                            future.completeExceptionally(s);
+                            logger.info(String.format("Failed exporting provider %s. caused by %s", name(), s.getMessage()));
+                            unexport();
+                        } else {
+                            logger.info("Success exporting provider " + name());
+                            future.complete(null);
+                        }
+                    });
                 }
             });
-            return f;
-        });
+            return future;
+        } else {
+            switch (status) {
+                case EXPORTING:
+                case EXPORTED:
+                case OPENING:
+                case OPENED:
+                    //可重入，没有并发调用
+                    return exportFuture;
+                default:
+                    //其它状态不应该并发执行
+                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
+            }
+        }
     }
 
     /**
      * 开启服务
      */
     public CompletableFuture<Void> open() {
-        return exporter.open();
+        CompletableFuture<Void> future;
+        switch (status) {
+            case EXPORTING:
+                future = openFuture;
+                exportFuture.whenComplete((v, t) -> {
+                    if (t != null) {
+                        future.completeExceptionally(t);
+                    } else {
+                        doOpen(future);
+                    }
+                });
+                return future;
+            case EXPORTED:
+                future = openFuture;
+                doOpen(future);
+                return future;
+            case OPENED:
+                return openFuture;
+            default:
+                return Futures.completeExceptionally(new InitializationException("Status is illegal."));
+        }
+    }
+
+    /**
+     * 打开
+     *
+     * @param future
+     */
+    protected void doOpen(final CompletableFuture<Void> future) {
+        if (!STATE_UPDATER.compareAndSet(this, Status.EXPORTED, Status.OPENING)) {
+            logger.info(String.format("Failed opening provider %s. caused by state is illegal.", name()));
+            future.completeExceptionally(new InitializationException("state is illegal."));
+        } else {
+            logger.info(String.format("Start opening provider %s.", name()));
+            controller.open().whenComplete((v, t) -> {
+                if (openFuture != future || t == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
+                    logger.info(String.format("Failed exporting provider %s. caused by state is illegal", name()));
+                    future.completeExceptionally(new InitializationException("Status is illegal."));
+                    controller.close();
+                } else if (t != null) {
+                    //会自动关闭
+                    logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
+                    //状态回滚
+                    STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.EXPORTED);
+                    future.completeExceptionally(t);
+                } else {
+                    logger.info(String.format("Success opening provider %s.", name()));
+                    future.complete(null);
+                    //触发配置更新
+                    controller.update();
+                }
+            });
+        }
     }
 
     /**
      * 取消发布
      */
     public CompletableFuture<Void> unexport() {
-        return switcher.close(f -> {
-            doUnexport(f);
-            return f;
-        });
+        return unexport(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
-     * 关闭
+     * 取消发布
      *
-     * @param future
+     * @param gracefully 是否优雅关闭
+     * @return
      */
-    protected void doUnexport(CompletableFuture<Void> future) {
-        if (exporter != null) {
-            logger.info(String.format("Unexport provider config : %s with bean id %s", name(), getId()));
-            exporter.close();
-            exporter = null;
-            configureRef = null;
+    public CompletableFuture<Void> unexport(boolean gracefully) {
+        if (STATE_UPDATER.compareAndSet(this, Status.EXPORTING, Status.CLOSING)) {
+            //终止等待的请求
+            controller.broken();
+            return doUnexport(() -> exportFuture);
+        } else if (STATE_UPDATER.compareAndSet(this, Status.EXPORTED, Status.CLOSING)) {
+            return doUnexport(() -> controller.close(false));
+        } else if (STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.CLOSING)) {
+            return doUnexport(() -> openFuture);
+        } else if (STATE_UPDATER.compareAndSet(this, Status.OPENED, Status.CLOSING)) {
+            return doUnexport(() -> controller.close(gracefully));
+        } else {
+            switch (status) {
+                case CLOSING:
+                case CLOSED:
+                    return closeFuture;
+                default:
+                    //其它状态不应该并发执行
+                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
+            }
         }
-        if (!waitingConfig.isDone()) {
-            waitingConfig.completeExceptionally(new InitializationException("Unexport interrupted waiting config."));
-        }
-        future.complete(null);
     }
 
     /**
-     * 输出服务
+     * 取消发布
+     *
+     * @param supplier
+     * @return
      */
-    protected void doExport(final CompletableFuture<Void> future) {
-        //创建注册中心
-        registry = registry != null ? registry : Arrays.asList(RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get());
-        registryUrls = parse(registry);
-        String host;
-        String bindIp = null;
-        if (Ipv4.isLocalHost(serverConfig.getHost())) {
-            //拿到本机地址
-            host = getLocalHost(registryUrls.get(0).getString(ADDRESS_OPTION));
-            bindIp = "0.0.0.0";
-        } else {
-            host = serverConfig.getHost();
-        }
-        int port = serverConfig.getPort() == null ? PORT_OPTION.getValue() : serverConfig.getPort();
-
-        //创建等到配置初始化
-        waitingConfig = new CompletableFuture<>();
-
-        //生成注册的URL
-        Map<String, String> map = addAttribute2Map(serverConfig.addAttribute2Map());
-        if (bindIp != null) {
-            map.put(BIND_IP_KEY, bindIp);
-        }
-        serviceUrl = new URL(GlobalContext.getString(PROTOCOL_KEY), host, port, interfaceClazz, map);
-
-        //构造注册中心对象
-        RegistryFactory factory;
-        Registry registry;
-        String name;
-        URL registryURL;
-        //订阅成功标识
-        AtomicBoolean subscribed = new AtomicBoolean(false);
-
-        //过滤掉重复的注册中心
-        Set<Registry> unique = new HashSet<>(3);
-        //多注册中心
-        for (int i = 0; i < registryUrls.size(); i++) {
-            //注册中心工厂插件
-            registryURL = registryUrls.get(i);
-            name = registryURL.getProtocol();
-            factory = REGISTRY.get(name);
-            if (factory == null) {
-                if (!register && !subscribe) {
-                    factory = REGISTRY.get("memory");
-                } else {
-                    future.completeExceptionally(new InitializationException(String.format("Registry factory is not found. %s", name)));
-                    return;
-                }
-            }
-            //获取注册中心
-            registry = factory.getRegistry(registryURL);
-            if (unique.add(registry)) {
-                //既不注册也不订阅，不执行open操作
-                CompletableFuture<Void> f = !register && !subscribe ? CompletableFuture.completedFuture(null) : registry.open();
-                if (subscribe) {
-                    f.whenComplete(new RegistryConsumer(registry, subscribed, future));
-                }
-                registries.add(registry);
-            }
-        }
-        //不需要订阅
-        if (!subscribe) {
-            waitingConfig.complete(serviceUrl);
-        }
-        waitingConfig.whenComplete((url, e) -> {
-            if (e != null) {
-                future.completeExceptionally(e);
-            } else {
-                //检查动态配置是否修改了别名，需要重新订阅
-                resubscribe(serviceUrl, url);
-                try {
-                    exporter = InvokerManager.export(this, configureRef, serviceUrl, subscribeUrl);
-                    future.complete(null);
-                } catch (Exception ex) {
-                    future.completeExceptionally(ex);
-                }
-            }
+    protected CompletableFuture<Void> doUnexport(final Supplier<CompletableFuture<Void>> supplier) {
+        logger.info("Start unexporting provider " + name());
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        closeFuture = future;
+        supplier.get().whenComplete((v, t) -> {
+            status = Status.CLOSED;
+            future.complete(null);
+            logger.info("Success unexporting provider " + name());
         });
-    }
-
-    @Override
-    protected void onChanged(final URL newUrl, final long version) {
-        Exporter<T> oldExporter = exporter;
-        exporter.close().whenComplete((v, t) -> {
-            Exporter<T> newExporter = InvokerManager.export(this, newUrl, configureRef, subscribeUrl);
-            newExporter.open().whenComplete((r, ex) -> {
-                if (r == null) {
-                    //异步并发，需要进行版本比较
-                    synchronized (counter) {
-                        long newVersion = counter.get();
-                        if (newVersion == version) {
-                            //检查动态配置是否修改了别名，需要重新订阅
-                            resubscribe(serviceUrl, newUrl);
-                            exporter = newExporter;
-                            serviceUrl = newUrl;
-                            oldExporter.close(true);
-                        } else {
-                            logger.info(String.format("Discard out-of-date config. old=%d, current=%d", version, newVersion));
-                            newExporter.close();
-                        }
-                    }
-                } else {
-                    logger.error("Error occurs while exporting after attribute changed", t);
-                    newExporter.close();
-                }
-            });
-        });
+        return future;
     }
 
     @Override
@@ -544,10 +511,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         this.dynamic = dynamic;
     }
 
-    public List<Registry> getRegistries() {
-        return registries;
-    }
-
     public Warmup getWarmup() {
         return warmup;
     }
@@ -573,53 +536,296 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     }
 
     /**
-     * 注册中心打开消费者
+     * 控制器
      */
-    protected class RegistryConsumer implements BiConsumer<Void, Throwable> {
+    protected static class Controller<T> extends AbstractController<ProviderConfig> {
+        /**
+         * 已发布
+         */
+        protected transient volatile Exporter<T> exporter;
         /**
          * 注册中心
          */
-        protected Registry registry;
-
-        /**
-         * 订阅配置标识（多个注册中心，只订阅配置一份）
-         */
-        protected AtomicBoolean subscribed;
-        /**
-         * 等到Future
-         */
-        protected CompletableFuture<Void> future;
+        protected transient List<Registry> registries = new ArrayList<>(3);
 
         /**
          * 构造函数
          *
-         * @param registry
-         * @param subscribed
-         * @param future
+         * @param config
          */
-        public RegistryConsumer(final Registry registry, final AtomicBoolean subscribed,
-                                final CompletableFuture<Void> future) {
-            this.registry = registry;
-            this.subscribed = subscribed;
-            this.future = future;
+        public Controller(ProviderConfig config) {
+            super(config);
         }
 
         @Override
-        public void accept(Void value, Throwable throwable) {
-            // todo subscribed不能确保多个里面一个成功
-            if (throwable != null) {
-                future.completeExceptionally(new InitializationException(
-                        String.format("Registry open error. %s", registry.getUrl().toString(false, false))));
-            } else if (!subscribed.get()) {
-                //保存订阅注册中心
-                configureRef = configure == null ? registry : configure;
-                //订阅的URL
-                subscribeUrl = configureRef.normalize(serviceUrl);
-                configureRef.subscribe(subscribeUrl, configHandler);
-                //只向满足条件的第一个注册中心订阅配置变化，多个注册中心同时订阅有问题
-                subscribed.set(true);
-            }
+        protected boolean isClose() {
+            return config.isClose() || config.controller != this;
         }
+
+        @Override
+        protected boolean isOpened() {
+            return config.status == Status.OPENED;
+        }
+
+        /**
+         * 暴露服务
+         *
+         * @return
+         */
+        public CompletableFuture<Void> export() {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            try {
+                config.validate();
+                ServerConfig serverConfig = config.getServerConfig();
+                //注册中心地址
+                List<URL> urls = parse(config.getRegistry());
+                //服务地址
+                String remote = urls.get(0).getString(ADDRESS_OPTION);
+                ServerAddress address = getAddress(serverConfig, remote);
+                //生成注册的URL
+                Map<String, String> map = config.addAttribute2Map(serverConfig.addAttribute2Map());
+                if (address.bindIp != null) {
+                    map.put(BIND_IP_KEY, address.bindIp);
+                }
+                //原始URL
+                url = new URL(GlobalContext.getString(PROTOCOL_KEY), address.host, address.port, config.interfaceClazz, map);
+                //加上动态配置的服务URL
+                serviceUrl = configure(null);
+                //订阅
+                chain(subscribe(urls), future, v -> chain(waitingConfig, future, u -> {
+                    //检查动态配置是否修改了别名，需要重新订阅
+                    resubscribe(buildSubscribedUrl(configureRef, u), false);
+                    //保存新的配置
+                    serviceUrl = u;
+                    try {
+                        List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, serviceUrl)).collect(Collectors.toList());
+                        exporter = InvokerManager.export(serviceUrl, config, registries, registerUrls, configureRef, subscribeUrl, configHandler);
+                        future.complete(null);
+                    } catch (Exception ex) {
+                        future.completeExceptionally(ex);
+                    }
+                }));
+            } catch (Throwable e) {
+                future.completeExceptionally(e);
+            }
+            return future;
+        }
+
+        /**
+         * 打开服务
+         *
+         * @return
+         */
+        public CompletableFuture<Void> open() {
+            Exporter<T> r = exporter;
+            return r == null ? Futures.completeExceptionally(new InitializationException("Status is illegal.")) : r.open();
+        }
+
+        /**
+         * 关闭服务
+         *
+         * @return
+         */
+        public CompletableFuture<Void> close() {
+            return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        }
+
+        /**
+         * 关闭服务
+         *
+         * @param gracefully 是否优雅关闭
+         * @return
+         */
+        public CompletableFuture<Void> close(boolean gracefully) {
+            Exporter<T> r = exporter;
+            return r == null ? CompletableFuture.completedFuture(null) : r.close(gracefully);
+        }
+
+        /**
+         * 订阅，打开注册中心
+         *
+         * @param urls
+         * @return
+         */
+        protected CompletableFuture<Void> subscribe(final List<URL> urls) {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            //订阅成功标识
+            AtomicBoolean subscribed = new AtomicBoolean(false);
+            //过滤掉重复的注册中心
+            Set<Registry> unique = new HashSet<>(3);
+            List<CompletableFuture<Void>> futures = new LinkedList<>();
+            //多注册中心
+            for (URL url : urls) {
+                //注册中心工厂插件
+                Registry registry = getRegistry(url);
+                if (registry == null) {
+                    futures.add(Futures.completeExceptionally(
+                            new InitializationException(String.format("Create registry error. %s", url.getProtocol()))));
+                } else if (unique.add(registry)) {
+                    futures.add(subscribe(registry, subscribed));
+                    registries.add(registry);
+                }
+            }
+            //不订阅配置
+            if (!config.subscribe) {
+                waitingConfig.complete(serviceUrl);
+            }
+            //等到所有的注册中心
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).whenComplete((v, t) -> {
+                if (t != null) {
+                    future.completeExceptionally(t);
+                } else {
+                    future.complete(null);
+                }
+            });
+            return future;
+        }
+
+        /**
+         * 构建注册中心
+         *
+         * @param url
+         * @return
+         */
+        protected Registry getRegistry(final URL url) {
+            String name = url.getProtocol();
+            RegistryFactory factory = REGISTRY.get(name);
+            if (factory == null) {
+                if (!config.register && !config.subscribe) {
+                    factory = REGISTRY.get("memory");
+                } else {
+                    return null;
+                }
+            }
+            //获取注册中心
+            return factory.getRegistry(url);
+        }
+
+        @Override
+        protected CompletableFuture<Void> update(final URL newUrl) {
+            //只在opened状态触发
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            //先关闭老的，再打开新的，否则报错
+            chain(exporter.close(true), future, v -> {
+                //异步，再次判断是否关闭了
+                if (!isClose()) {
+                    List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, newUrl)).collect(Collectors.toList());
+                    URL newSubscribeUrl = config.subscribe ? buildSubscribedUrl(configureRef, newUrl) : null;
+                    Exporter<T> newExporter = InvokerManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
+                    //打开
+                    chain(newExporter.open(), future, s -> {
+                        //异步，再次判断是否关闭了
+                        if (!isClose()) {
+                            //检查动态配置是否修改了别名，需要重新订阅
+                            resubscribe(newSubscribeUrl, true);
+                            exporter = newExporter;
+                            serviceUrl = newUrl;
+                            if (isClose()) {
+                                //再次判断防止并发
+                                newExporter.close(true);
+                            }
+                        } else {
+                            newExporter.close(false);
+                        }
+                    });
+                }
+            });
+
+            return future;
+        }
+    }
+
+    /**
+     * 服务地址
+     */
+    protected static class ServerAddress {
+        /**
+         * 对外服务的地址
+         */
+        protected String host;
+        /**
+         * 监听的IP
+         */
+        protected String bindIp;
+        /**
+         * 端口
+         */
+        protected int port;
+
+        /**
+         * 构造函数
+         *
+         * @param host
+         * @param bindIp
+         * @param port
+         */
+        public ServerAddress(String host, String bindIp, int port) {
+            this.host = host;
+            this.bindIp = bindIp;
+            this.port = port;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public String getBindIp() {
+            return bindIp;
+        }
+
+        public int getPort() {
+            return port;
+        }
+    }
+
+    /**
+     * 服务状态
+     */
+    public enum Status {
+        /**
+         * 关闭
+         */
+        CLOSED {
+            @Override
+            public boolean isClose() {
+                return true;
+            }
+        },
+        /**
+         * 暴露服务中
+         */
+        EXPORTING,
+        /**
+         * 暴露服务已完成
+         */
+        EXPORTED,
+        /**
+         * 打开中
+         */
+        OPENING,
+        /**
+         * 打开
+         */
+        OPENED,
+        /**
+         * 关闭中
+         */
+        CLOSING {
+            @Override
+            public boolean isClose() {
+                return true;
+            }
+        };
+
+        /**
+         * 是否关闭
+         *
+         * @return
+         */
+        public boolean isClose() {
+            return false;
+        }
+
     }
 
 }

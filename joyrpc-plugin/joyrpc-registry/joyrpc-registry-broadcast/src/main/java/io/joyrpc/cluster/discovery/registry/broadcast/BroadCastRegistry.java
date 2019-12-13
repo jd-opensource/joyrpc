@@ -494,7 +494,7 @@ public class BroadCastRegistry extends AbstractRegistry {
             } else {
                 datum = new HashMap<>();
             }
-            handler.handle(new ConfigEvent(BroadCastRegistry.this, null, FULL, version.incrementAndGet(), datum));
+            handler.handle(new ConfigEvent(BroadCastRegistry.this, null, version.incrementAndGet(), datum));
         }
     }
 

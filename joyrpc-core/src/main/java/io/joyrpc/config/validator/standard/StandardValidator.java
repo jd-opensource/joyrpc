@@ -9,9 +9,9 @@ package io.joyrpc.config.validator.standard;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,16 +20,14 @@ package io.joyrpc.config.validator.standard;
  * #L%
  */
 
-import io.joyrpc.Callback;
 import io.joyrpc.config.validator.InterfaceValidator;
-import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.exception.IllegalInterfaceException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.GenericChecker.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.validation.ValidationException;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -79,7 +77,7 @@ public class StandardValidator implements InterfaceValidator {
     }
 
     @Override
-    public void validate(final Class clazz) throws IllegalInterfaceException {
+    public void validate(final Class clazz) throws ValidationException {
         Set<String> overloads = new HashSet<>();
         GenericChecker checker = new GenericChecker();
         checker.checkMethods(clazz, NONE_STATIC_METHOD.and(method -> {
@@ -100,8 +98,8 @@ public class StandardValidator implements InterfaceValidator {
      * @param method
      */
     protected void onOverloadMethod(final Class clazz, final Method method) {
-        throw new IllegalInterfaceException(String.format("Overloaded methods are not supported. %s.%s",
-                clazz.getName(), method.getName()), ExceptionCode.PROVIDER_METHOD_OVERLOADING);
+        throw new ValidationException(String.format("Overloaded methods are not supported. %s.%s",
+                clazz.getName(), method.getName()));
     }
 
 
@@ -205,7 +203,7 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onNoDefaultConstructor(final Class clazz) {
-            throw new IllegalInterfaceException(String.format("This type does not have a default constructor. %s", clazz.getName()));
+            throw new ValidationException(String.format("This type does not have a default constructor. %s", clazz.getName()));
         }
 
         /**
@@ -214,7 +212,7 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onNotSerializable(final Class clazz) {
-            throw new IllegalInterfaceException(String.format("The type is not implement serializable. %s", clazz));
+            throw new ValidationException(String.format("The type is not implement serializable. %s", clazz));
         }
 
         /**
@@ -224,10 +222,10 @@ public class StandardValidator implements InterfaceValidator {
          */
         protected void onCustomInterface(final Class clazz, final Scope scope) {
             //参数允许是Callback
-            if (scope == Scope.PARAMETER && Callback.class.isAssignableFrom(clazz)) {
+            if (scope == Scope.PARAMETER) {
                 return;
             }
-            throw new IllegalInterfaceException(String.format("The interface is not allowed at %s. %s", scope.getName(), clazz.getName()));
+            throw new ValidationException(String.format("The interface is not allowed at %s. %s", scope.getName(), clazz.getName()));
         }
 
         /**
@@ -236,7 +234,7 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onCustomAbstract(final Class clazz, final Scope scope) {
-            throw new IllegalInterfaceException(String.format("The type is abstract. scope is %s, class is %s.", scope.getName(), clazz.getName()));
+            throw new ValidationException(String.format("The type is abstract. scope is %s, class is %s.", scope.getName(), clazz.getName()));
         }
 
         /**

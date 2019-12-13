@@ -46,12 +46,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static io.joyrpc.Plugin.AUTHENTICATOR;
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
@@ -127,24 +125,35 @@ public class Exporter<T> extends AbstractInvoker<T> {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
-     * @param config
-     * @param server
-     * @param closing
+     * @param name          名称
+     * @param url           服务URL
+     * @param config        服务提供者配置
+     * @param registries    注册中心
+     * @param registerUrls  注册的URL
+     * @param configure     配置
+     * @param subscribeUrl  订阅配置的URL
+     * @param configHandler 配置监听器
+     * @param server        服务
+     * @param closing       关闭消费者
      */
     protected Exporter(final String name,
                        final URL url,
                        final ProviderConfig<T> config,
+                       final List<Registry> registries,
+                       final List<URL> registerUrls,
                        final Configure configure,
                        final URL subscribeUrl,
+                       final ConfigHandler configHandler,
                        final Server server,
                        final Consumer<Exporter> closing) {
         this.name = name;
-        this.url = url;
         this.config = config;
+        this.registries = registries;
+        this.registerUrls = registerUrls;
         this.configure = configure;
+        this.url = url;
         this.subscribeUrl = subscribeUrl;
+        this.configHandler = configHandler;
         this.server = server;
         this.closing = closing;
 
@@ -154,7 +163,6 @@ public class Exporter<T> extends AbstractInvoker<T> {
         this.interfaceClass = config.getProxyClass();
         this.interfaceName = config.getInterfaceClazz();
         //保留全局的配置变更处理器，订阅和取消订阅对象一致
-        this.configHandler = config.getConfigHandler();
         this.ref = config.getRef();
         this.warmup = config.getWarmup();
         this.port = url.getPort();
@@ -166,9 +174,6 @@ public class Exporter<T> extends AbstractInvoker<T> {
                 Constants.METHOD_KEY.apply(m.getName(), String.valueOf(HIDE_KEY_PREFIX)), true));
         this.chain = FilterChain.producer(this, this::invokeMethod);
         this.authenticator = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
-        this.registries = config.getRegistries();
-        //往注册中心注册的URL
-        this.registerUrls = registries.stream().map(registry -> normalize(registry, url, config.getProxyClass())).collect(Collectors.toList());
     }
 
     @Override
@@ -357,7 +362,6 @@ public class Exporter<T> extends AbstractInvoker<T> {
      * @return
      */
     protected CompletableFuture<Void> deregister() {
-        logger.info(String.format("deregister provider config : %s", url.toString(false, false)));
         if (registries == null || registries.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         } else {
@@ -383,8 +387,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
     }
 
     public List<Registry> getRegistries() {
-        List<Registry> result = registries == null ? config.getRegistries() : registries;
-        return result == null ? new ArrayList<>(0) : result;
+        return registries;
     }
 
     public int getPort() {

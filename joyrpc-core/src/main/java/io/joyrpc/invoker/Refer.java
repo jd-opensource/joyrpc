@@ -21,11 +21,8 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Result;
-import io.joyrpc.annotation.Alias;
-import io.joyrpc.annotation.Service;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.Node;
-import io.joyrpc.cluster.discovery.Normalizer;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
@@ -135,6 +132,7 @@ public class Refer<T> extends AbstractInvoker<T> {
      */
     protected Iterable<ExceptionHandler> exceptionHandlers;
 
+
     /**
      * 构造函数
      *
@@ -144,16 +142,20 @@ public class Refer<T> extends AbstractInvoker<T> {
      * @param registry
      * @param configure
      * @param subscribeUrl
+     * @param configHandler
      * @param cluster
      * @param loadBalance
      * @param container
      * @param closing
      */
-    protected Refer(final String name, final URL url,
+    protected Refer(final String name,
+                    final URL url,
                     final ConsumerConfig config,
                     final Registry registry,
+                    final URL registerUrl,
                     final Configure configure,
                     final URL subscribeUrl,
+                    final ConfigHandler configHandler,
                     final Cluster cluster,
                     final LoadBalance loadBalance,
                     final CallbackContainer container,
@@ -162,23 +164,22 @@ public class Refer<T> extends AbstractInvoker<T> {
         this.url = url;
         this.config = config;
         this.registry = registry;
+        this.registerUrl = registerUrl;
         this.configure = configure;
         this.subscribeUrl = subscribeUrl;
+        //保留全局的配置变更处理器
+        this.configHandler = configHandler;
         this.cluster = cluster;
         this.container = container;
         this.closing = closing;
         this.system = url.getBoolean(Constants.SYSTEM_OPTION);
-
         //别名
         this.alias = url.getString(Constants.ALIAS_OPTION);
-        //保留全局的配置变更处理器
-        this.configHandler = config.getConfigHandler();
         //代理接口
         this.interfaceClass = config.getProxyClass();
         //真实类名
         this.interfaceName = config.getInterfaceClazz();
-        //获取真实的接口上的注解进行注册URL标准化
-        this.registerUrl = normalize(registry, url, config.getProxyClass());
+
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
         this.exporter = NAME.apply(config.getInterfaceClazz(), alias);
 
@@ -312,29 +313,6 @@ public class Refer<T> extends AbstractInvoker<T> {
                                 function.apply(request, payLoad.getResponse()), response);
     }
 
-    @Override
-    protected URL normalize(final Normalizer normalizer, final URL url, final Class<?> clazz) {
-        URL result = super.normalize(normalizer, url, clazz);
-        if (!config.isGeneric()) {
-            String aliasName = null;
-            //不是泛化调用
-            Service service = clazz.getAnnotation(Service.class);
-            if (service != null && service.name() != null && !service.name().isEmpty()) {
-                //判断服务名
-                aliasName = service.name();
-            } else {
-                Alias alias = clazz.getAnnotation(Alias.class);
-                if (alias != null && alias.value() != null && !alias.value().isEmpty()) {
-                    aliasName = alias.value();
-                }
-            }
-            if (aliasName != null) {
-                result = result.setPath(aliasName);
-            }
-        }
-        return result;
-    }
-
     /**
      * 构建路由器
      *
@@ -442,7 +420,6 @@ public class Refer<T> extends AbstractInvoker<T> {
 
     @Override
     protected CompletableFuture<Void> doClose() {
-        logger.info("Start unrefer consumer config " + name);
         //注销节点事件
         cluster.removeHandler(config);
         //从注册中心注销，最多重试1次
@@ -462,7 +439,6 @@ public class Refer<T> extends AbstractInvoker<T> {
             if (closing != null) {
                 closing.accept(this, null);
             }
-            logger.info("Success unrefer consumer config " + name);
         });
     }
 
@@ -474,9 +450,9 @@ public class Refer<T> extends AbstractInvoker<T> {
     protected CompletableFuture<Void> register() {
         CompletableFuture<Void> result = new CompletableFuture<>();
         //注册
-        if (url.getBoolean(Constants.REGISTER_OPTION) == true) {
+        if (registerUrl != null) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
-            registry.register(url).whenComplete((v, t) -> {
+            registry.register(registerUrl).whenComplete((v, t) -> {
                 if (t == null) {
                     result.complete(null);
                 } else {
@@ -496,7 +472,7 @@ public class Refer<T> extends AbstractInvoker<T> {
      */
     protected CompletableFuture<Void> deregister() {
         CompletableFuture<Void> future = new CompletableFuture();
-        if (url.getBoolean(Constants.REGISTER_OPTION)) {
+        if (registerUrl != null) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
             //TODO 要确保各个注册中心实现在服务有问题的情况下，能快速的注销掉
             registry.deregister(registerUrl, 1).whenComplete((r, t) -> future.complete(null));
@@ -514,7 +490,7 @@ public class Refer<T> extends AbstractInvoker<T> {
     protected CompletableFuture<Void> unsubscribe() {
         CompletableFuture<Void> future = new CompletableFuture();
         //订阅
-        if (url.getBoolean(Constants.SUBSCRIBE_OPTION)) {
+        if (subscribeUrl != null) {
             // todo 不能保证执行成功
             configure.unsubscribe(subscribeUrl, configHandler);
         }

@@ -94,7 +94,7 @@ public final class URL implements Serializable, Parametric {
         this.path = path;
         this.parameters = parameters == null || parameters.isEmpty() ? UNMODIFIED_EMPTY_MAP :
                 (UNMODIFIED_EMPTY_MAP.getClass().equals(parameters.getClass()) ? parameters :
-                        Collections.unmodifiableMap(new HashMap<String, String>(parameters)));
+                        Collections.unmodifiableMap(new HashMap<>(parameters)));
     }
 
     /**

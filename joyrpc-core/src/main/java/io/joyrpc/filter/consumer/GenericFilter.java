@@ -48,7 +48,7 @@ public class GenericFilter extends AbstractConsumerFilter {
         if (invocation.isGeneric()) {
             Object[] args = invocation.getArgs();
             String name = args[0].toString();
-            //真实的接口名
+            //真实的方法名
             invocation.setMethodName(name);
             //设置泛化标示
             invocation.addAttachment(Constants.GENERIC_OPTION.getName(), true);

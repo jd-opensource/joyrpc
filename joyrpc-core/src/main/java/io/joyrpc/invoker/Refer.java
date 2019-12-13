@@ -177,11 +177,11 @@ public class Refer<T> extends AbstractInvoker<T> {
         this.alias = url.getString(Constants.ALIAS_OPTION);
         //代理接口
         this.interfaceClass = config.getProxyClass();
-        //真实类名
-        this.interfaceName = config.getInterfaceClazz();
+        //真实接口名称
+        this.interfaceName = url.getPath();
 
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
-        this.exporter = NAME.apply(config.getInterfaceClazz(), alias);
+        this.exporter = NAME.apply(interfaceName, alias);
 
         //接口级别的隐藏参数，保留以"."开头
         this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
@@ -368,7 +368,7 @@ public class Refer<T> extends AbstractInvoker<T> {
             request.getHeader().setTimeout(option.getTimeout());
         }
         //设置实际的类名，而不是泛化类
-        invocation.setClassName(config.getInterfaceClazz());
+        invocation.setClassName(interfaceName);
         //接口透传参数
         invocation.addAttachments(interfaceImplicits);
         //方法透传参数

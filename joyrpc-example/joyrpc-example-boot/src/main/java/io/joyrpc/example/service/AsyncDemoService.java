@@ -1,4 +1,4 @@
-package io.joyrpc.example.boot;
+package io.joyrpc.example.service;
 
 /*-
  * #%L
@@ -20,15 +20,12 @@ package io.joyrpc.example.boot;
  * #L%
  */
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import io.joyrpc.annotation.Alias;
 
-@SpringBootApplication
-public class BootRestServer {
+import java.util.concurrent.CompletableFuture;
 
-    public static void main(String[] args) throws InterruptedException {
-        System.setProperty("spring.profiles.active", "rest");
-        SpringApplication.run(BootRestServer.class, args);
-        Thread.currentThread().join();
-    }
+@Alias("io.joyrpc.example.service.DemoService")
+public interface AsyncDemoService {
+
+    CompletableFuture<String> sayHello(String str);
 }

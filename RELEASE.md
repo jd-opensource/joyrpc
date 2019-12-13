@@ -43,6 +43,8 @@
 - Bootstrap
 
   - ConsumerConfig和ProviderConfig移除配置监听器方法，没有正确移除
+  
+  - 修改在接口上使用@Alias注解，消费者不能正确的调用和拿不到配置的问题。会使用Alias配置的名称替换ConsumerConfig配置的接口名称
 
 ## 1.0.4-SNAPSHOT
 

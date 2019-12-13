@@ -161,7 +161,8 @@ public class Exporter<T> extends AbstractInvoker<T> {
         this.alias = url.getString(Constants.ALIAS_OPTION);
         //代理接口
         this.interfaceClass = config.getProxyClass();
-        this.interfaceName = config.getInterfaceClazz();
+        //真实的接口名字
+        this.interfaceName = url.getPath();
         //保留全局的配置变更处理器，订阅和取消订阅对象一致
         this.ref = config.getRef();
         this.warmup = config.getWarmup();

@@ -24,8 +24,6 @@ import io.joyrpc.GenericService;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.annotation.Service;
 import io.joyrpc.cluster.candidate.Candidature;
-import io.joyrpc.cluster.discovery.config.Configure;
-import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.ExceptionPredication;
 import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.cluster.distribution.Route;
@@ -630,7 +628,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 注册和订阅的接口名称
          */
-        protected String pseudonym;
+        protected String interfaceClazz;
         /**
          * 调用handler
          */
@@ -665,7 +663,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             try {
                 config.validate();
                 proxyClass = config.getProxyClass();
-                pseudonym = getPseudonym(config.getInterfaceClass());
+                interfaceClazz = getPseudonym(config.getInterfaceClass(), config.getInterfaceClazz());
                 registry = (config.url != null && !config.url.isEmpty()) ?
                         new RegistryConfig(Constants.FIX_REGISTRY, config.url)
                         : config.registry != null ? config.registry : RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get();
@@ -673,7 +671,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 registryUrl = parse(registry);
                 String host = getLocalHost(registryUrl.getString(Constants.ADDRESS_OPTION));
                 //构造原始URL
-                url = new URL(GlobalContext.getString(PROTOCOL_KEY), host, 0, config.interfaceClazz, config.addAttribute2Map());
+                url = new URL(GlobalContext.getString(PROTOCOL_KEY), host, 0, interfaceClazz, config.addAttribute2Map());
                 //加上动态配置的服务URL
                 serviceUrl = configure(null);
                 doOpen().whenComplete((v, e) -> {
@@ -723,11 +721,12 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 获取服务的别名
          *
-         * @param clazz 接口
+         * @param clazz        接口
+         * @param defaultValue 默认值
          * @return
          */
-        protected String getPseudonym(final Class<?> clazz) {
-            String result = null;
+        protected String getPseudonym(final Class<?> clazz, final String defaultValue) {
+            String result = defaultValue;
             if (clazz != null && !GenericService.class.equals(clazz)) {
                 Service service = clazz.getAnnotation(Service.class);
                 if (service != null && service.name() != null && !service.name().isEmpty()) {
@@ -741,18 +740,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 }
             }
             return result;
-        }
-
-        @Override
-        protected URL buildRegisteredUrl(final Registry registry, final URL url) {
-            //判断是否要指向其它接口名称
-            return super.buildRegisteredUrl(registry, pseudonym != null ? url.setPath(pseudonym) : url);
-        }
-
-        @Override
-        protected URL buildSubscribedUrl(final Configure configure, final URL url) {
-            //判断是否要指向其它接口名称
-            return super.buildSubscribedUrl(configure, pseudonym != null ? url.setPath(pseudonym) : url);
         }
 
         @Override

@@ -895,6 +895,8 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
          */
         protected URL configure(final Map<String, String> updates) {
             Map<String, String> result = new HashMap<>(32);
+            //真实配置的接口名称
+            String path = url.getPath();
             //本地全局静态配置
             Configurator.update(GlobalContext.getContext(), result, GLOBAL_ALLOWED);
             //注册中心下发的全局动态配置，主要是一些开关
@@ -902,14 +904,13 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             //本地接口静态配置,数据中心和区域在注册中心里面会动态更新到全局上下文里面
             Configurator.update(url.getParameters(), result, CONFIG_ALLOWED);
             //注册中心下发的接口动态配置
-            //TODO 配置的接口名称
-            Configurator.update(GlobalContext.getInterfaceConfig(config.getInterfaceClazz()), result, GLOBAL_ALLOWED);
+            Configurator.update(GlobalContext.getInterfaceConfig(path), result, GLOBAL_ALLOWED);
             //调用插件
-            CONFIGURATOR.extensions().forEach(o -> Configurator.update(o.configure(config.getInterfaceClazz()), result, CONFIG_ALLOWED));
+            CONFIGURATOR.extensions().forEach(o -> Configurator.update(o.configure(path), result, CONFIG_ALLOWED));
             //动态配置
             Configurator.update(updates, result, CONFIG_ALLOWED);
 
-            return new URL(url.getProtocol(), url.getUser(), url.getPassword(), url.getHost(), url.getPort(), url.getPath(), result);
+            return new URL(url.getProtocol(), url.getUser(), url.getPassword(), url.getHost(), url.getPort(), path, result);
         }
 
         /**

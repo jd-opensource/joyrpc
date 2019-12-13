@@ -514,7 +514,8 @@ public class InvokerManager {
         loadBalance.setUrl(url);
         if (loadBalance instanceof InvokerAware) {
             InvokerAware aware = (InvokerAware) loadBalance;
-            aware.setClassName(config.getInterfaceClazz());
+            //获取真实接口名称
+            aware.setClassName(url.getPath());
         }
         loadBalance.setup();
         loadBalance = sticky ? new StickyLoadBalance(loadBalance) : loadBalance;
@@ -572,7 +573,8 @@ public class InvokerManager {
                                        final Configure configure,
                                        final URL subscribeUrl,
                                        final ConfigHandler configHandler) {
-        final String name = NAME.apply(config.getInterfaceClazz(), config.getAlias());
+        //使用url.getPath获取真实接口名称
+        final String name = NAME.apply(url.getPath(), config.getAlias());
         Map<Integer, Exporter> ports = exports.get(name);
         if (ports != null && ports.containsKey(url.getPort())) {
             throw new IllegalConfigureException(

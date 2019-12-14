@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -122,24 +122,32 @@ public class RankScore<T> implements Serializable, Cloneable {
      * @return
      */
     public Rank score(final T value, final BiFunction<T, T, Integer> comparable) {
-        if (fair != null && comparable.apply(value, fair) > 0) {
-            return Rank.Good;
-        } else if (poor != null) {
-            if (comparable.apply(value, poor) > 0) {
-                return fair != null ? Rank.Fair : Rank.Good;
-            } else if (disable != null) {
-                return comparable.apply(value, disable) > 0 ? Rank.Poor : Rank.Disabled;
+        int result;
+        Rank max = Rank.Good;
+        if (fair != null) {
+            result = comparable.apply(value, fair);
+            if (result > 0) {
+                return Rank.Good;
+            } else if (result == 0) {
+                return Rank.Fair;
             }
-            return Rank.Poor;
-        } else if (disable != null) {
-            if (comparable.apply(value, disable) > 0) {
-                return fair != null ? Rank.Fair : Rank.Good;
-            }
-            return Rank.Disabled;
-        } else {
-            return fair != null ? Rank.Fair : Rank.Good;
+            max = Rank.Fair;
         }
+        if (poor != null) {
+            result = comparable.apply(value, poor);
+            if (result > 0) {
+                return max;
+            } else if (result == 0) {
+                return Rank.Poor;
+            }
+            max = Rank.Poor;
+        }
+        if (disable != null && comparable.apply(value, disable) <= 0) {
+            return Rank.Disabled;
+        }
+        return max;
     }
+
 
     @Override
     public RankScore<T> clone() {

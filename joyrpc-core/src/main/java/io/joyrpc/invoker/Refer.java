@@ -224,11 +224,12 @@ public class Refer<T> extends AbstractInvoker<T> {
     /**
      * 调用远程
      *
-     * @param node
-     * @param request
+     * @param node    当前节点
+     * @param last    前一个节点
+     * @param request 请求
      * @return
      */
-    protected CompletableFuture<Result> invokeRemote(final Node node, final RequestMessage<Invocation> request) {
+    protected CompletableFuture<Result> invokeRemote(final Node node, final Node last, final RequestMessage<Invocation> request) {
         Client client = node.getClient();
         if (client == null) {
             //选择完后，节点可能被其它线程断开连接了
@@ -240,7 +241,12 @@ public class Refer<T> extends AbstractInvoker<T> {
         header.copy(session);
         //条件透传注入
         for (NodeReqInjection injection : injections) {
-            injection.inject(request, (Node) node, client);
+            if (last != null) {
+                //取消上一个节点注入的参数
+                injection.reject(request, last);
+            }
+            //注入当前节点参数
+            injection.inject(request, node);
         }
         //绑定回调，调用异常会删除注册的callback，避免造成垃圾数据
         if (container != null) {

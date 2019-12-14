@@ -672,7 +672,7 @@ public class Constants {
     /**
      * 自适应负载均衡，综合评分算法
      */
-    public static final URLOption<String> ADAPTIVE_ARBITER = new URLOption<>("adaptive.arbiter", "");
+    public static final URLOption<String> ADAPTIVE_ARBITER = new URLOption<>("adaptive.arbiter", "weight");
     /**
      * 自适应负载均衡，选举算法
      */

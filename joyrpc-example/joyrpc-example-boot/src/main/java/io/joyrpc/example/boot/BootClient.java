@@ -36,7 +36,7 @@ public class BootClient {
         while (true) {
             try {
                 System.out.println(consumer.sayHello("helloWold"));
-                Thread.sleep(1000L);
+                Thread.sleep(200L);
             } catch (InterruptedException e) {
                 break;
             } catch (Exception e) {

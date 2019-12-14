@@ -1,4 +1,4 @@
-package io.joyrpc.context.injection;
+package io.joyrpc.util;
 
 /*-
  * #%L
@@ -20,27 +20,23 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
-
 /**
- * 隐式参数配置
+ * 三元组函数
+ *
+ * @param <T>
+ * @param <U>
+ * @param <S>
+ * @param <R>
  */
-public interface ReqInjection {
+public interface TriFunction<T, U, S, R> {
 
     /**
-     * 绑定上下文到调用对象
+     * Applies this function to the given arguments.
      *
-     * @param request
+     * @param t the first function argument
+     * @param u the second function argument
+     * @param s the third function argument
+     * @return the function result
      */
-    void inject(RequestMessage<Invocation> request);
-
-    /**
-     * 取消绑定的上下文，用在重试，不同的节点有不同的协议，注入不同的隐式参数
-     *
-     * @param request
-     */
-    default void reject(RequestMessage<Invocation> request) {
-
-    }
+    R apply(T t, U u, S s);
 }

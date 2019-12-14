@@ -89,11 +89,11 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
         if (!retry) {
             //不重试
             Node node = loadBalance.select(candidate, request);
-            return node != null ? function.apply(node, request) :
+            return node != null ? function.apply(node, null, request) :
                     Futures.completeExceptionally(createEmptyException(0, candidate.getSize(), true));
         }
         CompletableFuture<R> result = new CompletableFuture<>();
-        retry(request, candidate, 0, policy == null ? retryPolicy : policy, candidate.getNodes(), result);
+        retry(request, null, candidate, 0, policy == null ? retryPolicy : policy, candidate.getNodes(), result);
         return result;
     }
 
@@ -101,20 +101,24 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
      * 递归重试
      *
      * @param request   请求
+     * @param last      前一次重试节点
      * @param candidate 候选者
      * @param retry     当前重试次数
      * @param policy    重试策略
      * @param origins   原始节点
      * @param future    结束Future
      */
-    protected void retry(final T request, final Candidate candidate,
-                         final int retry, final FailoverPolicy policy,
-                         final List<Node> origins, final CompletableFuture<R> future) {
-        //TODO 考虑不同的节点协议不同或环境不同，是否需要重新创建一份Invocation并进行绑定
+    protected void retry(final T request,
+                         final Node last,
+                         final Candidate candidate,
+                         final int retry,
+                         final FailoverPolicy policy,
+                         final List<Node> origins,
+                         final CompletableFuture<R> future) {
         //负载均衡选择节点
         final Node node = loadBalance.select(candidate, request);
         //调用，如果节点不存在，则抛出Failover异常。
-        CompletableFuture<R> result = node != null ? function.apply(node, request) :
+        CompletableFuture<R> result = node != null ? function.apply(node, last, request) :
                 Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
         result.whenComplete((r, t) -> {
             ExceptionPolicy<R> exceptionPolicy = policy.getExceptionPolicy();
@@ -149,7 +153,7 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                             //设置新的超时时间
                             timeoutPolicy.reset(request);
                         }
-                        retry(request, selector.select(candidate, node, retry, null, origins),
+                        retry(request, node, selector.select(candidate, node, retry, null, origins),
                                 retry + 1, policy, origins, future);
                     }
                 }

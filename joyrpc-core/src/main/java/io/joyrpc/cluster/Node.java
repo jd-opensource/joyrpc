@@ -196,6 +196,10 @@ public class Node implements Shard {
      */
     protected boolean mesh;
     /**
+     * 客户端协议
+     */
+    protected ClientProtocol clientProtocol;
+    /**
      * 打开的结果
      */
     protected volatile CompletableFuture<Node> openFuture;
@@ -275,6 +279,7 @@ public class Node implements Shard {
         this.state = shard.getState();
         this.alias = url.getString(Constants.ALIAS_OPTION);
         this.mesh = url.getBoolean(SERVICE_MESH_OPTION);
+        this.clientProtocol = CLIENT_PROTOCOL_SELECTOR.select(url);
     }
 
     /**
@@ -352,8 +357,7 @@ public class Node implements Shard {
         successiveHeartbeatFails.set(0);
         //Cluster中确保调用该方法只有CONNECTING状态
         //拿到客户端协议
-        ClientProtocol protocol = CLIENT_PROTOCOL_SELECTOR.select(url);
-        if (protocol == null) {
+        if (clientProtocol == null) {
             consumer.accept(new AsyncResult<>(this, new ProtocolException(String.format("protocol plugin %s is not found.",
                     url.getString(VERSION, url.getProtocol())))));
         } else {
@@ -369,7 +373,7 @@ public class Node implements Shard {
                                 url.getString(TRANSPORT_FACTORY_OPTION)))));
             } else {
                 try {
-                    c.setProtocol(protocol);
+                    c.setProtocol(clientProtocol);
                     doOpen(c, result -> {
                         //防止重复调用，或者状态已经变更，例如被关闭了
                         if (!result.isSuccess()) {
@@ -517,6 +521,10 @@ public class Node implements Shard {
     @Override
     public String getProtocol() {
         return shard.getProtocol();
+    }
+
+    public ClientProtocol getClientProtocol() {
+        return clientProtocol;
     }
 
     public Dashboard getDashboard() {

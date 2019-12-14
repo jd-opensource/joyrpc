@@ -9,9 +9,9 @@ package io.joyrpc.context.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,6 @@ import io.joyrpc.cluster.Node;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.Client;
 
 /**
  * 节点注入，满足条件的节点在指定环境下注入额外的信息
@@ -44,7 +43,16 @@ public interface NodeReqInjection {
      *
      * @param request 请求
      * @param node    当前节点
-     * @param client  当前连接
      */
-    void inject(RequestMessage<Invocation> request, Node node, Client client);
+    void inject(RequestMessage<Invocation> request, Node node);
+
+    /**
+     * 注销
+     *
+     * @param request
+     * @param node
+     */
+    default void reject(final RequestMessage<Invocation> request, final Node node) {
+
+    }
 }

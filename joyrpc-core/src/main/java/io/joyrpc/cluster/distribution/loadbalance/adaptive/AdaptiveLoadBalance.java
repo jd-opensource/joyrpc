@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -476,8 +476,7 @@ public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, Das
             Object payload = ((RequestMessage) request).getPayLoad();
             if (payload != null && payload instanceof Invocation) {
                 String method = ((Invocation) payload).getMethodName();
-                return o -> o instanceof Dashboard ?
-                        ((Dashboard) o).getMethod(method) : o.getMetric();
+                return o -> o instanceof Dashboard ? o.getMethod(method) : o.getMetric();
             }
         }
         return o -> o.getMetric();
@@ -593,9 +592,6 @@ public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, Das
          * @return
          */
         public NodeRank select() {
-            if (best == Rank.Disabled) {
-                return null;
-            }
             switch (bestRanks.size()) {
                 case 0:
                     return null;

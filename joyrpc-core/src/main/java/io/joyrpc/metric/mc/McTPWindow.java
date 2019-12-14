@@ -34,6 +34,7 @@ import java.util.function.Function;
 /**
  * TPWindow实现
  */
+//TODO 要检查一下逻辑，本机测试有T偶发TP时间长的现象
 public class McTPWindow implements TPWindow {
 
     public static final Function<String, TPWindow> MILLI_WINDOW_FUNCTION = t -> new McTPWindow();

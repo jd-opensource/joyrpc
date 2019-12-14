@@ -331,17 +331,16 @@ public class Cluster {
      * @param discards   不支持协议的节点
      */
     protected void filter(final Collection<Node> nodes, final List<Node> candidates, final List<Node> discards) {
-        //遍历节点，过滤掉SSL不匹配的节点
+        //遍历节点，过滤掉协议不支持的节点
         for (Node node : nodes) {
-            if (sslEnable == node.sslEnable) {
+            if (node.getClientProtocol() != null && sslEnable == node.sslEnable) {
                 candidates.add(node);
             } else {
                 discards.add(node);
             }
         }
         if (candidates.isEmpty() && !discards.isEmpty()) {
-            //非ssl连接ssl会直接断开连接
-            logger.warn(String.format("there is not any %s provider ", sslEnable ? "ssl" : "none ssl"));
+            logger.warn(String.format("there is not any available provider. client protocol or ssl is not supported."));
         }
     }
 

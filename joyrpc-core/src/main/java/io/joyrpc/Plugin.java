@@ -57,7 +57,7 @@ import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.permission.Authenticator;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MessageHandler;
-import io.joyrpc.protocol.Protocol.Version;
+import io.joyrpc.protocol.Protocol.ProtocolVersion;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.proxy.ProxyFactory;
@@ -286,7 +286,7 @@ public interface Plugin {
     /**
      * 客户端协议选择器，匹配最优的协议
      */
-    ExtensionSelector<ClientProtocol, String, Version, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
+    ExtensionSelector<ClientProtocol, String, ProtocolVersion, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
             new Selector.CacheSelector<>((extensions, version) -> {
                 String name = version.getName();
                 ClientProtocol protocol = extensions.get(version.getVersion(), name);

@@ -183,7 +183,7 @@ public interface Protocol {
     /**
      * 名称
      */
-    class Version {
+    class ProtocolVersion {
         /**
          * 名称
          */
@@ -199,7 +199,7 @@ public interface Protocol {
          * @param name
          * @param version
          */
-        public Version(String name, String version) {
+        public ProtocolVersion(String name, String version) {
             this.name = name;
             this.version = version;
         }
@@ -221,7 +221,7 @@ public interface Protocol {
                 return false;
             }
 
-            Version version1 = (Version) o;
+            ProtocolVersion version1 = (ProtocolVersion) o;
 
             if (name != null ? !name.equals(version1.name) : version1.name != null) {
                 return false;

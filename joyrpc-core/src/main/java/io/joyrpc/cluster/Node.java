@@ -38,7 +38,7 @@ import io.joyrpc.exception.ReconnectException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.Dashboard;
 import io.joyrpc.protocol.ClientProtocol;
-import io.joyrpc.protocol.Protocol;
+import io.joyrpc.protocol.Protocol.ProtocolVersion;
 import io.joyrpc.protocol.message.HeartbeatAware;
 import io.joyrpc.protocol.message.Response;
 import io.joyrpc.protocol.message.SuccessResponse;
@@ -280,7 +280,7 @@ public class Node implements Shard {
         this.state = shard.getState();
         this.alias = url.getString(Constants.ALIAS_OPTION);
         this.mesh = url.getBoolean(SERVICE_MESH_OPTION);
-        this.clientProtocol = CLIENT_PROTOCOL_SELECTOR.select(new Protocol.Version(url.getString(VERSION_KEY), url.getProtocol()));
+        this.clientProtocol = CLIENT_PROTOCOL_SELECTOR.select(new ProtocolVersion(url.getString(VERSION_KEY), url.getProtocol()));
     }
 
     /**

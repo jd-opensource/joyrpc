@@ -213,27 +213,20 @@ public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, Das
      * @param fair
      */
     protected RankScore<Integer> computeTpScore(final int fair) {
-        //计算中位值，减去差值，低于该值则降权
-        if (fair <= 0) {
-            return new RankScore<>(1, 2, 3);
-        } else if (fair < 8) {
-            return new RankScore<>(fair, fair + 1, fair + 2);
-        } else if (fair < 16) {
-            return new RankScore<>(fair, fair + 2, fair + 4);
-        } else if (fair < 32) {
-            return new RankScore<>(fair, fair + 4, fair + 8);
-        } else if (fair < 64) {
-            return new RankScore<>(fair, fair + 8, fair + 16);
-        } else if (fair < 256) {
-            return new RankScore<>(fair, fair + 16, fair + 32);
-        } else if (fair < 1024) {
-            return new RankScore<>(fair, fair + 32, fair + 64);
-        } else if (fair < 2048) {
-            return new RankScore<>(fair, fair + 128, fair + 256);
-        } else if (fair < 4096) {
-            return new RankScore<>(fair, fair + 512, fair + 1024);
-        } else {
-            return new RankScore<>(fair, fair + 1024, fair + 2056);
+        switch (fair) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+                return new RankScore<>(4, 8, 12);
+            case 5:
+            case 6:
+            case 7:
+            case 8:
+                return new RankScore<>(8, 12, 16);
+            default:
+                return new RankScore<>((int) (fair * 1.2), (int) (fair * 1.5), fair * 2);
         }
     }
 

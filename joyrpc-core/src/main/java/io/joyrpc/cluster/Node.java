@@ -683,21 +683,21 @@ public class Node implements Shard {
     /**
      * 发送会话心跳信息
      */
-    protected void sessionbeat() {
-        //保留一份现场
-        Client c = client;
-        if (c != null) {
-            ClientProtocol protocol = c.getProtocol();
-            Session session = c.session();
-            if (protocol != null && session != null) {
-                Message message = protocol.sessionbeat(clusterUrl, c);
-                if (message != null) {
-                    Header header = message.getHeader();
-                    header.setSerialization(session.getSerialization().getTypeId());
-                    header.setCompression(Compression.NONE);
-                    header.setChecksum(Checksum.NONE);
-                    c.oneway(message);
-                }
+    protected void sessionbeat(final Client client) {
+        if (client == null) {
+            return;
+        }
+        ClientProtocol protocol = client.getProtocol();
+        Session session = client.session();
+        if (protocol != null && session != null) {
+            Message message = protocol.sessionbeat(clusterUrl, client);
+            if (message != null) {
+                Header header = message.getHeader();
+                header.setSerialization(session.getSerialization().getTypeId());
+                header.setCompression(Compression.NONE);
+                header.setChecksum(Checksum.NONE);
+                //TODO 会话心跳最好不要增加请求数
+                client.oneway(message);
             }
         }
     }
@@ -1421,7 +1421,7 @@ public class Node implements Shard {
                 case CONNECTING:
                 case CONNECTED:
                 case WEAK:
-                    node.sessionbeat();
+                    node.sessionbeat(client);
                     time = SystemClock.now() + node.sessionbeatInterval;
                     timer().add(this);
             }

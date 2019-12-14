@@ -86,23 +86,26 @@ public class FutureManager<I, M> {
      * @return
      */
     public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis) {
-        return create(messageId, timeoutMillis, null);
+        return create(messageId, timeoutMillis, null, null);
     }
 
     /**
      * 创建一个future
      *
-     * @param messageId
-     * @param timeoutMillis
-     * @param session
+     * @param messageId     消息ID
+     * @param timeoutMillis 超时时间
+     * @param session       会话
+     * @param requests      当前Transport正在处理的请求数
      * @return
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis, final Session session) {
+    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis, final Session session,
+                                                 final AtomicInteger requests) {
         return futures.computeIfAbsent(messageId, o -> {
             //增加计数器
             counter.incrementAndGet();
-            return new EnhanceCompletableFuture<>(o, session, timer().add(
-                    new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, consumer)));
+            return new EnhanceCompletableFuture<>(o, session,
+                    timer().add(new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, consumer)),
+                    requests);
         });
     }
 
@@ -153,16 +156,31 @@ public class FutureManager<I, M> {
         futures.clear();
     }
 
+    /**
+     * 生成ID
+     *
+     * @return
+     */
     public I generateId() {
         return idGenerator.get();
     }
 
+    /**
+     * 待应答的请求数
+     *
+     * @return
+     */
     public int size() {
-        return futures.size();
+        return counter.get();
     }
 
+    /**
+     * 是否为空
+     *
+     * @return
+     */
     public boolean isEmpty() {
-        return futures.isEmpty();
+        return counter.get() == 0;
     }
 
     /**

@@ -9,9 +9,9 @@ package io.joyrpc.metric.mc;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package io.joyrpc.metric.mc;
  * #L%
  */
 
+import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.cluster.event.MetricEvent;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.Clock;
@@ -29,7 +30,6 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
-import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.transport.message.Message;
 
 import java.util.LinkedList;
@@ -114,9 +114,9 @@ public class McDashboard implements Dashboard {
     public void handle(final MetricEvent event) {
         Message message = event.getRequest();
         if (message instanceof RequestMessage) {
-            RequestMessage rm = (RequestMessage) message;
-            Object payload = rm.getPayLoad();
-            if (payload != null && payload instanceof Invocation) {
+            RequestMessage requestMessage = (RequestMessage) message;
+            Object payload = requestMessage.getPayLoad();
+            if (payload instanceof Invocation) {
                 onInvocation(event, (Invocation) payload);
             }
         }
@@ -138,23 +138,20 @@ public class McDashboard implements Dashboard {
                 CircuitBreaker breaker = breakerFunction == null ? null : breakerFunction.apply(invocation.getClassName(), invocation.getMethodName());
                 //只有节点才触发熔断逻辑，集群也会收到相同的事件不进行处理
                 //判断熔断支持的异常才统计数据
+                method.failure();
+                window.failure();
                 if (breaker != null && breaker.support(throwable)) {
-                    window.failure();
-                    method.failure();
                     //触发熔断
                     breaker.apply(throwable, method);
-                } else {
-                    window.failure();
-                    method.failure();
                 }
             }
         } else if (event.getStartTime() > 0 && event.getEndTime() > 0) {
             //如果正常执行，统计成功
             int elapse = (int) (event.getEndTime() - event.getStartTime());
-            window.success(elapse);
-            window.actives().set(event.getConcurrency());
             method.success(elapse);
             method.actives().set(event.getConcurrency());
+            window.success(elapse);
+            window.actives().set(event.getConcurrency());
         }
     }
 
@@ -169,10 +166,10 @@ public class McDashboard implements Dashboard {
             return event.getThrowable();
         }
         Message message = event.getResponse();
-        if (message != null && message instanceof ResponseMessage) {
+        if (message instanceof ResponseMessage) {
             ResponseMessage responseMessage = ((ResponseMessage) message);
             Object payLoad = responseMessage.getPayLoad();
-            if (payLoad != null && payLoad instanceof ResponsePayload) {
+            if (payLoad instanceof ResponsePayload) {
                 ResponsePayload responsePayload = ((ResponsePayload) payLoad);
                 if (responsePayload.isError()) {
                     return responsePayload.getException();

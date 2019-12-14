@@ -237,7 +237,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     protected abstract Connector getConnector();
 
     @Override
-    public long getRequests() {
+    public int getRequests() {
         return requests.get();
     }
 

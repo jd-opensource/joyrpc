@@ -75,10 +75,10 @@ public interface ClientTransport extends ChannelTransport, Endpoint {
     ClientProtocol getProtocol();
 
     /**
-     * 获取正在处理的请求数
+     * 获取正在处理的请求数，包括正在发送和等待应答的请求
      *
      * @return
      */
-    long getRequests();
+    int getRequests();
 
 }

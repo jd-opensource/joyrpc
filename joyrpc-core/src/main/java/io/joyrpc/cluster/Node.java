@@ -1035,9 +1035,8 @@ public class Node implements Shard {
             //判空,验证是否需要统计
             final long startTime = SystemClock.now();
             try {
-                return transport.async(message, timeoutMillis).whenComplete((r, t) -> {
-                    publish(message, r, startTime, SystemClock.now(), t);
-                });
+                return transport.async(message, timeoutMillis).whenComplete((r, t) ->
+                        publish(message, r, startTime, SystemClock.now(), t));
             } catch (Exception e) {
                 publish(message, null, startTime, SystemClock.now(), e);
                 throw e;
@@ -1056,7 +1055,7 @@ public class Node implements Shard {
         protected void publish(final Message request, final Message response,
                                final long startTime, final long endTime, Throwable throwable) {
             publisher.offer(new MetricEvent(node, null, clusterUrl, clusterName, url,
-                    request, response, throwable, getChannel().getFutureManager().size(),
+                    request, response, throwable, getRequests(),
                     startTime, endTime));
         }
     }
@@ -1468,4 +1467,5 @@ public class Node implements Shard {
 
         }
     }
+
 }

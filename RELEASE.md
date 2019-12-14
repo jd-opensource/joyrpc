@@ -48,6 +48,8 @@
   
   - 自适应负载均衡当都评估不可用的时候，没有进行选择直接返回空，造成调用出错。
   
+  - 节点的指标事件返回准确的Transport的请求数(正在发送+待应答），而不是Channel的待应答请求数
+  
 - Bootstrap
 
   - ConsumerConfig和ProviderConfig移除配置监听器方法，没有正确移除

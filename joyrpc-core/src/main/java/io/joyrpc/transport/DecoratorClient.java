@@ -242,7 +242,7 @@ public class DecoratorClient<T extends ClientTransport> implements Client {
     }
 
     @Override
-    public long getRequests() {
+    public int getRequests() {
         return transport.getRequests();
     }
 }

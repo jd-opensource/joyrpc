@@ -9,9 +9,9 @@ package io.joyrpc.cluster.event;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,23 +29,23 @@ import io.joyrpc.transport.message.Message;
  */
 public class MetricEvent extends AbstractEvent {
     //集群URL
-    protected URL cluster;
+    protected final URL cluster;
     //集群名
-    protected String clusterName;
+    protected final String clusterName;
     //目标节点URL
-    protected URL url;
+    protected final URL url;
     //请求
-    protected Message request;
+    protected final Message request;
     //应答
-    protected Message response;
+    protected final Message response;
     //当前并发数
-    protected int concurrency;
+    protected final int concurrency;
     //开始时间
-    protected long startTime;
+    protected final long startTime;
     //结束时间
-    protected long endTime;
+    protected final long endTime;
     //异常
-    protected Throwable throwable;
+    protected final Throwable throwable;
 
     /**
      * 构造函数

@@ -24,6 +24,7 @@ import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.Timer;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 增强的CompletableFuture
@@ -44,6 +45,10 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      */
     protected final Timer.Timeout timeout;
     /**
+     * Transport上的请求数
+     */
+    protected final AtomicInteger requests;
+    /**
      * 扩展属性
      */
     protected Object attr;
@@ -54,10 +59,13 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      * @param messageId
      * @param session
      * @param timeout
+     * @param requests
      */
-    public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout) {
+    public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout,
+                                    final AtomicInteger requests) {
         this.messageId = messageId;
         this.session = session;
+        this.requests = requests;
         this.timeout = timeout;
     }
 
@@ -82,11 +90,14 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
     }
 
     /**
-     * 放弃过期检查任务
+     * 放弃过期检查任务，在从Future管理器移除任务会进行调用
      */
-    public void cancel() {
+    protected void cancel() {
         if (timeout != null && !timeout.isExpired()) {
             timeout.cancel();
+        }
+        if (requests != null) {
+            requests.decrementAndGet();
         }
     }
 
@@ -95,7 +106,7 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      *
      * @param exception
      */
-    public void cancel(Throwable exception) {
+    protected void cancel(Throwable exception) {
         cancel();
         completeExceptionally(exception);
     }

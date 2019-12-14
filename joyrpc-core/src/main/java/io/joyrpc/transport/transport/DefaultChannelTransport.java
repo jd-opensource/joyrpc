@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 默认ChannelTransport实现
@@ -64,7 +64,7 @@ public class DefaultChannelTransport implements ChannelTransport {
     /**
      * 计数器
      */
-    protected AtomicLong requests = new AtomicLong();
+    protected AtomicInteger requests = new AtomicInteger();
 
     protected DefaultChannelTransport(URL url) {
         this.url = url;
@@ -126,10 +126,9 @@ public class DefaultChannelTransport implements ChannelTransport {
             message.setSessionId(transportId);
             message.setSession(session);
             //创建 future
-            future = futureManager.create(message.getMsgId(), timeout, session);
+            future = futureManager.create(message.getMsgId(), timeout, session, requests);
             requests.incrementAndGet();
             channel.send(message, r -> {
-                requests.decrementAndGet();
                 if (!r.isSuccess()) {
                     Throwable throwable = r.getThrowable() == null
                             ? new ChannelSendException("unknown exception.")
@@ -137,7 +136,7 @@ public class DefaultChannelTransport implements ChannelTransport {
                     CompletableFuture<Message> cf = futureManager.remove(message.getMsgId());
                     if (cf != null) {
                         cf.completeExceptionally(throwable);
-                        logger.error("failed sending message. The error is " + throwable.getMessage(), throwable);
+                        logger.error("Failed sending message. caused by " + throwable.getMessage(), throwable);
                     }
                 } else {
                     lastRequestTime = SystemClock.now();

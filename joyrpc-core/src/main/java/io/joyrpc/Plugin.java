@@ -57,6 +57,7 @@ import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.permission.Authenticator;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MessageHandler;
+import io.joyrpc.protocol.Protocol.Version;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.proxy.ProxyFactory;
@@ -192,8 +193,6 @@ public interface Plugin {
         }
     }
 
-    String VERSION = "version";
-
     /**
      * 环境插件
      */
@@ -287,15 +286,25 @@ public interface Plugin {
     /**
      * 客户端协议选择器，匹配最优的协议
      */
-    ExtensionSelector<ClientProtocol, String, URL, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
-            new Selector.CacheSelector<>((extensions, url) -> {
-                ClientProtocol protocol = extensions.get(url.getString(VERSION, url.getProtocol()), url.getProtocol());
-                if (protocol == null) {
-                    String name = url.getProtocol();
+    ExtensionSelector<ClientProtocol, String, Version, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
+            new Selector.CacheSelector<>((extensions, version) -> {
+                String name = version.getName();
+                ClientProtocol protocol = extensions.get(version.getVersion(), name);
+                if (protocol == null && name != null && !name.isEmpty()) {
+                    String n;
+                    //遍历插件
                     for (ExtensionMeta<ClientProtocol, String> meta : extensions.metas()) {
-                        if (meta.getExtension().getName().startsWith(name)) {
-                            protocol = meta.getTarget();
-                            break;
+                        //插件名称
+                        n = meta.getExtension().getName();
+                        //以指定名称开头，如joyrpc2以joyrpc开头
+                        if (n.startsWith(name)) {
+                            try {
+                                //如果以数字结尾
+                                Integer.valueOf(n.substring(name.length()));
+                                protocol = meta.getTarget();
+                                break;
+                            } catch (NumberFormatException e) {
+                            }
                         }
                     }
                 }

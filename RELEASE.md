@@ -50,6 +50,8 @@
   
   - 节点的指标事件返回准确的Transport的请求数(正在发送+待应答），而不是Channel的待应答请求数
   
+  - 获取节点客户端协议的时候以URL为Key缓存，缓存无意义，改成使用协议版本和名称作为Key缓存
+  
 - Bootstrap
 
   - ConsumerConfig和ProviderConfig移除配置监听器方法，没有正确移除

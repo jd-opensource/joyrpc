@@ -289,10 +289,11 @@ public interface Plugin {
     ExtensionSelector<ClientProtocol, String, ProtocolVersion, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
             new Selector.CacheSelector<>((extensions, version) -> {
                 String name = version.getName();
-                ClientProtocol protocol = extensions.get(version.getVersion(), name);
+                //根据版本获取
+                ClientProtocol protocol = extensions.get(version.getVersion());
                 if (protocol == null && name != null && !name.isEmpty()) {
                     String n;
-                    //遍历插件
+                    //版本没有找到，则按照名称取优先级最高的版本
                     for (ExtensionMeta<ClientProtocol, String> meta : extensions.metas()) {
                         //插件名称
                         n = meta.getExtension().getName();

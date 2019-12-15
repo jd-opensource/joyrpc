@@ -9,9 +9,9 @@ package io.joyrpc.filter.consumer;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,6 +26,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.mock.MockConfiguration;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractConsumerFilter;
 import io.joyrpc.filter.ConsumerFilter;
@@ -33,6 +34,8 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.concurrent.CompletableFuture;
+
+import static io.joyrpc.context.mock.MockConfiguration.MOCK;
 
 /**
  * @description: Mock过滤器<br>
@@ -45,14 +48,19 @@ public class MockFilter extends AbstractConsumerFilter {
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
         // 如果在注册中心中配置了
-        Object result = MockConfiguration.MOCK.get(invocation.getClassName(), invocation.getMethodName(), invocation.getAlias());
-        return result != null ? CompletableFuture.completedFuture(new Result(request.getContext(), result)) : invoker.invoke(request);
+        Object result = MOCK.get(invocation.getClassName(), invocation.getMethodName(), invocation.getAlias());
+        return result != null ?
+                CompletableFuture.completedFuture(
+                        new Result(request.getContext(), result)) :
+                invoker.invoke(request);
     }
 
     @Override
     public boolean test(final URL url) {
-        //兼容老版本，测试环境默认开启，如果环境设置了Mock=false则禁用
-        if (Boolean.TRUE.equals(GlobalContext.asParametric(Constants.GLOBAL_SETTING).getBoolean(Constants.MOCK_OPTION))) {
+        //兼容老版本，测试环境默认开启，如果环境设置了mock=false则禁用
+        //TODO 如何判断测试环境
+        Parametric parametric = GlobalContext.asParametric(Constants.GLOBAL_SETTING);
+        if (Boolean.TRUE.equals(parametric.getBoolean(Constants.MOCK_OPTION))) {
             return true;
         }
         return false;

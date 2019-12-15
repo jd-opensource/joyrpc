@@ -9,9 +9,9 @@ package io.joyrpc.context.mock;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,15 +46,17 @@ public class MockConfiguration extends AbstractInterfaceConfiguration<String, Ma
      * @return 结果
      */
     public Object get(final String className, final String methodName, final String alias) {
-        if (className == null || methodName == null || alias == null) {
+        //get方法内部判断了key是否为null
+        Map<String, Map<String, Object>> classMock = get(className);
+        if (classMock == null) {
             return null;
         } else {
-            Map<String, Map<String, Object>> classMock = get(className);
-            if (classMock == null) {
+            Map<String, Object> methodMock = methodName == null ? null : classMock.get(methodName);
+            if (methodMock == null) {
                 return null;
+            } else {
+                return alias == null ? null : methodMock.get(alias);
             }
-            Map<String, Object> methodMock = classMock.get(methodName);
-            return methodMock == null ? null : methodMock.get(alias);
         }
     }
 }

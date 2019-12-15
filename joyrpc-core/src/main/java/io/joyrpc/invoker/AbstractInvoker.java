@@ -23,6 +23,7 @@ package io.joyrpc.invoker;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.Configure;
+import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -134,12 +135,19 @@ public abstract class AbstractInvoker<T> implements Invoker {
         //在关闭判断之前增加计数器，确保安全
         requests.incrementAndGet();
         //执行调用链，减少计数器
-        return doInvoke(request).whenComplete((r, t) -> {
-            if (requests.decrementAndGet() == 0 && flyingFuture != null) {
-                //通知请求已经完成
-                flyingFuture.complete(null);
-            }
-        });
+        try {
+            return doInvoke(request).whenComplete((r, t) -> {
+                if (requests.decrementAndGet() == 0 && flyingFuture != null) {
+                    //通知请求已经完成
+                    flyingFuture.complete(null);
+                }
+            });
+        } catch (Throwable e) {
+            //如果抛出了异常
+            requests.decrementAndGet();
+            return Futures.completeExceptionally(
+                    new RpcException("Error occurs while invoking, caused by " + e.getMessage(), e));
+        }
 
     }
 

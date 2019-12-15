@@ -30,6 +30,7 @@ import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.config.validator.*;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.Configurator;
+import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
@@ -902,7 +903,10 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             //注册中心下发的全局动态配置，主要是一些开关
             Configurator.update(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), result, GLOBAL_ALLOWED);
             //本地接口静态配置,数据中心和区域在注册中心里面会动态更新到全局上下文里面
-            result.putAll(url.getParameters());
+            Map<String, String> parameters = url.getParameters();
+            parameters.remove(Environment.DATA_CENTER);
+            parameters.remove(Environment.REGION);
+            result.putAll(parameters);
             //注册中心下发的接口动态配置
             Configurator.update(GlobalContext.getInterfaceConfig(path), result, GLOBAL_ALLOWED);
             //调用插件

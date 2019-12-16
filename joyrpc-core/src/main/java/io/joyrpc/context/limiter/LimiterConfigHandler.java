@@ -25,6 +25,8 @@ import io.joyrpc.cluster.distribution.RateLimiter;
 import io.joyrpc.cluster.distribution.limiter.RateLimiterConfig;
 import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.context.ConfigEventHandler;
+import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
+import io.joyrpc.context.limiter.LimiterConfiguration.Option;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
@@ -39,7 +41,6 @@ import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.Plugin.LIMITER;
-import static io.joyrpc.cluster.distribution.RateLimiter.DELIMITER;
 import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.constants.Constants.SETTING_INVOKE_PROVIDER_LIMIT;
 import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
@@ -62,10 +63,11 @@ public class LimiterConfigHandler implements ConfigEventHandler {
             String newAttr = newAttrs.get(SETTING_INVOKE_PROVIDER_LIMIT);
             if (!Objects.equals(oldAttr, newAttr)) {
                 try {
-                    Map<String, RateLimiterConfig> configs = parse(newAttr);
-                    Map<String, RateLimiter> limiters = load(configs, LIMITERS.get(className));
+                    Map<Option, RateLimiterConfig> newConfigs = parse(newAttr);
+                    ClassLimiter limiter = LIMITERS.get(className);
+                    limiter = load(newConfigs, limiter == null ? null : limiter.getLimiters());
                     //全量更新
-                    LIMITERS.update(className, limiters);
+                    LIMITERS.update(className, limiter);
                 } catch (Exception e) {
                     logger.error("Error occurs while parsing limiter config. caused by " + e.getMessage(), e);
                 }
@@ -85,25 +87,25 @@ public class LimiterConfigHandler implements ConfigEventHandler {
      * @param limiters
      * @return
      */
-    protected Map<String, RateLimiter> load(final Map<String, RateLimiterConfig> configs, final Map<String, RateLimiter> limiters) {
+    protected ClassLimiter load(final Map<Option, RateLimiterConfig> configs, final Map<Option, RateLimiter> limiters) {
         if (configs == null) {
             return null;
         }
-        Map<String, RateLimiter> result = new HashMap<>(configs.size());
-        configs.forEach((name, config) -> {
-            RateLimiter limiter = limiters == null ? null : limiters.get(name);
+        Map<Option, RateLimiter> result = new HashMap<>(configs.size());
+        configs.forEach((option, config) -> {
+            RateLimiter limiter = limiters == null ? null : limiters.get(option);
             if (limiter == null || !limiter.type().equals(config.getType())) {
                 limiter = load(config);
                 if (limiter != null) {
-                    result.put(name, limiter);
+                    result.put(option, limiter);
                 }
             } else {
                 //重新加载配置
                 limiter.reload(config);
-                result.put(name, limiter);
+                result.put(option, limiter);
             }
         });
-        return result;
+        return new ClassLimiter(result);
     }
 
     /**
@@ -113,10 +115,11 @@ public class LimiterConfigHandler implements ConfigEventHandler {
      * @return
      */
     protected RateLimiter load(final RateLimiterConfig config) {
+        //插件是多态的，不是单例
         RateLimiter rateLimiter = LIMITER.get(config.getType());
         if (rateLimiter == null) {
             //插件没有
-            logger.error("rate limiter is not found. " + config.getType());
+            logger.error(String.format("No such extension %s for %s ", config.getType(), RateLimiter.class.getName()));
         } else {
             //重新加载配置
             rateLimiter.reload(config);
@@ -130,14 +133,15 @@ public class LimiterConfigHandler implements ConfigEventHandler {
      * @param limitStr
      * @return
      */
-    protected Map<String, RateLimiterConfig> parse(String limitStr) {
+    protected Map<Option, RateLimiterConfig> parse(final String limitStr) {
         if (limitStr == null || limitStr.isEmpty()) {
             return null;
         }
         List<Map> results = JSON.get().parseObject(limitStr, new TypeReference<List<Map>>() {
         });
-        Map<String, RateLimiterConfig> configs = new HashMap<>(results.size());
+        Map<Option, RateLimiterConfig> configs = new HashMap<>(results.size());
         Parametric parametric;
+        Option option;
         //遍历限流配置
         for (Map result : results) {
             parametric = new MapParametric(result);
@@ -150,8 +154,8 @@ public class LimiterConfigHandler implements ConfigEventHandler {
             long periodNanos = TimeUnit.MILLISECONDS.toNanos(parametric.getLong("period", 1000L));
             if (type != null && open && limit > 0 && periodNanos >= TimeUnit.MILLISECONDS.toNanos(1)) {
                 //限流开关没有关闭，限流数大于0，限流周期大于等于1ms
-                String limitKey = String.join(DELIMITER, methodName, alias, appId);
-                configs.put(limitKey, RateLimiterConfig.builder().type(type).limitCount(limit).limitPeriodNanos(periodNanos).build());
+                option = new Option(methodName, alias, appId);
+                configs.put(option, RateLimiterConfig.builder().type(type).limitCount(limit).limitPeriodNanos(periodNanos).build());
             }
         }
         return configs;

@@ -9,9 +9,9 @@ package io.joyrpc.protocol.message;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -377,6 +377,22 @@ public class Invocation implements Serializable {
      */
     public <T> T getAttachment(final String key) {
         return attachments == null ? null : (T) attachments.get(key);
+    }
+
+    /**
+     * 获取扩展属性
+     *
+     * @param key
+     * @param defaultValue 默认值
+     * @return
+     */
+    public <T> T getAttachment(final String key, final T defaultValue) {
+        if (attachments == null) {
+            return defaultValue;
+        } else {
+            T result = (T) attachments.get(key);
+            return result == null ? defaultValue : result;
+        }
     }
 
     public Parametric asParametric() {

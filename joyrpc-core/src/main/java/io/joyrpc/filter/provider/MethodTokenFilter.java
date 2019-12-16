@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,12 +22,10 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.AuthenticationException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
-import io.joyrpc.extension.URLOption;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -37,6 +35,8 @@ import io.joyrpc.util.GenericMethodOption;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+
+import static io.joyrpc.constants.Constants.HIDDEN_KEY_TOKEN;
 
 /**
  * 方法鉴权<br>
@@ -53,8 +53,9 @@ public class MethodTokenFilter extends AbstractProviderFilter {
 
     @Override
     public void setup() {
-        tokens = new GenericMethodOption<>(clazz, className, methodName ->
-                Optional.ofNullable(url.getString(getOption(methodName, new URLOption<>(Constants.HIDDEN_KEY_TOKEN, (String) null)))));
+        final String defToken = url.getString(HIDDEN_KEY_TOKEN);
+        tokens = new GenericMethodOption<>(clazz, className,
+                methodName -> Optional.ofNullable(url.getString(getOption(methodName, HIDDEN_KEY_TOKEN, defToken))));
     }
 
     @Override
@@ -64,7 +65,7 @@ public class MethodTokenFilter extends AbstractProviderFilter {
         //providerToken在配置中
         Optional<String> optional = tokens.get(invocation.getMethodName());
         String token = optional.orElse("");
-        if (!token.isEmpty() && !token.equals(invocation.getAttachment(Constants.HIDDEN_KEY_TOKEN))) {
+        if (!token.isEmpty() && !token.equals(invocation.getAttachment(HIDDEN_KEY_TOKEN))) {
             AuthenticationException exception = new AuthenticationException("Invalid token! Invocation of "
                     + invocation.getClassName() + "." + invocation.getMethodName()
                     + " from consumer " + request.getRemoteAddress()
@@ -77,9 +78,9 @@ public class MethodTokenFilter extends AbstractProviderFilter {
 
     @Override
     public boolean test(final URL url) {
-        String token = url.getString(Constants.HIDDEN_KEY_TOKEN);
+        String token = url.getString(HIDDEN_KEY_TOKEN);
         if (token == null || token.isEmpty()) {
-            Map<String, String> tokens = url.endsWith("." + Constants.HIDDEN_KEY_TOKEN);
+            Map<String, String> tokens = url.endsWith("." + HIDDEN_KEY_TOKEN);
             return tokens == null || tokens.isEmpty();
         }
         return true;

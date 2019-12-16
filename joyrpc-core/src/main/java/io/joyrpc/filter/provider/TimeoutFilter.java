@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.filter.AbstractProviderFilter;
@@ -36,6 +35,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+
+import static io.joyrpc.constants.Constants.TIMEOUT_OPTION;
 
 /**
  * @description: 服务端用，打印慢日志<br>
@@ -52,8 +53,11 @@ public class TimeoutFilter extends AbstractProviderFilter {
 
     @Override
     public void setup() {
-        //初始化的时候计算所有的方法超时配置
-        timeouts = new GenericMethodOption<>(clazz, className, methodName -> url.getInteger(getOption(methodName, Constants.TIMEOUT_OPTION)));
+        //初始化的时候计算所有的方法超时配置,超时时间大于0
+        final int defTimeout = url.getPositiveInt(TIMEOUT_OPTION);
+        timeouts = new GenericMethodOption<>(clazz, className,
+                methodName -> url.getPositiveInt(
+                        getOption(methodName, TIMEOUT_OPTION.getName(), defTimeout)));
     }
 
     @Override
@@ -61,14 +65,16 @@ public class TimeoutFilter extends AbstractProviderFilter {
         long start = SystemClock.now();
         return invoker.invoke(request).whenComplete((res, err) -> {
             Invocation invocation = request.getPayLoad();
-            long elapsed = SystemClock.now() - start;
-            int timeout = timeouts.get(invocation.getMethodName());
-            if (elapsed > timeout) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(ExceptionCode.format(ExceptionCode.FILTER_PROVIDER_TIMEOUT) + "Provider invoke method [" + invocation.getClassName() + "."
-                            + invocation.getMethodName() + "] timeout. "
-                            + "The arguments is: " + Arrays.toString(invocation.getArgs())
-                            + ", timeout is " + timeout + " ms, invoke elapsed " + elapsed + " ms.");
+            Integer timeout = timeouts.get(invocation.getMethodName());
+            if (timeout != null) {
+                long elapsed = SystemClock.now() - start;
+                if (elapsed > timeout) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(ExceptionCode.format(ExceptionCode.FILTER_PROVIDER_TIMEOUT) + "Provider invoke method [" + invocation.getClassName() + "."
+                                + invocation.getMethodName() + "] timeout. "
+                                + "The arguments is: " + Arrays.toString(invocation.getArgs())
+                                + ", timeout is " + timeout + " ms, invoke elapsed " + elapsed + " ms.");
+                    }
                 }
             }
         });

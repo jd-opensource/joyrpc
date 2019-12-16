@@ -9,9 +9,9 @@ package io.joyrpc.filter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -32,6 +31,9 @@ import io.joyrpc.util.GenericMethodOption;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
+
+import static io.joyrpc.constants.Constants.CONCURRENCY_OPTION;
+import static io.joyrpc.constants.Constants.TIMEOUT_OPTION;
 
 /**
  * 调用端并发限制器，按接口和方法进行限制
@@ -45,15 +47,19 @@ public abstract class AbstractConcurrencyFilter extends AbstractFilter {
 
     @Override
     public void setup() {
-        concurrencys = new GenericMethodOption<>(clazz, className, methodName -> new ConcurrencyOption(
-                url.getInteger(getOption(methodName, Constants.CONCURRENCY_OPTION)),
-                url.getInteger(getOption(methodName, Constants.TIMEOUT_OPTION)),
-                getMetric(methodName)));
+        final int defTimeout = url.getPositiveInt(TIMEOUT_OPTION);
+        final int defConcurrency = url.getInteger(CONCURRENCY_OPTION);
+        concurrencys = new GenericMethodOption<>(clazz, className, methodName ->
+                new ConcurrencyOption(
+                        url.getInteger(getOption(methodName, CONCURRENCY_OPTION.getName(), defConcurrency)),
+                        url.getInteger(getOption(methodName, TIMEOUT_OPTION.getName(), defTimeout)),
+                        getMetric(methodName)));
     }
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        ConcurrencyOption option = concurrencys.get(request.getPayLoad().getMethodName());
+        Invocation invocation = request.getPayLoad();
+        ConcurrencyOption option = concurrencys.get(invocation.getMethodName());
         //并发数
         int concurrency = option == null ? 0 : option.concurrency;
         if (concurrency <= 0) {
@@ -135,10 +141,10 @@ public abstract class AbstractConcurrencyFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        if (url.getInteger(Constants.CONCURRENCY_OPTION) > 0) {
+        if (url.getInteger(CONCURRENCY_OPTION) > 0) {
             return true;
         }
-        Map<String, String> tokens = url.endsWith("." + Constants.CONCURRENCY_OPTION.getName());
+        Map<String, String> tokens = url.endsWith("." + CONCURRENCY_OPTION.getName());
         if (tokens == null || tokens.isEmpty()) {
             return false;
         }

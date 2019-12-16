@@ -25,12 +25,12 @@ import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.context.RequestContext;
-import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.exception.NoAliveProviderException;
+import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
-import io.joyrpc.util.StringUtils;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.cluster.distribution.Route.PIN_POINT;
@@ -46,23 +46,25 @@ public class PinPointRoute<T, R> extends AbstractRoute<T, R> {
 
     @Override
     public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
-        // todo 没法从request取
         String pinpoint = RequestContext.getContext().getAttachment(HIDDEN_KEY_PINPOINT);
-        if (StringUtils.isBlank(pinpoint)) {
-            throw new IllegalConfigureException("pinpoint must set pinpoint", COMMON_VALUE_ILLEGAL);
+        if (pinpoint == null || pinpoint.isEmpty()) {
+            throw new RpcException(".pinpoint is not configured in request context.", COMMON_VALUE_ILLEGAL);
         }
-        URL url = URL.valueOf(pinpoint);
-        Node pinpointNode = null;
+        URL targetUrl = URL.valueOf(pinpoint, url.getProtocol());
+        Node target = null;
+        URL nodeUrl;
         for (Node node : candidate.getNodes()) {
-            if (node.getUrl().toString(false, false).equals(url.toString(false, false))) {
-                pinpointNode = node;
+            nodeUrl = node.getUrl();
+            if (Objects.equals(nodeUrl.getHost(), targetUrl.getHost())
+                    && nodeUrl.getPort() == targetUrl.getPort()) {
+                target = node;
                 break;
             }
         }
-        if (null == pinpointNode) {
-            throw new NoAliveProviderException(String.format("not found node %s in candidate", url.toString(false, false)), CONSUMER_NO_ALIVE_PROVIDER);
+        if (null == target) {
+            throw new NoAliveProviderException(String.format("not found node %s in candidate", pinpoint), CONSUMER_NO_ALIVE_PROVIDER);
         }
-        return function.apply(pinpointNode, null, request);
+        return function.apply(target, null, request);
     }
 
 }

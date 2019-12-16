@@ -20,10 +20,12 @@ package io.joyrpc.example.service;
  * #L%
  */
 
+import javax.validation.constraints.NotNull;
+
 /**
  * Demo service
  */
 public interface DemoService {
 
-    String sayHello(String str);
+    String sayHello(@NotNull String str);
 }

@@ -9,9 +9,9 @@ package io.joyrpc.filter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -73,6 +73,19 @@ public abstract class AbstractFilter implements Filter {
      */
     protected <T> URLBiOption<T> getOption(final String method, final URLOption<T> option) {
         return new URLBiOption<>(METHOD_KEY.apply(method, option.getName()), option.getName(), option.get());
+    }
+
+    /**
+     * 获取参数选项
+     *
+     * @param method       方法名
+     * @param name         参数名称
+     * @param defaultValue 默认值
+     * @param <T>
+     * @return
+     */
+    protected <T> URLOption<T> getOption(final String method, final String name, final T defaultValue) {
+        return new URLOption<>(METHOD_KEY.apply(method, name), defaultValue);
     }
 
 }

@@ -23,7 +23,6 @@ package io.joyrpc.filter;
 import io.joyrpc.GenericService;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Converts;
@@ -37,10 +36,13 @@ import org.slf4j.LoggerFactory;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
+import javax.validation.metadata.BeanDescriptor;
+import javax.validation.metadata.MethodDescriptor;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static io.joyrpc.constants.Constants.GENERIC_OPTION;
 import static io.joyrpc.constants.Constants.VALIDATION_OPTION;
 
 /**
@@ -60,40 +62,58 @@ public class AbstractValidationFilter extends AbstractFilter {
 
     @Override
     public void setup() {
-        validations = GenericService.class.equals(clazz) ? null :
-                new NameKeyOption<>(clazz,
-                        o -> url.getBoolean(getOption(o.getName(), Constants.VALIDATION_OPTION)));
         validator = Validation.buildDefaultValidatorFactory().getValidator();
+        //默认是否认证
+        boolean validate = url.getBoolean(VALIDATION_OPTION.getName());
+        //直接传入默认值，加快构建速度
+        if (validator == null || GenericService.class.equals(clazz)) {
+            validations = null;
+        } else {
+            //得到类的验证描述
+            BeanDescriptor beanDescriptor = validator.getConstraintsForClass(clazz);
+            //遍历方法，判断是否需要验证
+            validations = new NameKeyOption<>(clazz, o -> {
+                //判断该方法的配置是否开启了验证
+                if (!url.getBoolean(getOption(o.getName(), VALIDATION_OPTION.getName(), validate))) {
+                    return false;
+                }
+                //判断该方法上是有有验证注解
+                MethodDescriptor descriptor = beanDescriptor.getConstraintsForMethod(o.getName(), o.getParameterTypes());
+                return descriptor == null ? false : descriptor.hasConstrainedParameters();
+            });
+        }
     }
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
         //过滤掉泛化调用
-        if (!invocation.isGeneric() &&
-                validations != null && validator != null &&
-                validations.get(invocation.getMethodName())) {
-            //JSR303验证
-            Set<ConstraintViolation<Object>> violations = validator.forExecutables().validateParameters(
-                    invocation.getObject(), invocation.getMethod(), invocation.getArgs());
-            if (!violations.isEmpty()) {
-                //有异常
-                StringBuilder builder = new StringBuilder(100);
-                int i = 0;
-                for (ConstraintViolation<Object> violation : violations) {
-                    if (i++ > 0) {
-                        builder.append('\n');
+        if (!invocation.isGeneric() && validations != null) {
+            //判断方法是否开启了验证
+            Boolean validate = validations.get(invocation.getMethodName());
+            if (validate != null && validate) {
+                //JSR303验证
+                Set<ConstraintViolation<Object>> violations = validator.forExecutables().validateParameters(
+                        invocation.getObject(), invocation.getMethod(), invocation.getArgs());
+                if (!violations.isEmpty()) {
+                    //有异常
+                    StringBuilder builder = new StringBuilder(100);
+                    int i = 0;
+                    for (ConstraintViolation<Object> violation : violations) {
+                        if (i++ > 0) {
+                            builder.append('\n');
+                        }
+                        builder.append("ConstraintViolation");
+                        builder.append("{message=").append(violation.getMessage());
+                        builder.append(", propertyPath=").append(violation.getPropertyPath());
+                        builder.append(", class=").append(className);
+                        builder.append('}');
                     }
-                    builder.append("ConstraintViolation");
-                    builder.append("{message=").append(violation.getMessage());
-                    builder.append(", propertyPath=").append(violation.getPropertyPath());
-                    builder.append(", class=").append(className);
-                    builder.append('}');
+                    // 无法直接序列化异常，只能转为字符串然后包装为RpcException
+                    RpcException re = new RpcException("validate is not passed, cause by: \n" + builder.toString(),
+                            this instanceof ProviderFilter ? ExceptionCode.FILTER_VALID_PROVIDER : ExceptionCode.FILTER_VALID_CONSUMER);
+                    return CompletableFuture.completedFuture(new Result(request.getContext(), re));
                 }
-                // 无法直接序列化异常，只能转为字符串然后包装为RpcException
-                RpcException re = new RpcException("validate is not passed, cause by: \n" + builder.toString(),
-                        this instanceof ProviderFilter ? ExceptionCode.FILTER_VALID_PROVIDER : ExceptionCode.FILTER_VALID_CONSUMER);
-                return CompletableFuture.completedFuture(new Result(request.getContext(), re));
             }
         }
         return invoker.invoke(request);
@@ -102,7 +122,7 @@ public class AbstractValidationFilter extends AbstractFilter {
     @Override
     public boolean test(final URL url) {
         //泛型调用不进行校验
-        if (url.getBoolean(Constants.GENERIC_OPTION)) {
+        if (url.getBoolean(GENERIC_OPTION)) {
             return false;
         } else if (url.getBoolean(VALIDATION_OPTION)) {
             // 参数校验过滤器
@@ -117,4 +137,5 @@ public class AbstractValidationFilter extends AbstractFilter {
         }
         return false;
     }
+
 }

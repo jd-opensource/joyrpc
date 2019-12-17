@@ -49,6 +49,7 @@ import java.lang.reflect.Parameter;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
@@ -196,7 +197,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
                 invocation.addAttachment(Constants.HIDDEN_KEY_TOKEN, token);
             }
             CompletableFuture<Result> future = exporter.invoke(request);
-            Result response = future.get();
+            Result response = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
             long end = System.currentTimeMillis();
             if (response.isException()) {
                 Throwable e = response.getException();

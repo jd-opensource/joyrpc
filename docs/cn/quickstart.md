@@ -95,7 +95,7 @@
               try {
                   CompletableFuture<Void> future = new CompletableFuture<Void>();
                   DemoService service = consumerConfig.refer(future);
-                  future.get();
+                  future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
                   String echo = service.sayHello("hello");//发起服务调用
       
                   System.in.read();

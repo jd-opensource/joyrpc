@@ -27,7 +27,6 @@ import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.invoker.Refer;
-import io.joyrpc.proxy.ConsumerInvokeHandler;
 
 import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
@@ -78,7 +77,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
      *
      * @param <T>
      */
-    protected static class ConsumerController<T> extends AbstractConsumerController<T, ConsumerConfig> {
+    protected static class ConsumerController<T> extends AbstractConsumerController<T, ConsumerConfig<T>> {
         /**
          * 注册中心
          */
@@ -93,7 +92,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
          *
          * @param config
          */
-        public ConsumerController(ConsumerConfig config) {
+        public ConsumerController(ConsumerConfig<T> config) {
             super(config);
         }
 

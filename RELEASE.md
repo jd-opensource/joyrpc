@@ -40,6 +40,8 @@
   
   - 优化限流性能，根据方法、分组和应用缓存每次匹配的最佳限流器 
   
+  - Java8的CompletableFuture.get()内部会首先自旋，同步调用获取结果传入超时时间避免自旋，提升性能
+  
 - Dependency
 
   - 升级Springboot为2.2.1.RELEASE版本

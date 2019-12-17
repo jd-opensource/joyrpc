@@ -135,7 +135,7 @@ public class FilterChain implements Invoker {
         //禁用默认系统插件
         boolean disableDefault = blackWhiteList.inBlack("default");
         //禁用系统插件判断
-        Predicate<Filter> black = (t) -> disableDefault ? (t.type() & Filter.SYSTEM) != 0 : false;
+        Predicate<Filter> black = (t) -> disableDefault && (t.type() & Filter.SYSTEM) != 0;
         //全局插件
         Predicate<Filter> white = (t) -> (t.type() & Filter.GLOBAL) > 0;
 

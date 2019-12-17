@@ -513,7 +513,7 @@ public class Refer extends AbstractInvoker {
         return cluster;
     }
 
-    public ConsumerConfig getConfig() {
+    public ConsumerConfig<?> getConfig() {
         return config;
     }
 

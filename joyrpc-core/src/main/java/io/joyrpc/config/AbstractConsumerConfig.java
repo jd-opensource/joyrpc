@@ -167,7 +167,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 泛化调用的类
      */
-    protected transient Class genericClass;
+    protected transient Class<?> genericClass;
     /**
      * 代理实现类
      */
@@ -408,7 +408,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                     genericClass = GenericService.class;
                 } else {
                     try {
-                        Class clazz = ClassUtils.forName(className);
+                        Class<?> clazz = ClassUtils.forName(className);
                         genericClass = clazz.isInterface() && GenericService.class.isAssignableFrom(clazz) ? clazz : GenericService.class;
                     } catch (ClassNotFoundException e) {
                         genericClass = GenericService.class;

@@ -244,7 +244,7 @@ public class Exporter extends AbstractInvoker {
         CompletableFuture<Void> future1 = deregister().whenComplete((v, t) -> logger.info("Success deregister provider config " + name));
         CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe provider config " + name));
         //关闭服务
-        CompletableFuture<Void> future3 = new CompletableFuture();
+        CompletableFuture<Void> future3 = new CompletableFuture<>();
         if (server != null) {
             server.close(o -> {
                 //在这里安全关闭外部线程池
@@ -280,9 +280,7 @@ public class Exporter extends AbstractInvoker {
         context.setAttachments(interfaceImplicits).setAttachments(methodImplicits.get(invocation.getMethod()));
 
         //执行调用链
-        CompletableFuture<Result> future = chain.invoke(request);
-
-        return future;
+        return chain.invoke(request);
     }
 
     /**
@@ -326,7 +324,7 @@ public class Exporter extends AbstractInvoker {
             result.complete(null);
         } else {
             //多注册中心
-            CompletableFuture<URL>[] futures = new CompletableFuture[registries.size()];
+            CompletableFuture<?>[] futures = new CompletableFuture[registries.size()];
             for (int i = 0; i < registries.size(); i++) {
                 futures[i] = registries.get(i).register(url);
             }
@@ -366,7 +364,7 @@ public class Exporter extends AbstractInvoker {
         if (registries == null || registries.isEmpty()) {
             return CompletableFuture.completedFuture(null);
         } else {
-            CompletableFuture<URL>[] futures = new CompletableFuture[registries.size()];
+            CompletableFuture<?>[] futures = new CompletableFuture[registries.size()];
             //取消注册，最多重试1次
             for (int i = 0; i < registries.size(); i++) {
                 futures[i] = registries.get(i).deregister(registerUrls.get(i), 1);
@@ -375,7 +373,7 @@ public class Exporter extends AbstractInvoker {
         }
     }
 
-    public ProviderConfig getConfig() {
+    public ProviderConfig<?> getConfig() {
         return config;
     }
 

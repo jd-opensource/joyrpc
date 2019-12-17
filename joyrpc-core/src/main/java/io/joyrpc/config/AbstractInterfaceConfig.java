@@ -761,7 +761,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
          * @param target
          * @param consumer
          */
-        protected <T> void chain(final CompletableFuture<T> source, final CompletableFuture<Void> target, final Consumer<T> consumer) {
+        protected <U> void chain(final CompletableFuture<U> source, final CompletableFuture<Void> target, final Consumer<U> consumer) {
             source.whenComplete((v, e) -> {
                 if (e != null) {
                     target.completeExceptionally(e);

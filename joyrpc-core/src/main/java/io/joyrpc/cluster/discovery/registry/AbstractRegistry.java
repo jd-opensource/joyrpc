@@ -68,6 +68,7 @@ import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 public abstract class AbstractRegistry implements Registry, Configure {
 
     protected static final Logger logger = LoggerFactory.getLogger(AbstractRegistry.class);
+    public static final String TYPE = "type";
 
     /**
      * 注册中心URL
@@ -332,7 +333,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @return
      */
     protected ClusterMeta createClusterMeta(final URL url, final String key) {
-        return new ClusterMeta(url, key);
+        return new ClusterMeta(url, key, this::dirty, getPublisher(key));
     }
 
     /**
@@ -343,7 +344,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @return
      */
     protected ConfigMeta createConfigMeta(final URL url, final String key) {
-        return new ConfigMeta(url, key);
+        return new ConfigMeta(url, key, this::dirty, getPublisher(key));
     }
 
     /**
@@ -585,18 +586,19 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 获取集群键
+     * 获取集群键，加上类型参数避免和配置键一样
      *
      * @param url
      * @return
      */
     protected String getClusterKey(final URL url) {
-        //接口集群订阅:协议+接口+别名
-        return url.toString(false, true, ALIAS_OPTION.getName());
+        //接口集群订阅:协议+接口+别名+集群类型
+        URL u = url.add(TYPE, "cluster");
+        return u.toString(false, true, ALIAS_OPTION.getName(), TYPE);
     }
 
     /**
-     * 获取配置键
+     * 获取配置键，加上类型参数避免和集群键一样
      *
      * @param url
      * @return
@@ -607,8 +609,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
             //全局配置订阅
             return GLOBAL_SETTING;
         } else {
-            //接口配置订阅:协议+接口+别名+SIDE
-            return url.toString(false, true, ALIAS_OPTION.getName(), Constants.ROLE_OPTION.getName());
+            //接口配置订阅:协议+接口+别名+SIDE+配置类型
+            URL u = url.add(TYPE, "config");
+            return u.toString(false, true, ALIAS_OPTION.getName(), Constants.ROLE_OPTION.getName(), TYPE);
         }
     }
 
@@ -1079,7 +1082,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      *
      * @param <T>
      */
-    protected abstract class SubscribeMeta<T extends UpdateEvent> extends URLKey implements EventHandler<T>, Closeable {
+    protected static abstract class SubscribeMeta<T extends UpdateEvent> extends URLKey implements EventHandler<T>, Closeable {
         /**
          * 当前数据版本，-1表示还没有初始化
          */
@@ -1104,16 +1107,22 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * 回调ID（用于采用回调来订阅的场景）
          */
         protected String callbackId;
+        /**
+         * 当数据更新后的处理器
+         */
+        protected Runnable dirty;
 
         /**
          * 构造函数
          *
          * @param url
          * @param key
+         * @param dirty
          * @param publisher
          */
-        public SubscribeMeta(URL url, String key, Publisher<T> publisher) {
+        public SubscribeMeta(final URL url, final String key, final Runnable dirty, final Publisher<T> publisher) {
             super(url, key);
+            this.dirty = dirty;
             this.publisher = publisher;
             this.publisher.start();
         }
@@ -1204,12 +1213,18 @@ public abstract class AbstractRegistry implements Registry, Configure {
             publisher.close();
         }
 
+        protected void dirty() {
+            if (dirty != null) {
+                dirty.run();
+            }
+        }
+
     }
 
     /**
      * 集群订阅信息
      */
-    protected class ClusterMeta extends AbstractRegistry.SubscribeMeta<ClusterEvent> implements ClusterHandler {
+    protected static class ClusterMeta extends AbstractRegistry.SubscribeMeta<ClusterEvent> implements ClusterHandler {
         /**
          * 分片信息
          */
@@ -1224,20 +1239,14 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @param url
          * @param key
-         */
-        public ClusterMeta(final URL url, final String key) {
-            this(url, key, AbstractRegistry.this.getPublisher("registry.cluster." + key));
-        }
-
-        /**
-         * 构造函数
-         *
-         * @param url
-         * @param key
+         * @param dirty
          * @param publisher
          */
-        public ClusterMeta(final URL url, final String key, final Publisher<ClusterEvent> publisher) {
-            super(url, key, publisher);
+        public ClusterMeta(final URL url,
+                           final String key,
+                           final Runnable dirty,
+                           final Publisher<ClusterEvent> publisher) {
+            super(url, key, dirty, publisher);
         }
 
         /**
@@ -1391,7 +1400,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 配置订阅信息，确保先通知完整数据，再通知增量数据
      */
-    protected class ConfigMeta extends SubscribeMeta<ConfigEvent> implements ConfigHandler {
+    protected static class ConfigMeta extends SubscribeMeta<ConfigEvent> implements ConfigHandler {
         /**
          * 全量配置信息
          */
@@ -1402,20 +1411,14 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @param url
          * @param key
-         */
-        public ConfigMeta(final URL url, final String key) {
-            this(url, key, AbstractRegistry.this.getPublisher("registry.config." + key));
-        }
-
-        /**
-         * 构造函数
-         *
-         * @param url
-         * @param key
+         * @param dirty
          * @param publisher
          */
-        public ConfigMeta(final URL url, final String key, final Publisher<ConfigEvent> publisher) {
-            super(url, key, publisher);
+        public ConfigMeta(final URL url,
+                          final String key,
+                          final Runnable dirty,
+                          final Publisher<ConfigEvent> publisher) {
+            super(url, key, dirty, publisher);
         }
 
         /**
@@ -1477,7 +1480,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 注册信息
      */
-    protected class RegisterMeta extends URLKey {
+    protected static class RegisterMeta extends URLKey {
         /**
          * 注册Future
          */

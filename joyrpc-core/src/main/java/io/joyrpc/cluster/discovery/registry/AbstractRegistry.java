@@ -1448,8 +1448,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
         @Override
         public synchronized boolean addHandler(final EventHandler<ConfigEvent> handler) {
             if (publisher.addHandler(handler)) {
-                //有全量数据
-                if (full) {
+                //有全量数据，并且前置条件OK
+                if (full && ready()) {
                     publisher.offer(new ConfigEvent(this, handler, version, datum));
                 }
                 return true;

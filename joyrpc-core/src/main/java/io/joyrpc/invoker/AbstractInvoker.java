@@ -40,14 +40,14 @@ import static io.joyrpc.util.Status.*;
 /**
  * 抽象调用器
  */
-public abstract class AbstractInvoker<T> implements Invoker {
+public abstract class AbstractInvoker implements Invoker {
     protected static final AtomicReferenceFieldUpdater<AbstractInvoker, Status> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(AbstractInvoker.class, Status.class, "status");
 
     /**
      * 代理的接口类
      */
-    protected Class<T> interfaceClass;
+    protected Class<?> interfaceClass;
 
     /**
      * 接口真实名称
@@ -107,7 +107,7 @@ public abstract class AbstractInvoker<T> implements Invoker {
         return name;
     }
 
-    public Class<T> getInterfaceClass() {
+    public Class<?> getInterfaceClass() {
         return interfaceClass;
     }
 

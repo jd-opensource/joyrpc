@@ -95,6 +95,7 @@ public interface Configurator {
                         excludes.add("interfaceClazz");
                         excludes.add("ref");
                         excludes.add("server");
+                        excludes.add("genericClass");
                         excludes.add("delay");
                         excludes.add("registry");
                         excludes.add("interfaceValidator");

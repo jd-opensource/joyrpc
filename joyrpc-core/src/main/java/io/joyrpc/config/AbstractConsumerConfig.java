@@ -44,6 +44,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
+import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Status;
 import io.joyrpc.util.SystemClock;
@@ -65,6 +66,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
+import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.Status.*;
@@ -162,6 +164,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      * 预热时间
      */
     protected Integer warmupDuration;
+    /**
+     * 泛化调用的类
+     */
+    protected transient Class genericClass;
     /**
      * 代理实现类
      */
@@ -395,7 +401,22 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     @Override
     public Class getProxyClass() {
         if (Boolean.TRUE.equals(generic)) {
-            return GenericService.class;
+            if (genericClass == null) {
+                //获取泛化类名，便于兼容历史版本
+                String className = GlobalContext.getString(GENERIC_CLASS);
+                if (className == null || className.isEmpty()) {
+                    genericClass = GenericService.class;
+                } else {
+                    try {
+                        Class clazz = ClassUtils.forName(className);
+                        genericClass = clazz.isInterface() && GenericService.class.isAssignableFrom(clazz) ? clazz : GenericService.class;
+                    } catch (ClassNotFoundException e) {
+                        genericClass = GenericService.class;
+                    }
+                }
+            }
+            return genericClass;
+
         }
         return super.getInterfaceClass();
     }
@@ -615,7 +636,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 控制器
      */
-    protected static abstract class AbstractConsumerController<T, C extends AbstractConsumerConfig>
+    protected static abstract class AbstractConsumerController<T, C extends AbstractConsumerConfig<T>>
             extends AbstractController<C> implements InvocationHandler {
 
         /**
@@ -633,7 +654,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 代理类
          */
-        protected Class<T> proxyClass;
+        protected Class<?> proxyClass;
         /**
          * 注册和订阅的接口名称
          */
@@ -668,7 +689,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * @return
          */
         public CompletableFuture<Void> open() {
-            CompletableFuture<Void> future = new CompletableFuture();
+            CompletableFuture<Void> future = new CompletableFuture<>();
             try {
                 config.validate();
                 proxyClass = config.getProxyClass();
@@ -736,14 +757,14 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          */
         protected String getPseudonym(final Class<?> clazz, final String defaultValue) {
             String result = defaultValue;
-            if (clazz != null && !GenericService.class.equals(clazz)) {
+            if (clazz != null && !GENERIC.test(clazz)) {
                 Service service = clazz.getAnnotation(Service.class);
-                if (service != null && service.name() != null && !service.name().isEmpty()) {
+                if (service != null && !service.name().isEmpty()) {
                     //判断服务名
                     result = service.name();
                 } else {
                     Alias alias = clazz.getAnnotation(Alias.class);
-                    if (alias != null && alias.value() != null && !alias.value().isEmpty()) {
+                    if (alias != null && !alias.value().isEmpty()) {
                         result = alias.value();
                     }
                 }
@@ -775,7 +796,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      *
      * @date: 2 /19/2019
      */
-    protected static class ConsumerInvokeHandler<T> implements InvocationHandler {
+    protected static class ConsumerInvokeHandler implements InvocationHandler {
         /**
          * The Method name toString.
          */
@@ -795,7 +816,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 接口名称
          */
-        protected Class<T> iface;
+        protected Class<?> iface;
         /**
          * 是否为异步
          */
@@ -808,7 +829,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * @param iface
          * @param serviceUrl
          */
-        public ConsumerInvokeHandler(final Invoker invoker, final Class<T> iface, final URL serviceUrl) {
+        public ConsumerInvokeHandler(final Invoker invoker, final Class<?> iface, final URL serviceUrl) {
             this.invoker = invoker;
             this.iface = iface;
             this.async = serviceUrl.getBoolean(Constants.ASYNC_OPTION);

@@ -139,6 +139,7 @@ public class Constants {
     public final static String COMMA_SEPARATOR = ",";
     public final static String EQUAL_SIGN_SEPARATOR = "=";
     public final static String AND_SEPARATOR = "&";
+    public final static String GENERIC_CLASS = "genericClass";
 
     /*======================= Registration center configuration information item name =======================*/
     /**

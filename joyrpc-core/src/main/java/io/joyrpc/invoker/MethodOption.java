@@ -20,7 +20,6 @@ package io.joyrpc.invoker;
  * #L%
  */
 
-import io.joyrpc.GenericService;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.ExceptionPolicy;
 import io.joyrpc.cluster.distribution.ExceptionPredication;
@@ -48,6 +47,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.EXCEPTION_PREDICATION;
 import static io.joyrpc.Plugin.FAILOVER_SELECTOR;
 import static io.joyrpc.constants.Constants.*;
@@ -120,7 +120,7 @@ public class MethodOption {
         this.failoverSelector = url.getString(FAILOVER_SELECTOR_OPTION);
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
         //方法级别的隐藏参数，保留以"."开头
-        boolean generic = GenericService.class.equals(interfaceClass);
+        boolean generic = GENERIC.test(interfaceClass);
         this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null,
                 o -> new Option(
                         url.startsWith(getKey(o, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1)),

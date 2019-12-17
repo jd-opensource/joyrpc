@@ -85,7 +85,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
         /**
          * Refer对象
          */
-        protected volatile Refer<T> refer;
+        protected volatile Refer refer;
 
         /**
          * 构造函数
@@ -180,7 +180,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
             return future;
         }
 
-        public Refer<T> getRefer() {
+        public Refer getRefer() {
             return refer;
         }
     }

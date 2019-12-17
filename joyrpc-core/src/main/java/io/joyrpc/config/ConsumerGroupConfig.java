@@ -104,13 +104,13 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     /**
      * 消费者控制器
      */
-    public static class ConsumerGroupController<T> extends AbstractConsumerController<T, ConsumerGroupConfig> {
+    public static class ConsumerGroupController<T> extends AbstractConsumerController<T, ConsumerGroupConfig<T>> {
         /**
          * 分组调用
          */
         protected transient GroupInvoker route;
 
-        public ConsumerGroupController(ConsumerGroupConfig config) {
+        public ConsumerGroupController(ConsumerGroupConfig<T> config) {
             super(config);
         }
 
@@ -141,7 +141,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
 
         @Override
         public CompletableFuture<Void> close(boolean gracefully) {
-            CompletableFuture future = new CompletableFuture();
+            CompletableFuture<Void> future = new CompletableFuture<>();
             invokeHandler = null;
             if (route != null) {
                 route.close().whenComplete((v, t) -> future.complete(null));

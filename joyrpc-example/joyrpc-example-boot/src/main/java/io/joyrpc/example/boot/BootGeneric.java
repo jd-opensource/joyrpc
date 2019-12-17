@@ -34,7 +34,7 @@ public class BootGeneric {
         GenericService consumer = run.getBean(GenericService.class);
         while (true) {
             try {
-                System.out.println(consumer.$invoke("sayHello", null, new Object[]{"helloWold"}).get());
+                System.out.println(consumer.$invoke("sayHello", null, new Object[]{"helloWold"}));
                 Thread.sleep(1000L);
             } catch (InterruptedException e) {
                 break;

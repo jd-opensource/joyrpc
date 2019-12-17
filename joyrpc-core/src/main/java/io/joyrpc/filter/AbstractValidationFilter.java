@@ -20,7 +20,6 @@ package io.joyrpc.filter;
  * #L%
  */
 
-import io.joyrpc.GenericService;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.constants.ExceptionCode;
@@ -42,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
+import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.constants.Constants.GENERIC_OPTION;
 import static io.joyrpc.constants.Constants.VALIDATION_OPTION;
 
@@ -66,7 +66,7 @@ public class AbstractValidationFilter extends AbstractFilter {
         //默认是否认证
         boolean validate = url.getBoolean(VALIDATION_OPTION.getName());
         //直接传入默认值，加快构建速度
-        if (validator == null || GenericService.class.equals(clazz)) {
+        if (validator == null || GENERIC.test(clazz)) {
             validations = null;
         } else {
             //得到类的验证描述
@@ -79,7 +79,7 @@ public class AbstractValidationFilter extends AbstractFilter {
                 }
                 //判断该方法上是有有验证注解
                 MethodDescriptor descriptor = beanDescriptor.getConstraintsForMethod(o.getName(), o.getParameterTypes());
-                return descriptor == null ? false : descriptor.hasConstrainedParameters();
+                return descriptor != null && descriptor.hasConstrainedParameters();
             });
         }
     }

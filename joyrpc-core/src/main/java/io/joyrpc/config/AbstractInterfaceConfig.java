@@ -216,7 +216,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      *
      * @return
      */
-    public Class getProxyClass() {
+    public Class<?> getProxyClass() {
         return getInterfaceClass();
     }
 

@@ -46,18 +46,18 @@ public class IntfValidator implements ConstraintValidator<ValidateInterface, Abs
         if (interfaceClazz == null || interfaceClazz.isEmpty()) {
             error = new Pair<>("interfaceClazz", "interfaceClazz can not be empty");
         } else {
-            Class clazz = config.getProxyClass();
+            Class<?> clazz = config.getProxyClass();
             if (clazz == null) {
                 try {
                     clazz = forName(interfaceClazz);
                     config.setInterfaceClass(clazz);
                 } catch (ClassNotFoundException e) {
-                    error = new Pair<>("interfaceClazz", "class is not found. \'" + interfaceClazz + "\'");
+                    error = new Pair<>("interfaceClazz", "class is not found. '" + interfaceClazz + "'");
                 }
             }
             if (error == null) {
                 if (!clazz.isInterface()) {
-                    error = new Pair<>("interfaceClass", "class is not a interface. \'" + clazz.getName() + "\'");
+                    error = new Pair<>("interfaceClass", "class is not a interface. '" + clazz.getName() + "'");
                 } else if (config instanceof ProviderConfig) {
                     error = valid((ProviderConfig) config, clazz);
                 }

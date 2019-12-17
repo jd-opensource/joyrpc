@@ -118,7 +118,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     }
 
     @Override
-    public Class getObjectType() {
+    public Class<?> getObjectType() {
         // 如果spring注入在前，reference操作在后，则会提前走到此方法，此时interface为空
         try {
             return config.getProxyClass();

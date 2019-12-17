@@ -20,6 +20,8 @@
   
   - 配置只支持全量更新
   
+  - 调整了GenericService的方法，泛化的接口可以是GenericService的子类，便于兼容历史版本
+  
 - Springboot
 
   - 处理启动时候的几个Warn信息

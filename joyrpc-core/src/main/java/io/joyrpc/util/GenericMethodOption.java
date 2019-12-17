@@ -9,9 +9,9 @@ package io.joyrpc.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,9 +20,9 @@ package io.joyrpc.util;
  * #L%
  */
 
-import io.joyrpc.GenericService;
-
 import java.util.function.Function;
+
+import static io.joyrpc.GenericService.GENERIC;
 
 /**
  * 处理泛型的方法选项
@@ -39,6 +39,6 @@ public class GenericMethodOption<T> extends MethodOption.NameKeyOption<T> {
      * @param nameFunction
      */
     public GenericMethodOption(final Class clazz, final String className, final Function<String, T> nameFunction) {
-        super(GenericService.class.equals(clazz) ? null : clazz, className, nameFunction);
+        super(GENERIC.test(clazz) ? null : clazz, className, nameFunction);
     }
 }

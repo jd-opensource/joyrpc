@@ -58,13 +58,13 @@ import static io.joyrpc.util.ClassUtils.isReturnFuture;
 /**
  * @date: 15/1/2019
  */
-public class Exporter<T> extends AbstractInvoker<T> {
+public class Exporter extends AbstractInvoker {
 
     private static final Logger logger = LoggerFactory.getLogger(Exporter.class);
     /**
      * 配置
      */
-    protected ProviderConfig config;
+    protected ProviderConfig<?> config;
     /**
      * 压缩类型
      */
@@ -92,7 +92,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
     /**
      * 实现对象
      */
-    protected T ref;
+    protected Object ref;
     /**
      * 接口透传参数
      */
@@ -138,7 +138,7 @@ public class Exporter<T> extends AbstractInvoker<T> {
      */
     protected Exporter(final String name,
                        final URL url,
-                       final ProviderConfig<T> config,
+                       final ProviderConfig<?> config,
                        final List<Registry> registries,
                        final List<URL> registerUrls,
                        final Configure configure,

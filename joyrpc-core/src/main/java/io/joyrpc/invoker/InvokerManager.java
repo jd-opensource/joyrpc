@@ -178,16 +178,15 @@ public class InvokerManager {
      * @param configure
      * @param subscribeUrl
      * @param configHandler
-     * @param <T>
      * @return
      */
-    public static <T> Refer refer(final URL url,
-                                  final ConsumerConfig<T> config,
-                                  final Registry registry,
-                                  final URL registerUrl,
-                                  final Configure configure,
-                                  final URL subscribeUrl,
-                                  final ConfigHandler configHandler) {
+    public static Refer refer(final URL url,
+                              final ConsumerConfig<?> config,
+                              final Registry registry,
+                              final URL registerUrl,
+                              final Configure configure,
+                              final URL subscribeUrl,
+                              final ConfigHandler configHandler) {
         return INSTANCE.doRefer(url, config, registry, registerUrl, configure, subscribeUrl, configHandler);
     }
 
@@ -202,16 +201,15 @@ public class InvokerManager {
      * @param configure     动态配置
      * @param subscribeUrl  订阅配置URL
      * @param configHandler 配置变更处理器
-     * @param <T>
      * @return
      */
-    public static <T> Exporter export(final URL url,
-                                      final ProviderConfig<T> config,
-                                      final List<Registry> registries,
-                                      final List<URL> registerUrls,
-                                      final Configure configure,
-                                      final URL subscribeUrl,
-                                      final ConfigHandler configHandler) {
+    public static Exporter export(final URL url,
+                                  final ProviderConfig<?> config,
+                                  final List<Registry> registries,
+                                  final List<URL> registerUrls,
+                                  final Configure configure,
+                                  final URL subscribeUrl,
+                                  final ConfigHandler configHandler) {
         return INSTANCE.doExport(url, config, registries, registerUrls, configure, subscribeUrl, configHandler);
     }
 
@@ -428,17 +426,16 @@ public class InvokerManager {
      * @param subscribeUrl  配置订阅URL
      * @param configHandler 配置变更处理器
      * @param refers
-     * @param <T>
      * @return
      */
-    protected <T> Refer doRefer(final URL url,
-                                final ConsumerConfig<T> config,
-                                final Registry registry,
-                                final URL registerUrl,
-                                final Configure configure,
-                                final URL subscribeUrl,
-                                final ConfigHandler configHandler,
-                                final Map<String, Refer> refers) {
+    protected Refer doRefer(final URL url,
+                            final ConsumerConfig<?> config,
+                            final Registry registry,
+                            final URL registerUrl,
+                            final Configure configure,
+                            final URL subscribeUrl,
+                            final ConfigHandler configHandler,
+                            final Map<String, Refer> refers) {
         //一个服务接口可以注册多次，每个的参数不一样
         String key = url.toString(false, true);
         //添加hashCode参数，去掉HOST减少字符串
@@ -482,7 +479,7 @@ public class InvokerManager {
             }
             serializationRegister(config.getProxyClass(), callbackManager);
             //refer的名称和key保持一致，便于删除
-            return new Refer<T>(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler, cluster, loadBalance, container,
+            return new Refer(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler, cluster, loadBalance, container,
                     (v, t) -> {
                         //关闭回调，移除集群和引用
                         refers.remove(v.getName());
@@ -563,16 +560,15 @@ public class InvokerManager {
      * @param configure     配置中心
      * @param subscribeUrl  订阅配置的URL
      * @param configHandler 配置处理器
-     * @param <T>
      * @return
      */
-    protected <T> Exporter<T> doExport(final URL url,
-                                       final ProviderConfig<T> config,
-                                       final List<Registry> registries,
-                                       final List<URL> registerUrls,
-                                       final Configure configure,
-                                       final URL subscribeUrl,
-                                       final ConfigHandler configHandler) {
+    protected Exporter doExport(final URL url,
+                                final ProviderConfig<?> config,
+                                final List<Registry> registries,
+                                final List<URL> registerUrls,
+                                final Configure configure,
+                                final URL subscribeUrl,
+                                final ConfigHandler configHandler) {
         //使用url.getPath获取真实接口名称
         final String name = NAME.apply(url.getPath(), config.getAlias());
         Map<Integer, Exporter> ports = exports.get(name);
@@ -585,7 +581,7 @@ public class InvokerManager {
                 o -> {
                     callbackManager.register(config.getProxyClass());
                     serializationRegister(config.getProxyClass(), callbackManager);
-                    return new Exporter<>(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler, getServer(url),
+                    return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler, getServer(url),
                             c -> {
                                 Map<Integer, Exporter> map = exports.get(c.getName());
                                 if (map != null) {

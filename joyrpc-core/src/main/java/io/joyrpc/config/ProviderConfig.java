@@ -538,11 +538,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     /**
      * 控制器
      */
-    protected static class Controller<T> extends AbstractController<ProviderConfig> {
+    protected static class Controller<T> extends AbstractController<ProviderConfig<T>> {
         /**
          * 已发布
          */
-        protected transient volatile Exporter<T> exporter;
+        protected transient volatile Exporter exporter;
         /**
          * 注册中心
          */
@@ -553,7 +553,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          *
          * @param config
          */
-        public Controller(ProviderConfig config) {
+        public Controller(ProviderConfig<T> config) {
             super(config);
         }
 
@@ -617,7 +617,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          * @return
          */
         public CompletableFuture<Void> open() {
-            Exporter<T> r = exporter;
+            Exporter r = exporter;
             return r == null ? Futures.completeExceptionally(new InitializationException("Status is illegal.")) : r.open();
         }
 
@@ -637,7 +637,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          * @return
          */
         public CompletableFuture<Void> close(boolean gracefully) {
-            Exporter<T> r = exporter;
+            Exporter r = exporter;
             return r == null ? CompletableFuture.completedFuture(null) : r.close(gracefully);
         }
 
@@ -671,7 +671,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 waitingConfig.complete(serviceUrl);
             }
             //等到所有的注册中心
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()])).whenComplete((v, t) -> {
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).whenComplete((v, t) -> {
                 if (t != null) {
                     future.completeExceptionally(t);
                 } else {
@@ -711,7 +711,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 if (!isClose()) {
                     List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, newUrl)).collect(Collectors.toList());
                     URL newSubscribeUrl = config.subscribe ? buildSubscribedUrl(configureRef, newUrl) : null;
-                    Exporter<T> newExporter = InvokerManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
+                    Exporter newExporter = InvokerManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
                     //打开
                     chain(newExporter.open(), future, s -> {
                         //异步，再次判断是否关闭了

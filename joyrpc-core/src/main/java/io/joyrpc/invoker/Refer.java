@@ -65,7 +65,7 @@ import static io.joyrpc.invoker.InvokerManager.NAME;
  *
  * @date: 2019/1/10
  */
-public class Refer<T> extends AbstractInvoker<T> {
+public class Refer extends AbstractInvoker {
     private static final Logger logger = LoggerFactory.getLogger(Refer.class);
     /**
      * 消费配置
@@ -106,7 +106,7 @@ public class Refer<T> extends AbstractInvoker<T> {
     /**
      * 关闭的消费者
      */
-    protected BiConsumer<Refer<T>, ? super Throwable> closing;
+    protected BiConsumer<Refer, ? super Throwable> closing;
     /**
      * 是否优先本地JVM调用
      */
@@ -159,7 +159,7 @@ public class Refer<T> extends AbstractInvoker<T> {
                     final Cluster cluster,
                     final LoadBalance loadBalance,
                     final CallbackContainer container,
-                    final BiConsumer<Refer<T>, ? super Throwable> closing) {
+                    final BiConsumer<Refer, ? super Throwable> closing) {
         this.name = name;
         this.url = url;
         this.config = config;

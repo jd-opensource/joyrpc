@@ -20,7 +20,6 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.GenericService;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.MethodOverloadException;
@@ -40,6 +39,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.*;
 
@@ -406,7 +406,8 @@ public class Invocation implements Serializable {
      */
     public boolean isGeneric() {
         if (generic == null) {
-            generic = GenericService.class.equals(clazz) || Boolean.TRUE.equals(getAttachment(Constants.GENERIC_OPTION.getName()));
+            generic = GENERIC.test(clazz)
+                    || Boolean.TRUE.equals(getAttachment(Constants.GENERIC_OPTION.getName()));
         }
         return generic;
     }

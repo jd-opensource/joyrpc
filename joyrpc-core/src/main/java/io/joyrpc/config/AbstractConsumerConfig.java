@@ -58,6 +58,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -849,9 +850,14 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
 
         @Override
         public Object invoke(final Object proxy, final Method method, final Object[] param) throws Throwable {
-            //Java8允许在接口上定义静态方法和默认方法
-            if (method.isDefault()) {
+            //Java8允许在接口上定义静态方法和默认方法（仅用与GenericService接口类及其子接口类）
+            if (generic && method.isDefault()) {
                 return invokeDefaultMethod(proxy, method, param);
+            }
+            //Java8允许在接口上定义静态方法
+            if (Modifier.isStatic(method.getModifiers())) {
+                //静态方法
+                return method.invoke(proxy, param);
             }
 
             boolean isReturnFuture = isReturnFuture(iface, method);
@@ -865,7 +871,9 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             //分组Failover调用，需要在这里设置创建时间和超时时间，不能再Refer里面。否则会重置。
             request.setCreateTime(SystemClock.now());
             //超时时间为0，Refer会自动修正，便于分组重试
-            request.getHeader().setTimeout(0);
+            request.getHeader().
+
+                    setTimeout(0);
             //当前线程
             request.setThread(Thread.currentThread());
             //当前线程上下文

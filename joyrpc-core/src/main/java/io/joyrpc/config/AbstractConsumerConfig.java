@@ -929,7 +929,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                                 unreflectSpecial(method, declaringClass).
                                 bindTo(proxy));
                     } catch (Throwable e) {
-                        return Optional.ofNullable(null);
+                        return Optional.empty();
                     }
                 });
                 if (optional.isPresent()) {

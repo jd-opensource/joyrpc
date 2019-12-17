@@ -53,17 +53,16 @@ import org.slf4j.LoggerFactory;
 
 import javax.validation.Valid;
 import java.io.UnsupportedEncodingException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.joyrpc.GenericService.GENERIC;
@@ -662,7 +661,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 调用handler
          */
-        protected transient volatile ConsumerInvokeHandler invokeHandler;
+        protected volatile ConsumerInvokeHandler invokeHandler;
 
         /**
          * 构造函数
@@ -821,6 +820,18 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * 是否为异步
          */
         protected boolean async;
+        /**
+         * 是否是泛化调用
+         */
+        protected boolean generic;
+        /**
+         * 默认方法构造器
+         */
+        protected volatile Constructor<MethodHandles.Lookup> constructor;
+        /**
+         * 默认方法处理器
+         */
+        protected Map<String, Optional<MethodHandle>> handles = new ConcurrentHashMap<>();
 
         /**
          * 构造函数
@@ -833,26 +844,14 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             this.invoker = invoker;
             this.iface = iface;
             this.async = serviceUrl.getBoolean(Constants.ASYNC_OPTION);
+            this.generic = GENERIC.test(iface);
         }
 
         @Override
         public Object invoke(final Object proxy, final Method method, final Object[] param) throws Throwable {
-
             //Java8允许在接口上定义静态方法和默认方法
-            if (!Modifier.isAbstract(method.getModifiers())) {
-                //静态方法
-                return method.invoke(proxy, param);
-            }
-
-            int count = method.getParameterCount();
-            if (count == 0) {
-                if (METHOD_NAME_TO_STRING.equals(method.getName())) {
-                    return invoker.toString();
-                } else if (METHOD_NAME_HASHCODE.equals(method.getName())) {
-                    return invoker.hashCode();
-                }
-            } else if (count == 1 && METHOD_NAME_EQUALS.equals(method.getName())) {
-                return invoker.equals(param[0]);
+            if (method.isDefault()) {
+                return invokeDefaultMethod(proxy, method, param);
             }
 
             boolean isReturnFuture = isReturnFuture(iface, method);
@@ -885,6 +884,59 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 // 返回同步结果
                 return response;
             }
+        }
+
+        /**
+         * 调用默认方法
+         *
+         * @param proxy
+         * @param method
+         * @param param
+         * @return
+         * @throws Throwable
+         */
+        protected Object invokeDefaultMethod(final Object proxy, final Method method, final Object[] param) throws Throwable {
+            Object[] args = param;
+            String name = method.getName();
+            if (generic) {
+                args = (Object[]) param[2];
+                name = (String) param[0];
+            }
+            int count = args == null ? 0 : args.length;
+            if (count == 0) {
+                if (METHOD_NAME_TO_STRING.equals(name)) {
+                    return invoker.getName();
+                } else if (METHOD_NAME_HASHCODE.equals(name)) {
+                    return invoker.hashCode();
+                }
+            } else if (count == 1 && METHOD_NAME_EQUALS.equals(name)) {
+                return invoker.equals(args[0]);
+            }
+            if (constructor == null) {
+                synchronized (this) {
+                    if (constructor == null) {
+                        constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+                        constructor.setAccessible(true);
+                    }
+                }
+            }
+            if (constructor != null) {
+                Optional<MethodHandle> optional = handles.computeIfAbsent(method.getName(), o -> {
+                    Class<?> declaringClass = method.getDeclaringClass();
+                    try {
+                        return Optional.of(constructor.
+                                newInstance(declaringClass, MethodHandles.Lookup.PRIVATE).
+                                unreflectSpecial(method, declaringClass).
+                                bindTo(proxy));
+                    } catch (Throwable e) {
+                        return Optional.ofNullable(null);
+                    }
+                });
+                if (optional.isPresent()) {
+                    return optional.get().invokeWithArguments(param);
+                }
+            }
+            throw new UnsupportedOperationException();
         }
 
         /**

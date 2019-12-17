@@ -122,7 +122,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param clazzName  类名
      * @param methodName 方法名
@@ -139,7 +139,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param className  类名
      * @param methodName 方法名
@@ -154,7 +154,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -168,7 +168,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -181,7 +181,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param className  类
      * @param methodName 方法名
@@ -229,7 +229,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param clazz      类
      * @param methodName 方法名
@@ -241,7 +241,7 @@ public class ClassUtils {
     }
 
     /**
-     * 获取公共非静态方法，过滤掉了Object类型的方法
+     * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param clazz 类
      */
@@ -1379,8 +1379,7 @@ public class ClassUtils {
                 methods = new ArrayList<>(publicMethods.length);
                 String name;
                 for (Method method : publicMethods) {
-                    //过滤掉静态方法
-                    if (!method.getDeclaringClass().equals(Object.class) && !Modifier.isStatic(method.getModifiers())) {
+                    if (!method.getDeclaringClass().equals(Object.class)) {
                         overloadMethods.computeIfAbsent(method.getName(), k -> new OverloadMethod(type, k)).add(method);
                         methods.add(method);
                         name = method.getName();

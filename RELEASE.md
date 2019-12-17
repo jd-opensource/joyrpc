@@ -44,6 +44,12 @@
   
   - Java8的CompletableFuture.get()内部会首先自旋，同步调用获取结果传入超时时间避免自旋，提升性能
   
+  - 支持Java8接口上的默认方法和静态方法调用
+  
+- 工具类
+    
+  - ClassUtils的getPublicMethods返回公共的方法，包括静态方法，支持Java8接口上的静态方法调用
+  
 - Dependency
 
   - 升级Springboot为2.2.1.RELEASE版本

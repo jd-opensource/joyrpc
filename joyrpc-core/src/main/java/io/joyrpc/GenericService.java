@@ -54,9 +54,9 @@ public interface GenericService {
         } catch (InterruptedException e) {
             throw new RpcException(String.format("Failed invoking %s, It's interrupted.", method), e);
         } catch (ExecutionException e) {
-            Throwable throwable = e.getCause();
-            if (throwable == null) {
-                throwable = e;
+            Throwable throwable = e.getCause() == null ? e : e.getCause();
+            if (throwable instanceof RpcException) {
+                throw (RpcException) throwable;
             }
             throw new RpcException(String.format("Failed invoking %s, caused by %s", method, throwable.getMessage()), throwable);
         } catch (TimeoutException e) {

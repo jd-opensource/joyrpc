@@ -24,6 +24,8 @@ import io.joyrpc.context.RequestContext;
 import io.joyrpc.transport.message.Message;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 /**
  * 业务方法调用结果，使用在Filter链里面
@@ -127,6 +129,17 @@ public class Result implements Serializable {
 
     public RequestContext getContext() {
         return context;
+    }
+
+    public static void main(String[] args) {
+        try {
+            Method method = GenericService.class.getMethod("$invoke", String.class, String[].class, Object[].class);
+            System.out.println(Modifier.isAbstract(method.getModifiers()));
+            method = GenericService.class.getMethod("$async", String.class, String[].class, Object[].class);
+            System.out.println(Modifier.isAbstract(method.getModifiers()));
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        }
     }
 
 }

@@ -28,4 +28,12 @@ import javax.validation.constraints.NotNull;
 public interface DemoService {
 
     String sayHello(@NotNull String str);
+
+    default String echo(String str) {
+        return sayHello(str);
+    }
+
+    static String hello(String v) {
+        return v;
+    }
 }

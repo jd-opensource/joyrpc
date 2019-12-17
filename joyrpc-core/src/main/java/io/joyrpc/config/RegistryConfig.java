@@ -190,9 +190,7 @@ public class RegistryConfig extends AbstractIdConfig implements Serializable {
         addElement2Map(params, Constants.TIMEOUT_OPTION, timeout);
         addElement2Map(params, Constants.REGISTRY_BACKUP_PATH_OPTION, backupPath);
         if (null != parameters) {
-            parameters.entrySet().forEach(entry -> {
-                addElement2Map(params, entry.getKey(), entry.getValue());
-            });
+            parameters.forEach((key, value) -> addElement2Map(params, key, value));
         }
         return params;
 

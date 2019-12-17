@@ -55,7 +55,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     /**
      * 分组配置
      */
-    protected ConsumerConfig[] configs;
+    protected ConsumerConfig<?>[] configs;
     /**
      * 方法透传参数
      */
@@ -112,7 +112,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
                          final CompletableFuture<Result> future) {
 
         //调用，如果节点不存在，则抛出Failover异常。
-        ConsumerConfig config = configs[retry % configs.length];
+        ConsumerConfig<?> config = configs[retry % configs.length];
         CompletableFuture<Result> result = config.getRefer().invoke(request);
         result.whenComplete((r, t) -> {
             t = t == null ? r.getException() : t;

@@ -94,8 +94,8 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
      * @param alias
      * @return
      */
-    protected ConsumerConfig createGroupConfig(final String alias) {
-        ConsumerConfig result = new ConsumerConfig<>(this, alias);
+    protected ConsumerConfig<T> createGroupConfig(final String alias) {
+        ConsumerConfig<T> result = new ConsumerConfig<>(this, alias);
         // 注册的时候标记属于分组调用的group
         result.setParameter(FROM_GROUP_OPTION.getName(), "true");
         return result;

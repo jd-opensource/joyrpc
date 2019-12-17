@@ -248,9 +248,7 @@ public class MethodConfig extends AbstractConfig {
         addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
 
         if (null != parameters) {
-            parameters.forEach((k, v) -> {
-                addElement2Map(params, METHOD_KEY.apply(name, k), v);
-            });
+            parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY.apply(name, k), v));
         }
         return params;
     }

@@ -838,8 +838,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         @Override
         public Object invoke(final Object proxy, final Method method, final Object[] param) throws Throwable {
 
-            //Java8允许在接口上定义静态方法
-            if (Modifier.isStatic(method.getModifiers())) {
+            //Java8允许在接口上定义静态方法和默认方法
+            if (!Modifier.isAbstract(method.getModifiers())) {
                 //静态方法
                 return method.invoke(proxy, param);
             }

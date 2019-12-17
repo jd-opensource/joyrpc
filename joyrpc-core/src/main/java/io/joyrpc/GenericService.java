@@ -21,7 +21,12 @@ package io.joyrpc;
  */
 
 
+import io.joyrpc.exception.RpcException;
+
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Predicate;
 
 /**
@@ -43,7 +48,21 @@ public interface GenericService {
      * @param args           参数列表
      * @return 返回值
      */
-    Object $invoke(String method, String[] parameterTypes, Object[] args);
+    default Object $invoke(String method, String[] parameterTypes, Object[] args) {
+        try {
+            return $async(method, parameterTypes, args).get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            throw new RpcException(String.format("Failed invoking %s, It's interrupted.", method), e);
+        } catch (ExecutionException e) {
+            Throwable throwable = e.getCause();
+            if (throwable == null) {
+                throwable = e;
+            }
+            throw new RpcException(String.format("Failed invoking %s, caused by %s", method, throwable.getMessage()), throwable);
+        } catch (TimeoutException e) {
+            throw new RpcException(String.format("Failed invoking %s, It's timeout.", method), e);
+        }
+    }
 
     /**
      * 异步泛化调用

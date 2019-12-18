@@ -251,15 +251,18 @@ public class JavassistProxyFactory implements ProxyFactory {
          * @param builder
          * @return name.
          */
-        protected StringBuilder getName(Class<?> c, final StringBuilder builder) {
+        protected StringBuilder getName(final Class<?> c, final StringBuilder builder) {
             if (c.isArray()) {
-                StringBuilder suffixSb = new StringBuilder();
+                int dimension = 0;
                 Class<?> ct = c;
                 while (ct.isArray()) {
                     ct = ct.getComponentType();
-                    suffixSb.append("[]");
+                    dimension++;
                 }
-                builder.append(ct.getName()).append(suffixSb);
+                builder.append(ct.getName());
+                for (int i = 0; i < dimension; i++) {
+                    builder.append("[]");
+                }
             } else {
                 builder.append(c.getName());
             }

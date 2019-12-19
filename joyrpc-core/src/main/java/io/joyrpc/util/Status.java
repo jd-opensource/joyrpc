@@ -59,4 +59,5 @@ public enum Status {
     public boolean isClose() {
         return false;
     }
+
 }

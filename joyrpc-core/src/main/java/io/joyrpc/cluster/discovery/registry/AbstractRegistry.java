@@ -44,12 +44,10 @@ import org.slf4j.LoggerFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -66,7 +64,8 @@ import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
  * @date: 23/1/2019
  */
 public abstract class AbstractRegistry implements Registry, Configure {
-
+    protected static final AtomicReferenceFieldUpdater<AbstractRegistry, Status> STATE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractRegistry.class, Status.class, "status");
     protected static final Logger logger = LoggerFactory.getLogger(AbstractRegistry.class);
     public static final String TYPE = "type";
 
@@ -83,26 +82,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected Backup backup;
     /**
-     * 注册的Future
-     */
-    protected final Map<String, RegisterMeta> registers = new ConcurrentHashMap<>(20);
-    /**
-     * 集群订阅的Future
-     */
-    protected final Map<String, ClusterMeta> clusters = new ConcurrentHashMap<>(20);
-    /**
-     * 配置订阅Future
-     */
-    protected final Map<String, ConfigMeta> configs = new ConcurrentHashMap<>(20);
-    /**
-     * 任务队列
-     */
-    protected final Deque<Task> tasks = new LinkedBlockingDeque<>();
-    /**
-     * 备份恢复的数据
-     */
-    protected BackupDatum datum;
-    /**
      * 数据中心
      */
     protected String dataCenter;
@@ -115,38 +94,29 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected int maxConnectRetryTimes;
     /**
-     * 开关
-     */
-    protected Switcher switcher = new Switcher();
-    /**
-     * 任务派发
-     */
-    protected Daemon daemon;
-    /**
-     * 等待
-     */
-    protected Waiter waiter;
-    /**
-     * 数据是否做了修改
-     */
-    protected AtomicBoolean dirty = new AtomicBoolean();
-    /**
-     * 重连任务
-     */
-    protected ReconnectTask reconnectTask;
-    /**
-     * 连接状态
-     */
-    protected AtomicBoolean connected = new AtomicBoolean(false);
-    /**
      * 注册中心对象id
      */
     protected int registryId;
-
     /**
      * 任务重试时间间隔
      */
     protected long taskRetryInterval;
+    /**
+     * 注册
+     */
+    protected final Map<String, Set<URL>> registers = new ConcurrentHashMap<>(20);
+    /**
+     * 集群订阅
+     */
+    protected final Map<String, Set<URL>> clusters = new ConcurrentHashMap<>(20);
+    /**
+     * 配置订阅
+     */
+    protected final Map<String, Set<URL>> configs = new ConcurrentHashMap<>(20);
+    /**
+     * 控制器
+     */
+    protected transient StateMachine<RegistryController> state = new StateMachine<>(this::create, null);
 
     /**
      * 构造函数
@@ -184,40 +154,23 @@ public abstract class AbstractRegistry implements Registry, Configure {
         this.registryId = ID_GENERATOR.get();
     }
 
+    /**
+     * 构建控制器
+     *
+     * @return
+     */
+    protected RegistryController create() {
+        return new RegistryController();
+    }
+
     @Override
     public CompletableFuture<Void> open() {
-        //多次调用也能拿到正确的Future
-        return switcher.open(f -> {
-            dirty.set(false);
-            connected.set(false);
-            waiter = new Waiter.MutexWaiter();
-            //任务执行线程
-            daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
-                    .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
-            daemon.start();
-            doOpen(f);
-            return f.whenComplete((v, t) -> {
-                if (t != null) {
-                    //出现异常，自动关闭
-                    close();
-                }
-            });
-        });
+        return state.open();
     }
 
     @Override
     public CompletableFuture<Void> close() {
-        //多次调用也能拿到正确的Future
-        //TODO 调用以后不能再次open了
-        return switcher.close(f -> {
-            doClose(f);
-            return f.handle((u, t) -> {
-                if (daemon != null) {
-                    daemon.stop();
-                }
-                return null;
-            });
-        });
+        return state.close(false);
     }
 
     /**
@@ -249,35 +202,52 @@ public abstract class AbstractRegistry implements Registry, Configure {
         return meta;
     }
 
+    /**
+     * 添加
+     *
+     * @param map
+     * @param key
+     * @return
+     */
+    protected boolean add(Map<String, Set<URL>> map, URLKey key) {
+        return map.computeIfAbsent(key.getKey(), o -> new CopyOnWriteArraySet<>()).add(key.getUrl());
+    }
+
+    /**
+     * 添加
+     *
+     * @param map
+     * @param key
+     * @return
+     */
+    protected boolean remove(Map<String, Set<URL>> map, URLKey key) {
+        Set<URL> set = map.get(key.getKey());
+        return set != null && set.remove(key.getUrl());
+    }
+
     @Override
     public CompletableFuture<URL> register(final URL url) {
         Objects.requireNonNull(url, "url can not be null.");
-        //防止在关闭中
-        return switcher.reader().quietAnyway(() -> {
-            RegisterMeta meta = getOrCreateMeta(url, this::getRegisterKey, (u, k) -> new RegisterMeta(u, k),
-                    registers, this::addRegisterTask);
-            //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
-            meta.counter.incrementAndGet();
-            return meta.getRegister();
-        });
+        URLKey key = new URLKey(url, getRegisterKey(url));
+        if (add(registers, key)) {
+            if(state.getController())
+            RegistryController controller = state.getController();
+            if (controller != null) {
+                controller.register(key);
+            }
+        }
     }
 
     @Override
     public CompletableFuture<URL> deregister(final URL url, final int maxRetryTimes) {
         Objects.requireNonNull(url, "url can not be null.");
-        return switcher.reader().quietAnyway(() -> {
-            String key = getRegisterKey(url);
-            RegisterMeta meta = registers.get(key);
-            if (meta == null) {
-                return CompletableFuture.completedFuture(url);
-            } else if (meta.counter.decrementAndGet() == 0) {
-                //没有引用了，删除并反注册
-                registers.remove(key);
-                return meta.unregister(o -> addDeregisterTask(o, maxRetryTimes));
-            } else {
-                return CompletableFuture.completedFuture(url);
+        URLKey key = new URLKey(url, getRegisterKey(url));
+        if (remove(registers, key)) {
+            RegistryController controller = state.getController();
+            if (controller != null) {
+                controller.deregister(key, maxRetryTimes);
             }
-        });
+        }
     }
 
     @Override
@@ -970,6 +940,105 @@ public abstract class AbstractRegistry implements Registry, Configure {
             } catch (IOException e) {
                 logger.error(String.format("Error occurs while restoring %s registry datum.", name), e);
             }
+        }
+    }
+
+    /**
+     * 控制器
+     */
+    protected static class RegistryController implements StateMachine.Controller {
+        /**
+         * 注册的Future
+         */
+        protected final Map<String, RegisterMeta> registers = new ConcurrentHashMap<>(20);
+        /**
+         * 集群订阅的Future
+         */
+        protected final Map<String, ClusterMeta> clusters = new ConcurrentHashMap<>(20);
+        /**
+         * 配置订阅Future
+         */
+        protected final Map<String, ConfigMeta> configs = new ConcurrentHashMap<>(20);
+        /**
+         * 任务队列
+         */
+        protected final Deque<Task> tasks = new LinkedBlockingDeque<>();
+        /**
+         * 任务派发
+         */
+        protected Daemon daemon;
+        /**
+         * 等待
+         */
+        protected Waiter waiter;
+        /**
+         * 数据是否做了修改
+         */
+        protected AtomicBoolean dirty = new AtomicBoolean();
+        /**
+         * 重连任务
+         */
+        protected ReconnectTask reconnectTask;
+        /**
+         * 连接状态
+         */
+        protected AtomicBoolean connected = new AtomicBoolean(false);
+        /**
+         * 备份恢复的数据
+         */
+        protected BackupDatum datum;
+
+        @Override
+        public CompletableFuture<Void> open() {
+            waiter = new Waiter.MutexWaiter();
+            //任务执行线程
+            daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
+                    .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
+            daemon.start();
+            doOpen(f);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<Void> close(boolean gracefully) {
+            doClose(f);
+            return f.handle((u, t) -> {
+                if (daemon != null) {
+                    daemon.stop();
+                }
+                return null;
+            });
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<URL> register(final URLKey url) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public CompletableFuture<URL> deregister(final URLKey url, final int maxRetryTimes) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        public boolean subscribe(final URLKey url, final ClusterHandler handler) {
+            return false;
+        }
+
+        @Override
+        public boolean unsubscribe(final URLKey url, final ClusterHandler handler) {
+            return false;
+        }
+
+        @Override
+        public boolean subscribe(final URLKey url, final ConfigHandler handler) {
+            return false;
+        }
+
+        @Override
+        public boolean unsubscribe(final URLKey url, final ConfigHandler handler) {
+            return false;
         }
     }
 

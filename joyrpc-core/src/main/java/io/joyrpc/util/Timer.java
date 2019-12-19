@@ -291,6 +291,10 @@ public class Timer {
          */
         protected long now;
         /**
+         * 当前槽的位置
+         */
+        protected int index;
+        /**
          * 延迟队列
          */
         protected DelayQueue<Slot> queue;
@@ -345,7 +349,7 @@ public class Timer {
          */
         public long getLeastOneTick(final long time) {
             long result = SystemClock.now() + tickTime;
-            return time < result ? result : time;
+            return Math.max(time, result);
         }
 
         /**
@@ -359,15 +363,12 @@ public class Timer {
             } else if (time < duration) {
                 //该任务在一个时间轮里面，则加入到对应的时间槽
                 int count = (int) (time / tickTime);
-                Slot slot = slots[count % ticks];
+                Slot slot = slots[count + index];
                 //添加到槽里面
-                switch (slot.add(task, now + count * tickTime)) {
-                    case Slot.HEAD:
-                        queue.offer(slot);
-                        return true;
-                    default:
-                        return true;
+                if (slot.add(task, now + count * tickTime) == Slot.HEAD) {
+                    queue.offer(slot);
                 }
+                return true;
             } else {
                 //放到下一层的时间轮
                 return getNext().add(task);
@@ -380,6 +381,10 @@ public class Timer {
         public void advance(final long timestamp) {
             if (timestamp >= now + tickTime) {
                 now = timestamp - (timestamp % tickTime);
+                index++;
+                if (index >= ticks) {
+                    index = 0;
+                }
                 if (next != null) {
                     //推进下层时间轮时间
                     next.advance(timestamp);

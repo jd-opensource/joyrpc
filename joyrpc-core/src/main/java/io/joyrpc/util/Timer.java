@@ -363,7 +363,7 @@ public class Timer {
             } else if (time < duration) {
                 //该任务在一个时间轮里面，则加入到对应的时间槽
                 int count = (int) (time / tickTime);
-                Slot slot = slots[count + index];
+                Slot slot = slots[(count + index) % ticks];
                 //添加到槽里面
                 if (slot.add(task, now + count * tickTime) == Slot.HEAD) {
                     queue.offer(slot);

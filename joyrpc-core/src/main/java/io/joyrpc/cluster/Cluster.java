@@ -315,7 +315,7 @@ public class Cluster {
      * 选举
      *
      * @param candidates 候选人
-     * @return
+     * @return 选中的结果
      */
     protected Candidature.Result candidate(final List<Node> candidates) {
         return candidature.candidate(url, Candidate.builder().cluster(this).
@@ -340,35 +340,32 @@ public class Cluster {
             }
         }
         if (candidates.isEmpty() && !discards.isEmpty()) {
-            logger.warn(String.format("there is not any available provider. client protocol or ssl is not supported."));
+            logger.warn("there is not any available provider. client protocol or ssl is not supported.");
         }
     }
 
     /**
      * 是否发生变更
      *
-     * @param shard
-     * @param previous
-     * @return
+     * @param shard 分片
+     * @param previous 前一个节点
+     * @return 变更标识
      */
     protected boolean isChanged(final Shard shard, final Node previous) {
-        if (previous != null && (previous.originWeight == shard.getWeight()
-                && Objects.equals(previous.getName(), shard.getName())
-                && Objects.equals(previous.getRegion(), shard.getRegion())
-                && Objects.equals(previous.getDataCenter(), shard.getDataCenter())
-                && Objects.equals(previous.getProtocol(), shard.getProtocol())
-                && Objects.equals(previous.getUrl(), shard.getUrl()))) {
-            //没有发生变化
-            return false;
-        }
-        return true;
+        //没有发生变化
+        return previous == null || (previous.originWeight != shard.getWeight()
+                || !Objects.equals(previous.getName(), shard.getName())
+                || !Objects.equals(previous.getRegion(), shard.getRegion())
+                || !Objects.equals(previous.getDataCenter(), shard.getDataCenter())
+                || !Objects.equals(previous.getProtocol(), shard.getProtocol())
+                || !Objects.equals(previous.getUrl(), shard.getUrl()));
     }
 
     /**
      * 获取重试时间
      *
-     * @param throwable
-     * @return
+     * @param throwable 异常
+     * @return 重试时间
      */
     protected long getRetryTime(final Throwable throwable) {
         if (throwable == null) {
@@ -390,8 +387,8 @@ public class Cluster {
     /**
      * 检查目标节点是否已经不存活了
      *
-     * @param throwable
-     * @return
+     * @param throwable 异常
+     * @return 是否是死亡节点
      */
     protected boolean detectDead(Throwable throwable) {
         if (throwable == null) {
@@ -427,7 +424,7 @@ public class Cluster {
      *
      * @param shard   分片
      * @param handler 事件处理器
-     * @return
+     * @return 节点
      */
     protected Node createNode(final Shard shard, final NodeHandler handler) {
         return new Node(name, url, shard,
@@ -441,7 +438,7 @@ public class Cluster {
     /**
      * 是否启动
      *
-     * @return
+     * @return 启动标识
      */
     public boolean isOpened() {
         switch (state) {
@@ -457,7 +454,7 @@ public class Cluster {
      * 添加节点事件处理器
      *
      * @param handler 处理器
-     * @return
+     * @return 成功标识
      */
     public boolean addHandler(final EventHandler<NodeEvent> handler) {
         return clusterPublisher.addHandler(handler);
@@ -467,7 +464,7 @@ public class Cluster {
      * 移除节点事件处理器
      *
      * @param handler 处理器
-     * @return
+     * @return 是否成功
      */
     public boolean removeHandler(final EventHandler<NodeEvent> handler) {
         return clusterPublisher.removeHandler(handler);
@@ -498,7 +495,7 @@ public class Cluster {
     /**
      * 获取区域对象
      *
-     * @return
+     * @return 地域
      */
     public Region getRegion() {
         return registar;
@@ -592,7 +589,7 @@ public class Cluster {
 
         /***
          * 添加任务，单线程顺序执行，避免并发锁
-         * @param task
+         * @param task 任务
          */
         protected void offer(final Runnable task) {
             if (task != null) {
@@ -617,7 +614,7 @@ public class Cluster {
         /**
          * 执行节点事件
          *
-         * @param event
+         * @param event 事件
          */
         protected void onNodeEvent(final NodeEvent event) {
             if (!isOpened()) {
@@ -626,16 +623,14 @@ public class Cluster {
             Node node = event.getNode();
             NodeEvent.EventType type = event.getType();
             //确保不在选举和关闭中
-            switch (type) {
-                case DISCONNECT:
-                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    offer(() -> node.close(r -> {
-                        //连接断开了，则进行关闭
-                        if (r.isSuccess()) {
-                            onNodeDisconnect(node, cluster.getRetryTime(null));
-                        }
-                    }));
-                    break;
+            if (type == NodeEvent.EventType.DISCONNECT) {
+                logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
+                offer(() -> node.close(r -> {
+                    //连接断开了，则进行关闭
+                    if (r.isSuccess()) {
+                        onNodeDisconnect(node, cluster.getRetryTime(null));
+                    }
+                }));
             }
             cluster.clusterPublisher.offer(event);
         }
@@ -643,7 +638,7 @@ public class Cluster {
         /**
          * 执行集群事件
          *
-         * @param event
+         * @param event 事件
          */
         protected void onClusterEvent(final ClusterEvent event) {
             if (event == null || !isOpened()) {
@@ -685,7 +680,7 @@ public class Cluster {
         /**
          * 全量更新事件
          *
-         * @param events
+         * @param events 事件集
          */
         protected int onFullEvent(final List<ShardEvent> events) {
             int add = 0;
@@ -711,7 +706,7 @@ public class Cluster {
          * 增量更新集群事件
          *
          * @param events 事件
-         * @return
+         * @return 更新的数量
          */
         protected int onUpdateEvent(final List<ShardEvent> events) {
             int add = 0;
@@ -735,7 +730,7 @@ public class Cluster {
          * 触发超时通知
          */
         public void fire() {
-            Optional.ofNullable(trigger).ifPresent(o -> o.close());
+            Optional.ofNullable(trigger).ifPresent(Trigger::close);
         }
 
         public long getVersion() {
@@ -746,6 +741,10 @@ public class Cluster {
             return clusterHandler;
         }
 
+        /**
+         * 获取节点处理器
+         * @return 节点处理器
+         */
         public NodeHandler getNodeHandler() {
             return nodeHandler;
         }
@@ -758,7 +757,7 @@ public class Cluster {
          * 判断节点是否存在
          *
          * @param node 节点
-         * @return
+         * @return 存在标识
          */
         protected boolean exists(final Node node) {
             return nodes.get(node.getName()) == node;
@@ -767,7 +766,7 @@ public class Cluster {
         /**
          * 关闭所有节点
          *
-         * @return
+         * @return 关闭的Future
          */
         public CompletableFuture<Cluster> close() {
             final CompletableFuture<Cluster> result = new CompletableFuture<>();
@@ -811,11 +810,11 @@ public class Cluster {
                     result.getDiscards().size()
             ));*/
             //命中节点建立连接
-            candidate(result.getCandidates(), (s, n) -> connect(n), s -> s.getWeight());
+            candidate(result.getCandidates(), (s, n) -> connect(n), Node::getWeight);
             //热备节点建立连接
             //TODO 热备节点没有流量，影响自适应评分
             candidate(result.getStandbys(), (s, n) -> connect(n), s -> 0);
-            candidate(result.getBackups(), (s, n) -> backup(n), s -> s.getWeight());
+            candidate(result.getBackups(), (s, n) -> backup(n), Node::getWeight);
             //丢弃的节点
             candidate(result.getDiscards(), (s, n) -> discard(n), null);
             //重置可用节点，因为有些节点可能在这次选举中被放弃了
@@ -847,7 +846,7 @@ public class Cluster {
         /**
          * 丢弃节点
          *
-         * @param node
+         * @param node 节点
          */
         protected void discard(final Node node) {
             //关闭节点
@@ -859,7 +858,7 @@ public class Cluster {
         /**
          * 备份节点
          *
-         * @param node
+         * @param node 节点
          */
         protected void backup(final Node node) {
             //关闭节点
@@ -873,7 +872,7 @@ public class Cluster {
         /**
          * 打开节点
          *
-         * @param node
+         * @param node 节点
          */
         protected void connect(final Node node) {
             if (!isOpened()) {
@@ -882,16 +881,14 @@ public class Cluster {
             //把初始化状态改成候选状态
             node.getState().candidate(node::setState);
             //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
-            switch (node.getState()) {
-                case CANDIDATE:
-                    node.open(r -> {
-                        //如果已经关闭了，则关闭该节点
-                        if (!isOpened() && r.isSuccess()) {
-                            node.close(null);
-                        }
-                        offer(() -> onNodeOpen(r));
-                    });
-                    break;
+            if (node.getState() == Shard.ShardState.CANDIDATE) {
+                node.open(r -> {
+                    //如果已经关闭了，则关闭该节点
+                    if (!isOpened() && r.isSuccess()) {
+                        node.close(null);
+                    }
+                    offer(() -> onNodeOpen(r));
+                });
             }
         }
 
@@ -978,14 +975,14 @@ public class Cluster {
         /**
          * 节点连接上
          *
-         * @param node
+         * @param node 节点
          */
         protected void onNodeConnected(final Node node) {
             Node old = connects.put(node.getName(), node);
             if (old == node) {
                 //同一个节点
                 return;
-            } else if (old != null && old != node) {
+            } else if (old != null) {
                 //不同的节点
                 old.close(null);
             }
@@ -1025,7 +1022,7 @@ public class Cluster {
         /**
          * 删除分片事件
          *
-         * @param shard
+         * @param shard 分片
          */
         protected void onDeleteShard(final Shard shard) {
             String name = shard.getName();
@@ -1035,7 +1032,7 @@ public class Cluster {
                 //由于注册中心的事件晚于服务端直接发送的下线命令，所以这里可以做到优雅关闭节点
                 node.close(null);
                 if (connects.remove(name) != null) {
-                    //重新设置readys节点
+                    //重新设置就绪节点
                     readys = new ArrayList<>(connects.values());
                     supplies.incrementAndGet();
                     //从备选节点中重新创建连接
@@ -1047,7 +1044,7 @@ public class Cluster {
         /**
          * 添加分片事件
          *
-         * @param shard
+         * @param shard 分片
          */
         protected boolean onAddShard(final Shard shard) {
             URL url = shard.getUrl();
@@ -1076,7 +1073,7 @@ public class Cluster {
             previous = nodes.put(shard.getName(), node);
             if (previous != null) {
                 //确保前置节点关闭，防止并发open，报连接关闭异常
-                CompletableFuture<Void> waiting = new CompletableFuture();
+                CompletableFuture<Void> waiting = new CompletableFuture<>();
                 previous.close((result) -> waiting.complete(null));
                 node.setPrecondition(waiting);
             }
@@ -1098,7 +1095,7 @@ public class Cluster {
         /**
          * 构造函数
          *
-         * @param node
+         * @param node 节点
          */
         public DelayedNode(Node node) {
             this.node = node;
@@ -1181,7 +1178,7 @@ public class Cluster {
         /**
          * 调整触发计数器，只能调整一次
          *
-         * @param size
+         * @param size 尺寸
          */
         public boolean adjustSemaphore(final int size) {
             if (size <= 0) {
@@ -1216,7 +1213,7 @@ public class Cluster {
         /**
          * 获取信号量
          *
-         * @return
+         * @return 成功标识
          */
         public boolean acquire() {
             if (semaphore.decrementAndGet() == 0) {
@@ -1260,8 +1257,8 @@ public class Cluster {
         /**
          * 构造函数
          *
-         * @param cluster
-         * @param version
+         * @param cluster 集群
+         * @param version 版本
          */
         public DashboardTask(final Cluster cluster, final long version) {
             this.cluster = cluster;

@@ -584,9 +584,9 @@ public class Node implements Shard {
     /**
      * 设置状态
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source 原状态
+     * @param target 目标状态
+     * @return 成功标识
      */
     protected boolean setState(final ShardState source, final ShardState target) {
         return STATE_UPDATER.compareAndSet(this, source, target);
@@ -671,8 +671,8 @@ public class Node implements Shard {
     /**
      * 广播事件
      *
-     * @param type
-     * @param payload
+     * @param type 事件类型
+     * @param payload 载体
      */
     protected void sendEvent(final NodeEvent.EventType type, final Object payload) {
         if (nodeHandler != null) {
@@ -930,7 +930,7 @@ public class Node implements Shard {
     /**
      * 计算预热权重
      *
-     * @return
+     * @return 权重
      */
     protected int warmup() {
         int result = originWeight;

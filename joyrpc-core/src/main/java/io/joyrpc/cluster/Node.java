@@ -280,7 +280,7 @@ public class Node implements Shard {
         this.state = shard.getState();
         this.alias = url.getString(Constants.ALIAS_OPTION);
         this.mesh = url.getBoolean(SERVICE_MESH_OPTION);
-        this.clientProtocol = CLIENT_PROTOCOL_SELECTOR.select(new ProtocolVersion(url.getString(VERSION_KEY), url.getProtocol()));
+        this.clientProtocol = CLIENT_PROTOCOL_SELECTOR.select(new ProtocolVersion(url.getProtocol(), url.getString(VERSION_KEY)));
     }
 
     /**

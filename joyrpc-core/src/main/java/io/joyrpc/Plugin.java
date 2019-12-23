@@ -293,21 +293,30 @@ public interface Plugin {
                 ClientProtocol protocol = extensions.get(version.getVersion());
                 if (protocol == null && name != null && !name.isEmpty()) {
                     String n;
-                    //版本没有找到，则按照名称取优先级最高的版本
-                    for (ExtensionMeta<ClientProtocol, String> meta : extensions.metas()) {
-                        //插件名称
-                        n = meta.getExtension().getName();
-                        //以指定名称开头，如joyrpc2以joyrpc开头
-                        if (n.startsWith(name)) {
-                            try {
-                                //如果以数字结尾
-                                Integer.valueOf(n.substring(name.length()));
-                                protocol = meta.getTarget();
-                                break;
-                            } catch (NumberFormatException e) {
+                    if (version.isHigherFirst()) {
+                        //版本没有找到，则按照名称取优先级最高的版本
+                        for (ExtensionMeta<ClientProtocol, String> meta : extensions.metas()) {
+                            //插件名称
+                            n = meta.getExtension().getName();
+                            //以指定名称开头，如joyrpc2以joyrpc开头
+                            if (n.startsWith(name)) {
+                                try {
+                                    //如果以数字结尾
+                                    Integer.valueOf(n.substring(name.length()));
+                                    protocol = meta.getTarget();
+                                    break;
+                                } catch (NumberFormatException e) {
+                                    if (n.equals(name) && protocol == null) {
+                                        //还没有找到高版本的协议，但找到了与name名称相同的协议，暂时先赋值
+                                        protocol = meta.getTarget();
+                                    }
+                                }
                             }
                         }
+                    } else {
+                        protocol = extensions.get(name);
                     }
+
                 }
                 return protocol;
             }));

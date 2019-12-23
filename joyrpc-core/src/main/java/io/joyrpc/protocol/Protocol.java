@@ -24,6 +24,7 @@ import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -192,6 +193,10 @@ public interface Protocol {
          * 版本
          */
         protected final String version;
+        /**
+         * 是否高版本优先
+         */
+        protected final boolean higherFirst;
 
         /**
          * 构造函数
@@ -200,8 +205,20 @@ public interface Protocol {
          * @param version
          */
         public ProtocolVersion(String name, String version) {
+            this(name, version, false);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param name
+         * @param version
+         * @param higherFirst
+         */
+        public ProtocolVersion(String name, String version, boolean higherFirst) {
             this.name = name;
             this.version = version;
+            this.higherFirst = higherFirst;
         }
 
         public String getName() {
@@ -210,6 +227,10 @@ public interface Protocol {
 
         public String getVersion() {
             return version;
+        }
+
+        public boolean isHigherFirst() {
+            return higherFirst;
         }
 
         @Override
@@ -221,19 +242,15 @@ public interface Protocol {
                 return false;
             }
 
-            ProtocolVersion version1 = (ProtocolVersion) o;
-
-            if (name != null ? !name.equals(version1.name) : version1.name != null) {
-                return false;
-            }
-            return version != null ? version.equals(version1.version) : version1.version == null;
+            ProtocolVersion that = (ProtocolVersion) o;
+            return Objects.equals(name, that.name)
+                    && Objects.equals(version, that.version)
+                    && higherFirst == that.higherFirst;
         }
 
         @Override
         public int hashCode() {
-            int result = name != null ? name.hashCode() : 0;
-            result = 31 * result + (version != null ? version.hashCode() : 0);
-            return result;
+            return Objects.hash(name, version, higherFirst);
         }
     }
 

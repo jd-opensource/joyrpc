@@ -9,9 +9,9 @@ package io.joyrpc.proxy.bytebuddy;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,8 +40,8 @@ import static io.joyrpc.proxy.GrpcFactory.ORDER_BYTE_BUDDY;
 public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
 
     @Override
-    protected Class buildRequestClass(final Class clz, final Method method, final Supplier<String> naming) {
-        DynamicType.Builder builder = new ByteBuddy().with(
+    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> naming) {
+        DynamicType.Builder<?> builder = new ByteBuddy().with(
                 new NamingStrategy.SuffixingRandom(naming.get(), new BaseNameResolver.ForFixedValue(clz.getName()), "")).
                 subclass(Object.class);
         for (Parameter parameter : method.getParameters()) {
@@ -51,8 +51,8 @@ public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
     }
 
     @Override
-    protected Class buildResponseClass(final Class clz, final Method method, final Supplier<String> naming) {
-        DynamicType.Builder dynamicBuilder = new ByteBuddy().with(
+    protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Supplier<String> naming) {
+        DynamicType.Builder<?> dynamicBuilder = new ByteBuddy().with(
                 new NamingStrategy.SuffixingRandom(naming.get(), clz.getPackage().getName())).
                 subclass(Object.class).
                 defineProperty(GrpcType.F_RESULT, method.getGenericReturnType());

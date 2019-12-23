@@ -9,9 +9,9 @@ package io.joyrpc.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,8 +39,8 @@ public class GrpcType {
     /**
      * 构造函数
      *
-     * @param request
-     * @param response
+     * @param request  请求包装
+     * @param response 应答包装
      */
     public GrpcType(ClassWrapper request, ClassWrapper response) {
         this.request = request;
@@ -63,18 +63,18 @@ public class GrpcType {
         /**
          * 请求类型
          */
-        protected Class clazz;
+        protected Class<?> clazz;
         /**
          * 包装请求
          */
         protected boolean wrapper;
 
-        public ClassWrapper(Class clazz, boolean wrapper) {
+        public ClassWrapper(Class<?> clazz, boolean wrapper) {
             this.clazz = clazz;
             this.wrapper = wrapper;
         }
 
-        public Class getClazz() {
+        public Class<?> getClazz() {
             return clazz;
         }
 

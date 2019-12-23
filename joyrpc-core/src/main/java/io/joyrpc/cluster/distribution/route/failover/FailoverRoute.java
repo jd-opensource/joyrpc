@@ -119,6 +119,10 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                          final CompletableFuture<R> future) {
         //负载均衡选择节点
         final Node node = loadBalance.select(candidate, request);
+        if (retry > 0) {
+            //便于向服务端注入重试次数
+            RequestContext.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES, retry);
+        }
         //调用，如果节点不存在，则抛出Failover异常。
         CompletableFuture<R> result = node != null ? function.apply(node, last, request) :
                 Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
@@ -155,7 +159,6 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                             //设置新的超时时间
                             timeoutPolicy.reset(request);
                         }
-                        RequestContext.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES, retry + 1);
                         retry(request, node, selector.select(candidate, node, retry, null, origins),
                                 retry + 1, policy, origins, future);
                     }

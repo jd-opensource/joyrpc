@@ -25,6 +25,7 @@ import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.cluster.distribution.route.failover.simple.SimpleFailoverSelector;
+import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;
@@ -36,6 +37,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.cluster.distribution.Route.FAIL_OVER;
 import static io.joyrpc.cluster.distribution.Route.ORDER_FAILOVER;
+import static io.joyrpc.constants.Constants.INTERNAL_KEY_RETRY_TIMES;
 
 /**
  * 异常重试
@@ -117,6 +119,10 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                          final CompletableFuture<R> future) {
         //负载均衡选择节点
         final Node node = loadBalance.select(candidate, request);
+        if (retry > 0) {
+            //便于向服务端注入重试次数
+            RequestContext.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES, retry);
+        }
         //调用，如果节点不存在，则抛出Failover异常。
         CompletableFuture<R> result = node != null ? function.apply(node, last, request) :
                 Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));

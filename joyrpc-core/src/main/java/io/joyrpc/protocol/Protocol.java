@@ -193,10 +193,6 @@ public interface Protocol {
          * 版本
          */
         protected final String version;
-        /**
-         * 是否高版本优先
-         */
-        protected final boolean higherFirst;
 
         /**
          * 构造函数
@@ -218,7 +214,6 @@ public interface Protocol {
         public ProtocolVersion(String name, String version, boolean higherFirst) {
             this.name = name;
             this.version = version;
-            this.higherFirst = higherFirst;
         }
 
         public String getName() {
@@ -227,10 +222,6 @@ public interface Protocol {
 
         public String getVersion() {
             return version;
-        }
-
-        public boolean isHigherFirst() {
-            return higherFirst;
         }
 
         @Override
@@ -244,13 +235,12 @@ public interface Protocol {
 
             ProtocolVersion that = (ProtocolVersion) o;
             return Objects.equals(name, that.name)
-                    && Objects.equals(version, that.version)
-                    && higherFirst == that.higherFirst;
+                    && Objects.equals(version, that.version);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(name, version, higherFirst);
+            return Objects.hash(name, version);
         }
     }
 

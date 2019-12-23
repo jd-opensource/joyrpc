@@ -24,7 +24,7 @@ public class RetryInjection implements NodeReqInjection {
     public void inject(RequestMessage<Invocation> request, Node node) {
         String retryTimes = RequestContext.getContext().getAttachment(INTERNAL_KEY_RETRY_TIMES);
         if(StringUtils.isBlank(retryTimes)){
-            request.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES,retryTimes);
+            request.getPayLoad().addAttachment(INTERNAL_KEY_RETRY_TIMES,retryTimes);
         }
     }
 }

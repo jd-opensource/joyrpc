@@ -26,6 +26,8 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
+import java.util.Objects;
+
 import static io.joyrpc.constants.Constants.INTERNAL_KEY_CONSUMERALIAS;
 
 /**
@@ -45,9 +47,15 @@ public class AliasInjection implements NodeReqInjection {
         // 按照当前配置的别名调用服务会报别名不一致的错误，需要替换成node真实别名
         String alias = node.getAlias();
         // 传递用户配置别名
-        request.getPayLoad().addAttachment(INTERNAL_KEY_CONSUMERALIAS,request.getPayLoad().getAlias());
         if (alias != null && !alias.isEmpty()) {
-            request.getPayLoad().setAlias(alias);
+            Invocation invocation = request.getPayLoad();
+            String value = invocation.getAlias();
+            if (!Objects.equals(alias, value)) {
+                //模拟新分组调用
+                invocation.setAlias(alias);
+                //上下文设置原有的分组
+                invocation.addAttachment(INTERNAL_KEY_CONSUMERALIAS, value);
+            }
         }
     }
 }

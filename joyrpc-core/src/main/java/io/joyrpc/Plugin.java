@@ -291,7 +291,7 @@ public interface Plugin {
                 String name = protocolVersion.getName();
                 String version = protocolVersion.getVersion();
                 //协议版本为空，直接根据协议名称获取
-                if (version == null) {
+                if (version == null || version.isEmpty()) {
                     return extensions.get(name);
                 }
                 //根据版本获取

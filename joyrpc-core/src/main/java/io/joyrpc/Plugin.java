@@ -305,9 +305,14 @@ public interface Plugin {
                                 protocol = meta.getTarget();
                                 break;
                             } catch (NumberFormatException e) {
+                                if (n.equals(name) && protocol == null) {
+                                    //还没有找到高版本的协议，但找到了与name名称相同的协议，暂时先赋值
+                                    protocol = meta.getTarget();
+                                }
                             }
                         }
                     }
+
                 }
                 return protocol;
             }));

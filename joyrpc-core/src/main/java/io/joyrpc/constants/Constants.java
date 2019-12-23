@@ -302,6 +302,11 @@ public class Constants {
     public static final String INTERNAL_KEY_APPINSID = INTERNAL_KEY_PREFIX + KEY_APPINSID;
 
     /**
+     * 内部使用的key：重试次数
+     */
+    public static final String INTERNAL_KEY_RETRY_TIMES = INTERNAL_KEY_PREFIX + "retryTimes";
+
+    /**
      * 隐藏的key前缀，隐藏的key只能在filter里拿到，在RpcContext里拿不到，不过可以设置
      */
     public static final char HIDE_KEY_PREFIX = '.';

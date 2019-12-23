@@ -25,6 +25,7 @@ import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.cluster.distribution.route.failover.simple.SimpleFailoverSelector;
+import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;
@@ -36,6 +37,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.cluster.distribution.Route.FAIL_OVER;
 import static io.joyrpc.cluster.distribution.Route.ORDER_FAILOVER;
+import static io.joyrpc.constants.Constants.INTERNAL_KEY_RETRY_TIMES;
 
 /**
  * 异常重试
@@ -153,6 +155,7 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                             //设置新的超时时间
                             timeoutPolicy.reset(request);
                         }
+                        RequestContext.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES, retry + 1);
                         retry(request, node, selector.select(candidate, node, retry, null, origins),
                                 retry + 1, policy, origins, future);
                     }

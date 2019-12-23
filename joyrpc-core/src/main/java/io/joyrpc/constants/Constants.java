@@ -747,7 +747,7 @@ public class Constants {
      */
     public static boolean isUseEpoll(final URL url) {
         boolean linux = isLinux(url);
-        return url == null ? false : url.getBoolean(USE_EPOLL_KEY, linux) && linux;
+        return url != null && linux && url.getBoolean(USE_EPOLL_KEY, true);
     }
 
     /**
@@ -758,7 +758,7 @@ public class Constants {
      */
     public static boolean isLinux(final URL url) {
         try {
-            return url == null ? false : OsType.valueOf(url.getString(OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
+            return url != null && OsType.valueOf(url.getString(OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
         } catch (IllegalArgumentException e) {
             return false;
         }

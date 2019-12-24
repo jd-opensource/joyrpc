@@ -636,8 +636,8 @@ public class Constants {
     public static final URLOption<Integer> MIN_SIZE_OPTION = new URLOption<>("minSize", 0);
     public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 0L);
     public static final URLOption<Integer> CONNECT_TIMEOUT_OPTION = new URLOption<>("connectTimeout", 5000);
-    public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", 64 * 1024);
-    public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", 32 * 1024);
+    public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", DEFAULT_HIGH_WATER_MARK);
+    public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", DEFAULT_LOW_WATER_MARK);
     public static final URLOption<Integer> SO_RECEIVE_BUF_OPTION = new URLOption<>("soRevBuf", 8192 * 128);
     public static final URLOption<Integer> SO_SEND_BUF_OPTION = new URLOption<>("soSndBuf", 8192 * 128);
     public static final URLOption<Boolean> SO_KEEPALIVE_OPTION = new URLOption<>("soKeepAlive", Boolean.TRUE);

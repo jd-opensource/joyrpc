@@ -27,6 +27,7 @@ import io.joyrpc.exception.InitializationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static io.joyrpc.util.Status.*;
@@ -162,17 +163,41 @@ public class StateMachine<T extends StateMachine.Controller> {
     }
 
     /**
-     * 在打开状态下执行
+     * 在指定状态下执行
      *
-     * @param consumer 消费者
+     * @param predicate 条件
+     * @param consumer  消费者
+     * @return
      */
-    public void whenOpen(final Consumer<T> consumer) {
-        if (consumer != null && status.isOpen()) {
+    public boolean when(final Predicate<Status> predicate, final Consumer<T> consumer) {
+        if (consumer != null && (predicate == null || predicate.test(status))) {
             T c = controller;
             if (c != null) {
                 consumer.accept(c);
+                return true;
             }
         }
+        return false;
+    }
+
+    /**
+     * 在打开状态下执行
+     *
+     * @param consumer 消费者
+     * @return
+     */
+    public boolean whenOpen(final Consumer<T> consumer) {
+        return when(Status::isOpen, consumer);
+    }
+
+    /**
+     * 在打开状态下执行
+     *
+     * @param consumer 消费者
+     * @return
+     */
+    public boolean whenOpened(final Consumer<T> consumer) {
+        return when(s -> s == OPENED, consumer);
     }
 
     public T getController() {

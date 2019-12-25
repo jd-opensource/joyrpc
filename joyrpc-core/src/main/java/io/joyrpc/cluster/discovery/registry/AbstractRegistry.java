@@ -208,7 +208,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         String key = getRegisterKey(url);
         Registrion registrion = registers.computeIfAbsent(key, o -> new Registrion(url, key));
         state.whenOpen(c -> c.register(registrion));
-        return registrion.getRegisterFuture();
+        return registrion.registerFuture;
     }
 
     @Override
@@ -217,8 +217,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         String key = getRegisterKey(url);
         Registrion registrion = registers.remove(key);
         if (registrion != null) {
-            state.whenOpen(c -> c.deregister(registrion, maxRetryTimes));
-            return registrion.getDeregisterFuture();
+            if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
+                registrion.deregisterFuture.complete(url);
+            }
+            return registrion.deregisterFuture;
         }
         return CompletableFuture.completedFuture(url);
     }

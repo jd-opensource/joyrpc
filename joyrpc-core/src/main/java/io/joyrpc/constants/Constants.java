@@ -20,6 +20,7 @@ package io.joyrpc.constants;
  * #L%
  */
 
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.OsType;
 import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.extension.URL;
@@ -308,7 +309,6 @@ public class Constants {
 
     /**
      * 内部使用的key：消费端配置的分组别名信息
-     *
      */
     public static final String INTERNAL_KEY_CONSUMERALIAS = INTERNAL_KEY_PREFIX + "consumerAlias";
 
@@ -758,7 +758,10 @@ public class Constants {
      */
     public static boolean isUseEpoll(final URL url) {
         boolean linux = isLinux(url);
-        return url != null && linux && url.getBoolean(USE_EPOLL_KEY, true);
+        Boolean isUseEpoll = url == null ? null : url.getBoolean(USE_EPOLL_KEY);
+        isUseEpoll = isUseEpoll == null ? GlobalContext.getBoolean(USE_EPOLL_KEY, null) : isUseEpoll;
+        isUseEpoll = isUseEpoll == null ? true : isUseEpoll;
+        return linux && isUseEpoll;
     }
 
     /**

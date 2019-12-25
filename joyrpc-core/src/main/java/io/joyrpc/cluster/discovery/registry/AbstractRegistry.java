@@ -205,34 +205,32 @@ public abstract class AbstractRegistry implements Registry, Configure {
     @Override
     public CompletableFuture<URL> register(final URL url) {
         Objects.requireNonNull(url, "url can not be null.");
-        return registers.computeIfAbsent(getRegisterKey(url), key -> {
-            Registrion registrion = new Registrion(url, key);
-            //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
-            //TODO 计数器应该放在外面吧
-            registrion.counter.incrementAndGet();
-            state.whenOpen(c -> c.register(registrion));
-            return registrion;
-        }).registerFuture;
+        Registrion registrion = registers.computeIfAbsent(getRegisterKey(url), key -> {
+            Registrion result = new Registrion(url, key);
+            state.whenOpen(c -> c.register(result));
+            return result;
+        });
+        //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
+        registrion.counter.incrementAndGet();
+        return registrion.registerFuture;
     }
 
     @Override
     public CompletableFuture<URL> deregister(final URL url, final int maxRetryTimes) {
         Objects.requireNonNull(url, "url can not be null.");
-        CompletableFuture<URL> result = new CompletableFuture<>();
+        final CompletableFuture<URL>[] results = new CompletableFuture[1];
         registers.compute(getRegisterKey(url), (key, registrion) -> {
-            if (registrion == null) {
-                result.complete(url);
-            } else if (registrion.counter.decrementAndGet() <= 0) {
-                if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
-                    registrion.deregisterFuture.complete(url);
-                }
-                //TODO 是否应该放在外面，避免触发结果，还没有从Map删除
-                registrion.deregisterFuture.whenComplete((v, t) -> result.complete(url));
+            if (registrion == null || registrion.counter.decrementAndGet() > 0) {
+                results[0] = CompletableFuture.completedFuture(url);
             } else {
-                result.complete(url);
+                results[0] = registrion.deregisterFuture;
+                if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
+                    results[0].complete(url);
+                }
             }
             return null;
         });
+        return results[0];
     }
 
     /**

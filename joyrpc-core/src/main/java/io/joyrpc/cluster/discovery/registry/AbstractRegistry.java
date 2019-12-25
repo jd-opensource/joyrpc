@@ -104,15 +104,15 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 注册
      */
-    protected final Map<String, Set<URL>> registers = new ConcurrentHashMap<>(20);
+    protected final Map<String, Registrion> registers = new ConcurrentHashMap<>(30);
     /**
      * 集群订阅
      */
-    protected final Map<String, Set<URL>> clusters = new ConcurrentHashMap<>(20);
+    protected final Set<ClusterSubscription> clusters = new CopyOnWriteArraySet<>();
     /**
      * 配置订阅
      */
-    protected final Map<String, Set<URL>> configs = new ConcurrentHashMap<>(20);
+    protected final Set<ConfigSubscription> configs = new CopyOnWriteArraySet<>();
     /**
      * 控制器
      */
@@ -202,51 +202,62 @@ public abstract class AbstractRegistry implements Registry, Configure {
         return meta;
     }
 
-    /**
-     * 添加
-     *
-     * @param map
-     * @param key
-     * @return
-     */
-    protected boolean add(Map<String, Set<URL>> map, URLKey key) {
-        return map.computeIfAbsent(key.getKey(), o -> new CopyOnWriteArraySet<>()).add(key.getUrl());
-    }
-
-    /**
-     * 添加
-     *
-     * @param map
-     * @param key
-     * @return
-     */
-    protected boolean remove(Map<String, Set<URL>> map, URLKey key) {
-        Set<URL> set = map.get(key.getKey());
-        return set != null && set.remove(key.getUrl());
-    }
-
     @Override
     public CompletableFuture<URL> register(final URL url) {
         Objects.requireNonNull(url, "url can not be null.");
-        URLKey key = new URLKey(url, getRegisterKey(url));
-        if (add(registers, key)) {
-            if(state.getController())
-            RegistryController controller = state.getController();
-            if (controller != null) {
-                controller.register(key);
-            }
-        }
+        String key = getRegisterKey(url);
+        Registrion registrion = registers.computeIfAbsent(key, o -> new Registrion(url, key));
+        state.whenOpen(c -> c.register(registrion));
+        return registrion.getRegisterFuture();
     }
 
     @Override
     public CompletableFuture<URL> deregister(final URL url, final int maxRetryTimes) {
         Objects.requireNonNull(url, "url can not be null.");
-        URLKey key = new URLKey(url, getRegisterKey(url));
-        if (remove(registers, key)) {
-            RegistryController controller = state.getController();
-            if (controller != null) {
-                controller.deregister(key, maxRetryTimes);
-            }
+        String key = getRegisterKey(url);
+        Registrion registrion = registers.remove(key);
+        if (registrion != null) {
+            state.whenOpen(c -> c.deregister(registrion, maxRetryTimes));
+            return registrion.getDeregisterFuture();
+        }
+        return CompletableFuture.completedFuture(url);
+    }
+
+    /**
+     * 订阅
+     *
+     * @param subscriptions 订阅集合
+     * @param subscription  订阅
+     * @param consumer      消费者
+     * @param <T>
+     * @return 订阅成功标识
+     */
+    protected <T> boolean subscribe(final Set<T> subscriptions, final T subscription,
+                                    final BiConsumer<RegistryController, T> consumer) {
+        if (subscriptions.add(subscription)) {
+            state.whenOpen(c -> consumer.accept(c, subscription));
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * 取消订阅
+     *
+     * @param subscriptions 订阅集合
+     * @param subscription  订阅
+     * @param consumer      消费者
+     * @param <T>
+     * @return 取消订阅成功标识
+     */
+    protected <T> boolean unsubscribe(final Set<T> subscriptions, final T subscription,
+                                      final BiConsumer<RegistryController, T> consumer) {
+        if (subscriptions.remove(subscription)) {
+            state.whenOpen(c -> consumer.accept(c, subscription));
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -254,30 +265,28 @@ public abstract class AbstractRegistry implements Registry, Configure {
     public boolean subscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return switcher.reader().quietAnyway(() -> getOrCreateMeta(url, this::getClusterKey, this::createClusterMeta,
-                clusters, (meta) -> addSubscribeTask(clusters, meta, m -> doSubscribe(m, m))).addHandler(handler));
+        return subscribe(clusters, new ClusterSubscription(url, getClusterKey(url), handler), RegistryController::subscribe);
     }
 
     @Override
     public boolean unsubscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(clusters, getClusterKey(url), handler, m -> doUnsubscribe(m, m));
+        return unsubscribe(clusters, new ClusterSubscription(url, getClusterKey(url), handler), RegistryController::unsubscribe);
     }
 
     @Override
     public boolean subscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return switcher.reader().quietAnyway(() -> getOrCreateMeta(url, this::getConfigKey, this::createConfigMeta,
-                configs, (meta) -> addSubscribeTask(configs, meta, m -> doSubscribe(m, m))).addHandler(handler));
+        return subscribe(configs, new ConfigSubscription(url, getConfigKey(url), handler), RegistryController::subscribe);
     }
 
     @Override
     public boolean unsubscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(configs, getConfigKey(url), handler, m -> doUnsubscribe(m, m));
+        return unsubscribe(configs, new ConfigSubscription(url, getConfigKey(url), handler), RegistryController::unsubscribe);
     }
 
     @Override
@@ -944,6 +953,108 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
+     * 注册
+     */
+    protected static class Registrion extends URLKey {
+
+        /**
+         * 注册Future
+         */
+        protected final CompletableFuture<URL> registerFuture = new CompletableFuture<>();
+        /**
+         * 注销Future
+         */
+        protected final CompletableFuture<URL> deregisterFuture = new CompletableFuture<>();
+
+        /**
+         * 构造函数
+         *
+         * @param url
+         * @param key
+         */
+        public Registrion(URL url, String key) {
+            super(url, key);
+        }
+
+        public CompletableFuture<URL> getRegisterFuture() {
+            return registerFuture;
+        }
+
+        public CompletableFuture<URL> getDeregisterFuture() {
+            return deregisterFuture;
+        }
+    }
+
+    /**
+     * 订阅
+     *
+     * @param <T>
+     */
+    protected static class Subscription<T extends Event> extends URLKey {
+        protected final EventHandler<T> handler;
+
+        /**
+         * 构造函数
+         *
+         * @param url     url
+         * @param key     键
+         * @param handler 参数
+         */
+        public Subscription(final URL url, final String key, final EventHandler<T> handler) {
+            super(url, key);
+            this.handler = handler;
+        }
+
+        public EventHandler<T> getHandler() {
+            return handler;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            if (!super.equals(o)) {
+                return false;
+            }
+
+            Subscription<?> that = (Subscription<?>) o;
+
+            return handler.equals(that.handler);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = super.hashCode();
+            result = 31 * result + handler.hashCode();
+            return result;
+        }
+    }
+
+    /**
+     * 集群订阅
+     */
+    protected static class ClusterSubscription extends Subscription<ClusterEvent> {
+
+        public ClusterSubscription(URL url, String key, ClusterHandler handler) {
+            super(url, key, handler);
+        }
+    }
+
+    /**
+     * 配置订阅
+     */
+    protected static class ConfigSubscription extends Subscription<ConfigEvent> {
+
+        public ConfigSubscription(URL url, String key, ConfigHandler handler) {
+            super(url, key, handler);
+        }
+    }
+
+    /**
      * 控制器
      */
     protected static class RegistryController implements StateMachine.Controller {
@@ -1011,34 +1122,22 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return CompletableFuture.completedFuture(null);
         }
 
-        @Override
-        public CompletableFuture<URL> register(final URLKey url) {
-            return CompletableFuture.completedFuture(null);
+        public void register(final Registrion registrion) {
         }
 
-        @Override
-        public CompletableFuture<URL> deregister(final URLKey url, final int maxRetryTimes) {
-            return CompletableFuture.completedFuture(null);
+        public void deregister(final Registrion registrion, final int maxRetryTimes) {
         }
 
-        @Override
-        public boolean subscribe(final URLKey url, final ClusterHandler handler) {
-            return false;
+        public void subscribe(final ClusterSubscription subscription) {
         }
 
-        @Override
-        public boolean unsubscribe(final URLKey url, final ClusterHandler handler) {
-            return false;
+        public void unsubscribe(final ClusterSubscription subscription) {
         }
 
-        @Override
-        public boolean subscribe(final URLKey url, final ConfigHandler handler) {
-            return false;
+        public void subscribe(final ConfigSubscription subscription) {
         }
 
-        @Override
-        public boolean unsubscribe(final URLKey url, final ConfigHandler handler) {
-            return false;
+        public void unsubscribe(final ConfigSubscription subscription) {
         }
     }
 

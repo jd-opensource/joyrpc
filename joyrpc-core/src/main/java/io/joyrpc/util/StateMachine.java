@@ -26,6 +26,7 @@ import io.joyrpc.exception.InitializationException;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static io.joyrpc.util.Status.*;
@@ -160,8 +161,26 @@ public class StateMachine<T extends StateMachine.Controller> {
         }
     }
 
+    /**
+     * 在打开状态下执行
+     *
+     * @param consumer 消费者
+     */
+    public void whenOpen(final Consumer<T> consumer) {
+        if (consumer != null && status.isOpen()) {
+            T c = controller;
+            if (c != null) {
+                consumer.accept(c);
+            }
+        }
+    }
+
     public T getController() {
         return controller;
+    }
+
+    public Status getStatus() {
+        return status;
     }
 
     /**

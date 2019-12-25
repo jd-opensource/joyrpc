@@ -205,24 +205,34 @@ public abstract class AbstractRegistry implements Registry, Configure {
     @Override
     public CompletableFuture<URL> register(final URL url) {
         Objects.requireNonNull(url, "url can not be null.");
-        String key = getRegisterKey(url);
-        Registrion registrion = registers.computeIfAbsent(key, o -> new Registrion(url, key));
-        state.whenOpen(c -> c.register(registrion));
-        return registrion.registerFuture;
+        return registers.computeIfAbsent(getRegisterKey(url), key -> {
+            Registrion registrion = new Registrion(url, key);
+            //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
+            //TODO 计数器应该放在外面吧
+            registrion.counter.incrementAndGet();
+            state.whenOpen(c -> c.register(registrion));
+            return registrion;
+        }).registerFuture;
     }
 
     @Override
     public CompletableFuture<URL> deregister(final URL url, final int maxRetryTimes) {
         Objects.requireNonNull(url, "url can not be null.");
-        String key = getRegisterKey(url);
-        Registrion registrion = registers.remove(key);
-        if (registrion != null) {
-            if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
-                registrion.deregisterFuture.complete(url);
+        CompletableFuture<URL> result = new CompletableFuture<>();
+        registers.compute(getRegisterKey(url), (key, registrion) -> {
+            if (registrion == null) {
+                result.complete(url);
+            } else if (registrion.counter.decrementAndGet() <= 0) {
+                if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
+                    registrion.deregisterFuture.complete(url);
+                }
+                //TODO 是否应该放在外面，避免触发结果，还没有从Map删除
+                registrion.deregisterFuture.whenComplete((v, t) -> result.complete(url));
+            } else {
+                result.complete(url);
             }
-            return registrion.deregisterFuture;
-        }
-        return CompletableFuture.completedFuture(url);
+            return null;
+        });
     }
 
     /**
@@ -967,6 +977,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * 注销Future
          */
         protected final CompletableFuture<URL> deregisterFuture = new CompletableFuture<>();
+        /**
+         * 计数器
+         */
+        protected final AtomicLong counter = new AtomicLong(0);
 
         /**
          * 构造函数

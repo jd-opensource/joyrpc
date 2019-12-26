@@ -52,19 +52,16 @@ public class StateMachine<T extends StateMachine.Controller> {
     /**
      * 打开的结果
      */
-    protected transient volatile CompletableFuture<Void> openFuture;
-    /**
-     * 关闭Future
-     */
-    protected transient volatile CompletableFuture<Void> closeFuture = CompletableFuture.completedFuture(null);
+    protected StateFuture<Void> stateFuture = new StateFuture<>(null, null);
+
     /**
      * 状态
      */
-    protected transient volatile Status status = Status.CLOSED;
+    protected volatile Status status = Status.CLOSED;
     /**
      * 控制器
      */
-    protected transient T controller;
+    protected T controller;
 
     /**
      * 构造函数
@@ -85,33 +82,33 @@ public class StateMachine<T extends StateMachine.Controller> {
     public CompletableFuture<Void> open() {
         if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.OPENING)) {
             publish(EventType.START_OPEN);
-            final CompletableFuture<Void> f = new CompletableFuture<>();
+            final CompletableFuture<Void> future = stateFuture.newOpenFuture();
             final T cc = supplier.get();
-            openFuture = f;
             controller = cc;
             cc.open().whenComplete((v, e) -> {
-                if (openFuture != f || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
+                if (stateFuture.getOpenFuture() != future
+                        || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
                     publish(EventType.FAIL_OPEN_ILLEGAL_STATE);
                     //已经被关闭了
                     Throwable throwable = new InitializationException("state is illegal.");
-                    f.completeExceptionally(throwable);
+                    future.completeExceptionally(throwable);
                     cc.close(false);
                 } else if (e != null) {
                     publish(EventType.FAIL_OPEN);
-                    f.completeExceptionally(e);
+                    future.completeExceptionally(e);
                     close(false);
                 } else {
                     publish(EventType.START_OPEN);
-                    f.complete(null);
+                    future.complete(null);
                 }
             });
-            return f;
+            return future;
         } else {
             switch (status) {
                 case OPENING:
                 case OPENED:
                     //可重入，没有并发调用
-                    return openFuture;
+                    return stateFuture.getOpenFuture();
                 default:
                     //其它状态不应该并发执行
                     return Futures.completeExceptionally(new InitializationException("state is illegal."));
@@ -128,34 +125,32 @@ public class StateMachine<T extends StateMachine.Controller> {
     public CompletableFuture<Void> close(final boolean gracefully) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
             publish(EventType.START_CLOSE);
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            closeFuture = future;
+            CompletableFuture<Void> future = stateFuture.newCloseFuture();
             controller.broken();
-            openFuture.whenComplete((v, e) -> {
+            stateFuture.getOpenFuture().whenComplete((v, e) -> {
                 //openFuture完成后会自动关闭控制器
                 publish(EventType.SUCCESS_CLOSE);
                 status = CLOSED;
                 controller = null;
                 future.complete(null);
             });
-            return closeFuture;
+            return future;
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSED
             publish(EventType.START_CLOSE);
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            closeFuture = future;
+            CompletableFuture<Void> future = stateFuture.newCloseFuture();
             controller.close(gracefully).whenComplete((o, s) -> {
                 publish(EventType.SUCCESS_CLOSE);
                 status = CLOSED;
                 controller = null;
                 future.complete(null);
             });
-            return closeFuture;
+            return future;
         } else {
             switch (status) {
                 case CLOSING:
                 case CLOSED:
-                    return closeFuture;
+                    return stateFuture.getCloseFuture();
                 default:
                     return Futures.completeExceptionally(new IllegalStateException("Status is illegal."));
             }
@@ -216,6 +211,73 @@ public class StateMachine<T extends StateMachine.Controller> {
     protected void publish(final EventType type) {
         if (handler != null) {
             handler.handle(new StateEvent(type));
+        }
+    }
+
+    /**
+     * 状态Future
+     *
+     * @param <T>
+     */
+    public static class StateFuture<T> {
+        /**
+         * 打开的结果
+         */
+        protected volatile CompletableFuture<T> openFuture;
+        /**
+         * 关闭Future
+         */
+        protected volatile CompletableFuture<T> closeFuture;
+
+        public StateFuture() {
+            this(new CompletableFuture<>(), new CompletableFuture<>());
+        }
+
+        public StateFuture(CompletableFuture<T> openFuture, CompletableFuture<T> closeFuture) {
+            this.openFuture = openFuture;
+            this.closeFuture = closeFuture;
+        }
+
+        public CompletableFuture<T> getOpenFuture() {
+            return openFuture;
+        }
+
+        public CompletableFuture<T> getCloseFuture() {
+            return closeFuture;
+        }
+
+        /**
+         * 创建打开Future
+         *
+         * @return 新建的打开Future
+         */
+        public CompletableFuture<T> newOpenFuture() {
+            CompletableFuture<T> result = new CompletableFuture<>();
+            openFuture = result;
+            return result;
+        }
+
+        /**
+         * 创建关闭Future
+         *
+         * @return 新建的关闭Future
+         */
+        public CompletableFuture<T> newCloseFuture() {
+            CompletableFuture<T> result = new CompletableFuture<>();
+            closeFuture = result;
+            return result;
+        }
+
+        /**
+         * 关闭
+         */
+        public void close() {
+            if (openFuture != null) {
+                openFuture.completeExceptionally(new InitializationException("state is illegal."));
+            }
+            if (closeFuture != null) {
+                closeFuture.completeExceptionally(new IllegalStateException("Status is illegal."));
+            }
         }
     }
 

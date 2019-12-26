@@ -38,6 +38,7 @@ import io.joyrpc.event.UpdateEvent;
 import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.*;
+import io.joyrpc.util.StateMachine.StateFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,7 +213,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         });
         //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
         registrion.counter.incrementAndGet();
-        return registrion.registerFuture;
+        return registrion.getFuture().getOpenFuture();
     }
 
     @Override
@@ -223,7 +224,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             if (registrion == null || registrion.counter.decrementAndGet() > 0) {
                 results[0] = CompletableFuture.completedFuture(url);
             } else {
-                results[0] = registrion.deregisterFuture;
+                results[0] = registrion.getFuture().getCloseFuture();
                 if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
                     results[0].complete(url);
                 }
@@ -968,13 +969,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
     protected static class Registrion extends URLKey {
 
         /**
-         * 注册Future
+         * 状态Future
          */
-        protected final CompletableFuture<URL> registerFuture = new CompletableFuture<>();
-        /**
-         * 注销Future
-         */
-        protected final CompletableFuture<URL> deregisterFuture = new CompletableFuture<>();
+        protected volatile StateFuture<URL> future = new StateFuture<>();
         /**
          * 计数器
          */
@@ -990,12 +987,17 @@ public abstract class AbstractRegistry implements Registry, Configure {
             super(url, key);
         }
 
-        public CompletableFuture<URL> getRegisterFuture() {
-            return registerFuture;
+        public StateFuture<URL> getFuture() {
+            return future;
         }
 
-        public CompletableFuture<URL> getDeregisterFuture() {
-            return deregisterFuture;
+        /**
+         * 关闭
+         */
+        public void close() {
+            StateFuture<URL> f = future;
+            future = new StateFuture<>();
+            f.close();
         }
     }
 

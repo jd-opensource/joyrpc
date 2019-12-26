@@ -119,15 +119,29 @@ public class StateMachine<T extends StateMachine.Controller> {
     /**
      * 关闭
      *
-     * @param gracefully
+     * @param gracefully 优雅关闭标识
      * @return
      */
     public CompletableFuture<Void> close(final boolean gracefully) {
+        return close(gracefully, null);
+    }
+
+    /**
+     * 关闭
+     *
+     * @param gracefully 优雅关闭标识
+     * @param runnable   额外关闭操作
+     * @return
+     */
+    public CompletableFuture<Void> close(final boolean gracefully, final Runnable runnable) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
             publish(EventType.START_CLOSE);
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
             controller.broken();
             stateFuture.getOpenFuture().whenComplete((v, e) -> {
+                if (runnable != null) {
+                    runnable.run();
+                }
                 //openFuture完成后会自动关闭控制器
                 publish(EventType.SUCCESS_CLOSE);
                 status = CLOSED;
@@ -139,6 +153,9 @@ public class StateMachine<T extends StateMachine.Controller> {
             //状态从打开到关闭中，该状态只能变更为CLOSED
             publish(EventType.START_CLOSE);
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
+            if (runnable != null) {
+                runnable.run();
+            }
             controller.close(gracefully).whenComplete((o, s) -> {
                 publish(EventType.SUCCESS_CLOSE);
                 status = CLOSED;

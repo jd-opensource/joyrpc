@@ -47,10 +47,10 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -158,7 +158,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构建控制器
      *
-     * @return
+     * @return 新建的控制器
      */
     protected RegistryController create() {
         return new RegistryController();
@@ -171,36 +171,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
     @Override
     public CompletableFuture<Void> close() {
-        return state.close(false);
-    }
-
-    /**
-     * 构造元数据
-     *
-     * @param url
-     * @param keyFunc
-     * @param metaFunc
-     * @param map
-     * @param register
-     * @param <T>
-     * @return
-     */
-    protected <T extends URLKey> T getOrCreateMeta(final URL url,
-                                                   final Function<URL, String> keyFunc,
-                                                   final BiFunction<URL, String, T> metaFunc,
-                                                   final Map<String, T> map,
-                                                   final Consumer<T> register) {
-        String key = keyFunc.apply(url);
-        AtomicBoolean firstTimes = new AtomicBoolean(false);
-        T meta = map.computeIfAbsent(key, o -> {
-            firstTimes.set(true);
-            return metaFunc.apply(url, o);
-        });
-        //此url第一次注册，添加到任务队列
-        if (switcher.isOpened() && firstTimes.get()) {
-            register.accept(meta);
-        }
-        return meta;
+        return state.close(false, () -> registers.forEach((key, value) -> value.close()));
     }
 
     @Override
@@ -212,7 +183,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return result;
         });
         //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
-        registrion.counter.incrementAndGet();
+        registrion.addRef();
         return registrion.getFuture().getOpenFuture();
     }
 
@@ -221,7 +192,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         Objects.requireNonNull(url, "url can not be null.");
         final CompletableFuture<URL>[] results = new CompletableFuture[1];
         registers.compute(getRegisterKey(url), (key, registrion) -> {
-            if (registrion == null || registrion.counter.decrementAndGet() > 0) {
+            if (registrion == null || registrion.decRef() > 0) {
                 results[0] = CompletableFuture.completedFuture(url);
             } else {
                 results[0] = registrion.getFuture().getCloseFuture();
@@ -975,7 +946,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 计数器
          */
-        protected final AtomicLong counter = new AtomicLong(0);
+        protected final AtomicInteger counter = new AtomicInteger(0);
 
         /**
          * 构造函数
@@ -989,6 +960,24 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
         public StateFuture<URL> getFuture() {
             return future;
+        }
+
+        /**
+         * 增加引用计数器
+         *
+         * @return 引用计数
+         */
+        public int addRef() {
+            return counter.incrementAndGet();
+        }
+
+        /**
+         * 减少引用计数器
+         *
+         * @return 引用计数
+         */
+        public int decRef() {
+            return counter.decrementAndGet();
         }
 
         /**

@@ -22,6 +22,8 @@
   
   - 调整了GenericService的方法，泛化的接口可以是GenericService的子类，便于兼容历史版本
   
+  - 增加了处理链构造器扩展点FilterChainFactory
+  
 - Springboot
 
   - 处理启动时候的几个Warn信息

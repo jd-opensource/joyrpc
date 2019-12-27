@@ -20,6 +20,7 @@ package io.joyrpc.invoker;
  * #L%
  */
 
+import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -52,6 +53,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.AUTHENTICATOR;
+import static io.joyrpc.Plugin.FILTER_CHAIN_FACTORY;
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
@@ -104,7 +106,7 @@ public class Exporter extends AbstractInvoker {
     /**
      * 调用链
      */
-    protected FilterChain chain;
+    protected Invoker chain;
     /**
      * 注册中心
      */
@@ -173,7 +175,7 @@ public class Exporter extends AbstractInvoker {
         //方法透传参数
         this.methodImplicits = new MethodOption.NameKeyOption<>(interfaceClass, m -> url.startsWith(
                 Constants.METHOD_KEY.apply(m.getName(), String.valueOf(HIDE_KEY_PREFIX)), true));
-        this.chain = FilterChain.producer(this, this::invokeMethod);
+        this.chain = FILTER_CHAIN_FACTORY.get().build(this, this::invokeMethod);
         this.authenticator = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
     }
 

@@ -52,6 +52,7 @@ import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.filter.cache.CacheKeyGenerator;
 import io.joyrpc.health.Doctor;
 import io.joyrpc.invoker.ExceptionHandler;
+import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.GroupInvoker;
 import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.permission.Authenticator;
@@ -86,6 +87,11 @@ public interface Plugin {
      * 插件选择器
      */
     ExtensionSelector<MessageHandler, Integer, Integer, MessageHandler> MESSAGE_HANDLER_SELECTOR = new MessageHandlerSelector(MESSAGE_HANDLER);
+
+    /**
+     * 过滤链构建器
+     */
+    ExtensionPoint<FilterChainFactory, String> FILTER_CHAIN_FACTORY = new ExtensionPointLazy<>(FilterChainFactory.class);
 
     /**
      * 消费者过滤器插件

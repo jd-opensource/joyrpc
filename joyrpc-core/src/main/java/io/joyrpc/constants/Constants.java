@@ -757,11 +757,7 @@ public class Constants {
      * @return boolean
      */
     public static boolean isUseEpoll(final URL url) {
-        boolean linux = isLinux(url);
-        Boolean isUseEpoll = url == null ? null : url.getBoolean(USE_EPOLL_KEY);
-        isUseEpoll = isUseEpoll == null ? GlobalContext.getBoolean(USE_EPOLL_KEY, null) : isUseEpoll;
-        isUseEpoll = isUseEpoll == null ? true : isUseEpoll;
-        return linux && isUseEpoll;
+        return isLinux(url) && url != null && url.getBoolean(USE_EPOLL_KEY, true);
     }
 
     /**

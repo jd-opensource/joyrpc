@@ -38,18 +38,18 @@ public interface FilterChainFactory {
     /**
      * 构造消费者过滤链
      *
-     * @param refer
-     * @param last
-     * @return
+     * @param refer 服务消费者
+     * @param last  最后执行逻辑
+     * @return 处理链
      */
     Invoker build(Refer refer, Invoker last);
 
     /**
      * 构造服务提供者过滤链
      *
-     * @param exporter
-     * @param last
-     * @return
+     * @param exporter 服务提供者
+     * @param last     最后执行逻辑
+     * @return 处理链
      */
     Invoker build(Exporter exporter, Invoker last);
 

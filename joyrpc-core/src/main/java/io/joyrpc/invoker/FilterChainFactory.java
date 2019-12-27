@@ -42,7 +42,7 @@ public interface FilterChainFactory {
      * @param last
      * @return
      */
-    Invoker build(final Refer refer, final Invoker last);
+    Invoker build(Refer refer, Invoker last);
 
     /**
      * 构造服务提供者过滤链
@@ -51,7 +51,7 @@ public interface FilterChainFactory {
      * @param last
      * @return
      */
-    Invoker build(final Exporter exporter, final Invoker last);
+    Invoker build(Exporter exporter, Invoker last);
 
     /**
      * Filter的调用
@@ -60,22 +60,22 @@ public interface FilterChainFactory {
         /**
          * 过滤器
          */
-        protected Filter filter;
+        protected final Filter filter;
         /**
          * 后续调用
          */
-        protected Invoker next;
+        protected final Invoker next;
         /**
          * 名称
          */
-        protected String name;
+        protected final String name;
 
         /**
          * 构造函数
          *
-         * @param filter
-         * @param next
-         * @param name
+         * @param filter 过滤链
+         * @param next   下一个调用
+         * @param name   名称
          */
         public FilterInvoker(Filter filter, Invoker next, String name) {
             this.filter = filter;

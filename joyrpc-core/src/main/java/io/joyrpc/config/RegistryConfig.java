@@ -28,6 +28,7 @@ import io.joyrpc.context.GlobalContext;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import static io.joyrpc.constants.Constants.REGISTRY_ADDRESS_KEY;
@@ -158,29 +159,16 @@ public class RegistryConfig extends AbstractIdConfig implements Serializable {
         }
 
         RegistryConfig that = (RegistryConfig) o;
-        if (!id.equals(that.id)) {
-            return false;
-        }
-        if (!registry.equals(that.registry)) {
-            return false;
-        }
-        if (!address.equals(that.address)) {
-            return false;
-        }
-        if (!timeout.equals(that.timeout)) {
-            return false;
-        }
-        return parameters.equals(that.parameters);
+        return Objects.equals(this.id, that.id)
+                && Objects.equals(this.registry, that.registry)
+                && Objects.equals(this.address, that.address)
+                && Objects.equals(this.timeout, that.timeout)
+                && Objects.equals(this.parameters, that.parameters);
     }
 
     @Override
     public int hashCode() {
-        int result = registry.hashCode();
-        result = 31 * result + id.hashCode();
-        result = 31 * result + address.hashCode();
-        result = 31 * result + timeout.hashCode();
-        result = 31 * result + parameters.hashCode();
-        return result;
+        return Objects.hash(id, registry, address, timeout, parameters);
     }
 
     @Override

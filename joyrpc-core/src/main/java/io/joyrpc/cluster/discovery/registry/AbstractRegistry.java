@@ -48,7 +48,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -105,7 +104,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 注册
      */
-    protected final Map<String, Registrion> registers = new ConcurrentHashMap<>(30);
+    protected final Map<String, Registion> registers = new ConcurrentHashMap<>(30);
     /**
      * 集群订阅
      */
@@ -122,7 +121,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构造函数
      *
-     * @param url
+     * @param url URL
      */
     public AbstractRegistry(URL url) {
         this(null, url, null);
@@ -131,8 +130,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
+     * @param name 名称
+     * @param url  URL
      */
     public AbstractRegistry(String name, URL url) {
         this(name, url, null);
@@ -141,9 +140,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
-     * @param backup
+     * @param name   名称
+     * @param url    URL
+     * @param backup 备份
      */
     public AbstractRegistry(final String name, final URL url, final Backup backup) {
         Objects.requireNonNull(url, "url can not be null.");
@@ -161,7 +160,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @return 新建的控制器
      */
     protected RegistryController create() {
-        return new RegistryController();
+        RegistryController controller = new RegistryController();
+        registers.forEach((k, v) -> controller.register(v));
+        clusters.forEach(controller::subscribe);
+        configs.forEach(controller::subscribe);
+        return controller;
     }
 
     @Override
@@ -177,8 +180,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     @Override
     public CompletableFuture<URL> register(final URL url) {
         Objects.requireNonNull(url, "url can not be null.");
-        Registrion registrion = registers.computeIfAbsent(getRegisterKey(url), key -> {
-            Registrion result = new Registrion(url, key);
+        Registion registrion = registers.computeIfAbsent(getRegisterKey(url), key -> {
+            Registion result = new Registion(url, key);
             state.whenOpen(c -> c.register(result));
             return result;
         });
@@ -191,12 +194,12 @@ public abstract class AbstractRegistry implements Registry, Configure {
     public CompletableFuture<URL> deregister(final URL url, final int maxRetryTimes) {
         Objects.requireNonNull(url, "url can not be null.");
         final CompletableFuture<URL>[] results = new CompletableFuture[1];
-        registers.compute(getRegisterKey(url), (key, registrion) -> {
-            if (registrion == null || registrion.decRef() > 0) {
+        registers.compute(getRegisterKey(url), (key, reg) -> {
+            if (reg == null || reg.decRef() > 0) {
                 results[0] = CompletableFuture.completedFuture(url);
             } else {
-                results[0] = registrion.getFuture().getCloseFuture();
-                if (!state.whenOpen(c -> c.deregister(registrion, maxRetryTimes))) {
+                results[0] = reg.getFuture().getCloseFuture();
+                if (!state.whenOpen(c -> c.deregister(reg, maxRetryTimes))) {
                     results[0].complete(url);
                 }
             }
@@ -214,8 +217,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @param <T>
      * @return 订阅成功标识
      */
-    protected <T> boolean subscribe(final Set<T> subscriptions, final T subscription,
-                                    final BiConsumer<RegistryController, T> consumer) {
+    protected <T extends Subscription<?>> boolean subscribe(final Set<T> subscriptions, final T subscription,
+                                                            final BiConsumer<RegistryController, T> consumer) {
         if (subscriptions.add(subscription)) {
             state.whenOpen(c -> consumer.accept(c, subscription));
             return true;
@@ -233,8 +236,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @param <T>
      * @return 取消订阅成功标识
      */
-    protected <T> boolean unsubscribe(final Set<T> subscriptions, final T subscription,
-                                      final BiConsumer<RegistryController, T> consumer) {
+    protected <T extends Subscription<?>> boolean unsubscribe(final Set<T> subscriptions, final T subscription,
+                                                              final BiConsumer<RegistryController, T> consumer) {
         if (subscriptions.remove(subscription)) {
             state.whenOpen(c -> consumer.accept(c, subscription));
             return true;
@@ -284,255 +287,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
     @Override
     public URL getUrl() {
         return url;
-    }
-
-    /**
-     * 创建集群元数据
-     *
-     * @param url
-     * @param key
-     * @return
-     */
-    protected ClusterMeta createClusterMeta(final URL url, final String key) {
-        return new ClusterMeta(url, key, this::dirty, getPublisher(key));
-    }
-
-    /**
-     * 创建配置元数据
-     *
-     * @param url
-     * @param key
-     * @return
-     */
-    protected ConfigMeta createConfigMeta(final URL url, final String key) {
-        return new ConfigMeta(url, key, this::dirty, getPublisher(key));
-    }
-
-    /**
-     * 新任务
-     *
-     * @param task
-     */
-    protected void addNewTask(final Task task) {
-        tasks.offerFirst(task);
-        if (waiter != null) {
-            waiter.wakeup();
-        }
-    }
-
-    /**
-     * 添加订阅任务
-     *
-     * @param subscribes
-     * @param meta
-     * @param function
-     * @param <T>
-     */
-    protected <T extends SubscribeMeta> void addSubscribeTask(final Map<String, T> subscribes, final T meta,
-                                                              final Function<T, CompletableFuture<Void>> function) {
-        addSubscribeTask(subscribes, meta, function, 0);
-    }
-
-    /**
-     * 添加订阅任务
-     *
-     * @param subscribes
-     * @param meta
-     * @param function
-     * @param retryTime
-     * @param <T>
-     */
-    protected <T extends SubscribeMeta> void addSubscribeTask(final Map<String, T> subscribes, final T meta,
-                                                              final Function<T, CompletableFuture<Void>> function,
-                                                              final long retryTime) {
-        addNewTask(new Task(meta.getUrl(), meta.getFuture(), () -> {
-            //判断订阅是否存在
-            if (switcher.isOpened() && subscribes.get(meta.getKey()) == meta) {
-                function.apply(meta).whenComplete((v, e) -> {
-                    if (e != null) {
-                        //异常重试
-                        if (switcher.isOpened() && subscribes.get(meta.getKey()) == meta) {
-                            addSubscribeTask(subscribes, meta, function, SystemClock.now() + taskRetryInterval);
-                        }
-                    }
-                });
-            }
-            return true;
-        }, retryTime));
-    }
-
-    /**
-     * 添加注销任务
-     *
-     * @param meta          注册元数据
-     * @param maxRetryTimes 最大重试次数
-     */
-    protected void addDeregisterTask(final RegisterMeta meta, final int maxRetryTimes) {
-        addDeregisterTask(meta, 0, 0, maxRetryTimes);
-    }
-
-    /**
-     * 添加注销任务
-     *
-     * @param meta
-     * @param retryTime     下次重试时间
-     * @param retries       当前重试次数
-     * @param maxRetryTimes 最大重试次数
-     */
-    protected void addDeregisterTask(final RegisterMeta meta, final long retryTime, final int retries, final int maxRetryTimes) {
-        addNewTask(new Task(meta.getUrl(), meta.getUnregister(), () -> {
-            if (!registers.containsKey(meta.getKey())) {
-                doDeregister(meta).whenComplete((k, e) -> {
-                    //注销的时候要判断异常
-                    if (e != null && retry(e) && switcher.isOpened() && !registers.containsKey(meta.getKey())) {
-                        int count = retries + 1;
-                        if (count > maxRetryTimes) {
-                            meta.getUnregister().completeExceptionally(e);
-                            return;
-                        }
-                        addDeregisterTask(meta, SystemClock.now() + taskRetryInterval, count, maxRetryTimes);
-                    }
-                });
-            }
-            return true;
-        }, retryTime));
-    }
-
-    /**
-     * 添加注册任务
-     *
-     * @param meta
-     */
-    protected void addRegisterTask(final RegisterMeta meta) {
-        addRegisterTask(meta, 0);
-    }
-
-    /**
-     * 添加注册任务
-     *
-     * @param meta
-     * @param retryTime
-     */
-    protected void addRegisterTask(final RegisterMeta meta, final long retryTime) {
-        addNewTask(new Task(meta.getUrl(), meta.getRegister(), () -> {
-            //确保没有被关闭，还存在
-            if (switcher.isOpened() && meta == registers.get(meta.getKey())) {
-                doRegister(meta).whenComplete((v, e) -> {
-                    if (e != null) {
-                        if (switcher.isOpened() && registers.get(meta.getKey()) == meta) {
-                            addRegisterTask(meta, SystemClock.now() + taskRetryInterval);
-                        }
-                    } else {
-                        meta.setRegisterTime(SystemClock.now());
-                    }
-                });
-            }
-            return true;
-        }, retryTime));
-    }
-
-
-    /**
-     * 用户主动调用取消订阅，异步执行
-     *
-     * @param subscribes
-     * @param key,
-     * @param handler
-     * @param function
-     * @param <T>
-     * @param <M>
-     * @return
-     */
-    protected <T extends UpdateEvent, M extends SubscribeMeta<T>> boolean unsubscribe(final Map<String, M> subscribes,
-                                                                                      final String key,
-                                                                                      final EventHandler<T> handler,
-                                                                                      final Function<M, CompletableFuture<Void>> function) {
-        return switcher.reader().quietAnyway(() -> {
-            //防止关闭
-            M meta = subscribes.get(key);
-            if (meta != null) {
-                return meta.removeHandler(handler, o -> {
-                    //没有监听器了，则进行注销
-                    Close.close(subscribes.remove(o));
-                    CompletableFuture<URL> future = meta.getFuture();
-                    //判断是否订阅过
-                    if (future.isDone() && !future.isCancelled() && !future.isCompletedExceptionally()) {
-                        meta.newFuture();
-                        addUnsubscribeTask(meta, function, 0L);
-                    }
-                });
-            }
-            return false;
-        });
-    }
-
-    /**
-     * 添加取消订阅任务
-     *
-     * @param meta
-     * @param function
-     * @param retryTime
-     * @param <T>
-     * @param <M>
-     */
-    protected <T extends UpdateEvent, M extends SubscribeMeta<T>> void addUnsubscribeTask(
-            final M meta, final Function<M, CompletableFuture<Void>> function, long retryTime) {
-        addNewTask(new Task(meta.getUrl(), meta.getFuture(), () -> {
-            function.apply(meta).whenComplete((v, e) -> {
-                //取消订阅的时候，需要判断异常
-                if (e != null && retry(e) && switcher.isOpened()) {
-                    addUnsubscribeTask(meta, function, SystemClock.now() + taskRetryInterval);
-                }
-            });
-            return true;
-        }, retryTime));
-    }
-
-    /**
-     * 异常是否要重试
-     *
-     * @param throwable
-     * @return
-     */
-    protected boolean retry(Throwable throwable) {
-        return true;
-    }
-
-    /**
-     * 注销
-     *
-     * @param futures
-     */
-    protected void register(final List<CompletableFuture<URL>> futures) {
-        if (registers.isEmpty()) {
-            return;
-        }
-        RegisterMeta meta;
-        for (Map.Entry<String, RegisterMeta> entry : registers.entrySet()) {
-            meta = entry.getValue();
-            futures.add(meta.newFuture());
-            addRegisterTask(meta);
-        }
-    }
-
-    /**
-     * 恢复订阅
-     *
-     * @param futures
-     * @param subscribes
-     * @param function
-     * @param <M>
-     */
-    protected <M extends SubscribeMeta> void subscribe(final List<CompletableFuture<URL>> futures,
-                                                       final Map<String, M> subscribes,
-                                                       final Function<M, CompletableFuture<Void>> function) {
-        M meta;
-        for (Map.Entry<String, M> entry : subscribes.entrySet()) {
-            meta = entry.getValue();
-            futures.add(meta.newFuture());
-            //添加订阅任务
-            addSubscribeTask(subscribes, meta, function);
-        }
     }
 
     /**
@@ -587,357 +341,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 打开，恢复注册和订阅
-     *
-     * @return
-     */
-    protected void doOpen(CompletableFuture<Void> future) {
-        reconnect(future, 0, maxConnectRetryTimes);
-    }
-
-    /**
-     * 任务调度
-     *
-     * @return
-     */
-    protected long dispatch() {
-        if (!connected.get() && switcher.isOpened()) {
-            //当前还没有连接上，则判断是否有重连任务
-            ReconnectTask task = reconnectTask;
-            if (task != null && task.isExpire()) {
-                reconnectTask = null;
-                //重连
-                task.run();
-            }
-            //等到连接通知
-            return 1000L;
-        } else {
-            long waitTime = executeTask();
-            if (waitTime > 0) {
-                if (backup != null && dirty.compareAndSet(true, false)) {
-                    //备份数据
-                    backup();
-                }
-            }
-            return waitTime;
-        }
-    }
-
-    /**
-     * 执行任务队列中的任务
-     *
-     * @return
-     */
-    protected long executeTask() {
-        long waitTime;
-        //取到第一个任务
-        Task task = tasks.peekFirst();
-        if (task != null) {
-            //判断是否超时
-            waitTime = task.retryTime - SystemClock.now();
-        } else {
-            //没有任务则等待10秒
-            waitTime = 10000L;
-        }
-        //有任务执行
-        if (waitTime <= 0) {
-            //有其它线程并发插入头部，pollFirst可能拿到其它对象
-            task = tasks.pollFirst();
-            boolean result;
-            try {
-                //执行任务
-                result = task.call();
-            } catch (Exception e) {
-                //执行出错，则重试
-                logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
-                result = false;
-            }
-            if (!result && switcher.isOpened()) {
-                //关闭状态只运行一次，运行状态一致重试
-                task.setRetryTime(SystemClock.now() + taskRetryInterval);
-                tasks.addLast(task);
-            } else {
-                task.complete();
-            }
-        }
-        return waitTime;
-    }
-
-    /**
-     * 建连，如果失败进行重试
-     *
-     * @param result        结果
-     * @param retryTimes    当前重连次数
-     * @param maxRetryTimes 最大重连次数
-     */
-    protected void reconnect(final CompletableFuture<Void> result, final long retryTimes, final int maxRetryTimes) {
-        //建连接
-        connect().handle((v, t) -> {
-            if (!switcher.isOpened()) {
-                //断开连接
-                disconnect().whenComplete((c, r) -> result.completeExceptionally(new IllegalStateException("registry is already closed.")));
-                return null;
-            } else if (t != null) {
-                //出了异常，尝试重试
-                long count = retryTimes + 1;
-                if (maxRetryTimes < 0 || maxRetryTimes > 0 && count <= maxRetryTimes) {
-                    //失败重试
-                    logger.error(String.format("Error occurs while connecting to %s, retry in %d(ms)", url.toString(false, false), 1000L));
-                    reconnectTask = new ReconnectTask(result, count, maxRetryTimes, SystemClock.now() + 1000L);
-                } else {
-                    //连接失败
-                    result.completeExceptionally(t);
-                }
-            } else {
-                logger.info(String.format("Success connecting to %s.", url.toString(false, false)));
-                //连接成功
-                connected.set(true);
-                waiter.wakeup();
-                //恢复注册
-                recover();
-                result.complete(null);
-            }
-            return null;
-        });
-    }
-
-    /**
-     * 连接
-     *
-     * @return
-     */
-    protected CompletableFuture<Void> connect() {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 用于断开重连恢复注册和订阅
-     *
-     * @return
-     */
-    protected CompletableFuture<Void> recover() {
-        List<CompletableFuture<URL>> futures = new LinkedList<>();
-        register(futures);
-        subscribe(futures, clusters, m -> doSubscribe(m, m));
-        subscribe(futures, configs, m -> doSubscribe(m, m));
-        return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
-    }
-
-    /**
-     * 关闭
-     *
-     * @return
-     */
-    protected void doClose(CompletableFuture<Void> future) {
-        unregister().handle((v, t) -> {
-            if (!switcher.isOpened()) {
-                //异步调用，判断这个时候处于关闭状态
-                disconnect().handle((c, r) -> {
-                    if (r != null) {
-                        future.completeExceptionally(r);
-                    } else {
-                        future.complete(c);
-                    }
-                    return null;
-                });
-            }
-            return null;
-        });
-    }
-
-    /**
-     * 取消注册
-     *
-     * @return
-     */
-    protected CompletableFuture<Void> unregister() {
-        List<CompletableFuture<URL>> futures = new LinkedList<>();
-        unregister(futures);
-        unsubscribe(futures, clusters, (u, m) -> doUnsubscribe(u, m));
-        unsubscribe(futures, configs, (u, m) -> doUnsubscribe(u, m));
-        return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
-                CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
-    }
-
-    /**
-     * 关闭连接
-     *
-     * @return
-     */
-    protected CompletableFuture<Void> disconnect() {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 注销
-     *
-     * @param futures
-     */
-    protected void unregister(final List<CompletableFuture<URL>> futures) {
-        if (registers.isEmpty()) {
-            return;
-        }
-        RegisterMeta meta;
-        CompletableFuture<URL> future;
-        for (Map.Entry<String, RegisterMeta> entry : registers.entrySet()) {
-            meta = entry.getValue();
-            future = meta.getRegister();
-            if (future.isDone() && !future.isCancelled() && !future.isCompletedExceptionally()) {
-                //注册成功的进行注销操作
-                futures.add(deregister(meta.getUrl()));
-            }
-        }
-    }
-
-    /**
-     * 取消订阅
-     *
-     * @param futures
-     */
-    protected <T extends SubscribeMeta> void unsubscribe(final List<CompletableFuture<URL>> futures,
-                                                         final Map<String, T> subscribes,
-                                                         final BiConsumer<URLKey, T> consumer) {
-        if (subscribes.isEmpty()) {
-            return;
-        }
-        for (Map.Entry<String, T> entry : subscribes.entrySet()) {
-            //添加任务
-            T meta = entry.getValue();
-            CompletableFuture<URL> future = meta.getFuture();
-            //订阅过
-            if (future.isDone() && !future.isCompletedExceptionally() && !future.isCancelled()) {
-                future = meta.newFuture();
-                addNewTask(new Task(meta.getUrl(), future, () -> {
-                    //meta实现了URLKey
-                    consumer.accept(meta, entry.getValue());
-                    return true;
-                }));
-                futures.add(future);
-            }
-        }
-    }
-
-    /**
-     * 注册
-     *
-     * @param url
-     */
-    protected CompletableFuture<Void> doRegister(final URLKey url) {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 注销
-     *
-     * @param url
-     */
-    protected CompletableFuture<Void> doDeregister(final URLKey url) {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 集群订阅
-     *
-     * @param url
-     * @param handler
-     */
-    protected CompletableFuture<Void> doSubscribe(final URLKey url, final ClusterHandler handler) {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 注销集群订阅
-     *
-     * @param url
-     * @param handler
-     */
-    protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ClusterHandler handler) {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 配置订阅操作
-     *
-     * @param url     consumer/provider url
-     * @param handler 配置变更事件handler
-     */
-    protected CompletableFuture<Void> doSubscribe(final URLKey url, final ConfigHandler handler) {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 取消配置订阅操作
-     *
-     * @param url     consumer/provider url
-     * @param handler 配置变更事件handler
-     */
-    protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ConfigHandler handler) {
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 数据更新标识，唤醒等待线程进行备份
-     */
-    protected void dirty() {
-        if (backup != null) {
-            dirty.set(true);
-            if (waiter != null) {
-                waiter.wakeup();
-            }
-        }
-    }
-
-    /**
-     * 备份数据
-     */
-    protected void backup() {
-        if (backup != null) {
-            try {
-                BackupDatum datum = new BackupDatum();
-                //备份集群数据
-                Map<String, List<BackupShard>> backupClusters = new HashMap<>(this.clusters.size());
-                this.clusters.forEach((k, v) -> {
-                    if (v.persistable()) {
-                        List<BackupShard> backupShards = new LinkedList<>();
-                        v.datum.forEach((name, shard) -> backupShards.add(new BackupShard(shard)));
-                        backupClusters.put(k, backupShards);
-                    }
-                });
-                datum.setClusters(backupClusters);
-                //备份配置数据
-                Map<String, Map<String, String>> configs = new HashMap<>(this.configs.size());
-                this.configs.forEach((k, v) -> {
-                    if (v.persistable()) {
-                        configs.put(k, v.datum);
-                    }
-                });
-                datum.setConfigs(configs);
-                //备份到backup
-                backup.backup(name, datum);
-            } catch (IOException e) {
-                logger.error(String.format("Error occurs while backuping %s registry datum.", name), e);
-            }
-        }
-    }
-
-    /**
-     * 恢复数据
-     */
-    protected void restore() {
-        if (backup != null) {
-            try {
-                datum = backup.restore(name);
-            } catch (IOException e) {
-                logger.error(String.format("Error occurs while restoring %s registry datum.", name), e);
-            }
-        }
-    }
-
-    /**
      * 注册
      */
-    protected static class Registrion extends URLKey {
+    protected static class Registion extends URLKey {
 
         /**
          * 状态Future
@@ -951,10 +357,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url
-         * @param key
+         * @param url URL
+         * @param key 键
          */
-        public Registrion(URL url, String key) {
+        public Registion(URL url, String key) {
             super(url, key);
         }
 
@@ -995,7 +401,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      *
      * @param <T>
      */
-    protected static class Subscription<T extends Event> extends URLKey {
+    protected static class Subscription<T extends Event> extends URLKey implements EventHandler<T> {
         protected final EventHandler<T> handler;
 
         /**
@@ -1012,6 +418,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
         public EventHandler<T> getHandler() {
             return handler;
+        }
+
+        @Override
+        public void handle(final T event) {
+            handler.handle(event);
         }
 
         @Override
@@ -1062,11 +473,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected static class RegistryController implements StateMachine.Controller {
+    protected class RegistryController implements StateMachine.Controller {
         /**
          * 注册的Future
          */
-        protected final Map<String, RegisterMeta> registers = new ConcurrentHashMap<>(20);
+        protected final Map<String, Registion> registers = new ConcurrentHashMap<>(20);
         /**
          * 集群订阅的Future
          */
@@ -1104,12 +515,15 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected BackupDatum datum;
 
-        @Override
-        public CompletableFuture<Void> open() {
+        public RegistryController() {
             waiter = new Waiter.MutexWaiter();
-            //任务执行线程
             daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
                     .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
+        }
+
+        @Override
+        public CompletableFuture<Void> open() {
+            //任务执行线程
             daemon.start();
             doOpen(f);
             return CompletableFuture.completedFuture(null);
@@ -1127,10 +541,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return CompletableFuture.completedFuture(null);
         }
 
-        public void register(final Registrion registrion) {
+        public void register(final Registion registrion) {
         }
 
-        public void deregister(final Registrion registrion, final int maxRetryTimes) {
+        public void deregister(final Registion registrion, final int maxRetryTimes) {
         }
 
         public void subscribe(final ClusterSubscription subscription) {
@@ -1143,6 +557,605 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
         public void unsubscribe(final ConfigSubscription subscription) {
+        }
+
+        /**
+         * 恢复数据
+         */
+        protected void restore() {
+            if (backup != null) {
+                try {
+                    datum = backup.restore(name);
+                } catch (IOException e) {
+                    logger.error(String.format("Error occurs while restoring %s registry datum.", name), e);
+                }
+            }
+        }
+
+        /**
+         * 打开，恢复注册和订阅
+         *
+         * @return
+         */
+        protected void doOpen(CompletableFuture<Void> future) {
+            reconnect(future, 0, maxConnectRetryTimes);
+        }
+
+        /**
+         * 建连，如果失败进行重试
+         *
+         * @param result        结果
+         * @param retryTimes    当前重连次数
+         * @param maxRetryTimes 最大重连次数
+         */
+        protected void reconnect(final CompletableFuture<Void> result, final long retryTimes, final int maxRetryTimes) {
+            //建连接
+            connect().handle((v, t) -> {
+                if (!switcher.isOpened()) {
+                    //断开连接
+                    disconnect().whenComplete((c, r) -> result.completeExceptionally(new IllegalStateException("registry is already closed.")));
+                    return null;
+                } else if (t != null) {
+                    //出了异常，尝试重试
+                    long count = retryTimes + 1;
+                    if (maxRetryTimes < 0 || maxRetryTimes > 0 && count <= maxRetryTimes) {
+                        //失败重试
+                        logger.error(String.format("Error occurs while connecting to %s, retry in %d(ms)", url.toString(false, false), 1000L));
+                        reconnectTask = new ReconnectTask(result, count, maxRetryTimes, SystemClock.now() + 1000L);
+                    } else {
+                        //连接失败
+                        result.completeExceptionally(t);
+                    }
+                } else {
+                    logger.info(String.format("Success connecting to %s.", url.toString(false, false)));
+                    //连接成功
+                    connected.set(true);
+                    waiter.wakeup();
+                    //恢复注册
+                    recover();
+                    result.complete(null);
+                }
+                return null;
+            });
+        }
+
+        /**
+         * 连接
+         *
+         * @return
+         */
+        protected CompletableFuture<Void> connect() {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 创建集群元数据
+         *
+         * @param url
+         * @param key
+         * @return
+         */
+        protected ClusterMeta createClusterMeta(final URL url, final String key) {
+            return new ClusterMeta(url, key, this::dirty, getPublisher(key));
+        }
+
+        /**
+         * 创建配置元数据
+         *
+         * @param url
+         * @param key
+         * @return
+         */
+        protected ConfigMeta createConfigMeta(final URL url, final String key) {
+            return new ConfigMeta(url, key, this::dirty, getPublisher(key));
+        }
+
+        /**
+         * 新任务
+         *
+         * @param task
+         */
+        protected void addNewTask(final Task task) {
+            tasks.offerFirst(task);
+            if (waiter != null) {
+                waiter.wakeup();
+            }
+        }
+
+        /**
+         * 添加订阅任务
+         *
+         * @param subscribes
+         * @param meta
+         * @param function
+         * @param <T>
+         */
+        protected <T extends SubscribeMeta> void addSubscribeTask(final Map<String, T> subscribes, final T meta,
+                                                                  final Function<T, CompletableFuture<Void>> function) {
+            addSubscribeTask(subscribes, meta, function, 0);
+        }
+
+        /**
+         * 添加订阅任务
+         *
+         * @param subscribes
+         * @param meta
+         * @param function
+         * @param retryTime
+         * @param <T>
+         */
+        protected <T extends SubscribeMeta> void addSubscribeTask(final Map<String, T> subscribes, final T meta,
+                                                                  final Function<T, CompletableFuture<Void>> function,
+                                                                  final long retryTime) {
+            addNewTask(new Task(meta.getUrl(), meta.getFuture(), () -> {
+                //判断订阅是否存在
+                if (switcher.isOpened() && subscribes.get(meta.getKey()) == meta) {
+                    function.apply(meta).whenComplete((v, e) -> {
+                        if (e != null) {
+                            //异常重试
+                            if (switcher.isOpened() && subscribes.get(meta.getKey()) == meta) {
+                                addSubscribeTask(subscribes, meta, function, SystemClock.now() + taskRetryInterval);
+                            }
+                        }
+                    });
+                }
+                return true;
+            }, retryTime));
+        }
+
+        /**
+         * 添加注销任务
+         *
+         * @param meta          注册元数据
+         * @param maxRetryTimes 最大重试次数
+         */
+        protected void addDeregisterTask(final RegisterMeta meta, final int maxRetryTimes) {
+            addDeregisterTask(meta, 0, 0, maxRetryTimes);
+        }
+
+        /**
+         * 添加注销任务
+         *
+         * @param meta
+         * @param retryTime     下次重试时间
+         * @param retries       当前重试次数
+         * @param maxRetryTimes 最大重试次数
+         */
+        protected void addDeregisterTask(final RegisterMeta meta, final long retryTime, final int retries, final int maxRetryTimes) {
+            addNewTask(new Task(meta.getUrl(), meta.getUnregister(), () -> {
+                if (!registers.containsKey(meta.getKey())) {
+                    doDeregister(meta).whenComplete((k, e) -> {
+                        //注销的时候要判断异常
+                        if (e != null && retry(e) && switcher.isOpened() && !registers.containsKey(meta.getKey())) {
+                            int count = retries + 1;
+                            if (count > maxRetryTimes) {
+                                meta.getUnregister().completeExceptionally(e);
+                                return;
+                            }
+                            addDeregisterTask(meta, SystemClock.now() + taskRetryInterval, count, maxRetryTimes);
+                        }
+                    });
+                }
+                return true;
+            }, retryTime));
+        }
+
+        /**
+         * 添加注册任务
+         *
+         * @param meta
+         */
+        protected void addRegisterTask(final RegisterMeta meta) {
+            addRegisterTask(meta, 0);
+        }
+
+        /**
+         * 添加注册任务
+         *
+         * @param meta
+         * @param retryTime
+         */
+        protected void addRegisterTask(final RegisterMeta meta, final long retryTime) {
+            addNewTask(new Task(meta.getUrl(), meta.getRegister(), () -> {
+                //确保没有被关闭，还存在
+                if (switcher.isOpened() && meta == registers.get(meta.getKey())) {
+                    doRegister(meta).whenComplete((v, e) -> {
+                        if (e != null) {
+                            if (switcher.isOpened() && registers.get(meta.getKey()) == meta) {
+                                addRegisterTask(meta, SystemClock.now() + taskRetryInterval);
+                            }
+                        } else {
+                            meta.setRegisterTime(SystemClock.now());
+                        }
+                    });
+                }
+                return true;
+            }, retryTime));
+        }
+
+
+        /**
+         * 用户主动调用取消订阅，异步执行
+         *
+         * @param subscribes
+         * @param key,
+         * @param handler
+         * @param function
+         * @param <T>
+         * @param <M>
+         * @return
+         */
+        protected <T extends UpdateEvent, M extends SubscribeMeta<T>> boolean unsubscribe(final Map<String, M> subscribes,
+                                                                                          final String key,
+                                                                                          final EventHandler<T> handler,
+                                                                                          final Function<M, CompletableFuture<Void>> function) {
+            return switcher.reader().quietAnyway(() -> {
+                //防止关闭
+                M meta = subscribes.get(key);
+                if (meta != null) {
+                    return meta.removeHandler(handler, o -> {
+                        //没有监听器了，则进行注销
+                        Close.close(subscribes.remove(o));
+                        CompletableFuture<URL> future = meta.getFuture();
+                        //判断是否订阅过
+                        if (future.isDone() && !future.isCancelled() && !future.isCompletedExceptionally()) {
+                            meta.newFuture();
+                            addUnsubscribeTask(meta, function, 0L);
+                        }
+                    });
+                }
+                return false;
+            });
+        }
+
+        /**
+         * 添加取消订阅任务
+         *
+         * @param meta
+         * @param function
+         * @param retryTime
+         * @param <T>
+         * @param <M>
+         */
+        protected <T extends UpdateEvent, M extends SubscribeMeta<T>> void addUnsubscribeTask(
+                final M meta, final Function<M, CompletableFuture<Void>> function, long retryTime) {
+            addNewTask(new Task(meta.getUrl(), meta.getFuture(), () -> {
+                function.apply(meta).whenComplete((v, e) -> {
+                    //取消订阅的时候，需要判断异常
+                    if (e != null && retry(e) && switcher.isOpened()) {
+                        addUnsubscribeTask(meta, function, SystemClock.now() + taskRetryInterval);
+                    }
+                });
+                return true;
+            }, retryTime));
+        }
+
+        /**
+         * 异常是否要重试
+         *
+         * @param throwable
+         * @return
+         */
+        protected boolean retry(Throwable throwable) {
+            return true;
+        }
+
+        /**
+         * 注销
+         *
+         * @param futures
+         */
+        protected void register(final List<CompletableFuture<URL>> futures) {
+            if (registers.isEmpty()) {
+                return;
+            }
+            RegisterMeta meta;
+            for (Map.Entry<String, RegisterMeta> entry : registers.entrySet()) {
+                meta = entry.getValue();
+                futures.add(meta.newFuture());
+                addRegisterTask(meta);
+            }
+        }
+
+        /**
+         * 恢复订阅
+         *
+         * @param futures
+         * @param subscribes
+         * @param function
+         * @param <M>
+         */
+        protected <M extends SubscribeMeta> void subscribe(final List<CompletableFuture<URL>> futures,
+                                                           final Map<String, M> subscribes,
+                                                           final Function<M, CompletableFuture<Void>> function) {
+            M meta;
+            for (Map.Entry<String, M> entry : subscribes.entrySet()) {
+                meta = entry.getValue();
+                futures.add(meta.newFuture());
+                //添加订阅任务
+                addSubscribeTask(subscribes, meta, function);
+            }
+        }
+
+        /**
+         * 任务调度
+         *
+         * @return
+         */
+        protected long dispatch() {
+            if (!connected.get() && switcher.isOpened()) {
+                //当前还没有连接上，则判断是否有重连任务
+                ReconnectTask task = reconnectTask;
+                if (task != null && task.isExpire()) {
+                    reconnectTask = null;
+                    //重连
+                    task.run();
+                }
+                //等到连接通知
+                return 1000L;
+            } else {
+                long waitTime = executeTask();
+                if (waitTime > 0) {
+                    if (backup != null && dirty.compareAndSet(true, false)) {
+                        //备份数据
+                        backup();
+                    }
+                }
+                return waitTime;
+            }
+        }
+
+        /**
+         * 执行任务队列中的任务
+         *
+         * @return
+         */
+        protected long executeTask() {
+            long waitTime;
+            //取到第一个任务
+            Task task = tasks.peekFirst();
+            if (task != null) {
+                //判断是否超时
+                waitTime = task.retryTime - SystemClock.now();
+            } else {
+                //没有任务则等待10秒
+                waitTime = 10000L;
+            }
+            //有任务执行
+            if (waitTime <= 0) {
+                //有其它线程并发插入头部，pollFirst可能拿到其它对象
+                task = tasks.pollFirst();
+                boolean result;
+                try {
+                    //执行任务
+                    result = task.call();
+                } catch (Exception e) {
+                    //执行出错，则重试
+                    logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
+                    result = false;
+                }
+                if (!result && switcher.isOpened()) {
+                    //关闭状态只运行一次，运行状态一致重试
+                    task.setRetryTime(SystemClock.now() + taskRetryInterval);
+                    tasks.addLast(task);
+                } else {
+                    task.complete();
+                }
+            }
+            return waitTime;
+        }
+
+
+
+        /**
+         * 用于断开重连恢复注册和订阅
+         *
+         * @return
+         */
+        protected CompletableFuture<Void> recover() {
+            List<CompletableFuture<URL>> futures = new LinkedList<>();
+            register(futures);
+            subscribe(futures, clusters, m -> doSubscribe(m, m));
+            subscribe(futures, configs, m -> doSubscribe(m, m));
+            return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
+                    CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+        }
+
+        /**
+         * 关闭
+         *
+         * @return
+         */
+        protected void doClose(CompletableFuture<Void> future) {
+            unregister().handle((v, t) -> {
+                if (!switcher.isOpened()) {
+                    //异步调用，判断这个时候处于关闭状态
+                    disconnect().handle((c, r) -> {
+                        if (r != null) {
+                            future.completeExceptionally(r);
+                        } else {
+                            future.complete(c);
+                        }
+                        return null;
+                    });
+                }
+                return null;
+            });
+        }
+
+        /**
+         * 取消注册
+         *
+         * @return
+         */
+        protected CompletableFuture<Void> unregister() {
+            List<CompletableFuture<URL>> futures = new LinkedList<>();
+            unregister(futures);
+            unsubscribe(futures, clusters, (u, m) -> doUnsubscribe(u, m));
+            unsubscribe(futures, configs, (u, m) -> doUnsubscribe(u, m));
+            return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
+                    CompletableFuture.allOf(futures.toArray(new CompletableFuture[futures.size()]));
+        }
+
+        /**
+         * 关闭连接
+         *
+         * @return
+         */
+        protected CompletableFuture<Void> disconnect() {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 注销
+         *
+         * @param futures
+         */
+        protected void unregister(final List<CompletableFuture<URL>> futures) {
+            if (registers.isEmpty()) {
+                return;
+            }
+            RegisterMeta meta;
+            CompletableFuture<URL> future;
+            for (Map.Entry<String, RegisterMeta> entry : registers.entrySet()) {
+                meta = entry.getValue();
+                future = meta.getRegister();
+                if (future.isDone() && !future.isCancelled() && !future.isCompletedExceptionally()) {
+                    //注册成功的进行注销操作
+                    futures.add(deregister(meta.getUrl()));
+                }
+            }
+        }
+
+        /**
+         * 取消订阅
+         *
+         * @param futures
+         */
+        protected <T extends SubscribeMeta> void unsubscribe(final List<CompletableFuture<URL>> futures,
+                                                             final Map<String, T> subscribes,
+                                                             final BiConsumer<URLKey, T> consumer) {
+            if (subscribes.isEmpty()) {
+                return;
+            }
+            for (Map.Entry<String, T> entry : subscribes.entrySet()) {
+                //添加任务
+                T meta = entry.getValue();
+                CompletableFuture<URL> future = meta.getFuture();
+                //订阅过
+                if (future.isDone() && !future.isCompletedExceptionally() && !future.isCancelled()) {
+                    future = meta.newFuture();
+                    addNewTask(new Task(meta.getUrl(), future, () -> {
+                        //meta实现了URLKey
+                        consumer.accept(meta, entry.getValue());
+                        return true;
+                    }));
+                    futures.add(future);
+                }
+            }
+        }
+
+        /**
+         * 注册
+         *
+         * @param url
+         */
+        protected CompletableFuture<Void> doRegister(final URLKey url) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 注销
+         *
+         * @param url
+         */
+        protected CompletableFuture<Void> doDeregister(final URLKey url) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 集群订阅
+         *
+         * @param url
+         * @param handler
+         */
+        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ClusterHandler handler) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 注销集群订阅
+         *
+         * @param url
+         * @param handler
+         */
+        protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ClusterHandler handler) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 配置订阅操作
+         *
+         * @param url     consumer/provider url
+         * @param handler 配置变更事件handler
+         */
+        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ConfigHandler handler) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 取消配置订阅操作
+         *
+         * @param url     consumer/provider url
+         * @param handler 配置变更事件handler
+         */
+        protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ConfigHandler handler) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        /**
+         * 数据更新标识，唤醒等待线程进行备份
+         */
+        protected void dirty() {
+            if (backup != null) {
+                dirty.set(true);
+                if (waiter != null) {
+                    waiter.wakeup();
+                }
+            }
+        }
+
+        /**
+         * 备份数据
+         */
+        protected void backup() {
+            if (backup != null) {
+                try {
+                    BackupDatum datum = new BackupDatum();
+                    //备份集群数据
+                    Map<String, List<BackupShard>> backupClusters = new HashMap<>(this.clusters.size());
+                    this.clusters.forEach((k, v) -> {
+                        if (v.persistable()) {
+                            List<BackupShard> backupShards = new LinkedList<>();
+                            v.datum.forEach((name, shard) -> backupShards.add(new BackupShard(shard)));
+                            backupClusters.put(k, backupShards);
+                        }
+                    });
+                    datum.setClusters(backupClusters);
+                    //备份配置数据
+                    Map<String, Map<String, String>> configs = new HashMap<>(this.configs.size());
+                    this.configs.forEach((k, v) -> {
+                        if (v.persistable()) {
+                            configs.put(k, v.datum);
+                        }
+                    });
+                    datum.setConfigs(configs);
+                    //备份到backup
+                    backup.backup(name, datum);
+                } catch (IOException e) {
+                    logger.error(String.format("Error occurs while backuping %s registry datum.", name), e);
+                }
+            }
         }
     }
 
@@ -1255,7 +1268,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      *
      * @param <T>
      */
-    protected static abstract class SubscribeMeta<T extends UpdateEvent> extends URLKey implements EventHandler<T>, Closeable {
+    protected static abstract class SubscribeMeta<T extends UpdateEvent<?>> extends URLKey implements EventHandler<T>, Closeable {
         /**
          * 当前数据版本，-1表示还没有初始化
          */
@@ -1271,7 +1284,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * Future
          */
-        protected CompletableFuture<URL> future = new CompletableFuture<>();
+        protected StateFuture<URL> future = new StateFuture<>();
         /**
          * 最后一次事件处理的时间
          */
@@ -1288,10 +1301,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url
-         * @param key
-         * @param dirty
-         * @param publisher
+         * @param url       url
+         * @param key       key
+         * @param dirty     脏数据处理器
+         * @param publisher 事件发布者
          */
         public SubscribeMeta(final URL url, final String key, final Runnable dirty, final Publisher<T> publisher) {
             super(url, key);
@@ -1300,7 +1313,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             this.publisher.start();
         }
 
-        public CompletableFuture<URL> getFuture() {
+        public StateFuture<URL> getFuture() {
             return future;
         }
 
@@ -1333,35 +1346,49 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
         /**
-         * 新建Future
+         * 可持久化的
          *
-         * @return
+         * @return 可持久化标识
          */
-        public CompletableFuture<URL> newFuture() {
-            future = new CompletableFuture<>();
-            return future;
+        public boolean persistable() {
+            return false;
+        }
+
+        /**
+         * 是否准备好
+         *
+         * @return 准备好标识
+         */
+        protected boolean ready() {
+            return true;
         }
 
         /**
          * 添加监听器
          *
-         * @param handler
-         * @return
+         * @param handler 处理器
+         * @return 成功标识
          */
-        public synchronized boolean addHandler(final EventHandler<T> handler) {
-            return publisher.addHandler(handler);
+        public boolean addHandler(final EventHandler<T> handler) {
+            if (publisher.addHandler(handler)) {
+                //有全量数据
+                if (full && ready()) {
+                    publisher.offer(createFullEvent(handler));
+                }
+                return true;
+            }
+            return false;
         }
 
         /**
          * 删除监听器
          *
-         * @param handler
-         * @param cleaner
-         * @return
+         * @param handler 处理器
+         * @param cleaner 清理
+         * @return 成功标识
          */
-        public synchronized boolean removeHandler(final EventHandler<T> handler, final Consumer<String> cleaner) {
+        public boolean removeHandler(final EventHandler<T> handler, final Consumer<String> cleaner) {
             if (publisher.removeHandler(handler)) {
-                //防止添加
                 if (publisher.size() == 0) {
                     cleaner.accept(key);
                 }
@@ -1370,22 +1397,22 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return false;
         }
 
-        /**
-         * 在同步块中执行
-         *
-         * @param runnable
-         */
-        public synchronized void run(final Runnable runnable) {
-            if (runnable != null) {
-                runnable.run();
-            }
-        }
-
         @Override
         public void close() {
             publisher.close();
         }
 
+        /**
+         * 创建全量事件
+         *
+         * @param handler 事件
+         * @return 全量事件
+         */
+        protected abstract T createFullEvent(EventHandler<T> handler);
+
+        /**
+         * 脏数据处理
+         */
         protected void dirty() {
             if (dirty != null) {
                 dirty.run();
@@ -1410,10 +1437,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url
-         * @param key
-         * @param dirty
-         * @param publisher
+         * @param url       url
+         * @param key       key
+         * @param dirty     脏数据处理器
+         * @param publisher 事件发布者
          */
         public ClusterMeta(final URL url,
                            final String key,
@@ -1422,37 +1449,20 @@ public abstract class AbstractRegistry implements Registry, Configure {
             super(url, key, dirty, publisher);
         }
 
-        /**
-         * 可持久化的
-         *
-         * @return
-         */
+        @Override
         public boolean persistable() {
             return full && datum != null && !datum.isEmpty();
         }
 
-        /**
-         * 添加监听器
-         *
-         * @param handler
-         * @return
-         */
         @Override
-        public synchronized boolean addHandler(final EventHandler<ClusterEvent> handler) {
-            if (publisher.addHandler(handler)) {
-                //有全量数据
-                if (full) {
-                    publisher.offer(new ClusterEvent(this, handler, UpdateType.FULL, version, full()));
-                }
-                return true;
-            }
-            return false;
+        protected ClusterEvent createFullEvent(final EventHandler<ClusterEvent> handler) {
+            return new ClusterEvent(this, handler, UpdateType.FULL, version, full());
         }
 
         /**
          * 构造全量事件
          *
-         * @return
+         * @return 全量数据
          */
         protected List<ClusterEvent.ShardEvent> full() {
             List<ClusterEvent.ShardEvent> result = new ArrayList<>(datum.size());
@@ -1463,10 +1473,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 更新集群数据
          *
-         * @param cluster
-         * @param events
-         * @param protectNullDatum
-         * @return
+         * @param cluster          集群
+         * @param events           事件
+         * @param protectNullDatum 是否保护空数据
          */
         protected void update(final Map<String, Shard> cluster, final Collection<ClusterEvent.ShardEvent> events,
                               final boolean protectNullDatum) {
@@ -1492,9 +1501,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 合并增量事件
          *
-         * @param events
-         * @param shards
-         * @return
+         * @param events 事件
+         * @param shards 分片
+         * @return 合并后的事件
          */
         protected Map<String, ClusterEvent.ShardEvent> update(final Map<String, ClusterEvent.ShardEvent> events,
                                                               final List<ClusterEvent.ShardEvent> shards) {
@@ -1511,7 +1520,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
         @Override
-        public synchronized void handle(final ClusterEvent event) {
+        public void handle(final ClusterEvent event) {
             lastEventTime = SystemClock.now();
             event.getType().update(url, (fullDatum, protectNullDatum) -> {
                 if (!full && !fullDatum) {
@@ -1582,10 +1591,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url
-         * @param key
-         * @param dirty
-         * @param publisher
+         * @param url       url
+         * @param key       key
+         * @param dirty     脏数据处理器
+         * @param publisher 事件发布者
          */
         public ConfigMeta(final URL url,
                           final String key,
@@ -1594,44 +1603,18 @@ public abstract class AbstractRegistry implements Registry, Configure {
             super(url, key, dirty, publisher);
         }
 
-        /**
-         * 是否准备好
-         *
-         * @return
-         */
-        protected boolean ready() {
-            return true;
-        }
-
-        /**
-         * 可持久化的
-         *
-         * @return
-         */
+        @Override
         public boolean persistable() {
             return full && datum != null;
         }
 
-        /**
-         * 添加监听器
-         *
-         * @param handler
-         * @return
-         */
         @Override
-        public synchronized boolean addHandler(final EventHandler<ConfigEvent> handler) {
-            if (publisher.addHandler(handler)) {
-                //有全量数据，并且前置条件OK
-                if (full && ready()) {
-                    publisher.offer(new ConfigEvent(this, handler, version, datum));
-                }
-                return true;
-            }
-            return false;
+        protected ConfigEvent createFullEvent(final EventHandler<ConfigEvent> handler) {
+            return new ConfigEvent(this, handler, version, datum);
         }
 
         @Override
-        public synchronized void handle(final ConfigEvent event) {
+        public void handle(final ConfigEvent event) {
             lastEventTime = SystemClock.now();
             //都是全量数据更新
             if (datum == null || event.getVersion() > version) {
@@ -1649,75 +1632,5 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
     }
-
-    /**
-     * 注册信息
-     */
-    protected static class RegisterMeta extends URLKey {
-        /**
-         * 注册Future
-         */
-        protected CompletableFuture<URL> register = new CompletableFuture<>();
-        /**
-         * 注销Future
-         */
-        protected CompletableFuture<URL> unregister;
-        /**
-         * 计数器
-         */
-        protected AtomicLong counter = new AtomicLong(0);
-        /**
-         * 注册时间
-         */
-        protected long registerTime;
-
-        public RegisterMeta(URL url, String key) {
-            super(url, key);
-        }
-
-        public CompletableFuture<URL> getRegister() {
-            return register;
-        }
-
-        public CompletableFuture<URL> getUnregister() {
-            return unregister;
-        }
-
-        /**
-         * 新建Future
-         *
-         * @return
-         */
-        public CompletableFuture<URL> newFuture() {
-            register = new CompletableFuture<>();
-            unregister = null;
-            return register;
-        }
-
-        /**
-         * 注销
-         *
-         * @param consumer
-         * @return
-         */
-        public synchronized CompletableFuture<URL> unregister(final Consumer<RegisterMeta> consumer) {
-            if (unregister == null) {
-                unregister = new CompletableFuture<>();
-                if (consumer != null) {
-                    consumer.accept(this);
-                }
-            }
-            return unregister;
-        }
-
-        public long getRegisterTime() {
-            return registerTime;
-        }
-
-        public void setRegisterTime(long registerTime) {
-            this.registerTime = registerTime;
-        }
-    }
-
 
 }

@@ -220,6 +220,10 @@ public class StateMachine<T extends StateMachine.Controller> {
         return status;
     }
 
+    public boolean isOpen(final Controller controller) {
+        return controller == this.controller && status.isOpen();
+    }
+
     /**
      * 发布事件
      *

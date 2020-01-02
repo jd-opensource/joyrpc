@@ -116,7 +116,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected transient StateMachine<RegistryController> state = new StateMachine<>(this::create, null);
+    protected transient StateMachine<RegistryController<AbstractRegistry>> state = new StateMachine<>(this::create, null);
 
     /**
      * 构造函数
@@ -159,12 +159,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
      *
      * @return 新建的控制器
      */
-    protected RegistryController create() {
-        RegistryController controller = new RegistryController();
-        registers.forEach((k, v) -> controller.register(v));
-        clusters.forEach(controller::subscribe);
-        configs.forEach(controller::subscribe);
-        return controller;
+    protected RegistryController<AbstractRegistry> create() {
+        return new RegistryController<>(this);
     }
 
     @Override
@@ -292,8 +288,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 获取注册键
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 键
      */
     protected String getRegisterKey(final URL url) {
         //注册:协议+接口+别名+SIDE,生产者和消费者都需要注册
@@ -303,8 +299,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 获取集群键，加上类型参数避免和配置键一样
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 键
      */
     protected String getClusterKey(final URL url) {
         //接口集群订阅:协议+接口+别名+集群类型
@@ -315,8 +311,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 获取配置键，加上类型参数避免和集群键一样
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 键
      */
     protected String getConfigKey(final URL url) {
         //分组信息可能在参数里面，可以在子类里面覆盖
@@ -328,16 +324,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
             URL u = url.add(TYPE, "config");
             return u.toString(false, true, ALIAS_OPTION.getName(), Constants.ROLE_OPTION.getName(), TYPE);
         }
-    }
-
-    /**
-     * 获取通知器
-     *
-     * @param name
-     * @return
-     */
-    protected <T extends Event> Publisher<T> getPublisher(final String name) {
-        return EVENT_BUS.get().getPublisher(Registry.class.getSimpleName(), name);
     }
 
     /**
@@ -473,19 +459,23 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected class RegistryController implements StateMachine.Controller {
+    protected class RegistryController<R extends AbstractRegistry> implements StateMachine.Controller {
+        /**
+         * 注册
+         */
+        protected R registry;
         /**
          * 注册的Future
          */
-        protected final Map<String, Registion> registers = new ConcurrentHashMap<>(20);
+        protected Map<String, Registion> registers;
         /**
          * 集群订阅的Future
          */
-        protected final Map<String, ClusterMeta> clusters = new ConcurrentHashMap<>(20);
+        protected final Map<String, InnerClusterSubscription> clusters = new ConcurrentHashMap<>(20);
         /**
          * 配置订阅Future
          */
-        protected final Map<String, ConfigMeta> configs = new ConcurrentHashMap<>(20);
+        protected final Map<String, InnerConfigSubscription> configs = new ConcurrentHashMap<>(20);
         /**
          * 任务队列
          */
@@ -515,48 +505,76 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected BackupDatum datum;
 
-        public RegistryController() {
-            waiter = new Waiter.MutexWaiter();
-            daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
-                    .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
+        /**
+         * 构造函数
+         *
+         * @param registry 注册中心对象
+         */
+        public RegistryController(final R registry) {
+            this.registry = registry;
+            this.registers = registry.registers;
+            registry.clusters.forEach(this::subscribe);
+            registry.configs.forEach(this::subscribe);
         }
 
         @Override
         public CompletableFuture<Void> open() {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            waiter = new Waiter.MutexWaiter();
             //任务执行线程
-            daemon.start();
-            doOpen(f);
-            return CompletableFuture.completedFuture(null);
+            daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
+                    .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
+            doOpen(future);
+            return future;
         }
 
         @Override
-        public CompletableFuture<Void> close(boolean gracefully) {
-            doClose(f);
-            return f.handle((u, t) -> {
+        public CompletableFuture<Void> close(final boolean gracefully) {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            doClose(future);
+            return future.handle((u, t) -> {
                 if (daemon != null) {
                     daemon.stop();
                 }
                 return null;
             });
-            return CompletableFuture.completedFuture(null);
         }
 
-        public void register(final Registion registrion) {
+        public void register(final Registion registion) {
         }
 
-        public void deregister(final Registion registrion, final int maxRetryTimes) {
+        public void deregister(final Registion registion, final int maxRetryTimes) {
         }
 
         public void subscribe(final ClusterSubscription subscription) {
+            clusters.computeIfAbsent(subscription.getKey(), key -> createClusterMeta(subscription)).addHandler(subscription);
         }
 
         public void unsubscribe(final ClusterSubscription subscription) {
+            InnerClusterSubscription meta = clusters.get(subscription.getKey());
+            if (meta != null) {
+                meta.removeHandler(subscription, clusters::remove);
+            }
         }
 
         public void subscribe(final ConfigSubscription subscription) {
+            configs.computeIfAbsent(subscription.getKey(), key -> createConfigMeta(subscription)).addHandler(subscription);
         }
 
         public void unsubscribe(final ConfigSubscription subscription) {
+            InnerConfigSubscription meta = configs.get(subscription.getKey());
+            if (meta != null) {
+                meta.removeHandler(subscription, configs::remove);
+            }
+        }
+
+        /**
+         * 是否打开
+         *
+         * @return 打开标识
+         */
+        protected boolean isOpen() {
+            return state.isOpen(this);
         }
 
         /**
@@ -574,26 +592,24 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
         /**
          * 打开，恢复注册和订阅
-         *
-         * @return
          */
-        protected void doOpen(CompletableFuture<Void> future) {
+        protected void doOpen(final CompletableFuture<Void> future) {
             reconnect(future, 0, maxConnectRetryTimes);
         }
 
         /**
          * 建连，如果失败进行重试
          *
-         * @param result        结果
+         * @param future        结果
          * @param retryTimes    当前重连次数
          * @param maxRetryTimes 最大重连次数
          */
-        protected void reconnect(final CompletableFuture<Void> result, final long retryTimes, final int maxRetryTimes) {
+        protected void reconnect(final CompletableFuture<Void> future, final long retryTimes, final int maxRetryTimes) {
             //建连接
             connect().handle((v, t) -> {
-                if (!switcher.isOpened()) {
+                if (!isOpen()) {
                     //断开连接
-                    disconnect().whenComplete((c, r) -> result.completeExceptionally(new IllegalStateException("registry is already closed.")));
+                    disconnect().whenComplete((c, r) -> future.completeExceptionally(new IllegalStateException("registry is already closed.")));
                     return null;
                 } else if (t != null) {
                     //出了异常，尝试重试
@@ -601,10 +617,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     if (maxRetryTimes < 0 || maxRetryTimes > 0 && count <= maxRetryTimes) {
                         //失败重试
                         logger.error(String.format("Error occurs while connecting to %s, retry in %d(ms)", url.toString(false, false), 1000L));
-                        reconnectTask = new ReconnectTask(result, count, maxRetryTimes, SystemClock.now() + 1000L);
+                        reconnectTask = new ReconnectTask(() -> reconnect(future, count, maxRetryTimes), SystemClock.now() + 1000L);
                     } else {
                         //连接失败
-                        result.completeExceptionally(t);
+                        future.completeExceptionally(t);
                     }
                 } else {
                     logger.info(String.format("Success connecting to %s.", url.toString(false, false)));
@@ -613,7 +629,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     waiter.wakeup();
                     //恢复注册
                     recover();
-                    result.complete(null);
+                    future.complete(null);
                 }
                 return null;
             });
@@ -629,31 +645,39 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
         /**
+         * 获取通知器
+         *
+         * @param name 名称
+         * @return 事件发布器
+         */
+        protected <T extends Event> Publisher<T> getPublisher(final String name) {
+            return EVENT_BUS.get().getPublisher(Registry.class.getSimpleName(), name);
+        }
+
+        /**
          * 创建集群元数据
          *
-         * @param url
-         * @param key
-         * @return
+         * @param key key
+         * @return 集群元数据
          */
-        protected ClusterMeta createClusterMeta(final URL url, final String key) {
-            return new ClusterMeta(url, key, this::dirty, getPublisher(key));
+        protected InnerClusterSubscription createClusterMeta(final URLKey key) {
+            return new InnerClusterSubscription(key, this::dirty, getPublisher(key.getKey()));
         }
 
         /**
          * 创建配置元数据
          *
-         * @param url
-         * @param key
-         * @return
+         * @param key key
+         * @return 配置元数据
          */
-        protected ConfigMeta createConfigMeta(final URL url, final String key) {
-            return new ConfigMeta(url, key, this::dirty, getPublisher(key));
+        protected InnerConfigSubscription createConfigMeta(final URLKey key) {
+            return new InnerConfigSubscription(key, this::dirty, getPublisher(key.getKey()));
         }
 
         /**
          * 新任务
          *
-         * @param task
+         * @param task 任务
          */
         protected void addNewTask(final Task task) {
             tasks.offerFirst(task);
@@ -665,36 +689,38 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 添加订阅任务
          *
-         * @param subscribes
-         * @param meta
+         * @param subscriptions
+         * @param subscription
          * @param function
          * @param <T>
          */
-        protected <T extends SubscribeMeta> void addSubscribeTask(final Map<String, T> subscribes, final T meta,
-                                                                  final Function<T, CompletableFuture<Void>> function) {
-            addSubscribeTask(subscribes, meta, function, 0);
+        protected <T extends InnerSubscription<?>> void addSubscribeTask(final Map<String, T> subscriptions,
+                                                                         final T subscription,
+                                                                         final Function<T, CompletableFuture<Void>> function) {
+            addSubscribeTask(subscriptions, subscription, function, 0);
         }
 
         /**
          * 添加订阅任务
          *
-         * @param subscribes
-         * @param meta
+         * @param subscriptions
+         * @param subscription
          * @param function
          * @param retryTime
          * @param <T>
          */
-        protected <T extends SubscribeMeta> void addSubscribeTask(final Map<String, T> subscribes, final T meta,
-                                                                  final Function<T, CompletableFuture<Void>> function,
-                                                                  final long retryTime) {
-            addNewTask(new Task(meta.getUrl(), meta.getFuture(), () -> {
+        protected <T extends InnerSubscription<?>> void addSubscribeTask(final Map<String, T> subscriptions,
+                                                                         final T subscription,
+                                                                         final Function<T, CompletableFuture<Void>> function,
+                                                                         final long retryTime) {
+            addNewTask(new Task(subscription.getUrl(), subscription.getFuture(), () -> {
                 //判断订阅是否存在
-                if (switcher.isOpened() && subscribes.get(meta.getKey()) == meta) {
-                    function.apply(meta).whenComplete((v, e) -> {
+                if (isOpen() && subscriptions.get(subscription.getKey()) == subscription) {
+                    function.apply(subscription).whenComplete((v, e) -> {
                         if (e != null) {
                             //异常重试
-                            if (switcher.isOpened() && subscribes.get(meta.getKey()) == meta) {
-                                addSubscribeTask(subscribes, meta, function, SystemClock.now() + taskRetryInterval);
+                            if (isOpen() && subscriptions.get(subscription.getKey()) == subscription) {
+                                addSubscribeTask(subscriptions, subscription, function, SystemClock.now() + taskRetryInterval);
                             }
                         }
                     });
@@ -726,7 +752,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 if (!registers.containsKey(meta.getKey())) {
                     doDeregister(meta).whenComplete((k, e) -> {
                         //注销的时候要判断异常
-                        if (e != null && retry(e) && switcher.isOpened() && !registers.containsKey(meta.getKey())) {
+                        if (e != null && retry(e) && isOpen() && !registers.containsKey(meta.getKey())) {
                             int count = retries + 1;
                             if (count > maxRetryTimes) {
                                 meta.getUnregister().completeExceptionally(e);
@@ -758,10 +784,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         protected void addRegisterTask(final RegisterMeta meta, final long retryTime) {
             addNewTask(new Task(meta.getUrl(), meta.getRegister(), () -> {
                 //确保没有被关闭，还存在
-                if (switcher.isOpened() && meta == registers.get(meta.getKey())) {
+                if (isOpen() && meta == registers.get(meta.getKey())) {
                     doRegister(meta).whenComplete((v, e) -> {
                         if (e != null) {
-                            if (switcher.isOpened() && registers.get(meta.getKey()) == meta) {
+                            if (isOpen() && registers.get(meta.getKey()) == meta) {
                                 addRegisterTask(meta, SystemClock.now() + taskRetryInterval);
                             }
                         } else {
@@ -785,10 +811,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param <M>
          * @return
          */
-        protected <T extends UpdateEvent, M extends SubscribeMeta<T>> boolean unsubscribe(final Map<String, M> subscribes,
-                                                                                          final String key,
-                                                                                          final EventHandler<T> handler,
-                                                                                          final Function<M, CompletableFuture<Void>> function) {
+        protected <T extends UpdateEvent, M extends InnerSubscription<T>> boolean unsubscribe(final Map<String, M> subscribes,
+                                                                                              final String key,
+                                                                                              final EventHandler<T> handler,
+                                                                                              final Function<M, CompletableFuture<Void>> function) {
             return switcher.reader().quietAnyway(() -> {
                 //防止关闭
                 M meta = subscribes.get(key);
@@ -817,12 +843,12 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param <T>
          * @param <M>
          */
-        protected <T extends UpdateEvent, M extends SubscribeMeta<T>> void addUnsubscribeTask(
+        protected <T extends UpdateEvent, M extends InnerSubscription<T>> void addUnsubscribeTask(
                 final M meta, final Function<M, CompletableFuture<Void>> function, long retryTime) {
             addNewTask(new Task(meta.getUrl(), meta.getFuture(), () -> {
                 function.apply(meta).whenComplete((v, e) -> {
                     //取消订阅的时候，需要判断异常
-                    if (e != null && retry(e) && switcher.isOpened()) {
+                    if (e != null && retry(e) && isOpen()) {
                         addUnsubscribeTask(meta, function, SystemClock.now() + taskRetryInterval);
                     }
                 });
@@ -865,9 +891,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param function
          * @param <M>
          */
-        protected <M extends SubscribeMeta> void subscribe(final List<CompletableFuture<URL>> futures,
-                                                           final Map<String, M> subscribes,
-                                                           final Function<M, CompletableFuture<Void>> function) {
+        protected <M extends InnerSubscription> void subscribe(final List<CompletableFuture<URL>> futures,
+                                                               final Map<String, M> subscribes,
+                                                               final Function<M, CompletableFuture<Void>> function) {
             M meta;
             for (Map.Entry<String, M> entry : subscribes.entrySet()) {
                 meta = entry.getValue();
@@ -883,7 +909,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @return
          */
         protected long dispatch() {
-            if (!connected.get() && switcher.isOpened()) {
+            if (!connected.get() && isOpen()) {
                 //当前还没有连接上，则判断是否有重连任务
                 ReconnectTask task = reconnectTask;
                 if (task != null && task.isExpire()) {
@@ -934,7 +960,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
                     result = false;
                 }
-                if (!result && switcher.isOpened()) {
+                if (!result && isOpen()) {
                     //关闭状态只运行一次，运行状态一致重试
                     task.setRetryTime(SystemClock.now() + taskRetryInterval);
                     tasks.addLast(task);
@@ -944,7 +970,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
             }
             return waitTime;
         }
-
 
 
         /**
@@ -968,7 +993,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected void doClose(CompletableFuture<Void> future) {
             unregister().handle((v, t) -> {
-                if (!switcher.isOpened()) {
+                if (!isOpen()) {
                     //异步调用，判断这个时候处于关闭状态
                     disconnect().handle((c, r) -> {
                         if (r != null) {
@@ -1032,9 +1057,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @param futures
          */
-        protected <T extends SubscribeMeta> void unsubscribe(final List<CompletableFuture<URL>> futures,
-                                                             final Map<String, T> subscribes,
-                                                             final BiConsumer<URLKey, T> consumer) {
+        protected <T extends InnerSubscription> void unsubscribe(final List<CompletableFuture<URL>> futures,
+                                                                 final Map<String, T> subscribes,
+                                                                 final BiConsumer<URLKey, T> consumer) {
             if (subscribes.isEmpty()) {
                 return;
             }
@@ -1175,9 +1200,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url
-         * @param future
-         * @param callable
+         * @param url      url
+         * @param future   future
+         * @param callable 执行代码
          */
         public Task(URL url, CompletableFuture<URL> future, Callable<Boolean> callable) {
             this(url, future, callable, 0);
@@ -1186,10 +1211,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url
-         * @param future
-         * @param callable
-         * @param retryTime
+         * @param url       url
+         * @param future    future
+         * @param callable  执行代码
+         * @param retryTime 重试时间
          */
         public Task(URL url, CompletableFuture<URL> future, Callable<Boolean> callable, long retryTime) {
             this.url = url;
@@ -1222,41 +1247,30 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 重连任务
      */
-    protected class ReconnectTask implements Runnable {
+    protected static class ReconnectTask implements Runnable {
         /**
          * 结果
          */
-        protected CompletableFuture<Void> result;
-        /**
-         * 重试次数
-         */
-        protected long retryTimes;
-        /**
-         * 最大重连次数
-         */
-        protected int maxRetryTimes;
+        protected Runnable runnable;
         /**
          * 下次重试时间
          */
         protected long retryTime;
 
-        public ReconnectTask(final CompletableFuture<Void> result, final long retryTimes,
-                             final int maxRetryTimes, final long retryTime) {
-            this.result = result;
-            this.retryTimes = retryTimes;
-            this.maxRetryTimes = maxRetryTimes;
+        public ReconnectTask(final Runnable runnable, final long retryTime) {
+            this.runnable = runnable;
             this.retryTime = retryTime;
         }
 
         @Override
         public void run() {
-            reconnect(result, retryTimes, maxRetryTimes);
+            runnable.run();
         }
 
         /**
          * 是否过期
          *
-         * @return
+         * @return 过期标识
          */
         public boolean isExpire() {
             return retryTime <= SystemClock.now();
@@ -1264,11 +1278,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 订阅信息
+     * 内部订阅
      *
      * @param <T>
      */
-    protected static abstract class SubscribeMeta<T extends UpdateEvent<?>> extends URLKey implements EventHandler<T>, Closeable {
+    protected static abstract class InnerSubscription<T extends UpdateEvent<?>> extends URLKey implements EventHandler<T>, Closeable {
         /**
          * 当前数据版本，-1表示还没有初始化
          */
@@ -1301,13 +1315,12 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url       url
          * @param key       key
          * @param dirty     脏数据处理器
          * @param publisher 事件发布者
          */
-        public SubscribeMeta(final URL url, final String key, final Runnable dirty, final Publisher<T> publisher) {
-            super(url, key);
+        public InnerSubscription(final URLKey key, final Runnable dirty, final Publisher<T> publisher) {
+            super(key.getUrl(), key.getKey());
             this.dirty = dirty;
             this.publisher = publisher;
             this.publisher.start();
@@ -1369,7 +1382,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param handler 处理器
          * @return 成功标识
          */
-        public boolean addHandler(final EventHandler<T> handler) {
+        public synchronized boolean addHandler(final EventHandler<T> handler) {
             if (publisher.addHandler(handler)) {
                 //有全量数据
                 if (full && ready()) {
@@ -1387,7 +1400,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param cleaner 清理
          * @return 成功标识
          */
-        public boolean removeHandler(final EventHandler<T> handler, final Consumer<String> cleaner) {
+        public synchronized boolean removeHandler(final EventHandler<T> handler, final Consumer<String> cleaner) {
             if (publisher.removeHandler(handler)) {
                 if (publisher.size() == 0) {
                     cleaner.accept(key);
@@ -1422,9 +1435,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 集群订阅信息
+     * 内部集群订阅
      */
-    protected static class ClusterMeta extends AbstractRegistry.SubscribeMeta<ClusterEvent> implements ClusterHandler {
+    protected static class InnerClusterSubscription extends InnerSubscription<ClusterEvent> implements ClusterHandler {
         /**
          * 分片信息
          */
@@ -1437,16 +1450,14 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url       url
          * @param key       key
          * @param dirty     脏数据处理器
          * @param publisher 事件发布者
          */
-        public ClusterMeta(final URL url,
-                           final String key,
-                           final Runnable dirty,
-                           final Publisher<ClusterEvent> publisher) {
-            super(url, key, dirty, publisher);
+        public InnerClusterSubscription(final URLKey key,
+                                        final Runnable dirty,
+                                        final Publisher<ClusterEvent> publisher) {
+            super(key, dirty, publisher);
         }
 
         @Override
@@ -1580,9 +1591,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 配置订阅信息，确保先通知完整数据，再通知增量数据
+     * 内部配置订阅，确保先通知完整数据，再通知增量数据
      */
-    protected static class ConfigMeta extends SubscribeMeta<ConfigEvent> implements ConfigHandler {
+    protected static class InnerConfigSubscription extends InnerSubscription<ConfigEvent> implements ConfigHandler {
         /**
          * 全量配置信息
          */
@@ -1591,16 +1602,14 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url       url
          * @param key       key
          * @param dirty     脏数据处理器
          * @param publisher 事件发布者
          */
-        public ConfigMeta(final URL url,
-                          final String key,
-                          final Runnable dirty,
-                          final Publisher<ConfigEvent> publisher) {
-            super(url, key, dirty, publisher);
+        public InnerConfigSubscription(final URLKey key,
+                                       final Runnable dirty,
+                                       final Publisher<ConfigEvent> publisher) {
+            super(key, dirty, publisher);
         }
 
         @Override

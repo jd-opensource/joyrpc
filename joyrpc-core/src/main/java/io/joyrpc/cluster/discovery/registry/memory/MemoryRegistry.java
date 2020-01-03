@@ -140,7 +140,7 @@ public class MemoryRegistry extends AbstractRegistry {
             datum = values == null ? new HashMap<>() : new HashMap<>(values);
             newDatum = new Config(version, datum);
             if (ref.compareAndSet(oldDatum, newDatum)) {
-                InnerConfigSubscription meta = configs.get(key);
+                ConfigBooking meta = configs.get(key);
                 if (meta != null) {
                     meta.handle((new ConfigEvent(this, null, version, datum)));
                 }
@@ -155,7 +155,7 @@ public class MemoryRegistry extends AbstractRegistry {
         AtomicReference<Topology> ref = urls.computeIfAbsent(urlKey.getKey(), key -> new AtomicReference<>());
         long version = update(urlKey, ref, (urls, url) -> urls.add(url));
         if (version >= 0) {
-            InnerClusterSubscription meta = clusters.get(urlKey.getKey());
+            ClusterBooking meta = clusters.get(urlKey.getKey());
             if (meta != null) {
                 List<ShardEvent> shards = new ArrayList<>(1);
                 shards.add(new ShardEvent(createShard(urlKey.getUrl()), ShardEventType.ADD));
@@ -199,7 +199,7 @@ public class MemoryRegistry extends AbstractRegistry {
         if (ref != null) {
             long version = update(urlKey, ref, (urls, url) -> urls.remove(url));
             if (version >= 0) {
-                InnerClusterSubscription meta = clusters.get(urlKey.getKey());
+                ClusterBooking meta = clusters.get(urlKey.getKey());
                 if (meta != null) {
                     List<ShardEvent> shards = new ArrayList<>(1);
                     shards.add(new ShardEvent(createShard(urlKey.getUrl()), ShardEventType.DELETE));
@@ -213,7 +213,7 @@ public class MemoryRegistry extends AbstractRegistry {
 
     @Override
     protected CompletableFuture<Void> doSubscribe(final URLKey urlKey, final ClusterHandler handler) {
-        InnerClusterSubscription meta = clusters.get(urlKey.getKey());
+        ClusterBooking meta = clusters.get(urlKey.getKey());
         if (meta != null) {
             AtomicReference<Topology> ref = urls.get(urlKey.getKey());
             Topology topology = ref != null ? ref.get() : null;
@@ -229,7 +229,7 @@ public class MemoryRegistry extends AbstractRegistry {
 
     @Override
     protected CompletableFuture<Void> doSubscribe(final URLKey urlKey, final ConfigHandler handler) {
-        InnerConfigSubscription meta = configs.get(urlKey.getKey());
+        ConfigBooking meta = configs.get(urlKey.getKey());
         if (meta != null) {
             AtomicReference<Config> ref = configDatum.get(urlKey.getKey());
             Config config = ref != null ? ref.get() : null;

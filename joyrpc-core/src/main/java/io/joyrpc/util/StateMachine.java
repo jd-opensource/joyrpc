@@ -290,34 +290,6 @@ public class StateMachine<T extends StateMachine.Controller> {
         }
 
         /**
-         * 获取当前openFuture，如果当前openFuture已经结束则创建新的openFuture
-         *
-         * @return openFuture
-         */
-        public CompletableFuture<T> getOrNewOpenFuture() {
-            if (openFuture != null && !openFuture.isDone()) {
-                return openFuture;
-            }
-            CompletableFuture<T> result = new CompletableFuture<>();
-            openFuture = result;
-            return result;
-        }
-
-        /**
-         * 获取当前closeFuture，如果当前closeFuture已经结束则创建新的closeFuture
-         *
-         * @return closeFuture
-         */
-        public CompletableFuture<T> getOrNewCloseFuture() {
-            if (closeFuture != null && !closeFuture.isDone()) {
-                return closeFuture;
-            }
-            CompletableFuture<T> result = new CompletableFuture<>();
-            closeFuture = result;
-            return result;
-        }
-
-        /**
          * 关闭
          */
         public void close() {

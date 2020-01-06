@@ -112,7 +112,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected transient StateMachine<RegistryController<AbstractRegistry>> state = new StateMachine<>(this::create, null);
+    protected transient StateMachine<RegistryController<? extends AbstractRegistry>> state = new StateMachine<>(this::create, null);
 
     /**
      * 构造函数
@@ -155,7 +155,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      *
      * @return 新建的控制器
      */
-    protected RegistryController<AbstractRegistry> create() {
+    protected RegistryController<? extends AbstractRegistry> create() {
         return new RegistryController<>(this);
     }
 

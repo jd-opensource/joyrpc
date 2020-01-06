@@ -29,7 +29,6 @@ import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Event;
 import io.joyrpc.event.EventHandler;
@@ -51,11 +50,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.cluster.event.ClusterEvent.ShardEventType.ADD;
-import static io.joyrpc.constants.Constants.ALIAS_OPTION;
-import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 注册中心基类，实现Registry接口
@@ -298,7 +297,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected String getRegisterKey(final URL url) {
         //注册:协议+接口+别名+SIDE,生产者和消费者都需要注册
-        return url.toString(false, true, ALIAS_OPTION.getName(), Constants.ROLE_OPTION.getName());
+        return url.toString(false, true, ALIAS_OPTION.getName(), ROLE_OPTION.getName());
     }
 
     /**
@@ -327,7 +326,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         } else {
             //接口配置订阅:协议+接口+别名+SIDE+配置类型
             URL u = url.add(TYPE, "config");
-            return u.toString(false, true, ALIAS_OPTION.getName(), Constants.ROLE_OPTION.getName(), TYPE);
+            return u.toString(false, true, ALIAS_OPTION.getName(), ROLE_OPTION.getName(), TYPE);
         }
     }
 
@@ -588,7 +587,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public void register(final Registion registion) {
             if (registers.putIfAbsent(registion.getKey(), registion) == null) {
-                addBookingTask(registers, registion, this::doRegister, 0);
+                addBookingTask(registers, registion, this::doRegister);
             }
         }
 
@@ -601,7 +600,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
         public void deregister(final Registion registion, final int maxRetries) {
             Registion remove = registers.remove(registion.getKey());
             if (remove != null) {
-                addCancelTask(registers, remove, this::doDeregister, 0, 0, maxRetries);
+                addNewTask(new Task(remove.getUrl(), remove.getFuture().getCloseFuture(), () -> doDeregister(remove),
+                        0, 0, maxRetries,
+                        t -> (t == null || retry(t)) && !registers.containsKey(remove.getKey())));
             }
         }
 
@@ -658,7 +659,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             subscriptions.compute(subscription.getKey(), (key, v) -> {
                 if (v == null) {
                     v = creationFunc.apply(subscription);
-                    addBookingTask(subscriptions, v, doFunc, 0);
+                    addBookingTask(subscriptions, v, doFunc);
                 } else {
                     v.addHandler(subscription.getHandler());
                 }
@@ -784,7 +785,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param task 任务
          */
         protected void addNewTask(final Task task) {
-            //TODO 是否要使用Timer对象
+            //TODO 重试的任务是否应该放在后面？
             tasks.offerFirst(task);
             if (waiter != null) {
                 waiter.wakeup();
@@ -797,89 +798,15 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param subscriptions 集合
          * @param subscription  订阅
          * @param function      执行函数
-         * @param retryTime     下次重试时间
          * @param <T>           泛型
          * @return 异步Future
          */
         protected <T extends StateKey> CompletableFuture<URL> addBookingTask(final Map<String, T> subscriptions,
                                                                              final T subscription,
-                                                                             final Function<T, CompletableFuture<Void>> function,
-                                                                             final long retryTime) {
+                                                                             final Function<T, CompletableFuture<Void>> function) {
             CompletableFuture<URL> future = subscription.getFuture().getOpenFuture();
-            if (!isOpen()) {
-                future.completeExceptionally(new IllegalStateException("registry is closed."));
-            } else {
-                addNewTask(new Task(subscription.getUrl(), future, () -> {
-                    //判断订阅是否存在
-                    if (!subscriptions.containsKey(subscription.getKey())) {
-                        future.completeExceptionally(new IllegalStateException("url is removed."));
-                    } else if (!isOpen()) {
-                        future.completeExceptionally(new IllegalStateException("registry is closed."));
-                    } else {
-                        function.apply(subscription).whenComplete((v, e) -> {
-                            if (e != null) {
-                                //异常重试
-                                if (isOpen() && subscriptions.containsKey(subscription.getKey())) {
-                                    addBookingTask(subscriptions, subscription, function, SystemClock.now() + registry.taskRetryInterval);
-                                } else {
-                                    future.completeExceptionally(e);
-                                }
-                            } else if (!subscriptions.containsKey(subscription.getKey())) {
-                                future.completeExceptionally(new IllegalStateException("url is removed."));
-                            } else if (!isOpen()) {
-                                future.completeExceptionally(new IllegalStateException("registry is closed."));
-                            } else {
-                                future.complete(subscription.getUrl());
-                            }
-                        });
-                    }
-                    return true;
-                }, retryTime));
-            }
-            return future;
-        }
-
-        /**
-         * 添加取消订阅任务
-         *
-         * @param subscriptions 订阅集合
-         * @param subscription  订阅
-         * @param function      函数
-         * @param retryTime     重试时间
-         * @param retries       当前重试次数
-         * @param maxRetries    最大重试次数
-         * @param <M>           泛型
-         * @return 异步Future
-         */
-        protected <M extends StateKey> CompletableFuture<URL> addCancelTask(final Map<String, M> subscriptions,
-                                                                            final M subscription,
-                                                                            final Function<M, CompletableFuture<Void>> function,
-                                                                            final long retryTime,
-                                                                            final int retries,
-                                                                            final int maxRetries) {
-            CompletableFuture<URL> future = subscription.getFuture().getCloseFuture();
-            addNewTask(new Task(subscription.getUrl(), future, () -> {
-                if (!subscriptions.containsKey(subscription.getKey())) {
-                    function.apply(subscription).whenComplete((v, e) -> {
-                        //取消订阅的时候，需要判断异常
-                        if (e != null) {
-                            if (retry(e) && isOpen() && !subscriptions.containsKey(subscription.getKey())) {
-                                int count = retries + 1;
-                                if (maxRetries >= 0 && count > maxRetries) {
-                                    future.completeExceptionally(e);
-                                    return;
-                                }
-                                addCancelTask(subscriptions, subscription, function, SystemClock.now() + registry.taskRetryInterval, count, maxRetries);
-                            } else {
-                                future.completeExceptionally(e);
-                            }
-                        } else {
-                            future.complete(subscription.getUrl());
-                        }
-                    });
-                }
-                return true;
-            }, retryTime));
+            addNewTask(new Task(subscription.getUrl(), future, () -> function.apply(subscription),
+                    0, 0, -1, r -> subscriptions.containsKey(subscription.getKey())));
             return future;
         }
 
@@ -932,7 +859,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             Task task = tasks.peekFirst();
             if (task != null) {
                 //判断是否超时
-                waitTime = task.retryTime - SystemClock.now();
+                waitTime = task.getRetryTime() - SystemClock.now();
             } else {
                 //没有任务则等待10秒
                 waitTime = 10000L;
@@ -941,8 +868,19 @@ public abstract class AbstractRegistry implements Registry, Configure {
             if (waitTime <= 0) {
                 //有其它线程并发插入头部，pollFirst可能拿到其它对象
                 task = tasks.pollFirst();
+                //再次判断
                 if (task != null) {
-                    execute(task);
+                    //判断是否超时
+                    waitTime = task.getRetryTime() - SystemClock.now();
+                    if (waitTime <= 0) {
+                        execute(task);
+                    } else {
+                        //重新入队
+                        tasks.addFirst(task);
+                    }
+                } else {
+                    //没有任务则等待10秒
+                    waitTime = 10000L;
                 }
             }
             return waitTime;
@@ -954,25 +892,47 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param task 任务
          */
         protected void execute(final Task task) {
-            boolean result;
-            try {
-                //执行任务
-                result = task.call();
-            } catch (Exception e) {
-                //执行出错，则重试
-                logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
-                result = false;
-            }
-            if (!result) {
-                if (isOpen()) {
-                    //关闭状态只运行一次，运行状态一致重试
-                    task.setRetryTime(SystemClock.now() + registry.taskRetryInterval);
-                    tasks.addLast(task);
-                } else {
-                    task.completeExceptionally(new IllegalStateException("illegal state."));
-                }
+            if (!isOpen()) {
+                task.completeExceptionally(new IllegalStateException("registry is closed."));
+            } else if (!task.test(null)) {
+                task.completeExceptionally(new IllegalStateException("url is removed."));
             } else {
-                task.complete();
+                try {
+                    //执行任务
+                    task.call().whenComplete((v, t) -> {
+                        if (!isOpen()) {
+                            task.completeExceptionally(new IllegalStateException("registry is closed."));
+                        } else if (!task.test(t)) {
+                            task.completeExceptionally(t == null ? new IllegalStateException("url is removed.") : t);
+                        } else if (t != null) {
+                            if (task.getMaxRetries() < 0 || task.getRetry() < task.getMaxRetries()) {
+                                //重试
+                                task.setRetryTime(SystemClock.now() + registry.taskRetryInterval);
+                                task.setRetry(task.getRetry() + 1);
+                                tasks.addLast(task);
+                            } else {
+                                task.completeExceptionally(t);
+                            }
+                        } else {
+                            task.complete();
+                        }
+                    });
+                } catch (Throwable e) {
+                    //执行出错，则重试
+                    logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
+                    if (!isOpen()) {
+                        task.completeExceptionally(new IllegalStateException("registry is closed."));
+                    } else if (!task.test(e)) {
+                        task.completeExceptionally(e);
+                    } else if (task.getMaxRetries() < 0 || task.getRetry() < task.getMaxRetries()) {
+                        //重试
+                        task.setRetryTime(SystemClock.now() + registry.taskRetryInterval);
+                        task.setRetry(task.getRetry() + 1);
+                        tasks.addLast(task);
+                    } else {
+                        task.completeExceptionally(e);
+                    }
+                }
             }
         }
 
@@ -984,9 +944,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected CompletableFuture<Void> recover() {
             List<CompletableFuture<URL>> futures = new LinkedList<>();
-            registers.forEach((k, v) -> futures.add(addBookingTask(registers, v, this::doRegister, 0)));
-            clusters.forEach((k, v) -> futures.add(addBookingTask(clusters, v, m -> doSubscribe(m, m), 0)));
-            configs.forEach((k, v) -> futures.add(addBookingTask(configs, v, m -> doSubscribe(m, m), 0)));
+            registers.forEach((k, v) -> futures.add(addBookingTask(registers, v, this::doRegister)));
+            clusters.forEach((k, v) -> futures.add(addBookingTask(clusters, v, m -> doSubscribe(m, m))));
+            configs.forEach((k, v) -> futures.add(addBookingTask(configs, v, m -> doSubscribe(m, m))));
             return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
                     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         }
@@ -1016,21 +976,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected CompletableFuture<Void> deregister() {
             List<CompletableFuture<URL>> futures = new LinkedList<>();
-            registers.forEach((k, v) -> {
-                CompletableFuture<URL> future = v.getFuture().getOpenFuture();
-                //判断是否注册成功过
-                if (!future.completeExceptionally(new IllegalStateException("illegal state."))
-                        && !future.isCancelled() && !future.isCompletedExceptionally()) {
-                    future = v.getFuture().getCloseFuture();
-                    addNewTask(new Task(v.getUrl(), future, () -> {
-                        doDeregister(v);
-                        return true;
-                    }));
-                    futures.add(future);
-                }
-            });
-            unsubscribe(futures, clusters, this::doUnsubscribe);
-            unsubscribe(futures, configs, this::doUnsubscribe);
+            unsubscribe(futures, registers, this::doDeregister);
+            unsubscribe(futures, clusters, booking -> doUnsubscribe(booking, booking));
+            unsubscribe(futures, configs, booking -> doUnsubscribe(booking, booking));
             return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
                     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         }
@@ -1040,23 +988,23 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @param futures       Future集合
          * @param subscriptions 订阅
-         * @param consumer      消费者
+         * @param function      消费者
          */
-        protected <T extends Booking<?>> void unsubscribe(final List<CompletableFuture<URL>> futures,
-                                                          final Map<String, T> subscriptions,
-                                                          final BiConsumer<URLKey, T> consumer) {
+        protected <T extends StateKey> void unsubscribe(final List<CompletableFuture<URL>> futures,
+                                                        final Map<String, T> subscriptions,
+                                                        final Function<T, CompletableFuture<Void>> function) {
             subscriptions.forEach((k, v) -> {
-                CompletableFuture<URL> future = v.getFuture().getOpenFuture();
+                CompletableFuture<URL> openFuture = v.getFuture().getOpenFuture();
+                CompletableFuture<URL> closeFuture = v.getFuture().getCloseFuture();
                 //判断是否订阅成功过
-                if (!future.completeExceptionally(new IllegalStateException()) && !future.isCompletedExceptionally() && !future.isCancelled()) {
-                    future = v.getFuture().getCloseFuture();
-                    addNewTask(new Task(v.getUrl(), future, () -> {
-                        //meta实现了URLKey
-                        consumer.accept(v, v);
-                        return true;
-                    }));
-                    futures.add(future);
+                if ((openFuture.isDone() || !openFuture.completeExceptionally(new IllegalStateException()))
+                        && !openFuture.isCompletedExceptionally()
+                        && !openFuture.isCancelled()) {
+                    addNewTask(new Task(v.getUrl(), closeFuture, () -> function.apply(v), 0, 0, 0, null));
+                } else {
+                    closeFuture.complete(v.getUrl());
                 }
+                futures.add(closeFuture);
             });
         }
 
@@ -1187,53 +1135,88 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 重试任务
      */
-    protected static class Task implements Callable<Boolean> {
-        //URL
+    protected static class Task implements Callable<CompletableFuture<Void>> {
+        /**
+         * URL
+         */
         protected URL url;
-        //Future
+        /**
+         * Future
+         */
         protected CompletableFuture<URL> future;
-        //执行
-        protected Callable<Boolean> callable;
-        //下次重试时间
+        /**
+         * 执行
+         */
+        protected Callable<CompletableFuture<Void>> callable;
+        /**
+         * 下次重试时间
+         */
         protected long retryTime;
+        /**
+         * 重试次数
+         */
+        protected int retry;
+        /**
+         * 最大重试次数
+         */
+        protected int maxRetries;
+        /**
+         * 判断是否要重试
+         */
+        protected Predicate<Throwable> predicate;
 
         /**
          * 构造函数
          *
-         * @param url      url
-         * @param future   future
-         * @param callable 执行代码
+         * @param url        url
+         * @param future     future
+         * @param callable   执行代码
+         * @param retryTime  重试时间
+         * @param retry      重试次数
+         * @param maxRetries 最大重试次数<br/>
+         *                   <li>>0 最大重试次数</li>
+         *                   <li>=0 不重试</li>
+         *                   <li><0 永久重试</li>
+         * @param predicate  异常断言
          */
-        public Task(URL url, CompletableFuture<URL> future, Callable<Boolean> callable) {
-            this(url, future, callable, 0);
-        }
-
-        /**
-         * 构造函数
-         *
-         * @param url       url
-         * @param future    future
-         * @param callable  执行代码
-         * @param retryTime 重试时间
-         */
-        public Task(URL url, CompletableFuture<URL> future, Callable<Boolean> callable, long retryTime) {
+        public Task(URL url, CompletableFuture<URL> future, Callable<CompletableFuture<Void>> callable, long retryTime,
+                    int retry, int maxRetries, Predicate<Throwable> predicate) {
             this.url = url;
             this.future = future;
             this.callable = callable;
             this.retryTime = retryTime;
+            this.retry = retry;
+            this.maxRetries = maxRetries;
+            this.predicate = predicate;
+        }
+
+        public long getRetryTime() {
+            return retryTime;
         }
 
         public void setRetryTime(long retryTime) {
             this.retryTime = retryTime;
         }
 
+        public int getRetry() {
+            return retry;
+        }
+
+        public void setRetry(int retry) {
+            this.retry = retry;
+        }
+
+        public int getMaxRetries() {
+            return maxRetries;
+        }
+
+        public boolean test(Throwable throwable) {
+            return predicate == null || predicate.test(throwable);
+        }
+
         @Override
-        public Boolean call() throws Exception {
-            if (callable.call()) {
-                future.complete(url);
-                return true;
-            }
-            return false;
+        public CompletableFuture<Void> call() throws Exception {
+            return callable.call();
         }
 
         /**

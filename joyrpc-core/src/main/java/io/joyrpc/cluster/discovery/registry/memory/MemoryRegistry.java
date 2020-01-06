@@ -62,7 +62,7 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 构造函数
      *
-     * @param url
+     * @param url url
      */
     public MemoryRegistry(URL url) {
         this(null, url, null);
@@ -71,8 +71,8 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
+     * @param name 名称
+     * @param url  url
      */
     public MemoryRegistry(String name, URL url) {
         this(name, url, null);
@@ -81,9 +81,9 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
-     * @param backup
+     * @param name   名称
+     * @param url    url
+     * @param backup 备份
      */
     public MemoryRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
@@ -110,8 +110,8 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 更新配置
      *
-     * @param url
-     * @param values
+     * @param url    url
+     * @param values 配置
      */
     public void update(final URL url, final Map<String, String> values) {
         if (url == null) {

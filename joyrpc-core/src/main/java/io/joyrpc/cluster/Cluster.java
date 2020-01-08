@@ -643,6 +643,10 @@ public class Cluster {
          */
         protected void onClusterEvent(final ClusterEvent event) {
             if (event == null || !isOpened()) {
+                logger.warn(String.format("Cluster %s receive cluster event, but "
+                                + (event == null ? "event is null" : "controller was not opened")
+                                + ", cluster status is %s.",
+                        this.cluster.name, this.cluster.state.name()));
                 return;
             }
             offer(() -> {

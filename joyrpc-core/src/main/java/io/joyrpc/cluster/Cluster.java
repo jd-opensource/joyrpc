@@ -61,6 +61,7 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
 import static io.joyrpc.util.Status.CLOSED;
+import static io.joyrpc.util.StringUtils.toSimpleString;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -347,7 +348,7 @@ public class Cluster {
     /**
      * 是否发生变更
      *
-     * @param shard 分片
+     * @param shard    分片
      * @param previous 前一个节点
      * @return 变更标识
      */
@@ -743,6 +744,7 @@ public class Cluster {
 
         /**
          * 获取节点处理器
+         *
          * @return 节点处理器
          */
         public NodeHandler getNodeHandler() {
@@ -960,11 +962,11 @@ public class Cluster {
                 if (e == null) {
                     logger.warn(String.format("Failed connecting node %s.", node.getName()));
                 } else if (e instanceof TransportException) {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
                 } else if (e instanceof ProtocolException) {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
                 } else if (e instanceof AuthenticationException) {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()));
+                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
                 } else {
                     logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
                 }

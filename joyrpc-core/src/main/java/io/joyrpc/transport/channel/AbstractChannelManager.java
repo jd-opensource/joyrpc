@@ -456,22 +456,18 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public void run() {
-            switch (channel.status) {
-                case OPENED:
-                    //只有在该状态下执行，手工关闭状态不要触发
-                    try {
-                        trigger.run();
-                    } catch (Exception e) {
-                        logger.error(String.format("Error occurs while trigger heartbeat to %s, caused by: %s",
-                                Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
-                    }
-                    time = SystemClock.now() + interval;
-                    timer().add(this);
-                default:
-                    logger.debug(String.format("Channel %s is %s, but heartbeat task is running now.",
-                            Channel.toString(channel.getRemoteAddress()), channel.status.name()));
-
+            if (channel.status == OPENED) {//只有在该状态下执行，手工关闭状态不要触发
+                try {
+                    trigger.run();
+                } catch (Exception e) {
+                    logger.error(String.format("Error occurs while trigger heartbeat to %s, caused by: %s",
+                            Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+                }
+                time = SystemClock.now() + interval;
+                timer().add(this);
             }
+            logger.debug(String.format("Heartbeat task was run， channel %s status is %s.",
+                    Channel.toString(channel.getRemoteAddress()), channel.status.name()));
         }
     }
 

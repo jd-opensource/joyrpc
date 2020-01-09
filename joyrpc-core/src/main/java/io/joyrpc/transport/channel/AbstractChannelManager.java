@@ -35,6 +35,8 @@ import io.joyrpc.transport.transport.ClientTransport;
 import io.joyrpc.util.Status;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Optional;
@@ -55,6 +57,8 @@ import static io.joyrpc.util.Timer.timer;
  * @date: 2019/3/7
  */
 public abstract class AbstractChannelManager implements ChannelManager {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractChannelManager.class);
 
     /**
      * channel
@@ -455,9 +459,17 @@ public abstract class AbstractChannelManager implements ChannelManager {
             switch (channel.status) {
                 case OPENED:
                     //只有在该状态下执行，手工关闭状态不要触发
-                    trigger.run();
+                    try {
+                        trigger.run();
+                    } catch (Exception e) {
+                        logger.error(String.format("Error occurs while trigger heartbeat to %s, caused by: %s",
+                                Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+                    }
                     time = SystemClock.now() + interval;
                     timer().add(this);
+                default:
+                    logger.debug(String.format("Channel %s is %s, but heartbeat task is running now.",
+                            Channel.toString(channel.getRemoteAddress()), channel.status.name()));
 
             }
         }

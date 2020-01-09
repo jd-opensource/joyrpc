@@ -464,10 +464,15 @@ public abstract class AbstractChannelManager implements ChannelManager {
                             Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
                 }
                 time = SystemClock.now() + interval;
-                timer().add(this);
+                try {
+                    timer().add(this);
+                } catch (Exception e) {
+                    logger.error(String.format("Error occurs while add heartbeat task for %s, caused by: %s",
+                            Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+                }
             }
-            logger.debug(String.format("Heartbeat task was run， channel %s status is %s.",
-                    Channel.toString(channel.getRemoteAddress()), channel.status.name()));
+            logger.debug(String.format("Heartbeat task was run, channel %s status is %s, next time is %d.",
+                    Channel.toString(channel.getRemoteAddress()), channel.status.name(), time));
         }
     }
 

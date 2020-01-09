@@ -398,7 +398,13 @@ public abstract class AbstractServerTransport implements ServerTransport {
     protected void addChannel(final Channel channel, final ChannelTransport transport) {
         if (channel != null && transport != null) {
             transports.put(channel, transport);
-            timer().add(new EvictSessionTask(channel));
+            try {
+                timer().add(new EvictSessionTask(channel));
+            } catch (Exception e) {
+                logger.error(String.format("Error occurs while add evict session task for channel %s,  caused by: %s",
+                        Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+                throw e;
+            }
         }
     }
 
@@ -449,7 +455,13 @@ public abstract class AbstractServerTransport implements ServerTransport {
         @Override
         public void run() {
             if (channel.isActive()) {
-                channel.evictSession();
+                try {
+                    channel.evictSession();
+                } catch (Exception e) {
+                    logger.error(
+                            String.format("Error occurs while run evict session task for channel %s,  caused by: %s",
+                                    Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+                }
                 timer().add(this);
             }
         }

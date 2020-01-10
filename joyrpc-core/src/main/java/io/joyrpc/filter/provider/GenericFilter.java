@@ -24,6 +24,7 @@ import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.constants.ExceptionCode;
+import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.GenericException;
 import io.joyrpc.exception.LafException;
@@ -37,10 +38,12 @@ import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GENERIC_SERIALIZER;
 import static io.joyrpc.codec.serialization.GenericSerializer.STANDARD;
+import static io.joyrpc.constants.Constants.GENERIC_OPTION;
 
 /**
  * @description: 服务端的泛化调用过滤器<br>
@@ -59,10 +62,18 @@ public class GenericFilter extends AbstractProviderFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        // 如果是generic请求，
+
         if (!invocation.isGeneric()) {
+            // 如果不是generic请求，直接执行下一filter
             return invoker.invoke(request);
+        } else {
+            //移掉RequestContext中的generic属性，防止在A调B调C的场景中，generic属性传递下去
+            RequestContext context = request.getContext();
+            context = context == null ? RequestContext.getContext() : context;
+            context.removeAttachment(GENERIC_OPTION.getName());
         }
+
+
         CompletableFuture<Result> future = null;
         GenericSerializer[] serializers = new GenericSerializer[1];
         //把泛化调用进行标准化

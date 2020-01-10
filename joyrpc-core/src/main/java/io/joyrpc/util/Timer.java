@@ -23,7 +23,11 @@ package io.joyrpc.util;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.thread.NamedThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -37,6 +41,9 @@ import static io.joyrpc.constants.Constants.TIMER_THREADS;
  * 时间轮调度器
  */
 public class Timer {
+
+    private final static Logger logger = LoggerFactory.getLogger(Timer.class);
+
     /**
      * 默认定时器
      */
@@ -157,7 +164,11 @@ public class Timer {
                         }
                     }
                 } catch (InterruptedException e) {
+                    logger.error(e.getMessage(), e);
                     break;
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                    throw e;
                 }
             }
         });
@@ -529,6 +540,10 @@ public class Timer {
          * 根节点
          */
         protected Task root = new Task("root", -1L, null, null, null);
+        /**
+         * 将要处理的task
+         */
+        protected Deque<Task> flushTasks = new LinkedList<>();
 
         /**
          * 构造函数
@@ -581,10 +596,14 @@ public class Timer {
             Task task = root.next;
             while (task != root) {
                 remove(task);
-                consumer.accept(task);
+                flushTasks.add(task);
                 task = root.next;
             }
             expiration = -1L;
+            Task flushTask;
+            while ((flushTask = flushTasks.poll()) != null) {
+                consumer.accept(flushTask);
+            }
         }
 
         @Override

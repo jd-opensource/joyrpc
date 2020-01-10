@@ -35,6 +35,7 @@ import io.joyrpc.transport.codec.ProtocolAdapter;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Status;
+import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -431,6 +432,14 @@ public abstract class AbstractServerTransport implements ServerTransport {
          * 任务名称
          */
         protected String name;
+        /**
+         * 清理时间
+         */
+        protected long time;
+        /**
+         * 清理时间间隔
+         */
+        protected int interval = 10000;
 
         /**
          * 构造函数
@@ -440,6 +449,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
         public EvictSessionTask(Channel channel) {
             this.channel = channel;
             this.name = this.getClass().getSimpleName() + "-" + Channel.toString(channel.getRemoteAddress());
+            this.time = SystemClock.now() + interval;
         }
 
         @Override
@@ -449,7 +459,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
 
         @Override
         public long getTime() {
-            return 10000L;
+            return time;
         }
 
         @Override
@@ -462,6 +472,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
                             String.format("Error occurs while run evict session task for channel %s,  caused by: %s",
                                     Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
                 }
+                time = SystemClock.now() + interval;
                 timer().add(this);
             }
         }

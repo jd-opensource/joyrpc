@@ -26,8 +26,8 @@ import io.joyrpc.thread.NamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Deque;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -540,10 +540,6 @@ public class Timer {
          * 根节点
          */
         protected Task root = new Task("root", -1L, null, null, null);
-        /**
-         * 将要处理的task
-         */
-        protected Deque<Task> flushTasks = new LinkedList<>();
 
         /**
          * 构造函数
@@ -593,17 +589,15 @@ public class Timer {
          * @param consumer 消费者
          */
         protected void flush(final Consumer<Task> consumer) {
+            List<Task> ts = new LinkedList<>();
             Task task = root.next;
             while (task != root) {
                 remove(task);
-                flushTasks.add(task);
+                ts.add(task);
                 task = root.next;
             }
             expiration = -1L;
-            Task flushTask;
-            while ((flushTask = flushTasks.poll()) != null) {
-                consumer.accept(flushTask);
-            }
+            ts.forEach(consumer);
         }
 
         @Override

@@ -24,7 +24,7 @@
   
   - 增加了处理链构造器扩展点FilterChainFactory
   
-  - 优化cluster初始化连接逻辑，check设置为false，则不用等待初始化连接成功，建连操作执行完后就ready
+  - 优化cluster初始化连接逻辑，若check设置为false（默认值改为true），则不用等待初始化连接成功，建连操作执行完后就ready
   
 - Springboot
 

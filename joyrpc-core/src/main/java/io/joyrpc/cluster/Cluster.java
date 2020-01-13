@@ -964,15 +964,15 @@ public class Cluster {
             } else {
                 Throwable e = result.getThrowable();
                 if (e == null) {
-                    logger.warn(String.format("Failed connecting node %s.", node.getName()));
+                    logger.error(String.format("Failed connecting node %s.", node.getName()));
                 } else if (e instanceof TransportException) {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
                 } else if (e instanceof ProtocolException) {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
                 } else if (e instanceof AuthenticationException) {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
                 } else {
-                    logger.warn(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
                 }
                 onNodeDisconnect(result.getResult(), cluster.getRetryTime(e));
             }

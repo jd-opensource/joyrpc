@@ -24,6 +24,8 @@
   
   - 增加了处理链构造器扩展点FilterChainFactory
   
+  - 优化cluster初始化连接逻辑，check设置为false，则不用等待初始化连接成功，建连操作执行完后就ready
+  
 - Springboot
 
   - 处理启动时候的几个Warn信息

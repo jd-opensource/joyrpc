@@ -60,6 +60,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
+import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.util.Status.CLOSED;
 import static io.joyrpc.util.StringUtils.toSimpleString;
 import static io.joyrpc.util.Timer.timer;
@@ -132,6 +133,10 @@ public class Cluster {
      */
     protected long initTimeout;
     /**
+     * 是否验证初始化建连（即初始化连接超时则启动失败）
+     */
+    protected boolean check;
+    /**
      * 是否启用SSL
      */
     protected boolean sslEnable;
@@ -193,6 +198,7 @@ public class Cluster {
         this.initSize = url.getInteger(Constants.INIT_SIZE_OPTION);
         this.minSize = url.getInteger(Constants.MIN_SIZE_OPTION);
         this.initTimeout = url.getLong(Constants.INIT_TIMEOUT_OPTION);
+        this.check = url.getBoolean(Constants.CHECK_OPTION);
         this.reconnectInterval = url.getLong(RECONNECT_INTERVAL);
         this.sslEnable = url.getBoolean(Constants.SSL_ENABLE);
         //创建仪表盘
@@ -565,6 +571,10 @@ public class Cluster {
          * 补充节点的名称
          */
         protected final String supplyTask;
+        /**
+         * check任务
+         */
+        protected CheckTask checkTask;
 
         /**
          * 构造函数
@@ -582,9 +592,14 @@ public class Cluster {
                 timer().add("ReadyTask " + cluster.name, SystemClock.now(), () -> ready.accept(new AsyncResult<>(this)));
             } else {
                 this.trigger = new Trigger("ReadyTask " + cluster.name, cluster.initSize, cluster.initTimeout,
+                        cluster.check,
                         () -> ready.accept(new AsyncResult<>(this)),
                         () -> ready.accept(new AsyncResult<>(this,
                                 new InitializationException("initialization timeout."))));
+                if (!cluster.check) {
+                    this.checkTask = new CheckTask("Check-" + cluster.name,
+                            SystemClock.now() + cluster.initTimeout, trigger);
+                }
             }
         }
 
@@ -668,6 +683,9 @@ public class Cluster {
                 if (add > 0) {
                     //新增了节点，重新选举
                     candidate();
+                } else if (!cluster.check && event.getType() == FULL) {
+                    //check为false，事件类型为FULL，直接触发ready
+                    trigger.fireReady();
                 }
             });
         }
@@ -815,8 +833,9 @@ public class Cluster {
                     result.getBackups().size(),
                     result.getDiscards().size()
             ));*/
+            final AtomicInteger semaphore = new AtomicInteger(result.getCandidates().size());
             //命中节点建立连接
-            candidate(result.getCandidates(), (s, n) -> connect(n), Node::getWeight);
+            candidate(result.getCandidates(), (s, n) -> connect(n, r -> semaphore.decrementAndGet()), Node::getWeight);
             //热备节点建立连接
             //TODO 热备节点没有流量，影响自适应评分
             candidate(result.getStandbys(), (s, n) -> connect(n), s -> 0);
@@ -825,6 +844,10 @@ public class Cluster {
             candidate(result.getDiscards(), (s, n) -> discard(n), null);
             //重置可用节点，因为有些节点可能在这次选举中被放弃了
             readys = new ArrayList<>(connects.values());
+            //如果check为false，添加定时任务，当所有节点建完连接之后，无论成功还是失败，直接fire
+            if (checkTask != null && checkTask.initSemaphore(semaphore) && readys.isEmpty()) {
+                timer().add(checkTask);
+            }
         }
 
         /**
@@ -881,6 +904,16 @@ public class Cluster {
          * @param node 节点
          */
         protected void connect(final Node node) {
+            connect(node, null);
+        }
+
+        /**
+         * 打开节点
+         *
+         * @param node     节点
+         * @param consumer consumer
+         */
+        protected void connect(final Node node, Consumer<AsyncResult<Node>> consumer) {
             if (!isOpened()) {
                 return;
             }
@@ -894,6 +927,9 @@ public class Cluster {
                         node.close(null);
                     }
                     offer(() -> onNodeOpen(r));
+                    if (consumer != null) {
+                        consumer.accept(r);
+                    }
                 });
             }
         }
@@ -1090,6 +1126,90 @@ public class Cluster {
     }
 
     /**
+     * check 任务
+     */
+    protected static class CheckTask implements Timer.TimeTask {
+
+        /**
+         * 任务名称
+         */
+        protected String name;
+        /**
+         * 清理时间
+         */
+        protected long time;
+        /**
+         * 清理时间间隔
+         */
+        protected int interval = 1000;
+        /**
+         * 任务结束时间
+         */
+        protected long endTime;
+        /**
+         * 信号量
+         */
+        protected AtomicInteger semaphore;
+        /**
+         * trigger
+         */
+        protected Trigger trigger;
+
+        /**
+         * 构造方法
+         *
+         * @param name
+         * @param endTime
+         */
+        public CheckTask(String name, long endTime, Trigger trigger) {
+            this.name = name;
+            this.time = SystemClock.now() + interval;
+            this.endTime = endTime;
+            this.trigger = trigger;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public long getTime() {
+            return time;
+        }
+
+        /**
+         * 初始化信号量
+         *
+         * @param semaphore
+         * @return
+         */
+        public boolean initSemaphore(AtomicInteger semaphore) {
+            if (this.semaphore == null) {
+                synchronized (this) {
+                    if (this.semaphore == null) {
+                        this.semaphore = semaphore;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public void run() {
+            if (semaphore.get() <= 0) {
+                trigger.fireReady();
+            } else {
+                time = SystemClock.now() + interval;
+                if (time < endTime) {
+                    timer().add(this);
+                }
+            }
+        }
+    }
+
+    /**
      * 延迟连接节点
      */
     protected static class DelayedNode implements Delayed {
@@ -1141,6 +1261,10 @@ public class Cluster {
          */
         protected AtomicLong semaphore;
         /**
+         * 初始化连接数
+         */
+        protected int initSize;
+        /**
          * 超时时间
          */
         protected long timeout;
@@ -1165,19 +1289,20 @@ public class Cluster {
          * 构造函数
          *
          * @param name        名称
-         * @param semaphore   信号量
+         * @param initSize    信号量
          * @param timeout     超时时间
          * @param ready       就绪处理器
          * @param whenTimeout 超时处理器
          */
-        public Trigger(final String name, final int semaphore, final long timeout, final Runnable ready, final Runnable whenTimeout) {
-            this.semaphore = new AtomicLong(semaphore);
+        public Trigger(final String name, final int initSize, final long timeout, boolean check, final Runnable ready, final Runnable whenTimeout) {
+            this.initSize = initSize;
+            this.semaphore = new AtomicLong(initSize);
             this.ready = ready;
             this.timeout = timeout;
             this.whenTimeout = whenTimeout;
             if (timeout > 0) {
-                //超时检测
-                timer().add(name, SystemClock.now() + timeout, () -> fire(whenTimeout));
+                //超时检测，check为false，执行ready
+                timer().add(name, SystemClock.now() + timeout, () -> fire(check ? whenTimeout : ready));
             }
         }
 
@@ -1214,6 +1339,14 @@ public class Cluster {
                 return true;
             }
             return false;
+        }
+
+        /**
+         * 触发ready
+         */
+        protected void fireReady() {
+            semaphore.set(0L);
+            fire(ready);
         }
 
         /**

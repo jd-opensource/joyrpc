@@ -9,9 +9,9 @@ package io.joyrpc.context.injection.context;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -62,7 +62,7 @@ public class ContextTransmit implements Transmit {
         Map<String, Object> attachments = request.getPayLoad().getAttachments();
         if (attachments != null && !attachments.isEmpty()) {
             //复制所有非内部属性，内部处理了HIDDEN_KEY_SESSION
-            context.setAttachments(attachments, NONE_INTERNAL_KEY);
+            context.setAttachments(attachments, NONE_INTERNAL_KEY.and((o) -> !GENERIC_OPTION.getName().equals(o)));
             //复制内部属性，转换成隐藏属性
             attachments.forEach((k, v) -> {
                 if (INTERNAL_KEY.test(k)) {

@@ -176,10 +176,10 @@ public class StandardGenericSerializer implements GenericSerializer {
         Map<String, Object> result = new HashMap<>();
         history.put(pojo, result);
         result.put(CLASS, pojoClass.getName());
-        //读方法
-        for (Map.Entry<String, Method> entry : getGetter(pojoClass).entrySet()) {
+        //读方法 //TODO 暂时注释掉，防止get方法new出新对象，无限循环
+        /*for (Map.Entry<String, Method> entry : getGetter(pojoClass).entrySet()) {
             result.put(entry.getKey(), normalize(entry.getValue().invoke(pojo), history));
-        }
+        }*/
         int modifiers;
         //公共字段
         for (Field field : getFields(pojoClass)) {

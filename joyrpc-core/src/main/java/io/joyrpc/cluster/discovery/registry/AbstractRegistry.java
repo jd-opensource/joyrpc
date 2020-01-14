@@ -613,7 +613,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public void subscribe(final ClusterSubscription subscription) {
             //在锁里面
-            subscribe(clusters, subscription, this::createClusterBooking, m -> doSubscribe(m, m));
+            subscribe(clusters, subscription, this::createClusterBooking, this::doSubscribe);
         }
 
         /**
@@ -631,7 +631,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param subscription 订阅
          */
         public void subscribe(final ConfigSubscription subscription) {
-            subscribe(configs, subscription, this::createConfigBooking, m -> doSubscribe(m, m));
+            subscribe(configs, subscription, this::createConfigBooking, this::doSubscribe);
         }
 
         /**
@@ -945,8 +945,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
         protected CompletableFuture<Void> recover() {
             List<CompletableFuture<URL>> futures = new LinkedList<>();
             registers.forEach((k, v) -> futures.add(addBookingTask(registers, v, this::doRegister)));
-            clusters.forEach((k, v) -> futures.add(addBookingTask(clusters, v, m -> doSubscribe(m, m))));
-            configs.forEach((k, v) -> futures.add(addBookingTask(configs, v, m -> doSubscribe(m, m))));
+            clusters.forEach((k, v) -> futures.add(addBookingTask(clusters, v, this::doSubscribe)));
+            configs.forEach((k, v) -> futures.add(addBookingTask(configs, v, this::doSubscribe)));
             return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
                     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         }
@@ -977,8 +977,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
         protected CompletableFuture<Void> deregister() {
             List<CompletableFuture<URL>> futures = new LinkedList<>();
             unsubscribe(futures, registers, this::doDeregister);
-            unsubscribe(futures, clusters, booking -> doUnsubscribe(booking, booking));
-            unsubscribe(futures, configs, booking -> doUnsubscribe(booking, booking));
+            unsubscribe(futures, clusters, this::doUnsubscribe);
+            unsubscribe(futures, configs, this::doUnsubscribe);
             return futures.isEmpty() ? CompletableFuture.completedFuture(null) :
                     CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]));
         }
@@ -1049,40 +1049,40 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 集群订阅
          *
-         * @param url     url
-         * @param handler 处理器
+         * @param booking booking
+         * @return 异步Future
          */
-        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ClusterHandler handler) {
+        protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
             return CompletableFuture.completedFuture(null);
         }
 
         /**
          * 注销集群订阅
          *
-         * @param url     url
-         * @param handler 处理器
+         * @param booking booking
+         * @return 异步Future
          */
-        protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ClusterHandler handler) {
+        protected CompletableFuture<Void> doUnsubscribe(final ClusterBooking booking) {
             return CompletableFuture.completedFuture(null);
         }
 
         /**
          * 配置订阅操作
          *
-         * @param url     url
-         * @param handler 处理器
+         * @param booking booking
+         * @return 异步Future
          */
-        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ConfigHandler handler) {
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
             return CompletableFuture.completedFuture(null);
         }
 
         /**
          * 取消配置订阅操作
          *
-         * @param url     url
-         * @param handler 处理器
+         * @param booking booking
+         * @return 异步Future
          */
-        protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ConfigHandler handler) {
+        protected CompletableFuture<Void> doUnsubscribe(final ConfigBooking booking) {
             return CompletableFuture.completedFuture(null);
         }
 

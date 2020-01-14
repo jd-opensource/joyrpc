@@ -20,10 +20,8 @@ package io.joyrpc.cluster.discovery.registry.zk;
  * #L%
  */
 
-import io.joyrpc.cluster.Shard;
+import io.joyrpc.cluster.Shard.DefaultShard;
 import io.joyrpc.cluster.discovery.backup.Backup;
-import io.joyrpc.cluster.discovery.config.ConfigHandler;
-import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
@@ -33,8 +31,10 @@ import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
+import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.Futures;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -43,15 +43,15 @@ import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.x.async.AsyncCuratorFramework;
 import org.apache.curator.x.async.api.CreateOption;
+import org.apache.curator.x.async.api.DeleteOption;
 import org.apache.curator.x.async.api.ExistsOption;
 import org.apache.zookeeper.data.Stat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -66,7 +66,7 @@ import static org.apache.curator.x.async.api.CreateOption.setDataIfExists;
 import static org.apache.zookeeper.CreateMode.EPHEMERAL;
 
 /**
- * zk注册中心
+ * Zookeeper注册中心
  */
 public class ZKRegistry extends AbstractRegistry {
 
@@ -78,10 +78,6 @@ public class ZKRegistry extends AbstractRegistry {
     public static final URLOption<Integer> SESSION_TIMEOUT = new URLOption<>("sessionTimeout", 60000);
 
     /**
-     * zk异步Curator对象
-     */
-    protected AsyncCuratorFramework asyncCurator;
-    /**
      * 目标地址
      */
     protected String address;
@@ -89,6 +85,10 @@ public class ZKRegistry extends AbstractRegistry {
      * session过期时间
      */
     protected int sessionTimeout;
+    /**
+     * 连接超时时间
+     */
+    protected int connectionTimeout;
     /**
      * 根路径
      */
@@ -105,19 +105,19 @@ public class ZKRegistry extends AbstractRegistry {
      * 接口配置路径函数(接口级全局配置) /根路径/config/接口/consumer|provider
      */
     protected Function<URL, String> configFunction;
-    /**
-     * 集群节点订阅事件管理
-     */
-    protected SubscriberManager clusterManager;
-    /**
-     * 配置订阅事件管理
-     */
-    protected SubscriberManager configManager;
 
-    public ZKRegistry(String name, URL url, Backup backup) {
+    /**
+     * 构造函数
+     *
+     * @param name   名称
+     * @param url    url
+     * @param backup 备份
+     */
+    public ZKRegistry(final String name, final URL url, final Backup backup) {
         super(name, url, backup);
         this.address = url.getString(Constants.ADDRESS_OPTION);
         this.sessionTimeout = url.getInteger(SESSION_TIMEOUT);
+        this.connectionTimeout = url.getInteger(CONNECT_TIMEOUT_OPTION);
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
         if (root.charAt(0) != '/') {
             root = "/" + root;
@@ -128,133 +128,262 @@ public class ZKRegistry extends AbstractRegistry {
         this.serviceFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
         this.clusterFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
         this.configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + "/" + GlobalContext.getString(KEY_APPNAME);
-        this.clusterManager = new SubscriberManager(clusterFunction);
-        this.configManager = new SubscriberManager(configFunction);
     }
 
     @Override
-    protected CompletableFuture<Void> connect() {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        try {
-            CuratorFramework cf = CuratorFrameworkFactory.builder()
-                    .connectString(address)
-                    .sessionTimeoutMs(sessionTimeout)
-                    .connectionTimeoutMs(sessionTimeout)
-                    .retryPolicy(new ExponentialBackoffRetry(1000, 3))
-                    .build();
-            cf.start();
-            cf.getConnectionStateListenable().addListener((curator, state) -> {
-                if (state.isConnected()) {
-                    logger.warn("zk connection state is changed to " + state + ", ZKRegistry while be recover.");
-                    recover();
-                } else {
-                    logger.warn("zk connection state is changed to " + state + ".");
-                }
+    protected RegistryController<? extends AbstractRegistry> create() {
+        return new ZKController(this);
+    }
+
+    /**
+     * ZK控制器
+     */
+    protected static class ZKController extends RegistryController<ZKRegistry> {
+
+        /**
+         * zk异步Curator对象
+         */
+        protected AsyncCuratorFramework curator;
+
+        /**
+         * 构造函数
+         *
+         * @param registry 注册中心
+         */
+        public ZKController(ZKRegistry registry) {
+            super(registry);
+        }
+
+        @Override
+        protected ClusterBooking createClusterBooking(final URLKey key) {
+            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()));
+        }
+
+        @Override
+        protected ConfigBooking createConfigBooking(final URLKey key) {
+            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()));
+        }
+
+        @Override
+        protected CompletableFuture<Void> doConnect() {
+            return Futures.call(future -> {
+                CuratorFramework client = CuratorFrameworkFactory.builder().connectString(registry.address)
+                        .sessionTimeoutMs(registry.sessionTimeout)
+                        .connectionTimeoutMs(registry.connectionTimeout)
+                        .retryPolicy(new ExponentialBackoffRetry(1000, 3))
+                        .build();
+                client.start();
+                client.getConnectionStateListenable().addListener((curator, state) -> {
+                    if (state.isConnected()) {
+                        logger.warn("zk connection state is changed to " + state + ".");
+                        future.complete(null);
+                    } else {
+                        logger.warn("zk connection state is changed to " + state + ".");
+                    }
+                });
+                curator = AsyncCuratorFramework.wrap(client);
             });
-            asyncCurator = AsyncCuratorFramework.wrap(cf);
-            future.complete(null);
-        } catch (Exception e) {
-            future.completeExceptionally(e);
         }
-        return future;
-    }
 
-    @Override
-    protected CompletableFuture<Void> disconnect() {
-        if (asyncCurator != null) {
-            asyncCurator.unwrap().close();
+        @Override
+        protected CompletableFuture<Void> doDisconnect() {
+            if (curator != null) {
+                curator.unwrap().close();
+            }
+            return CompletableFuture.completedFuture(null);
         }
-        connected.set(false);
-        return CompletableFuture.completedFuture(null);
-    }
 
-    @Override
-    protected CompletableFuture<Void> doRegister(URLKey url) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        String path = serviceFunction.apply(url.getUrl());
-        String value = url.getUrl().toString();
-        try {
-            //判断节点是否存在
+        @Override
+        protected CompletableFuture<Void> doRegister(final URLKey url) {
+            String path = registry.serviceFunction.apply(url.getUrl());
+            String value = url.getUrl().toString();
             Set<ExistsOption> existsOptions = new HashSet<ExistsOption>() {{
                 add(ExistsOption.createParentsIfNeeded);
             }};
-            asyncCurator.checkExists().withOptions(existsOptions).forPath(path).whenComplete((stat, exist) -> {
-                //若存在，删除临时节点
-                if (stat != null) {
-                    try {
-                        asyncCurator.unwrap().delete().forPath(path);
-                    } catch (Exception e) {
-                        logger.error(e.getMessage(), e);
+            Set<CreateOption> createOptions = new HashSet<CreateOption>() {{
+                add(createParentsIfNeeded);
+                add(setDataIfExists);
+            }};
+            return Futures.call(future -> {
+                //判断节点是否存在
+                curator.checkExists().withOptions(existsOptions).forPath(path).whenComplete((stat, exist) -> {
+                    //若存在，删除临时节点
+                    if (stat != null) {
+                        try {
+                            curator.unwrap().delete().forPath(path);
+                        } catch (Exception ignored) {
+                        }
                     }
-                }
-                //添加临时节点
-                Set<CreateOption> options = new HashSet<CreateOption>() {{
-                    add(createParentsIfNeeded);
-                    add(setDataIfExists);
-                }};
-                asyncCurator.create().withOptions(options, EPHEMERAL).forPath(path, value.getBytes(UTF_8)).whenComplete((n, err) -> {
-                    if (err != null) {
-                        logger.error(err.getMessage(), err);
-                        future.completeExceptionally(err);
-                    } else {
-                        future.complete(null);
-                    }
+                    //添加临时节点
+                    curator.create().withOptions(createOptions, EPHEMERAL).forPath(path, value.getBytes(UTF_8)).whenComplete((n, err) -> {
+                        if (err != null) {
+                            future.completeExceptionally(err);
+                        } else {
+                            future.complete(null);
+                        }
+                    });
                 });
             });
-        } catch (Exception e) {
-            logger.error(e.getMessage(), e);
-            future.completeExceptionally(e);
         }
-        return future;
-    }
 
-    @Override
-    protected CompletableFuture<Void> doDeregister(URLKey url) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        String path = serviceFunction.apply(url.getUrl());
-        try {
-            asyncCurator.delete().forPath(path).whenComplete((n, err) -> {
+        @Override
+        protected CompletableFuture<Void> doDeregister(final URLKey url) {
+            String path = registry.serviceFunction.apply(url.getUrl());
+            //删除节点
+            Set<DeleteOption> deleteOptions = new HashSet<DeleteOption>() {{
+                add(DeleteOption.quietly);
+            }};
+            return Futures.call(future -> curator.delete().withOptions(deleteOptions).forPath(path).whenComplete((n, err) -> {
                 if (err != null) {
                     future.completeExceptionally(err);
                 } else {
                     future.complete(null);
                 }
-            });
-        } catch (Exception e) {
-            future.completeExceptionally(e);
+            }));
         }
-        return future;
-    }
 
-    @Override
-    protected CompletableFuture<Void> doSubscribe(URLKey url, ClusterHandler handler) {
-        return clusterManager.subscribe(url, new ClusterSubscriberExecutor(url.getUrl(), handler));
-    }
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
+            return Futures.call(future -> {
+                ZKClusterBooking zkBooking = (ZKClusterBooking) booking;
+                String path = registry.clusterFunction.apply(booking.getUrl());
+                //添加监听
+                PathChildrenCache childrenCache = new PathChildrenCache(curator.unwrap(), path, true);
+                childrenCache.getListenable().addListener((client, event) -> {
+                    List<ShardEvent> events = new ArrayList<>();
+                    UpdateType type = UPDATE;
+                    switch (event.getType()) {
+                        case INITIALIZED:
+                            type = FULL;
+                            List<ChildData> children = event.getInitialData();
+                            if (children != null) {
+                                children.forEach(childData -> addEvent(events, ShardEventType.ADD, childData));
+                            }
+                            break;
+                        case CHILD_ADDED:
+                            addEvent(events, ShardEventType.ADD, event.getData());
+                            break;
+                        case CHILD_UPDATED:
+                            addEvent(events, ShardEventType.UPDATE, event.getData());
+                            break;
+                        case CHILD_REMOVED:
+                            addEvent(events, ShardEventType.DELETE, event.getData());
+                            break;
 
-    @Override
-    protected CompletableFuture<Void> doUnsubscribe(URLKey url, ClusterHandler handler) {
-        return clusterManager.unSubscribe(url);
-    }
-
-    @Override
-    protected CompletableFuture<Void> doSubscribe(URLKey url, ConfigHandler handler) {
-        return configManager.subscribe(url, new ConfigSubscriberExecutor(url.getUrl(), handler));
-    }
-
-    @Override
-    protected CompletableFuture<Void> doUnsubscribe(URLKey url, ConfigHandler handler) {
-        return configManager.unSubscribe(url);
-    }
-
-    protected static class ZKController extends RegistryController<ZKRegistry>{
+                    }
+                    booking.handle(new ClusterEvent(registry, null, type, zkBooking.getStat().incrementAndGet(), events));
+                });
+                //启动监听
+                childrenCache.start(POST_INITIALIZED_EVENT);
+                zkBooking.setChildrenCache(childrenCache);
+            });
+        }
 
         /**
-         * 客户端
+         * 添加事件
+         *
+         * @param events    事件集合
+         * @param type      事件类型
+         * @param childData 节点数据
          */
-        protected CuratorFramework client;
+        protected void addEvent(final List<ShardEvent> events, final ShardEventType type, final ChildData childData) {
+            byte[] data = childData.getData();
+            if (data != null) {
+                events.add(new ShardEvent(new DefaultShard(URL.valueOf(new String(data, UTF_8))), type));
+            }
+        }
 
-        public ZKController(ZKRegistry registry) {
-            super(registry);
+        @Override
+        protected CompletableFuture<Void> doUnsubscribe(final ClusterBooking booking) {
+            PathChildrenCache cache = ((ZKClusterBooking) booking).getChildrenCache();
+            if (cache != null) {
+                try {
+                    cache.close();
+                } catch (IOException ignored) {
+                }
+            }
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
+            return Futures.call(future -> {
+                ZKConfigBooking zkBooking = (ZKConfigBooking) booking;
+                String path = registry.configFunction.apply(booking.getUrl());
+                CuratorFramework client = curator.unwrap();
+                Stat pathStat = client.checkExists().creatingParentsIfNeeded().forPath(path);
+                if (pathStat == null) {
+                    client.create().creatingParentsIfNeeded().forPath(path, new byte[0]);
+                }
+                NodeCache cache = new NodeCache(client, path);
+                cache.getListenable().addListener(() -> {
+                    ChildData childData = cache.getCurrentData();
+                    Map<String, String> datum;
+                    if (childData == null) {
+                        //被删掉了
+                        datum = new HashMap<>();
+                    } else {
+                        byte[] data = childData.getData();
+                        if (data != null && data.length > 0) {
+                            datum = JSON.get().parseObject(new String(data, UTF_8), Map.class);
+                        } else {
+                            datum = new HashMap<>();
+                        }
+                    }
+                    booking.handle(new ConfigEvent(registry, null, zkBooking.getStat().incrementAndGet(), datum));
+                });
+                cache.start();
+                zkBooking.setNodeCache(cache);
+            });
+        }
+
+        @Override
+        protected CompletableFuture<Void> doUnsubscribe(final ConfigBooking booking) {
+            NodeCache cache = ((ZKConfigBooking) booking).getNodeCache();
+            if (cache != null) {
+                try {
+                    cache.close();
+                } catch (IOException ignored) {
+                }
+            }
+            return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    /**
+     * 配置订阅
+     */
+    protected static class ZKClusterBooking extends ClusterBooking {
+        /**
+         * zk节点监听cache
+         */
+        protected PathChildrenCache childrenCache;
+        /**
+         * 事件版本
+         */
+        protected AtomicLong stat = new AtomicLong();
+
+        /**
+         * 构造函数
+         *
+         * @param key       键
+         * @param dirty     脏函数
+         * @param publisher 通知器
+         */
+        public ZKClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher) {
+            super(key, dirty, publisher);
+        }
+
+        public PathChildrenCache getChildrenCache() {
+            return childrenCache;
+        }
+
+        public void setChildrenCache(PathChildrenCache childrenCache) {
+            this.childrenCache = childrenCache;
+        }
+
+        public AtomicLong getStat() {
+            return stat;
         }
     }
 
@@ -262,398 +391,36 @@ public class ZKRegistry extends AbstractRegistry {
      * 配置订阅
      */
     protected static class ZKConfigBooking extends ConfigBooking {
-
-        /**
-         * 客户端
-         */
-        protected CuratorFramework client;
-        /**
-         * 路径函数
-         */
-        protected Function<URL, String> function;
         /**
          * zk节点监听cache
          */
         protected NodeCache nodeCache;
+        /**
+         * 事件版本
+         */
+        protected AtomicLong stat = new AtomicLong();
 
-        public ZKConfigBooking(final URLKey key, final Runnable dirty, final Publisher<ConfigEvent> publisher) {
+        /**
+         * 构造函数
+         *
+         * @param key       键
+         * @param dirty     脏函数
+         * @param publisher 通知器
+         */
+        public ZKConfigBooking(URLKey key, Runnable dirty, Publisher<ConfigEvent> publisher) {
             super(key, dirty, publisher);
         }
 
-        @Override
-        public void start() throws Exception {
-            status = Status.STARTING;
-            try {
-                String path = configFunction.apply(url);
-                Stat pathStat = asyncCurator.unwrap().checkExists().creatingParentsIfNeeded().forPath(path);
-                if (pathStat == null) {
-                    asyncCurator.unwrap().create().creatingParentsIfNeeded().forPath(path, new byte[0]);
-                }
-                nodeCache = new NodeCache(asyncCurator.unwrap(), path);
-                nodeCache.getListenable().addListener(() -> {
-                    ChildData childData = nodeCache.getCurrentData();
-                    Map<String, String> datum;
-                    if (childData == null) {
-                        //被删掉了
-                        datum = new HashMap<>();
-                    } else {
-                        byte[] data = childData.getData();
-                        if (data != null && data.length > 0) {
-                            datum = JSON.get().parseObject(new String(data, UTF_8), Map.class);
-                        } else {
-                            datum = new HashMap<>();
-                        }
-                    }
-                    handler.handle(new ConfigEvent(ZKRegistry.this, null, version.incrementAndGet(), datum));
-                });
-                nodeCache.start();
-                status = Status.STARTED;
-            } catch (Exception e) {
-                status = SubscriberExecutor.Status.CLOSED;
-                throw e;
-            }
-        }
-    }
-
-    /**
-     * 订阅事件管理器
-     */
-    protected class SubscriberManager {
-
-        /**
-         * 订阅执行Executor列表
-         */
-        protected Map<String, SubscriberExecutor> subscribers = new ConcurrentHashMap<>();
-
-        /**
-         * 路径函数
-         */
-        protected Function<URL, String> function;
-
-
-        /**
-         * 构造方法
-         *
-         * @param function
-         */
-        public SubscriberManager(Function<URL, String> function) {
-            this.function = function;
+        public NodeCache getNodeCache() {
+            return nodeCache;
         }
 
-        /**
-         * 订阅操作
-         *
-         * @param urlKey
-         * @param subscriber
-         * @return
-         */
-        public CompletableFuture<Void> subscribe(URLKey urlKey, SubscriberExecutor subscriber) {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            SubscriberExecutor old = subscribers.putIfAbsent(function.apply(urlKey.getUrl()), subscriber);
-            try {
-                //old不存在，说明是第一次注册，或者之前反注册过，启动入参subscriber
-                //old存在，且状态为CLOSED，说明之前注册过，但没有启动成功，这里启动old
-                //old存在，且状态不是CLOSED，这里防止重复操作，直接返回
-                if (old == null) {
-                    subscriber.start();
-                } else if (old.getStatus() == SubscriberExecutor.Status.CLOSED) {
-                    old.start();
-                }
-                future.complete(null);
-            } catch (Exception e) {
-                if (old == null) {
-                    subscriber.close();
-                } else {
-                    old.close();
-                }
-                logger.error(e.getMessage(), e);
-                future.completeExceptionally(e);
-            }
-            return future;
+        public void setNodeCache(NodeCache nodeCache) {
+            this.nodeCache = nodeCache;
         }
 
-        /**
-         * 取消订阅操作
-         *
-         * @param urlKey
-         * @return
-         */
-        public CompletableFuture<Void> unSubscribe(URLKey urlKey) {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            try {
-                SubscriberExecutor subscriber = subscribers.remove(function.apply(urlKey.getUrl()));
-                if (subscriber != null) {
-                    subscriber.close();
-                }
-                future.complete(null);
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
-                future.completeExceptionally(e);
-            }
-            return future;
-        }
-
-    }
-
-    /**
-     * 事件订阅执行Executor
-     */
-    protected interface SubscriberExecutor {
-
-        /**
-         * 开始订阅
-         *
-         * @throws Exception
-         */
-        void start() throws Exception;
-
-        /**
-         * 终止订阅
-         */
-        void close();
-
-        /**
-         * 获取SubscriberExecutor启动状态
-         *
-         * @return
-         */
-        Status getStatus();
-
-        /**
-         * SubscriberExecutor启动状态
-         */
-        enum Status {
-            CLOSED, STARTING, STARTED, CLOSING
-        }
-    }
-
-    /**
-     * 集群节点订阅Executor
-     */
-    protected class ClusterSubscriberExecutor implements SubscriberExecutor {
-
-        /**
-         * consumer url
-         */
-        protected URL url;
-        /**
-         * 集群事件handler
-         */
-        protected ClusterHandler handler;
-
-        /**
-         * zk节点监听cache
-         */
-        protected PathChildrenCache pathChildrenCache;
-        /**
-         * zk集群父节点path
-         */
-        protected String path;
-        /**
-         * 事件版本
-         */
-        protected AtomicLong version = new AtomicLong();
-        /**
-         * 是否已经初始化
-         */
-        protected AtomicBoolean initialized = new AtomicBoolean();
-        /**
-         * 启动状态
-         */
-        protected Status status;
-
-        /**
-         * 构造方法
-         *
-         * @param url
-         * @param handler
-         */
-        public ClusterSubscriberExecutor(URL url, ClusterHandler handler) {
-            this.url = url;
-            this.handler = handler;
-        }
-
-        @Override
-        public void start() throws Exception {
-            status = Status.STARTING;
-            path = clusterFunction.apply(url);
-            try {
-                //添加监听
-                pathChildrenCache = new PathChildrenCache(asyncCurator.unwrap(), path, true);
-                pathChildrenCache.getListenable().addListener((curatorFramework, curatorEvent) -> {
-                    switch (curatorEvent.getType()) {
-                        case CHILD_ADDED:
-                            onUpdateShardEvent(ShardEventType.ADD, curatorEvent.getData());
-                            break;
-                        case CHILD_UPDATED:
-                            onUpdateShardEvent(ShardEventType.UPDATE, curatorEvent.getData());
-                            break;
-                        case CHILD_REMOVED:
-                            onUpdateShardEvent(ShardEventType.DELETE, curatorEvent.getData());
-                            break;
-                        case INITIALIZED:
-                            onInitShardsEvent(curatorEvent.getInitialData());
-                            break;
-                    }
-                });
-                //启动监听
-                pathChildrenCache.start(POST_INITIALIZED_EVENT);
-                status = Status.STARTED;
-            } catch (Exception e) {
-                status = Status.CLOSED;
-                throw e;
-            }
-        }
-
-        /**
-         * 增量更新
-         *
-         * @param eventType
-         * @param childData
-         */
-        protected void onUpdateShardEvent(ShardEventType eventType, ChildData childData) {
-            if (!initialized.get()) {
-                return;
-            }
-            byte[] data = childData.getData();
-            if (data != null) {
-                List<ShardEvent> shardEvents = new ArrayList<>();
-                URL providerUrl = URL.valueOf(new String(data, UTF_8));
-                shardEvents.add(new ShardEvent(new Shard.DefaultShard(providerUrl), eventType));
-                handler.handle(new ClusterEvent(ZKRegistry.this, null, UPDATE, version.incrementAndGet(), shardEvents));
-            }
-        }
-
-        /**
-         * 全量更新
-         *
-         * @param children
-         * @throws Exception
-         */
-        protected void onInitShardsEvent(List<ChildData> children) throws Exception {
-            initialized.set(true);
-            List<ShardEvent> shardEvents = new ArrayList<>();
-            if (children != null && !children.isEmpty()) {
-                children.forEach(childData -> {
-                    try {
-                        byte[] data = childData.getData();
-                        if (data != null && data.length > 0) {
-                            URL providerUrl = URL.valueOf(new String(data, UTF_8));
-                            shardEvents.add(new ShardEvent(new Shard.DefaultShard(providerUrl), ShardEventType.ADD));
-                        }
-                    } catch (Exception e) {
-                        logger.error(e.getMessage(), e);
-                    }
-                });
-            }
-            handler.handle(new ClusterEvent(ZKRegistry.this, null, FULL, version.incrementAndGet(), shardEvents));
-        }
-
-        @Override
-        public void close() {
-            status = Status.CLOSED;
-            //终止监听
-            try {
-                pathChildrenCache.close();
-            } catch (Throwable e) {
-                //内部实现不抛异常，忽略
-            }
-        }
-
-        @Override
-        public Status getStatus() {
-            return status;
-        }
-    }
-
-    /**
-     * 配置订阅Executor
-     */
-    protected class ConfigSubscriberExecutor implements SubscriberExecutor {
-
-        /**
-         * Consumer/Provider url
-         */
-        protected URL url;
-
-        /**
-         * 配置监听handler
-         */
-        protected ConfigHandler handler;
-
-        /**
-         * zk节点监听cache
-         */
-        protected NodeCache nodeCache;
-
-        /**
-         * 事件版本
-         */
-        protected AtomicLong version = new AtomicLong();
-
-        /**
-         * 启动状态
-         */
-        protected Status status;
-
-        /**
-         * 构造方法
-         *
-         * @param url
-         * @param handler
-         */
-        public ConfigSubscriberExecutor(URL url, ConfigHandler handler) {
-            this.url = url;
-            this.handler = handler;
-        }
-
-        @Override
-        public void start() throws Exception {
-            status = Status.STARTING;
-            try {
-                String path = configFunction.apply(url);
-                Stat pathStat = asyncCurator.unwrap().checkExists().creatingParentsIfNeeded().forPath(path);
-                if (pathStat == null) {
-                    asyncCurator.unwrap().create().creatingParentsIfNeeded().forPath(path, new byte[0]);
-                }
-                nodeCache = new NodeCache(asyncCurator.unwrap(), path);
-                nodeCache.getListenable().addListener(() -> {
-                    ChildData childData = nodeCache.getCurrentData();
-                    Map<String, String> datum;
-                    if (childData == null) {
-                        //被删掉了
-                        datum = new HashMap<>();
-                    } else {
-                        byte[] data = childData.getData();
-                        if (data != null && data.length > 0) {
-                            datum = JSON.get().parseObject(new String(data, UTF_8), Map.class);
-                        } else {
-                            datum = new HashMap<>();
-                        }
-                    }
-                    handler.handle(new ConfigEvent(ZKRegistry.this, null, version.incrementAndGet(), datum));
-                });
-                nodeCache.start();
-                status = Status.STARTED;
-            } catch (Exception e) {
-                status = Status.CLOSED;
-                throw e;
-            }
-        }
-
-        @Override
-        public void close() {
-            status = Status.CLOSED;
-            try {
-                nodeCache.close();
-            } catch (Throwable e) {
-                //内部实现不抛异常，忽略
-            }
-        }
-
-        @Override
-        public Status getStatus() {
-            return status;
+        public AtomicLong getStat() {
+            return stat;
         }
     }
 }

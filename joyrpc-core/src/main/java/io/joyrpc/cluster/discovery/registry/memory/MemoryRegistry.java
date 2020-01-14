@@ -23,8 +23,6 @@ package io.joyrpc.cluster.discovery.registry.memory;
 import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
-import io.joyrpc.cluster.discovery.config.ConfigHandler;
-import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
@@ -259,31 +257,25 @@ public class MemoryRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ClusterHandler handler) {
-            ClusterBooking booking = clusters.get(url.getKey());
-            if (booking != null) {
-                AtomicReference<Topology> ref = urls.get(url.getKey());
-                Topology topology = ref != null ? ref.get() : null;
-                List<ShardEvent> shards = new ArrayList<>(topology == null ? 0 : topology.getUrls().size());
-                if (topology != null) {
-                    topology.getUrls().forEach(u -> shards.add(new ShardEvent(registry.createShard(u), ShardEventType.ADD)));
-                }
-                long version = topology == null ? 0 : topology.getVersion();
-                booking.handle(new ClusterEvent(this, null, UpdateType.FULL, version, shards));
+        protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
+            AtomicReference<Topology> ref = urls.get(booking.getKey());
+            Topology topology = ref != null ? ref.get() : null;
+            List<ShardEvent> shards = new ArrayList<>(topology == null ? 0 : topology.getUrls().size());
+            if (topology != null) {
+                topology.getUrls().forEach(u -> shards.add(new ShardEvent(registry.createShard(u), ShardEventType.ADD)));
             }
+            long version = topology == null ? 0 : topology.getVersion();
+            booking.handle(new ClusterEvent(this, null, UpdateType.FULL, version, shards));
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ConfigHandler handler) {
-            ConfigBooking booking = configs.get(url.getKey());
-            if (booking != null) {
-                AtomicReference<Config> ref = registry.configDatum.get(url.getKey());
-                Config config = ref != null ? ref.get() : null;
-                booking.handle(new ConfigEvent(this, null,
-                        config == null ? 0 : config.getVersion(),
-                        config == null ? new HashMap<>() : config.getData()));
-            }
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
+            AtomicReference<Config> ref = registry.configDatum.get(booking.getKey());
+            Config config = ref != null ? ref.get() : null;
+            booking.handle(new ConfigEvent(this, null,
+                    config == null ? 0 : config.getVersion(),
+                    config == null ? new HashMap<>() : config.getData()));
             return CompletableFuture.completedFuture(null);
         }
 

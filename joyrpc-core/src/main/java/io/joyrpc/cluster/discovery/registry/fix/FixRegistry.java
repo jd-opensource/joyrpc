@@ -20,11 +20,8 @@ package io.joyrpc.cluster.discovery.registry.fix;
  * #L%
  */
 
-import io.joyrpc.cluster.discovery.config.ConfigHandler;
-import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.naming.fix.FixRegistar;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
-import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.extension.URL;
 
@@ -77,25 +74,25 @@ public class FixRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ClusterHandler handler) {
-            registar.subscribe(url.getUrl(), handler);
+        protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
+            registar.subscribe(booking.getUrl(), booking);
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ClusterHandler handler) {
-            registar.unsubscribe(url.getUrl(), handler);
+        protected CompletableFuture<Void> doUnsubscribe(final ClusterBooking booking) {
+            registar.unsubscribe(booking.getUrl(), booking);
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        protected CompletableFuture<Void> doSubscribe(final URLKey url, final ConfigHandler handler) {
-            handler.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
+            booking.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
             return CompletableFuture.completedFuture(null);
         }
 
         @Override
-        protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ConfigHandler handler) {
+        protected CompletableFuture<Void> doUnsubscribe(final ConfigBooking booking) {
             return CompletableFuture.completedFuture(null);
         }
     }

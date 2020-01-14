@@ -129,9 +129,13 @@ public class Cluster {
      */
     protected int initSize;
     /**
-     * 初始化建连的超时时间
+     * 初始化超时时间
      */
     protected long initTimeout;
+    /**
+     * 初始化连接超时时间
+     */
+    protected long initConnectTimeout;
     /**
      * 是否验证初始化建连（即初始化连接超时则启动失败）
      */
@@ -198,6 +202,7 @@ public class Cluster {
         this.initSize = url.getInteger(Constants.INIT_SIZE_OPTION);
         this.minSize = url.getInteger(Constants.MIN_SIZE_OPTION);
         this.initTimeout = url.getLong(Constants.INIT_TIMEOUT_OPTION);
+        this.initConnectTimeout = url.getLong(Constants.INIT_CONNECT_TIMEOUT_OPTION);
         this.check = url.getBoolean(Constants.CHECK_OPTION);
         this.reconnectInterval = url.getLong(RECONNECT_INTERVAL);
         this.sslEnable = url.getBoolean(Constants.SSL_ENABLE);
@@ -589,13 +594,15 @@ public class Cluster {
             this.supplyTask = "SupplyTask-" + cluster.name;
             if (cluster.initSize <= 0) {
                 //不需要等到初始化连接，异步通知，避免在Open线程里面触发
-                timer().add("ReadyTask " + cluster.name, SystemClock.now(), () -> ready.accept(new AsyncResult<>(this)));
+                timer().add("ReadyTask-" + cluster.name, SystemClock.now(), () -> ready.accept(new AsyncResult<>(this)));
             } else {
-                this.trigger = new Trigger("ReadyTask " + cluster.name, cluster.initSize, cluster.initTimeout,
-                        cluster.check,
+                long beginTime = SystemClock.now();
+                this.trigger = new Trigger(cluster.name, cluster.initSize,
+                        cluster.initTimeout, cluster.initConnectTimeout, cluster.check,
                         () -> ready.accept(new AsyncResult<>(this)),
                         () -> ready.accept(new AsyncResult<>(this,
-                                new InitializationException("initialization timeout."))));
+                                new InitializationException(
+                                        String.format("initialization timeout, used %d ms.", SystemClock.now() - beginTime)))));
                 if (!cluster.check) {
                     this.checkTask = new CheckTask("Check-" + cluster.name,
                             SystemClock.now() + cluster.initTimeout, trigger);
@@ -686,6 +693,9 @@ public class Cluster {
                 } else if (!cluster.check && event.getType() == FULL) {
                     //check为false，事件类型为FULL，直接触发ready
                     trigger.fireReady();
+                }
+                if (event.getType() == FULL) {
+                    trigger.onClusterEvent();
                 }
             });
         }
@@ -1257,6 +1267,10 @@ public class Cluster {
     protected static class Trigger {
 
         /**
+         * cluster 名称
+         */
+        protected String clusterName;
+        /**
          * 通知触发的信号量
          */
         protected AtomicLong semaphore;
@@ -1268,6 +1282,14 @@ public class Cluster {
          * 超时时间
          */
         protected long timeout;
+        /**
+         * 建连超时时间
+         */
+        protected long connectTimeout;
+        /**
+         * 是否验证初始化建连成功
+         */
+        protected boolean check;
         /**
          * 就绪事件
          */
@@ -1284,25 +1306,34 @@ public class Cluster {
          * 第一次选择
          */
         protected AtomicBoolean first = new AtomicBoolean(false);
+        /**
+         * 第一次收到cluster事件
+         */
+        protected AtomicBoolean firstOnClusterEvent = new AtomicBoolean(false);
 
         /**
          * 构造函数
          *
-         * @param name        名称
+         * @param clusterName 名称
          * @param initSize    信号量
          * @param timeout     超时时间
          * @param ready       就绪处理器
          * @param whenTimeout 超时处理器
          */
-        public Trigger(final String name, final int initSize, final long timeout, boolean check, final Runnable ready, final Runnable whenTimeout) {
+        public Trigger(final String clusterName, final int initSize, final long timeout, final long connectTimeout,
+                       boolean check, final Runnable ready, final Runnable whenTimeout) {
+            this.clusterName = clusterName;
             this.initSize = initSize;
             this.semaphore = new AtomicLong(initSize);
-            this.ready = ready;
             this.timeout = timeout;
+            this.connectTimeout = connectTimeout;
+            this.check = check;
+            this.ready = ready;
             this.whenTimeout = whenTimeout;
             if (timeout > 0) {
                 //超时检测，check为false，执行ready
-                timer().add(name, SystemClock.now() + timeout, () -> fire(check ? whenTimeout : ready));
+                timer().add("ReadyTask-" + clusterName, SystemClock.now() + timeout,
+                        () -> fire(check ? whenTimeout : ready));
             }
         }
 
@@ -1321,6 +1352,19 @@ public class Cluster {
                 return true;
             }
             return false;
+        }
+
+        /**
+         * 第一次接收到集群事件，触发超时检查任务
+         */
+        public void onClusterEvent() {
+            if (firstOnClusterEvent.compareAndSet(false, true)
+                    && check
+                    && timeout > 0
+                    && connectTimeout > 0) {
+                timer().add("ReadyTask-OnClusterEvent-" + clusterName, SystemClock.now() + connectTimeout,
+                        () -> fire(whenTimeout));
+            }
         }
 
         /**
@@ -1344,7 +1388,7 @@ public class Cluster {
         /**
          * 触发ready
          */
-        protected void fireReady() {
+        public void fireReady() {
             semaphore.set(0L);
             fire(ready);
         }

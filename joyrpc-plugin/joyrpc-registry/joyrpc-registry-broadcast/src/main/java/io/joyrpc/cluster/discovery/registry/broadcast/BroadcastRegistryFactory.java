@@ -32,10 +32,10 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
  */
 @Extension(value = "broadcast")
 @ConditionalOnClass("com.hazelcast.core.Hazelcast")
-public class BroadCastRegistryFactory extends AbstractRegistryFactory {
+public class BroadcastRegistryFactory extends AbstractRegistryFactory {
 
     @Override
     protected Registry createRegistry(final String name, final URL url, final Backup backup) {
-        return new BroadCastRegistry(name, url, backup);
+        return new BroadcastRegistry(name, url, backup);
     }
 }

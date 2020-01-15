@@ -221,6 +221,7 @@ public class Futures {
         try {
             executor.execute(future);
         } catch (Exception e) {
+            executor.onException(e);
             future.completeExceptionally(e);
         }
         return future;
@@ -236,6 +237,15 @@ public class Futures {
          * @throws Exception
          */
         void execute(CompletableFuture<T> future) throws Exception;
+
+        /**
+         * 异常
+         *
+         * @param e
+         */
+        default void onException(final Exception e) {
+
+        }
 
     }
 

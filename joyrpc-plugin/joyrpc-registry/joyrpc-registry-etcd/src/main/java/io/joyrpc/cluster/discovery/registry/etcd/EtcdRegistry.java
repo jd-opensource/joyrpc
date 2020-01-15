@@ -83,7 +83,6 @@ public class EtcdRegistry extends AbstractRegistry {
 
     private static final URLOption<String> AUTHORITY = new URLOption<>("authority", (String) null);
 
-
     /**
      * 目标地址
      */
@@ -251,9 +250,9 @@ public class EtcdRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doRegister(final URLKey key) {
+        protected CompletableFuture<Void> doRegister(final Registion registion) {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            String path = registry.serviceFunction.apply(key.getUrl());
+            String path = registry.serviceFunction.apply(registion.getUrl());
             if (leaseId <= 0) {
                 //没有租约
                 future.completeExceptionally(new IllegalStateException(
@@ -261,7 +260,7 @@ public class EtcdRegistry extends AbstractRegistry {
             } else {
                 //有租约
                 PutOption putOption = PutOption.newBuilder().withLeaseId(leaseId).build();
-                client.getKVClient().put(ByteSequence.from(path, UTF_8), ByteSequence.from(key.getUrl().toString(), UTF_8), putOption)
+                client.getKVClient().put(ByteSequence.from(path, UTF_8), ByteSequence.from(registion.getUrl().toString(), UTF_8), putOption)
                         .whenComplete((r, t) -> {
                             if (!isOpen()) {
                                 //已经关闭，或者创建了新的客户端
@@ -280,9 +279,9 @@ public class EtcdRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doDeregister(final URLKey key) {
+        protected CompletableFuture<Void> doDeregister(final Registion registion) {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            String path = registry.serviceFunction.apply(key.getUrl());
+            String path = registry.serviceFunction.apply(registion.getUrl());
             client.getKVClient().delete(ByteSequence.from(path, UTF_8)).whenComplete((r, t) -> {
                 if (t != null) {
                     future.completeExceptionally(t);
@@ -383,6 +382,9 @@ public class EtcdRegistry extends AbstractRegistry {
 
     }
 
+    /**
+     * 集群配置
+     */
     protected static class EtcdClusterBooking extends ClusterBooking implements Watch.Listener {
         /**
          * 监听器

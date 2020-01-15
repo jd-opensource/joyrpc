@@ -194,9 +194,9 @@ public class ZKRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doRegister(final URLKey key) {
-            String path = registry.serviceFunction.apply(key.getUrl());
-            String value = key.getUrl().toString();
+        protected CompletableFuture<Void> doRegister(final Registion registion) {
+            String path = registry.serviceFunction.apply(registion.getUrl());
+            String value = registion.getUrl().toString();
             Set<ExistsOption> existsOptions = new HashSet<ExistsOption>() {{
                 add(ExistsOption.createParentsIfNeeded);
             }};
@@ -227,8 +227,8 @@ public class ZKRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doDeregister(final URLKey key) {
-            String path = registry.serviceFunction.apply(key.getUrl());
+        protected CompletableFuture<Void> doDeregister(final Registion registion) {
+            String path = registry.serviceFunction.apply(registion.getUrl());
             //删除节点
             Set<DeleteOption> deleteOptions = new HashSet<DeleteOption>() {{
                 add(DeleteOption.quietly);

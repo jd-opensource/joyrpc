@@ -224,14 +224,14 @@ public class MemoryRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doRegister(final URLKey url) {
-            AtomicReference<Topology> ref = urls.computeIfAbsent(url.getKey(), key -> new AtomicReference<>());
-            long version = update(url, ref, List::add);
+        protected CompletableFuture<Void> doRegister(final URLKey key) {
+            AtomicReference<Topology> ref = urls.computeIfAbsent(key.getKey(), key -> new AtomicReference<>());
+            long version = update(key, ref, List::add);
             if (version >= 0) {
-                ClusterBooking booking = clusters.get(url.getKey());
+                ClusterBooking booking = clusters.get(key.getKey());
                 if (booking != null) {
                     List<ShardEvent> shards = new ArrayList<>(1);
-                    shards.add(new ShardEvent(registry.createShard(url.getUrl()), ShardEventType.ADD));
+                    shards.add(new ShardEvent(registry.createShard(key.getUrl()), ShardEventType.ADD));
                     booking.handle((new ClusterEvent(this, null, UpdateType.UPDATE, version, shards)));
                 }
             }
@@ -239,15 +239,15 @@ public class MemoryRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doDeregister(final URLKey url) {
-            AtomicReference<Topology> ref = urls.get(url.getKey());
+        protected CompletableFuture<Void> doDeregister(final URLKey key) {
+            AtomicReference<Topology> ref = urls.get(key.getKey());
             if (ref != null) {
-                long version = update(url, ref, List::remove);
+                long version = update(key, ref, List::remove);
                 if (version >= 0) {
-                    ClusterBooking booking = clusters.get(url.getKey());
+                    ClusterBooking booking = clusters.get(key.getKey());
                     if (booking != null) {
                         List<ShardEvent> shards = new ArrayList<>(1);
-                        shards.add(new ShardEvent(registry.createShard(url.getUrl()), ShardEventType.DELETE));
+                        shards.add(new ShardEvent(registry.createShard(key.getUrl()), ShardEventType.DELETE));
                         booking.handle((new ClusterEvent(this, null, UpdateType.UPDATE, ref.get().getVersion(),
                                 shards)));
                     }

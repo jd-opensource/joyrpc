@@ -1029,20 +1029,20 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 注册
          *
-         * @param url url
+         * @param key url
          * @return 异步Future
          */
-        protected CompletableFuture<Void> doRegister(final URLKey url) {
+        protected CompletableFuture<Void> doRegister(final URLKey key) {
             return CompletableFuture.completedFuture(null);
         }
 
         /**
          * 注销
          *
-         * @param url url
+         * @param key url
          * @return 异步Future
          */
-        protected CompletableFuture<Void> doDeregister(final URLKey url) {
+        protected CompletableFuture<Void> doDeregister(final URLKey key) {
             return CompletableFuture.completedFuture(null);
         }
 

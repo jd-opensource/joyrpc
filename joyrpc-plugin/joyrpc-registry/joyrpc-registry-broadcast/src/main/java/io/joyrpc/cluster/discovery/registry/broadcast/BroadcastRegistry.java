@@ -216,7 +216,6 @@ public class BroadcastRegistry extends AbstractRegistry {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
                 instance = Hazelcast.newHazelcastInstance(registry.cfg);
-                //TODO 续约时间过长，不适宜在timer里面做
                 timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
                 future.complete(null);
             } catch (Exception e) {
@@ -231,8 +230,12 @@ public class BroadcastRegistry extends AbstractRegistry {
          */
         protected void lease() {
             if (isOpen()) {
-                //遍历注册
-
+                //遍历注册，放到注册中心的线程执行
+                registers.forEach((k, v) -> addNewTask(new Task(null, new CompletableFuture<>(), () -> lease(v),
+                        0, 0, 0, null)));
+                if (isOpen()) {
+                    timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
+                }
             }
         }
 
@@ -241,8 +244,9 @@ public class BroadcastRegistry extends AbstractRegistry {
          *
          * @param registion 注册
          */
-        protected void lease(final Registion registion) {
+        protected CompletableFuture<Void> lease(final Registion registion) {
             //registerTime不为0，说明已经注册，执行续期
+            CompletableFuture<Void> future = new CompletableFuture<>();
             if (isOpen() && registion.getRegisterTime() != 0) {
                 URL url = registion.getUrl();
                 String serviceRootKey = registry.serviceRootKeyFunc.apply(url);
@@ -253,10 +257,25 @@ public class BroadcastRegistry extends AbstractRegistry {
                 boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
                 //节点已经过期，重新添加回节点，并修改meta的registerTime
                 if (!isNotExpired) {
-                    map.put(nodeKey, url, registry.nodeExpiredTime, TimeUnit.MILLISECONDS);
                     registion.setRegisterTime(SystemClock.now());
+                    map.putAsync(nodeKey, url, registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
+                        @Override
+                        public void onResponse(final URL response) {
+                            future.complete(null);
+                        }
+
+                        @Override
+                        public void onFailure(final Throwable t) {
+                            future.completeExceptionally(t);
+                        }
+                    });
+                } else {
+                    future.complete(null);
                 }
+            } else {
+                future.complete(null);
             }
+            return future;
         }
 
         @Override

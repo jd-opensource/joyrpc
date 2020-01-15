@@ -31,8 +31,6 @@ import io.etcd.jetcd.watch.WatchEvent;
 import io.etcd.jetcd.watch.WatchResponse;
 import io.joyrpc.cluster.Shard.DefaultShard;
 import io.joyrpc.cluster.discovery.backup.Backup;
-import io.joyrpc.cluster.discovery.config.ConfigHandler;
-import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
@@ -44,7 +42,6 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
-import io.joyrpc.util.Daemon;
 import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
@@ -187,12 +184,12 @@ public class EtcdRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(URLKey key) {
-            return super.createClusterBooking(key);
+            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(URLKey key) {
-            return super.createConfigBooking(key);
+            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()));
         }
 
         @Override
@@ -226,7 +223,11 @@ public class EtcdRegistry extends AbstractRegistry {
                             if (leaseErr.incrementAndGet() >= 3) {
                                 logger.error(String.format("Error occurs while lease than 3 times, caused by %s. reconnect....", err.getMessage()));
                                 //先关闭连接，再重连
-                                doDisconnect().whenComplete((v, t) -> reconnect(new CompletableFuture<>(), 0, registry.maxConnectRetryTimes));
+                                doDisconnect().whenComplete((v, t) -> {
+                                    if (isOpen()) {
+                                        reconnect(new CompletableFuture<>(), 0, registry.maxConnectRetryTimes);
+                                    }
+                                });
                             } else {
                                 logger.error(String.format("Error occurs while lease, caused by %s.", err.getMessage()));
                             }
@@ -354,7 +355,7 @@ public class EtcdRegistry extends AbstractRegistry {
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
                     res.getKvs().forEach(kv -> events.add(new WatchEvent(kv, null, PUT)));
-                    etcdBooking.onUpdate(events, res.getHeader().getRevision(), FULL);
+                    etcdBooking.onUpdate(events, res.getHeader().getRevision());
                     //添加watch
                     try {
                         WatchOption watchOption = WatchOption.newBuilder().withPrefix(key).build();
@@ -420,31 +421,26 @@ public class EtcdRegistry extends AbstractRegistry {
         public void onUpdate(final List<WatchEvent> events, final long version, final UpdateType updateType) {
             List<ShardEvent> shardEvents = new ArrayList<>();
             events.forEach(e -> {
-                switch (e.getEventType()) {
-                    case PUT:
-                        shardEvents.add(new ShardEvent(new DefaultShard(URL.valueOf(e.getKeyValue().getValue().toString(UTF_8))), ShardEventType.ADD));
-                        break;
-                    case DELETE:
-                        shardEvents.add(new ShardEvent(
-                                new DefaultShard(convertByDelKey(e.getKeyValue().getKey().toString(UTF_8))), ShardEventType.DELETE));
-                        break;
+                try {
+                    String value = e.getKeyValue().getValue().toString(UTF_8);
+                    switch (e.getEventType()) {
+                        case PUT:
+                            shardEvents.add(new ShardEvent(new DefaultShard(URL.valueOf(value)), ShardEventType.ADD));
+                            break;
+                        case DELETE:
+                            //通过删除的key，转换成URL(集群删除节点，只根据shardName删除，所有能够获得ip:port即可)
+                            int pos = value.lastIndexOf('/');
+                            if (pos >= 0) {
+                                value = value.substring(pos + 1);
+                            }
+                            String[] parts = value.split("_");
+                            shardEvents.add(new ShardEvent(new DefaultShard(new URL(parts[0], parts[1], Integer.parseInt(parts[2]))), ShardEventType.DELETE));
+                            break;
+                    }
+                } catch (Exception ignored) {
                 }
             });
             handle(new ClusterEvent(this, null, updateType, version, shardEvents));
-        }
-
-        /**
-         * 通过删除的key，转换成URL(集群删除节点，只根据shardName删除，所有能够获得ip:port即可)
-         *
-         * @param delKey
-         * @return
-         */
-        private URL convertByDelKey(String delKey) {
-            if (StringUtils.isNotEmpty(delKey)) {
-                String[] strs = delKey.substring(delKey.lastIndexOf("/") + 1).split("_");
-                return new URL(strs[0], strs[1], Integer.parseInt(strs[2]));
-            }
-            return null;
         }
 
         public Watch.Watcher getWatcher() {
@@ -456,6 +452,9 @@ public class EtcdRegistry extends AbstractRegistry {
         }
     }
 
+    /**
+     * ETCD配置订阅
+     */
     protected static class EtcdConfigBooking extends ConfigBooking implements Watch.Listener {
         /**
          * 监听器
@@ -470,7 +469,7 @@ public class EtcdRegistry extends AbstractRegistry {
         public void onNext(final WatchResponse response) {
             List<WatchEvent> events = response.getEvents();
             if (events != null && !events.isEmpty()) {
-                onUpdate(events, response.getHeader().getRevision(), UPDATE);
+                onUpdate(events, response.getHeader().getRevision());
             }
         }
 
@@ -487,11 +486,10 @@ public class EtcdRegistry extends AbstractRegistry {
         /**
          * 更新
          *
-         * @param events     事件
-         * @param version    版本
-         * @param updateType 更新类型
+         * @param events  事件
+         * @param version 版本
          */
-        public void onUpdate(final List<WatchEvent> events, final long version, final UpdateType updateType) {
+        public void onUpdate(final List<WatchEvent> events, final long version) {
             if (events != null && !events.isEmpty()) {
                 events.forEach(e -> {
                     Map<String, String> datum = null;
@@ -506,8 +504,9 @@ public class EtcdRegistry extends AbstractRegistry {
                     if (datum != null) {
                         String className = url.getPath();
                         Map<String, String> oldAttrs = GlobalContext.getInterfaceConfig(className);
+                        final Map<String, String> data = datum;
                         //全局配置动态配置变更
-                        CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(className, oldAttrs == null ? new HashMap<>() : oldAttrs, datum));
+                        CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(className, oldAttrs == null ? new HashMap<>() : oldAttrs, data));
                         //修改全局配置
                         GlobalContext.put(className, datum);
                         //TODO 是否需要实例配置

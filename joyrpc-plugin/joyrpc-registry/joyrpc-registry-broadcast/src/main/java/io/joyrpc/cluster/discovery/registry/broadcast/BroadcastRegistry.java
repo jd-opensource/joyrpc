@@ -221,6 +221,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doConnect() {
             return Futures.call(future -> {
                 instance = Hazelcast.newHazelcastInstance(registry.cfg);
+                future.complete(null);
             });
         }
 

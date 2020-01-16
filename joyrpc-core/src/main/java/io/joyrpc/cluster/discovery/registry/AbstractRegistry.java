@@ -1402,7 +1402,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param handler 处理器
          * @return 成功标识
          */
-        public synchronized boolean addHandler(final EventHandler<T> handler) {
+        public boolean addHandler(final EventHandler<T> handler) {
             if (publisher.addHandler(handler)) {
                 //有全量数据
                 if (full && ready()) {
@@ -1420,7 +1420,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param cleaner 清理
          * @return 成功标识
          */
-        public synchronized boolean removeHandler(final EventHandler<T> handler, final Consumer<String> cleaner) {
+        public boolean removeHandler(final EventHandler<T> handler, final Consumer<String> cleaner) {
             if (publisher.removeHandler(handler)) {
                 if (publisher.size() == 0) {
                     cleaner.accept(key);

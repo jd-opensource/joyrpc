@@ -26,6 +26,10 @@
   
   - 优化cluster初始化连接逻辑，若check设置为false（默认值改为true），则不用等待初始化连接成功，建连操作执行完后就ready
   
+- Registry
+
+  - 去掉锁
+  
 - Springboot
 
   - 处理启动时候的几个Warn信息

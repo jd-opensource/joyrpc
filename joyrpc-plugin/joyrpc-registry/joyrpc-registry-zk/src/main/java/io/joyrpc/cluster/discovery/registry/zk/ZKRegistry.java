@@ -253,8 +253,12 @@ public class ZKRegistry extends AbstractRegistry {
             return Futures.call(future -> {
                 ZKClusterBooking zkBooking = (ZKClusterBooking) booking;
                 //添加监听
-                PathChildrenCache childrenCache = new PathChildrenCache(curator.unwrap(), booking.getPath(), true);
-                childrenCache.getListenable().addListener((client, event) -> {
+                PathChildrenCache cache = new PathChildrenCache(curator.unwrap(), booking.getPath(), true);
+                //启动监听
+                cache.start(POST_INITIALIZED_EVENT);
+                zkBooking.setChildrenCache(cache);
+                future.complete(null);
+                cache.getListenable().addListener((client, event) -> {
                     List<ShardEvent> events = new ArrayList<>();
                     UpdateType type = UPDATE;
                     switch (event.getType()) {
@@ -278,9 +282,6 @@ public class ZKRegistry extends AbstractRegistry {
                     }
                     booking.handle(new ClusterEvent(registry, null, type, zkBooking.getStat().incrementAndGet(), events));
                 });
-                //启动监听
-                childrenCache.start(POST_INITIALIZED_EVENT);
-                zkBooking.setChildrenCache(childrenCache);
             });
         }
 
@@ -320,6 +321,9 @@ public class ZKRegistry extends AbstractRegistry {
                     client.create().creatingParentsIfNeeded().forPath(booking.getPath(), new byte[0]);
                 }
                 NodeCache cache = new NodeCache(client, booking.getPath());
+                cache.start();
+                zkBooking.setNodeCache(cache);
+                future.complete(null);
                 cache.getListenable().addListener(() -> {
                     ChildData childData = cache.getCurrentData();
                     Map<String, String> datum;
@@ -336,8 +340,6 @@ public class ZKRegistry extends AbstractRegistry {
                     }
                     booking.handle(new ConfigEvent(registry, null, zkBooking.getStat().incrementAndGet(), datum));
                 });
-                cache.start();
-                zkBooking.setNodeCache(cache);
             });
         }
 

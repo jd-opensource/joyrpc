@@ -135,6 +135,11 @@ public class ZKRegistry extends AbstractRegistry {
         return new ZKController(this);
     }
 
+    @Override
+    protected Registion createRegistion(final URL url, final String key) {
+        return new Registion(url, key, serviceFunction.apply(url));
+    }
+
     /**
      * ZK控制器
      */
@@ -156,12 +161,12 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()));
+            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key.getUrl()));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()));
+            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key.getUrl()));
         }
 
         @Override
@@ -174,10 +179,13 @@ public class ZKRegistry extends AbstractRegistry {
                         .build();
                 client.start();
                 client.getConnectionStateListenable().addListener((curator, state) -> {
-                    if (state.isConnected()) {
+                    if (!isOpen()) {
+                        doDisconnect().whenComplete((v, t) -> future.completeExceptionally(new IllegalStateException("controller is closed.")));
+                    } else if (state.isConnected()) {
                         logger.warn("zk connection state is changed to " + state + ".");
                         future.complete(null);
                     } else {
+                        //会自动重连
                         logger.warn("zk connection state is changed to " + state + ".");
                     }
                 });
@@ -195,8 +203,6 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         protected CompletableFuture<Void> doRegister(final Registion registion) {
-            String path = registry.serviceFunction.apply(registion.getUrl());
-            String value = registion.getUrl().toString();
             Set<ExistsOption> existsOptions = new HashSet<ExistsOption>() {{
                 add(ExistsOption.createParentsIfNeeded);
             }};
@@ -206,16 +212,17 @@ public class ZKRegistry extends AbstractRegistry {
             }};
             return Futures.call(future -> {
                 //判断节点是否存在
-                curator.checkExists().withOptions(existsOptions).forPath(path).whenComplete((stat, exist) -> {
+                curator.checkExists().withOptions(existsOptions).forPath(registion.getPath()).whenComplete((stat, exist) -> {
                     //若存在，删除临时节点
                     if (stat != null) {
                         try {
-                            curator.unwrap().delete().forPath(path);
+                            curator.unwrap().delete().forPath(registion.getPath());
                         } catch (Exception ignored) {
                         }
                     }
                     //添加临时节点
-                    curator.create().withOptions(createOptions, EPHEMERAL).forPath(path, value.getBytes(UTF_8)).whenComplete((n, err) -> {
+                    curator.create().withOptions(createOptions, EPHEMERAL)
+                            .forPath(registion.getPath(), registion.getUrl().toString().getBytes(UTF_8)).whenComplete((n, err) -> {
                         if (err != null) {
                             future.completeExceptionally(err);
                         } else {
@@ -228,12 +235,11 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         protected CompletableFuture<Void> doDeregister(final Registion registion) {
-            String path = registry.serviceFunction.apply(registion.getUrl());
             //删除节点
             Set<DeleteOption> deleteOptions = new HashSet<DeleteOption>() {{
                 add(DeleteOption.quietly);
             }};
-            return Futures.call(future -> curator.delete().withOptions(deleteOptions).forPath(path).whenComplete((n, err) -> {
+            return Futures.call(future -> curator.delete().withOptions(deleteOptions).forPath(registion.getPath()).whenComplete((n, err) -> {
                 if (err != null) {
                     future.completeExceptionally(err);
                 } else {
@@ -246,9 +252,8 @@ public class ZKRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
             return Futures.call(future -> {
                 ZKClusterBooking zkBooking = (ZKClusterBooking) booking;
-                String path = registry.clusterFunction.apply(booking.getUrl());
                 //添加监听
-                PathChildrenCache childrenCache = new PathChildrenCache(curator.unwrap(), path, true);
+                PathChildrenCache childrenCache = new PathChildrenCache(curator.unwrap(), booking.getPath(), true);
                 childrenCache.getListenable().addListener((client, event) -> {
                     List<ShardEvent> events = new ArrayList<>();
                     UpdateType type = UPDATE;
@@ -309,13 +314,12 @@ public class ZKRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
             return Futures.call(future -> {
                 ZKConfigBooking zkBooking = (ZKConfigBooking) booking;
-                String path = registry.configFunction.apply(booking.getUrl());
                 CuratorFramework client = curator.unwrap();
-                Stat pathStat = client.checkExists().creatingParentsIfNeeded().forPath(path);
+                Stat pathStat = client.checkExists().creatingParentsIfNeeded().forPath(booking.getPath());
                 if (pathStat == null) {
-                    client.create().creatingParentsIfNeeded().forPath(path, new byte[0]);
+                    client.create().creatingParentsIfNeeded().forPath(booking.getPath(), new byte[0]);
                 }
-                NodeCache cache = new NodeCache(client, path);
+                NodeCache cache = new NodeCache(client, booking.getPath());
                 cache.getListenable().addListener(() -> {
                     ChildData childData = cache.getCurrentData();
                     Map<String, String> datum;
@@ -369,9 +373,10 @@ public class ZKRegistry extends AbstractRegistry {
          * @param key       键
          * @param dirty     脏函数
          * @param publisher 通知器
+         * @param path      路径
          */
-        public ZKClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher) {
-            super(key, dirty, publisher);
+        public ZKClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher, final String path) {
+            super(key, dirty, publisher, path);
         }
 
         public PathChildrenCache getChildrenCache() {
@@ -406,9 +411,10 @@ public class ZKRegistry extends AbstractRegistry {
          * @param key       键
          * @param dirty     脏函数
          * @param publisher 通知器
+         * @param path      路径
          */
-        public ZKConfigBooking(URLKey key, Runnable dirty, Publisher<ConfigEvent> publisher) {
-            super(key, dirty, publisher);
+        public ZKConfigBooking(final URLKey key, final Runnable dirty, final Publisher<ConfigEvent> publisher, final String path) {
+            super(key, dirty, publisher, path);
         }
 
         public NodeCache getNodeCache() {

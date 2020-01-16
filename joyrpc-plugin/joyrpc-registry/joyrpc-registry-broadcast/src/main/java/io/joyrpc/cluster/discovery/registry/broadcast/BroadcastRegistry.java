@@ -336,8 +336,9 @@ public class BroadcastRegistry extends AbstractRegistry {
                     IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     List<ShardEvent> events = new LinkedList<>();
                     map.values().forEach(url -> events.add(new ShardEvent(new Shard.DefaultShard(url), ShardEventType.ADD)));
-                    booking.handle(new ClusterEvent(booking, null, FULL, broadcastBooking.getStat().incrementAndGet(), events));
                     broadcastBooking.setListenerId(map.addEntryListener(broadcastBooking, true));
+                    future.complete(null);
+                    booking.handle(new ClusterEvent(booking, null, FULL, broadcastBooking.getStat().incrementAndGet(), events));
                 }
 
                 @Override
@@ -360,6 +361,7 @@ public class BroadcastRegistry extends AbstractRegistry {
                     IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     map.removeEntryListener(listenerId);
                 }
+                future.complete(null);
             });
         }
 
@@ -371,8 +373,9 @@ public class BroadcastRegistry extends AbstractRegistry {
                     BroadcastConfigBooking broadcastBooking = (BroadcastConfigBooking) booking;
                     IMap<String, String> imap = instance.getMap(broadcastBooking.getPath());
                     Map<String, String> map = new HashMap<>(imap);
-                    booking.handle(new ConfigEvent(booking, null, broadcastBooking.getStat().incrementAndGet(), map));
                     broadcastBooking.setListenerId(imap.addEntryListener(broadcastBooking, true));
+                    future.complete(null);
+                    booking.handle(new ConfigEvent(booking, null, broadcastBooking.getStat().incrementAndGet(), map));
                 }
 
                 @Override
@@ -395,6 +398,7 @@ public class BroadcastRegistry extends AbstractRegistry {
                     IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     map.removeEntryListener(listenerId);
                 }
+                future.complete(null);
             });
         }
     }

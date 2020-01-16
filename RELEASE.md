@@ -63,6 +63,8 @@
   - 升级Springboot为2.2.1.RELEASE版本
 
   - 升级Spring为5.2.1.RELEASE版本
+  
+  - 升级Hazelcast为3.12.5版本
 
 ### Bugfixes
 

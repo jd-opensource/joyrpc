@@ -1316,10 +1316,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected long lastEventTime = SystemClock.now();
         /**
-         * 回调ID（用于采用回调来订阅的场景）
-         */
-        protected String callbackId;
-        /**
          * 当数据更新后的处理器
          */
         protected Runnable dirty;
@@ -1356,14 +1352,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
         public long getVersion() {
             return version;
-        }
-
-        public String getCallbackId() {
-            return callbackId;
-        }
-
-        public void setCallbackId(String callbackId) {
-            this.callbackId = callbackId;
         }
 
         public long getLastEventTime() {

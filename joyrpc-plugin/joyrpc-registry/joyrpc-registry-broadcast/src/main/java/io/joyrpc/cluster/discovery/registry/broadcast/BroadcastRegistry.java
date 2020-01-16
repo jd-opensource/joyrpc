@@ -281,19 +281,25 @@ public class BroadcastRegistry extends AbstractRegistry {
                 iMap.putAsync(broadcastRegistion.getNode(), registion.getUrl(), registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
                     @Override
                     public void onResponse(final URL response) {
-                        long interval = ThreadLocalRandom.current().nextLong(registry.nodeExpiredTime / 3, registry.nodeExpiredTime * 2 / 5);
-                        interval = Math.max(15000, interval);
-                        broadcastRegistion.setRegisterTime(SystemClock.now());
-                        broadcastRegistion.setLeaseInterval(interval);
-                        if (isOpen()) {
-                            timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + interval, () -> lease(broadcastRegistion)));
+                        if (!isOpen()) {
+                            future.completeExceptionally(new IllegalStateException("controller is closed."));
+                        } else {
+                            long interval = ThreadLocalRandom.current().nextLong(registry.nodeExpiredTime / 3, registry.nodeExpiredTime * 2 / 5);
+                            interval = Math.max(15000, interval);
+                            broadcastRegistion.setRegisterTime(SystemClock.now());
+                            broadcastRegistion.setLeaseInterval(interval);
+                            if (isOpen()) {
+                                timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + interval, () -> lease(broadcastRegistion)));
+                            }
+                            future.complete(null);
                         }
-                        future.complete(null);
                     }
 
                     @Override
                     public void onFailure(final Throwable e) {
-                        logger.error(String.format("Error occurs while do register of %s, caused by %s", registion.getKey(), e.getMessage()));
+                        if (isOpen()) {
+                            logger.error(String.format("Error occurs while do register of %s, caused by %s", registion.getKey(), e.getMessage()));
+                        }
                         future.completeExceptionally(e);
                     }
                 });
@@ -406,17 +412,12 @@ public class BroadcastRegistry extends AbstractRegistry {
          */
         protected long leaseInterval;
         /**
-         * 路径
-         */
-        protected String path;
-        /**
          * 节点
          */
         protected String node;
 
         public BroadcastRegistion(final URL url, final String key, final String path, final String node) {
-            super(url, key);
-            this.path = path;
+            super(url, key, path);
             this.node = node;
         }
 
@@ -442,10 +443,6 @@ public class BroadcastRegistry extends AbstractRegistry {
             this.leaseInterval = leaseInterval;
         }
 
-        public String getPath() {
-            return path;
-        }
-
         public String getNode() {
             return node;
         }
@@ -464,13 +461,9 @@ public class BroadcastRegistry extends AbstractRegistry {
          * 监听器ID
          */
         protected String listenerId;
-        /**
-         * 配置路径
-         */
-        protected String path;
 
         public BroadcastClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher, final String path) {
-            super(key, dirty, publisher);
+            super(key, dirty, publisher, path);
             this.path = path;
         }
 
@@ -509,10 +502,6 @@ public class BroadcastRegistry extends AbstractRegistry {
         public AtomicLong getStat() {
             return stat;
         }
-
-        public String getPath() {
-            return path;
-        }
     }
 
     /**
@@ -529,10 +518,6 @@ public class BroadcastRegistry extends AbstractRegistry {
          * 监听器ID
          */
         protected String listenerId;
-        /**
-         * 配置路径
-         */
-        protected String path;
 
         /**
          * 构造函数
@@ -546,8 +531,7 @@ public class BroadcastRegistry extends AbstractRegistry {
                                       final Runnable dirty,
                                       final Publisher<ConfigEvent> publisher,
                                       final String path) {
-            super(key, dirty, publisher);
-            this.path = path;
+            super(key, dirty, publisher, path);
         }
 
         @Override
@@ -588,10 +572,6 @@ public class BroadcastRegistry extends AbstractRegistry {
 
         public AtomicLong getStat() {
             return stat;
-        }
-
-        public String getPath() {
-            return path;
         }
 
     }

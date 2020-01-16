@@ -143,6 +143,11 @@ public class EtcdRegistry extends AbstractRegistry {
         return new EtcdController(this);
     }
 
+    @Override
+    protected Registion createRegistion(final URL url, final String key) {
+        return new Registion(url, key, serviceFunction.apply(url));
+    }
+
     /**
      * ETCD控制器
      */
@@ -182,13 +187,13 @@ public class EtcdRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected ClusterBooking createClusterBooking(URLKey key) {
-            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()));
+        protected ClusterBooking createClusterBooking(final URLKey key) {
+            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key.getUrl()));
         }
 
         @Override
-        protected ConfigBooking createConfigBooking(URLKey key) {
-            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()));
+        protected ConfigBooking createConfigBooking(final URLKey key) {
+            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key.getUrl()));
         }
 
         @Override
@@ -199,10 +204,13 @@ public class EtcdRegistry extends AbstractRegistry {
             CompletableFuture<LeaseGrantResponse> grant = client.getLeaseClient().grant(registry.timeToLive / 1000);
             grant.whenComplete((res, err) -> {
                 if (err != null) {
+                    client.close();
+                    client = null;
                     future.completeExceptionally(err);
                 } else {
                     leaseId = res.getID();
                     leaseErr.set(0);
+                    //续约
                     timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
                     future.complete(null);
                 }
@@ -252,28 +260,28 @@ public class EtcdRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doRegister(final Registion registion) {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            String path = registry.serviceFunction.apply(registion.getUrl());
             if (leaseId <= 0) {
                 //没有租约
                 future.completeExceptionally(new IllegalStateException(
-                        String.format("Error occurs while register provider of %s, caused by no leaseId. retry....", path)));
+                        String.format("Error occurs while register provider of %s, caused by no leaseId. retry....", registion.getPath())));
             } else {
                 //有租约
                 PutOption putOption = PutOption.newBuilder().withLeaseId(leaseId).build();
-                client.getKVClient().put(ByteSequence.from(path, UTF_8), ByteSequence.from(registion.getUrl().toString(), UTF_8), putOption)
-                        .whenComplete((r, t) -> {
-                            if (!isOpen()) {
-                                //已经关闭，或者创建了新的客户端
-                                future.completeExceptionally(new IllegalStateException("controller is closed."));
-                            } else if (t != null) {
-                                //TODO 判断租期失效异常，触发重连逻辑
-                                logger.error(String.format("Error occurs while register provider of %s, caused by %s. retry....",
-                                        path, t.getMessage()), t);
-                                future.completeExceptionally(t);
-                            } else {
-                                future.complete(null);
-                            }
-                        });
+                ByteSequence key = ByteSequence.from(registion.getPath(), UTF_8);
+                ByteSequence value = ByteSequence.from(registion.getUrl().toString(), UTF_8);
+                client.getKVClient().put(key, value, putOption).whenComplete((r, t) -> {
+                    if (!isOpen()) {
+                        //已经关闭，或者创建了新的客户端
+                        future.completeExceptionally(new IllegalStateException("controller is closed."));
+                    } else if (t != null) {
+                        //TODO 判断租期失效异常，触发重连逻辑
+                        logger.error(String.format("Error occurs while register provider of %s, caused by %s. retry....",
+                                registion.getPath(), t.getMessage()), t);
+                        future.completeExceptionally(t);
+                    } else {
+                        future.complete(null);
+                    }
+                });
             }
             return future;
         }
@@ -281,8 +289,8 @@ public class EtcdRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doDeregister(final Registion registion) {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            String path = registry.serviceFunction.apply(registion.getUrl());
-            client.getKVClient().delete(ByteSequence.from(path, UTF_8)).whenComplete((r, t) -> {
+            ByteSequence key = ByteSequence.from(registion.getPath(), UTF_8);
+            client.getKVClient().delete(key).whenComplete((r, t) -> {
                 if (t != null) {
                     future.completeExceptionally(t);
                 } else {
@@ -295,17 +303,16 @@ public class EtcdRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
             CompletableFuture<Void> future = new CompletableFuture<>();
+            EtcdClusterBooking etcdBooking = (EtcdClusterBooking) booking;
             //先查询
-            String path = registry.clusterFunction.apply(booking.getUrl());
-            ByteSequence key = ByteSequence.from(path, UTF_8);
+            ByteSequence key = ByteSequence.from(etcdBooking.getPath(), UTF_8);
             //先查询，无异常后添加watcher，若结果不为空，通知FULL事件
             GetOption getOption = GetOption.newBuilder().withPrefix(key).build();
-            EtcdClusterBooking etcdBooking = (EtcdClusterBooking) booking;
             client.getKVClient().get(key, getOption).whenComplete((res, err) -> {
                 if (!isOpen()) {
                     future.completeExceptionally(new IllegalStateException("controller is closed."));
                 } else if (err != null) {
-                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", path, err.getMessage()), err);
+                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), err.getMessage()), err);
                     future.completeExceptionally(err);
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
@@ -318,7 +325,7 @@ public class EtcdRegistry extends AbstractRegistry {
                         etcdBooking.setWatcher(watcher);
                         future.complete(null);
                     } catch (Exception e) {
-                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", path, e.getMessage()), e);
+                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), e.getMessage()), e);
                         future.completeExceptionally(e);
                     }
                 }
@@ -339,17 +346,16 @@ public class EtcdRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
             CompletableFuture<Void> future = new CompletableFuture<>();
+            EtcdConfigBooking etcdBooking = (EtcdConfigBooking) booking;
             //先查询
-            String path = registry.configFunction.apply(booking.getUrl());
-            ByteSequence key = ByteSequence.from(path, UTF_8);
+            ByteSequence key = ByteSequence.from(etcdBooking.getPath(), UTF_8);
             //先查询，无异常后添加watcher，若结果不为空，通知FULL事件
             GetOption getOption = GetOption.newBuilder().withPrefix(key).build();
-            EtcdConfigBooking etcdBooking = (EtcdConfigBooking) booking;
             client.getKVClient().get(key, getOption).whenComplete((res, err) -> {
                 if (!isOpen()) {
                     future.completeExceptionally(new IllegalStateException("controller is closed."));
                 } else if (err != null) {
-                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", path, err.getMessage()), err);
+                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), err.getMessage()), err);
                     future.completeExceptionally(err);
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
@@ -362,7 +368,7 @@ public class EtcdRegistry extends AbstractRegistry {
                         etcdBooking.setWatcher(watcher);
                         future.complete(null);
                     } catch (Exception e) {
-                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", path, e.getMessage()), e);
+                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), e.getMessage()), e);
                         future.completeExceptionally(e);
                     }
                 }
@@ -391,8 +397,8 @@ public class EtcdRegistry extends AbstractRegistry {
          */
         protected Watch.Watcher watcher;
 
-        public EtcdClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher) {
-            super(key, dirty, publisher);
+        public EtcdClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher, String path) {
+            super(key, dirty, publisher, path);
         }
 
         @Override
@@ -463,8 +469,8 @@ public class EtcdRegistry extends AbstractRegistry {
          */
         protected Watch.Watcher watcher;
 
-        public EtcdConfigBooking(final URLKey key, final Runnable dirty, final Publisher<ConfigEvent> publisher) {
-            super(key, dirty, publisher);
+        public EtcdConfigBooking(final URLKey key, final Runnable dirty, final Publisher<ConfigEvent> publisher, final String path) {
+            super(key, dirty, publisher, path);
         }
 
         @Override

@@ -345,6 +345,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected static abstract class StateKey extends URLKey {
         /**
+         * 路径
+         */
+        protected String path;
+        /**
          * 状态Future
          */
         protected volatile StateFuture<URL> future = new StateFuture<>();
@@ -357,6 +361,22 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public StateKey(final URL url, final String key) {
             super(url, key);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param url  url
+         * @param key  键
+         * @param path 路径
+         */
+        public StateKey(URL url, String key, String path) {
+            super(url, key);
+            this.path = path;
+        }
+
+        public String getPath() {
+            return path;
         }
 
         public StateFuture<URL> getFuture() {
@@ -381,6 +401,17 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public Registion(final URL url, final String key) {
             super(url, key);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param url  url
+         * @param key  键
+         * @param path 路径
+         */
+        public Registion(final URL url, final String key, final String path) {
+            super(url, key, path);
         }
 
         /**
@@ -1299,7 +1330,19 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param publisher 事件发布者
          */
         public Booking(final URLKey key, final Runnable dirty, final Publisher<T> publisher) {
-            super(key.getUrl(), key.getKey());
+            this(key, dirty, publisher, null);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param key       键
+         * @param dirty     脏函数
+         * @param publisher 事件发布器
+         * @param path      路径
+         */
+        public Booking(final URLKey key, Runnable dirty, Publisher<T> publisher, String path) {
+            super(key.getUrl(), key.getKey(), path);
             this.dirty = dirty;
             this.publisher = publisher;
             this.publisher.start();
@@ -1431,6 +1474,18 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public ClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher) {
             super(key, dirty, publisher);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param key       key
+         * @param dirty     脏数据处理器
+         * @param publisher 事件发布者
+         * @param path      路径
+         */
+        public ClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher, final String path) {
+            super(key, dirty, publisher, path);
         }
 
         @Override
@@ -1581,6 +1636,18 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public ConfigBooking(final URLKey key, final Runnable dirty, final Publisher<ConfigEvent> publisher) {
             super(key, dirty, publisher);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param key       key
+         * @param dirty     脏数据处理器
+         * @param publisher 事件发布者
+         * @param path      路径
+         */
+        public ConfigBooking(URLKey key, Runnable dirty, Publisher<ConfigEvent> publisher, String path) {
+            super(key, dirty, publisher, path);
         }
 
         @Override

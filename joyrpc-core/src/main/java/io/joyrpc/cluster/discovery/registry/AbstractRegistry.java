@@ -591,6 +591,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             //任务执行线程
             daemon = Daemon.builder().name("registry-dispatcher").delay(0).fault(1000L)
                     .prepare(this::restore).callable(this::dispatch).waiter(waiter).build();
+            daemon.start();
             doOpen(future);
             return future;
         }

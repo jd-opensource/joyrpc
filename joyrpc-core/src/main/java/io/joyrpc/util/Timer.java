@@ -23,7 +23,11 @@ package io.joyrpc.util;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.thread.NamedThreadFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -39,6 +43,9 @@ import static io.joyrpc.constants.Constants.TIMER_THREADS;
  * 时间轮调度器
  */
 public class Timer {
+
+    private final static Logger logger = LoggerFactory.getLogger(Timer.class);
+
     /**
      * 默认定时器
      */
@@ -159,7 +166,11 @@ public class Timer {
                         }
                     }
                 } catch (InterruptedException e) {
+                    logger.error(e.getMessage(), e);
                     break;
+                } catch (Exception e) {
+                    logger.error(e.getMessage(), e);
+                    throw e;
                 }
             }
         });
@@ -293,6 +304,10 @@ public class Timer {
          */
         protected long now;
         /**
+         * 当前槽的位置
+         */
+        protected int index;
+        /**
          * 延迟队列
          */
         protected DelayQueue<Slot> queue;
@@ -347,7 +362,7 @@ public class Timer {
          */
         public long getLeastOneTick(final long time) {
             long result = SystemClock.now() + tickTime;
-            return time < result ? result : time;
+            return Math.max(time, result);
         }
 
         /**
@@ -361,15 +376,12 @@ public class Timer {
             } else if (time < duration) {
                 //该任务在一个时间轮里面，则加入到对应的时间槽
                 int count = (int) (time / tickTime);
-                Slot slot = slots[count % ticks];
+                Slot slot = slots[(count + index) % ticks];
                 //添加到槽里面
-                switch (slot.add(task, now + count * tickTime)) {
-                    case Slot.HEAD:
-                        queue.offer(slot);
-                        return true;
-                    default:
-                        return true;
+                if (slot.add(task, now + count * tickTime) == Slot.HEAD) {
+                    queue.offer(slot);
                 }
+                return true;
             } else {
                 //放到下一层的时间轮
                 return getNext().add(task);
@@ -382,6 +394,10 @@ public class Timer {
         public void advance(final long timestamp) {
             if (timestamp >= now + tickTime) {
                 now = timestamp - (timestamp % tickTime);
+                index++;
+                if (index >= ticks) {
+                    index = 0;
+                }
                 if (next != null) {
                     //推进下层时间轮时间
                     next.advance(timestamp);
@@ -575,13 +591,15 @@ public class Timer {
          * @param consumer 消费者
          */
         protected void flush(final Consumer<Task> consumer) {
+            List<Task> ts = new LinkedList<>();
             Task task = root.next;
             while (task != root) {
                 remove(task);
-                consumer.accept(task);
+                ts.add(task);
                 task = root.next;
             }
             expiration = -1L;
+            ts.forEach(consumer);
         }
 
         @Override

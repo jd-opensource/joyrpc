@@ -1895,7 +1895,9 @@ public class ClassUtils {
          * @return
          */
         public boolean isWriteable() {
-            return field != null || setter != null;
+            //有set方法 或 field存在 并且filed不是final的
+            return (field != null && !Modifier.isFinal(field.getModifiers()))
+                    || setter != null;
         }
 
         /**

@@ -78,7 +78,7 @@ public class AbstractCacheFilter extends AbstractFilter {
                 //判断是否开启了缓存
                 boolean enable = url.getBoolean(getOption(methodName, CACHE_OPTION.getName(), defEnable));
                 if (!enable) {
-                    return Optional.ofNullable(null);
+                    return Optional.empty();
                 }
                 //获取缓存键生成器
                 String keyGenerator = url.getString(getOption(methodName, CACHE_KEY_GENERATOR_OPTION.getName(), defKeyGenerator));
@@ -87,7 +87,7 @@ public class AbstractCacheFilter extends AbstractFilter {
                     if (keyGenerator != null && noneExitsGenerators.add(keyGenerator)) {
                         logger.warn(String.format("No such extension %s for %s.", keyGenerator, CacheKeyGenerator.class.getName()));
                     }
-                    return Optional.ofNullable(null);
+                    return Optional.empty();
                 } else {
                     //判断是否缓存空值
                     boolean cacheNullable = url.getBoolean(getOption(methodName, CACHE_NULLABLE_OPTION.getName(), defCacheNullable));
@@ -97,7 +97,7 @@ public class AbstractCacheFilter extends AbstractFilter {
                             expireAfterWrite(url.getInteger(getOption(methodName, CACHE_EXPIRE_TIME_OPTION.getName(), defCacheExpireTime))).
                             build();
                     Cache<Object, Object> cache = cacheFactory.build(methodName, cacheConfig);
-                    return Optional.ofNullable(new CacheMeta(cache, generator, cacheNullable));
+                    return Optional.of(new CacheMeta(cache, generator, cacheNullable));
                 }
             });
         }
@@ -161,7 +161,7 @@ public class AbstractCacheFilter extends AbstractFilter {
             return true;
         }
         Map<String, String> caches = url.endsWith("." + Constants.CACHE_OPTION.getName());
-        if (caches == null || caches.isEmpty()) {
+        if (caches.isEmpty()) {
             return false;
         }
         for (String value : caches.values()) {

@@ -20,6 +20,7 @@ package io.joyrpc.invoker;
  * #L%
  */
 
+import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.Node;
@@ -98,7 +99,7 @@ public class Refer extends AbstractInvoker {
     /**
      * 过滤链
      */
-    protected FilterChain chain;
+    protected Invoker chain;
     /**
      * 回调容器
      */
@@ -189,7 +190,7 @@ public class Refer extends AbstractInvoker {
         this.cluster.addHandler(config);
         this.distribution = buildDistribution(buildRouter(url, interfaceClass), buildRoute(url, loadBalance));
         //处理链
-        this.chain = FilterChain.consumer(this, this::distribute);
+        this.chain = FILTER_CHAIN_FACTORY.get().build(this, this::distribute);
         //加载符合条件的透传插件，例如在MESH环境加载MeshTransmit
         this.transmits = TRANSMIT.extensions();
         this.injections = NODE_REQUEST_INJECTION.extensions(o -> o.test());

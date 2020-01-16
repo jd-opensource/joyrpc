@@ -9,9 +9,9 @@ package io.joyrpc.exception;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,7 @@ public class LafException extends RuntimeException {
      */
     protected String errorCode;
 
-    protected boolean retry;
+    protected Boolean retry = false;
 
     public LafException() {
     }
@@ -114,7 +114,7 @@ public class LafException extends RuntimeException {
      * @return
      */
     public boolean isRetry() {
-        return retry;
+        return retry != null && retry;
     }
 
     public void setRetry(boolean retry) {

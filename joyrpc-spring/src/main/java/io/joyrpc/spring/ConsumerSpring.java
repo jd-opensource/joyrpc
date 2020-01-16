@@ -29,13 +29,13 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
 
     /**
-     * consumer bean 计数
-     */
-    public transient static final AtomicInteger REFERS = new AtomicInteger(0);
-    /**
      * slf4j logger for this class
      */
     private final static Logger logger = LoggerFactory.getLogger(ConsumerGroupBean.class);
+    /**
+     * consumer bean 计数
+     */
+    public transient static final AtomicInteger REFERS = new AtomicInteger(0);
     /**
      * 抽象消费者类
      */
@@ -188,6 +188,9 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
             try {
                 latch.await();
                 if (referThrowable != null) {
+                    logger.error(String.format("Failed refer %s/%s, while be system exit, caused by %s",
+                            config.getInterfaceClazz(), config.getAlias(), referThrowable.getMessage()),
+                            referThrowable);
                     System.exit(1);
                 } else if (REFERS.decrementAndGet() == 0) {
                     applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));

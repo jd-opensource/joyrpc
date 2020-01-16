@@ -29,11 +29,7 @@ import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.MetricEvent;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.event.AsyncResult;
-import io.joyrpc.event.EventHandler;
-import io.joyrpc.event.Publisher;
-import io.joyrpc.event.PublisherConfig;
-import io.joyrpc.event.UpdateEvent.UpdateType;
+import io.joyrpc.event.*;
 import io.joyrpc.exception.*;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
@@ -647,7 +643,7 @@ public class Cluster {
          * @param event
          */
         protected void onClusterEvent(final ClusterEvent event) {
-            if (event == null || !isOpened() || (event.getType() == UpdateType.UPDATE && (event.getDatum() == null || event.getDatum().isEmpty()))) {
+            if (event == null || !isOpened() || (event.getType() == UpdateEvent.UpdateType.UPDATE && (event.getDatum() == null || event.getDatum().isEmpty()))) {
                 return;
             }
             offer(() -> {

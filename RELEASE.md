@@ -22,6 +22,10 @@
   
   - 调整了GenericService的方法，泛化的接口可以是GenericService的子类，便于兼容历史版本
   
+  - 增加了处理链构造器扩展点FilterChainFactory
+  
+  - 优化cluster初始化连接逻辑，若check设置为false（默认值改为true），则不用等待初始化连接成功，建连操作执行完后就ready
+  
 - Springboot
 
   - 处理启动时候的几个Warn信息
@@ -109,6 +113,8 @@
 - 序列化
   
   - 修改泛化调用的反序列化逻辑，优先按照用户传递的子类参数类型来进行反序列化
+  
+  - grpc请求包装类增加接口类名作为前缀名称
   
 - 工具类
   

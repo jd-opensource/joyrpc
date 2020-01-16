@@ -143,8 +143,19 @@ public class GlobalContext {
      * @return String
      */
     public static String getString(final String key) {
+        return getString(key, null);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @param def the def
+     * @return String
+     */
+    public static String getString(final String key, final String def) {
         Object value = get(key);
-        return value == null ? null : value.toString();
+        return value == null ? def : value.toString();
     }
 
     /**
@@ -154,7 +165,18 @@ public class GlobalContext {
      * @return Integer
      */
     public static Integer getInteger(final String key) {
-        return Converts.getInteger(get(key), 0);
+        return getInteger(key, 0);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @param def the def
+     * @return Integer
+     */
+    public static Integer getInteger(final String key, final Integer def) {
+        return Converts.getInteger(get(key), def);
     }
 
     /**
@@ -164,7 +186,38 @@ public class GlobalContext {
      * @return Long
      */
     public static Long getLong(final String key) {
-        return Converts.getLong(get(key), 0L);
+        return getLong(key, 0L);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @return Long
+     */
+    public static Boolean getBoolean(final String key) {
+        return getBoolean(key, false);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @param def the def
+     * @return Long
+     */
+    public static Boolean getBoolean(final String key, final Boolean def) {
+        return Converts.getBoolean(get(key), def);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @return Long
+     */
+    public static Long getLong(final String key, final Long def) {
+        return Converts.getLong(get(key), def);
     }
 
     /**

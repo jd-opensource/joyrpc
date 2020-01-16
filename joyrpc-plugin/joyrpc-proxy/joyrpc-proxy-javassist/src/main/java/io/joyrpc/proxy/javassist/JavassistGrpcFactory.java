@@ -9,9 +9,9 @@ package io.joyrpc.proxy.javassist;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,7 +38,7 @@ import static io.joyrpc.proxy.GrpcFactory.ORDER_JAVASSIST;
 public class JavassistGrpcFactory extends AbstractGrpcFactory {
 
     @Override
-    protected Class buildRequestClass(final Class clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
         //ClassPool：CtClass对象的容器
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
@@ -61,7 +61,7 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
     }
 
     @Override
-    protected Class buildResponseClass(final Class clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
         //ClassPool：CtClass对象的容器
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类

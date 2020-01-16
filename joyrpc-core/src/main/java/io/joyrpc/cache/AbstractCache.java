@@ -9,9 +9,9 @@ package io.joyrpc.cache;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -46,7 +46,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
         try {
             if (value != null || config.nullable) {
                 //判断是否缓存空值
-                doPut(key, value);
+                return doPut(key, value);
             }
             return CompletableFuture.completedFuture(null);
         } catch (Exception e) {
@@ -58,11 +58,10 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
     /**
      * 同步修改
      *
-     * @param key
-     * @param value
-     * @throws Exception
+     * @param key   键
+     * @param value 值
      */
-    protected abstract void doPut(final K key, final V value) throws Exception;
+    protected abstract CompletableFuture<Void> doPut(K key, V value);
 
     @Override
     public CompletableFuture<CacheObject<V>> get(final K key) {
@@ -70,7 +69,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
             return CompletableFuture.completedFuture(null);
         }
         try {
-            return CompletableFuture.completedFuture(doGet(key));
+            return doGet(key);
         } catch (Exception e) {
             return Futures.completeExceptionally(new CacheException(e.getMessage(), e));
         }
@@ -79,29 +78,28 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
     /**
      * 同步获取
      *
-     * @param key
-     * @return
-     * @throws Exception
+     * @param key 键
+     * @return 缓存对象
      */
-    protected abstract CacheObject<V> doGet(final K key) throws Exception;
+    protected abstract CompletableFuture<CacheObject<V>> doGet(K key);
 
     @Override
     public CompletableFuture<Void> remove(final K key) {
-        if (key != null) {
-            try {
-                doRemove(key);
-            } catch (Exception e) {
-                return Futures.completeExceptionally(new CacheException(e.getMessage(), e));
-            }
+        if (key == null) {
+            return CompletableFuture.completedFuture(null);
         }
-        return CompletableFuture.completedFuture(null);
+        try {
+            return doRemove(key);
+        } catch (Exception e) {
+            return Futures.completeExceptionally(new CacheException(e.getMessage(), e));
+        }
+
     }
 
     /**
      * 同步删除
      *
-     * @param key
-     * @throws Exception
+     * @param key 键
      */
-    protected abstract void doRemove(final K key) throws Exception;
+    protected abstract CompletableFuture<Void> doRemove(K key);
 }

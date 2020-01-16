@@ -52,6 +52,7 @@ import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.filter.cache.CacheKeyGenerator;
 import io.joyrpc.health.Doctor;
 import io.joyrpc.invoker.ExceptionHandler;
+import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.GroupInvoker;
 import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.permission.Authenticator;
@@ -86,6 +87,11 @@ public interface Plugin {
      * 插件选择器
      */
     ExtensionSelector<MessageHandler, Integer, Integer, MessageHandler> MESSAGE_HANDLER_SELECTOR = new MessageHandlerSelector(MESSAGE_HANDLER);
+
+    /**
+     * 过滤链构建器
+     */
+    ExtensionPoint<FilterChainFactory, String> FILTER_CHAIN_FACTORY = new ExtensionPointLazy<>(FilterChainFactory.class);
 
     /**
      * 消费者过滤器插件
@@ -287,10 +293,15 @@ public interface Plugin {
      * 客户端协议选择器，匹配最优的协议
      */
     ExtensionSelector<ClientProtocol, String, ProtocolVersion, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
-            new Selector.CacheSelector<>((extensions, version) -> {
-                String name = version.getName();
+            new Selector.CacheSelector<>((extensions, protocolVersion) -> {
+                String name = protocolVersion.getName();
+                String version = protocolVersion.getVersion();
+                //协议版本为空，直接根据协议名称获取
+                if (version == null || version.isEmpty()) {
+                    return extensions.get(name);
+                }
                 //根据版本获取
-                ClientProtocol protocol = extensions.get(version.getVersion());
+                ClientProtocol protocol = extensions.get(version);
                 if (protocol == null && name != null && !name.isEmpty()) {
                     String n;
                     //版本没有找到，则按照名称取优先级最高的版本
@@ -305,9 +316,14 @@ public interface Plugin {
                                 protocol = meta.getTarget();
                                 break;
                             } catch (NumberFormatException e) {
+                                if (n.equals(name) && protocol == null) {
+                                    //还没有找到高版本的协议，但找到了与name名称相同的协议，暂时先赋值
+                                    protocol = meta.getTarget();
+                                }
                             }
                         }
                     }
+
                 }
                 return protocol;
             }));

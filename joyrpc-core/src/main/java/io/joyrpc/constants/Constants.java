@@ -20,6 +20,7 @@ package io.joyrpc.constants;
  * #L%
  */
 
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.OsType;
 import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.extension.URL;
@@ -302,6 +303,16 @@ public class Constants {
     public static final String INTERNAL_KEY_APPINSID = INTERNAL_KEY_PREFIX + KEY_APPINSID;
 
     /**
+     * 内部使用的key：重试次数
+     */
+    public static final String INTERNAL_KEY_RETRY_TIMES = INTERNAL_KEY_PREFIX + "retryTimes";
+
+    /**
+     * 内部使用的key：消费端配置的分组别名信息
+     */
+    public static final String INTERNAL_KEY_CONSUMERALIAS = INTERNAL_KEY_PREFIX + "consumerAlias";
+
+    /**
      * 隐藏的key前缀，隐藏的key只能在filter里拿到，在RpcContext里拿不到，不过可以设置
      */
     public static final char HIDE_KEY_PREFIX = '.';
@@ -460,7 +471,7 @@ public class Constants {
     public static final URLOption<String> LOADBALANCE_OPTION = new URLOption<>("loadbalance", "randomWeight");
     public static final URLOption<Boolean> STICKY_OPTION = new URLOption<>("sticky", false);
     public static final URLOption<Boolean> IN_JVM_OPTION = new URLOption<>("injvm", true);
-    public static final URLOption<Boolean> CHECK_OPTION = new URLOption<>("check", false);
+    public static final URLOption<Boolean> CHECK_OPTION = new URLOption<>("check", true);
     /**
      * 默认序列化算法
      */
@@ -624,10 +635,10 @@ public class Constants {
     public static final URLOption<Boolean> BUFFER_POOLED_OPTION = new URLOption<>("buffer.pooled", false);
     public static final URLOption<Integer> INIT_SIZE_OPTION = new URLOption<>("initSize", 5);
     public static final URLOption<Integer> MIN_SIZE_OPTION = new URLOption<>("minSize", 0);
-    public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 0L);
+    public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 90000L);
     public static final URLOption<Integer> CONNECT_TIMEOUT_OPTION = new URLOption<>("connectTimeout", 5000);
-    public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", 64 * 1024);
-    public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", 32 * 1024);
+    public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", DEFAULT_HIGH_WATER_MARK);
+    public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", DEFAULT_LOW_WATER_MARK);
     public static final URLOption<Integer> SO_RECEIVE_BUF_OPTION = new URLOption<>("soRevBuf", 8192 * 128);
     public static final URLOption<Integer> SO_SEND_BUF_OPTION = new URLOption<>("soSndBuf", 8192 * 128);
     public static final URLOption<Boolean> SO_KEEPALIVE_OPTION = new URLOption<>("soKeepAlive", Boolean.TRUE);
@@ -748,8 +759,7 @@ public class Constants {
      * @return boolean
      */
     public static boolean isUseEpoll(final URL url) {
-        boolean linux = isLinux(url);
-        return url == null ? false : url.getBoolean(USE_EPOLL_KEY, linux) && linux;
+        return isLinux(url) && url != null && url.getBoolean(USE_EPOLL_KEY, true);
     }
 
     /**
@@ -760,7 +770,7 @@ public class Constants {
      */
     public static boolean isLinux(final URL url) {
         try {
-            return url == null ? false : OsType.valueOf(url.getString(OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
+            return url != null && OsType.valueOf(url.getString(OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
         } catch (IllegalArgumentException e) {
             return false;
         }

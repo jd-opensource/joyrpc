@@ -176,9 +176,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
         AtomicBoolean first = new AtomicBoolean(false);
         //获取注册对象
         Registion registion = registers.computeIfAbsent(getRegisterKey(url), key -> {
-            Registion result = new Registion(url, key);
             first.set(true);
-            return result;
+            return createRegistion(url, key);
         });
         //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
         registion.addRef();
@@ -188,6 +187,17 @@ public abstract class AbstractRegistry implements Registry, Configure {
             state.whenOpen(c -> c.register(registion));
         }
         return registion.getFuture().getOpenFuture();
+    }
+
+    /**
+     * 构建注册对象
+     *
+     * @param url url
+     * @param key 键
+     * @return 注册对象
+     */
+    protected Registion createRegistion(final URL url, final String key) {
+        return new Registion(url, key);
     }
 
     @Override
@@ -364,11 +374,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
         protected final AtomicInteger counter = new AtomicInteger(0);
 
         /**
-         * 注册时间
-         */
-        protected long registerTime;
-
-        /**
          * 构造函数
          *
          * @param url URL
@@ -396,19 +401,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return counter.decrementAndGet();
         }
 
-        public long getRegisterTime() {
-            return registerTime;
-        }
-
-        public void setRegisterTime(long registerTime) {
-            this.registerTime = registerTime;
-        }
-
         /**
          * 关闭
          */
         public void close() {
-            registerTime = 0;
             StateFuture<URL> f = future;
             future = new StateFuture<>();
             f.close();
@@ -731,14 +727,14 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     long count = retryTimes + 1;
                     if (maxRetries < 0 || maxRetries > 0 && count <= maxRetries) {
                         //失败重试，<0无限重试，=0不重试，>0则表示最大重试次数
-                        logger.error(String.format("Error occurs while connecting to %s, retry in %d(ms)", registry.url.toString(false, false), 1000L));
+                        logger.error(String.format("Error occurs while connecting to %s, retry in %d(ms)", registry.name, 1000L));
                         reconnectTask = new ReconnectTask(() -> reconnect(future, count, maxRetries), SystemClock.now() + 1000L);
                     } else {
                         //连接失败
                         future.completeExceptionally(t);
                     }
                 } else {
-                    logger.info(String.format("Success connecting to %s.", registry.url.toString(false, false)));
+                    logger.info(String.format("Success connecting to %s.", registry.name));
                     //连接成功
                     connected.set(true);
                     waiter.wakeup();

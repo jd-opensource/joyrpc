@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -169,6 +170,11 @@ public class BroadcastRegistry extends AbstractRegistry {
     }
 
     @Override
+    protected Registion createRegistion(final URL url, final String key) {
+        return new BroadcastRegistion(url, key, serviceRootKeyFunc.apply(url), serviceNodeKeyFunc.apply(url));
+    }
+
+    @Override
     protected RegistryController<? extends AbstractRegistry> create() {
         return new BroadcastController(this);
     }
@@ -180,7 +186,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         /**
          * hazelcast实例
          */
-        protected HazelcastInstance instance;
+        protected volatile HazelcastInstance instance;
         /**
          * 续约间隔
          */
@@ -203,40 +209,19 @@ public class BroadcastRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new BroadcastClusterBooking(key, this::dirty, getPublisher(key.getKey()));
+            return new BroadcastClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.providersRootKeyFunc.apply(key.getUrl()));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new BroadcastConfigBooking(key, this::dirty, getPublisher(key.getKey()));
+            return new BroadcastConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configRootKeyFunc.apply(key.getUrl()));
         }
 
         @Override
         protected CompletableFuture<Void> doConnect() {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            try {
+            return Futures.call(future -> {
                 instance = Hazelcast.newHazelcastInstance(registry.cfg);
-                timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
-                future.complete(null);
-            } catch (Exception e) {
-                logger.error(String.format("Error occurs while connect, caused by %s", e.getMessage()), e);
-                future.completeExceptionally(e);
-            }
-            return future;
-        }
-
-        /**
-         * 续约
-         */
-        protected void lease() {
-            if (isOpen()) {
-                //遍历注册，放到注册中心的线程执行
-                registers.forEach((k, v) -> addNewTask(new Task(null, new CompletableFuture<>(), () -> lease(v),
-                        0, 0, 0, null)));
-                if (isOpen()) {
-                    timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
-                }
-            }
+            });
         }
 
         /**
@@ -244,38 +229,40 @@ public class BroadcastRegistry extends AbstractRegistry {
          *
          * @param registion 注册
          */
-        protected CompletableFuture<Void> lease(final Registion registion) {
-            //registerTime不为0，说明已经注册，执行续期
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            if (isOpen() && registion.getRegisterTime() != 0) {
-                URL url = registion.getUrl();
-                String serviceRootKey = registry.serviceRootKeyFunc.apply(url);
-                String nodeKey = registry.serviceNodeKeyFunc.apply(url);
-                IMap<String, URL> map = instance.getMap(serviceRootKey);
-                //计算新的ttl，并续期
-                long newTtl = SystemClock.now() - registion.getRegisterTime() + registry.nodeExpiredTime;
-                boolean isNotExpired = map.setTtl(nodeKey, newTtl, TimeUnit.MILLISECONDS);
-                //节点已经过期，重新添加回节点，并修改meta的registerTime
-                if (!isNotExpired) {
-                    registion.setRegisterTime(SystemClock.now());
-                    map.putAsync(nodeKey, url, registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
-                        @Override
-                        public void onResponse(final URL response) {
-                            future.complete(null);
-                        }
+        protected void lease(final BroadcastRegistion registion) {
+            if (isOpen() && registers.containsKey(registion.getKey())) {
+                try {
+                    URL url = registion.getUrl();
+                    IMap<String, URL> map = instance.getMap(registion.getPath());
+                    //计算新的ttl，并续期
+                    long newTtl = SystemClock.now() - registion.getRegisterTime() + registry.nodeExpiredTime;
+                    boolean isNotExpired = map.setTtl(registion.getNode(), newTtl, TimeUnit.MILLISECONDS);
+                    //节点已经过期，重新添加回节点，并修改meta的registerTime
+                    if (!isNotExpired) {
+                        map.putAsync(registion.getNode(), url, registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
+                            @Override
+                            public void onResponse(final URL response) {
+                                registion.setRegisterTime(SystemClock.now());
+                            }
 
-                        @Override
-                        public void onFailure(final Throwable t) {
-                            future.completeExceptionally(t);
-                        }
-                    });
-                } else {
-                    future.complete(null);
+                            @Override
+                            public void onFailure(final Throwable t) {
+                                if (!(t instanceof HazelcastInstanceNotActiveException)) {
+                                    logger.error("Error occurs while leasing registion " + registion.getKey(), t);
+                                }
+                            }
+                        });
+                    }
+                } catch (HazelcastInstanceNotActiveException e) {
+                    logger.error("Error occurs while leasing registion " + registion.getKey() + ", caused by " + e.getMessage());
+                } catch (Exception e) {
+                    logger.error("Error occurs while leasing registion " + registion.getKey(), e);
+                } finally {
+                    if (isOpen() && registers.containsKey(registion.getKey())) {
+                        timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + registion.getLeaseInterval(), () -> lease(registion)));
+                    }
                 }
-            } else {
-                future.complete(null);
             }
-            return future;
         }
 
         @Override
@@ -287,14 +274,20 @@ public class BroadcastRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doRegister(Registion registion) {
+        protected CompletableFuture<Void> doRegister(final Registion registion) {
             return Futures.call(future -> {
-                String name = registry.serviceRootKeyFunc.apply(registion.getUrl());
-                String key = registry.serviceNodeKeyFunc.apply(registion.getUrl());
-                IMap<String, URL> iMap = instance.getMap(name);
-                iMap.putAsync(key, registion.getUrl(), registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
+                BroadcastRegistion broadcastRegistion = (BroadcastRegistion) registion;
+                IMap<String, URL> iMap = instance.getMap(broadcastRegistion.getPath());
+                iMap.putAsync(broadcastRegistion.getNode(), registion.getUrl(), registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
                     @Override
                     public void onResponse(final URL response) {
+                        long interval = ThreadLocalRandom.current().nextLong(registry.nodeExpiredTime / 3, registry.nodeExpiredTime * 2 / 5);
+                        interval = Math.max(15000, interval);
+                        broadcastRegistion.setRegisterTime(SystemClock.now());
+                        broadcastRegistion.setLeaseInterval(interval);
+                        if (isOpen()) {
+                            timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + interval, () -> lease(broadcastRegistion)));
+                        }
                         future.complete(null);
                     }
 
@@ -331,9 +324,9 @@ public class BroadcastRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
             return Futures.call(new Futures.Executor<Void>() {
                 @Override
-                public void execute(final CompletableFuture<Void> future) throws Exception {
+                public void execute(final CompletableFuture<Void> future) {
                     BroadcastClusterBooking broadcastBooking = (BroadcastClusterBooking) booking;
-                    IMap<String, URL> map = instance.getMap(registry.providersRootKeyFunc.apply(booking.getUrl()));
+                    IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     List<ShardEvent> events = new LinkedList<>();
                     map.values().forEach(url -> events.add(new ShardEvent(new Shard.DefaultShard(url), ShardEventType.ADD)));
                     booking.handle(new ClusterEvent(booking, null, FULL, broadcastBooking.getStat().incrementAndGet(), events));
@@ -357,7 +350,7 @@ public class BroadcastRegistry extends AbstractRegistry {
                 BroadcastClusterBooking broadcastBooking = (BroadcastClusterBooking) booking;
                 String listenerId = broadcastBooking.getListenerId();
                 if (listenerId != null) {
-                    IMap<String, URL> map = instance.getMap(registry.providersRootKeyFunc.apply(booking.getUrl()));
+                    IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     map.removeEntryListener(listenerId);
                 }
             });
@@ -367,9 +360,9 @@ public class BroadcastRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(ConfigBooking booking) {
             return Futures.call(new Futures.Executor<Void>() {
                 @Override
-                public void execute(final CompletableFuture<Void> future) throws Exception {
+                public void execute(final CompletableFuture<Void> future) {
                     BroadcastConfigBooking broadcastBooking = (BroadcastConfigBooking) booking;
-                    IMap<String, String> imap = instance.getMap(registry.providersRootKeyFunc.apply(booking.getUrl()));
+                    IMap<String, String> imap = instance.getMap(broadcastBooking.getPath());
                     Map<String, String> map = new HashMap<>(imap);
                     booking.handle(new ConfigEvent(booking, null, broadcastBooking.getStat().incrementAndGet(), map));
                     broadcastBooking.setListenerId(imap.addEntryListener(broadcastBooking, true));
@@ -392,10 +385,69 @@ public class BroadcastRegistry extends AbstractRegistry {
                 BroadcastConfigBooking broadcastBooking = (BroadcastConfigBooking) booking;
                 String listenerId = broadcastBooking.getListenerId();
                 if (listenerId != null) {
-                    IMap<String, URL> map = instance.getMap(registry.providersRootKeyFunc.apply(booking.getUrl()));
+                    IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     map.removeEntryListener(listenerId);
                 }
             });
+        }
+    }
+
+    /**
+     * 广播注册
+     */
+    protected static class BroadcastRegistion extends Registion {
+
+        /**
+         * 注册时间
+         */
+        protected long registerTime;
+        /**
+         * 续约时间间隔
+         */
+        protected long leaseInterval;
+        /**
+         * 路径
+         */
+        protected String path;
+        /**
+         * 节点
+         */
+        protected String node;
+
+        public BroadcastRegistion(final URL url, final String key, final String path, final String node) {
+            super(url, key);
+            this.path = path;
+            this.node = node;
+        }
+
+        @Override
+        public void close() {
+            registerTime = 0;
+            super.close();
+        }
+
+        public long getRegisterTime() {
+            return registerTime;
+        }
+
+        public void setRegisterTime(long registerTime) {
+            this.registerTime = registerTime;
+        }
+
+        public long getLeaseInterval() {
+            return leaseInterval;
+        }
+
+        public void setLeaseInterval(long leaseInterval) {
+            this.leaseInterval = leaseInterval;
+        }
+
+        public String getPath() {
+            return path;
+        }
+
+        public String getNode() {
+            return node;
         }
     }
 
@@ -412,9 +464,14 @@ public class BroadcastRegistry extends AbstractRegistry {
          * 监听器ID
          */
         protected String listenerId;
+        /**
+         * 配置路径
+         */
+        protected String path;
 
-        public BroadcastClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher) {
+        public BroadcastClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher, final String path) {
             super(key, dirty, publisher);
+            this.path = path;
         }
 
         @Override
@@ -452,6 +509,10 @@ public class BroadcastRegistry extends AbstractRegistry {
         public AtomicLong getStat() {
             return stat;
         }
+
+        public String getPath() {
+            return path;
+        }
     }
 
     /**
@@ -468,9 +529,25 @@ public class BroadcastRegistry extends AbstractRegistry {
          * 监听器ID
          */
         protected String listenerId;
+        /**
+         * 配置路径
+         */
+        protected String path;
 
-        public BroadcastConfigBooking(URLKey key, Runnable dirty, Publisher<ConfigEvent> publisher) {
+        /**
+         * 构造函数
+         *
+         * @param key       key
+         * @param dirty     脏函数
+         * @param publisher 发布器
+         * @param path      配置路径
+         */
+        public BroadcastConfigBooking(final URLKey key,
+                                      final Runnable dirty,
+                                      final Publisher<ConfigEvent> publisher,
+                                      final String path) {
             super(key, dirty, publisher);
+            this.path = path;
         }
 
         @Override
@@ -512,6 +589,11 @@ public class BroadcastRegistry extends AbstractRegistry {
         public AtomicLong getStat() {
             return stat;
         }
+
+        public String getPath() {
+            return path;
+        }
+
     }
 
 }

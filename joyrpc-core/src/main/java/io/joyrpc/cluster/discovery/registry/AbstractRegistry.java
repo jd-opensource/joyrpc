@@ -687,6 +687,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             subscriptions.compute(subscription.getKey(), (key, v) -> {
                 if (v == null) {
                     v = creationFunc.apply(subscription);
+                    v.addHandler(subscription.getHandler());
                     addBookingTask(subscriptions, v, doFunc);
                 } else {
                     v.addHandler(subscription.getHandler());

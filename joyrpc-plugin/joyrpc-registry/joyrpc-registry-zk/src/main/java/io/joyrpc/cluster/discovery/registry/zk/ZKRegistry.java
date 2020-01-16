@@ -115,7 +115,7 @@ public class ZKRegistry extends AbstractRegistry {
      */
     public ZKRegistry(final String name, final URL url, final Backup backup) {
         super(name, url, backup);
-        this.address = url.getString(Constants.ADDRESS_OPTION);
+        this.address = URL.valueOf(url.getString(Constants.ADDRESS_OPTION), "zookeeper", 2181, null).getAddress();
         this.sessionTimeout = url.getInteger(SESSION_TIMEOUT);
         this.connectionTimeout = url.getInteger(CONNECT_TIMEOUT_OPTION);
         this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));

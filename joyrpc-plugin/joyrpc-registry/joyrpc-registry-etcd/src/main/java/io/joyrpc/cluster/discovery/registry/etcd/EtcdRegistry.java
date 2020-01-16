@@ -121,7 +121,7 @@ public class EtcdRegistry extends AbstractRegistry {
      */
     public EtcdRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
-        this.address = URL.valueOf(url.getString(Constants.ADDRESS_OPTION),"http").toString();
+        this.address = URL.valueOf(url.getString(Constants.ADDRESS_OPTION), "http", 2379, null).toString();
         this.authority = url.getString(AUTHORITY);
         this.timeToLive = Math.max(url.getLong(TTL), 30000L);
         root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));

@@ -75,7 +75,7 @@ public class ZKRegistry extends AbstractRegistry {
     /**
      * session超时时间参数
      */
-    public static final URLOption<Integer> SESSION_TIMEOUT = new URLOption<>("sessionTimeout", 60000);
+    public static final URLOption<Integer> SESSION_TIMEOUT = new URLOption<>("sessionTimeout", 15000);
 
     /**
      * 目标地址
@@ -183,7 +183,12 @@ public class ZKRegistry extends AbstractRegistry {
                         doDisconnect().whenComplete((v, t) -> future.completeExceptionally(new IllegalStateException("controller is closed.")));
                     } else if (state.isConnected()) {
                         logger.warn("zk connection state is changed to " + state + ".");
-                        future.complete(null);
+                        if (future.isDone()) {
+                            //重新注册
+                            registers.forEach((k, r) -> addBookingTask(registers, r, this::doRegister));
+                        } else {
+                            future.complete(null);
+                        }
                     } else {
                         //会自动重连
                         logger.warn("zk connection state is changed to " + state + ".");

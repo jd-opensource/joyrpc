@@ -33,6 +33,7 @@ import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.PublisherConfig;
+import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.exception.*;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
@@ -646,7 +647,7 @@ public class Cluster {
          * @param event
          */
         protected void onClusterEvent(final ClusterEvent event) {
-            if (event == null || !isOpened()) {
+            if (event == null || !isOpened() || (event.getType() == UpdateType.UPDATE && (event.getDatum() == null || event.getDatum().isEmpty()))) {
                 return;
             }
             offer(() -> {

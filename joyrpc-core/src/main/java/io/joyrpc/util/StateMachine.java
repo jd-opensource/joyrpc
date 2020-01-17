@@ -91,13 +91,14 @@ public class StateMachine<T extends StateMachine.Controller> {
      */
     public CompletableFuture<Void> open(final Runnable runnable) {
         if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.OPENING)) {
-            if (runnable != null) {
-                runnable.run();
-            }
             publish(EventType.START_OPEN);
             final CompletableFuture<Void> future = stateFuture.newOpenFuture();
             final T cc = supplier.get();
             controller = cc;
+            //在赋值controller之后执行
+            if (runnable != null) {
+                runnable.run();
+            }
             cc.open().whenComplete((v, e) -> {
                 if (stateFuture.getOpenFuture() != future
                         || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {

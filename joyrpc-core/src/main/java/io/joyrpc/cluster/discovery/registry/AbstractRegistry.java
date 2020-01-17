@@ -161,12 +161,26 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
     @Override
     public CompletableFuture<Void> open() {
-        return state.open();
+        return state.open(this::doOpen);
+    }
+
+    /**
+     * 打开
+     */
+    protected void doOpen() {
+
     }
 
     @Override
     public CompletableFuture<Void> close() {
-        return state.close(false, () -> registers.forEach((key, value) -> value.close()));
+        return state.close(false, this::doClose);
+    }
+
+    /**
+     * 关闭
+     */
+    protected void doClose() {
+        registers.forEach((key, value) -> value.close());
     }
 
     @Override

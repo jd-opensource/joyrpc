@@ -80,7 +80,20 @@ public class StateMachine<T extends StateMachine.Controller> {
      * @return
      */
     public CompletableFuture<Void> open() {
+        return open(null);
+    }
+
+    /**
+     * 大开
+     *
+     * @param runnable 执行块
+     * @return
+     */
+    public CompletableFuture<Void> open(final Runnable runnable) {
         if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.OPENING)) {
+            if (runnable != null) {
+                runnable.run();
+            }
             publish(EventType.START_OPEN);
             final CompletableFuture<Void> future = stateFuture.newOpenFuture();
             final T cc = supplier.get();

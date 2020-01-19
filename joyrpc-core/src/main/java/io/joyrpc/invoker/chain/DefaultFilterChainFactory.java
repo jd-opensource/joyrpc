@@ -1,22 +1,33 @@
 package io.joyrpc.invoker.chain;
 
 import io.joyrpc.Invoker;
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.ClusterAware;
+import io.joyrpc.config.AbstractConsumerConfig;
+import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.*;
+import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.filter.Filter;
+import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.Refer;
 import io.joyrpc.permission.StringBlackWhiteList;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 
+import javax.validation.ConstraintValidatorContext;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.CONSUMER_FILTER;
 import static io.joyrpc.Plugin.PROVIDER_FILTER;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * 默认处理链工厂类
@@ -32,6 +43,32 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     @Override
     public Invoker build(final Exporter exporter, final Invoker last) {
         return build(null, exporter.getInterfaceClass(), exporter.getInterfaceName(), exporter.getUrl(), last, PROVIDER_FILTER);
+    }
+
+    @Override
+    public boolean validFilters(AbstractInterfaceConfig config, ConstraintValidatorContext context) {
+        String value = config.getFilter();
+        if (value != null && !value.isEmpty()) {
+            String message = null;
+            ExtensionPoint<? extends Filter, String> point = config instanceof AbstractConsumerConfig ? CONSUMER_FILTER : PROVIDER_FILTER;
+            Class clazz = config instanceof AbstractConsumerConfig ? ConsumerFilter.class : ProviderFilter.class;
+            String[] values = split(value, SEMICOLON_COMMA_WHITESPACE);
+            for (String v : values) {
+                if (v.charAt(0) != '-' && null == point.get(v)) {
+                    //过滤掉黑名单
+                    message = String.format("No such extension \'%s\' of %s. ", v, clazz.getName());
+                    break;
+                }
+            }
+            if (message != null) {
+                context.disableDefaultConstraintViolation();
+                context.buildConstraintViolationWithTemplate(message)
+                        .addPropertyNode("filter")
+                        .addConstraintViolation();
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -105,5 +142,61 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
 
         return result;
 
+    }
+
+    /**
+     * Filter的调用
+     */
+    static class FilterInvoker implements Invoker {
+        /**
+         * 过滤器
+         */
+        protected final Filter filter;
+        /**
+         * 后续调用
+         */
+        protected final Invoker next;
+        /**
+         * 名称
+         */
+        protected final String name;
+
+        /**
+         * 构造函数
+         *
+         * @param filter 过滤链
+         * @param next   下一个调用
+         * @param name   名称
+         */
+        public FilterInvoker(Filter filter, Invoker next, String name) {
+            this.filter = filter;
+            this.next = next;
+            this.name = name;
+        }
+
+        @Override
+        public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
+            return filter.invoke(next, request);
+        }
+
+        @Override
+        public CompletableFuture<Void> close() {
+            CompletableFuture<Void> result = new CompletableFuture<>();
+            filter.close().whenComplete((v, t) -> next.close().whenComplete((o, s) -> {
+                if (t == null && s == null) {
+                    result.complete(null);
+                } else if (t != null) {
+                    result.completeExceptionally(t);
+                } else {
+                    result.completeExceptionally(s);
+                }
+            }));
+            return result;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
     }
 }

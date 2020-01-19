@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -531,10 +531,16 @@ public abstract class ExtensionManager {
                                 (extension == null ? true : extension.singleton())));
                 //获取插件，不存在则创建
                 T target = meta.getTarget();
-                meta.setExtension(new Name(pluginClass, classify != null ? classify.type(target) :
-                        (Type.class.isAssignableFrom(pluginClass) ? ((Type) target).type() :
-                                (extension != null && extension.value() != null && !extension.value().isEmpty() ? extension.value() :
-                                        pluginClass.getName()))));
+                M name;
+                if (classify != null) {
+                    name = classify.type(meta);
+                } else if (Type.class.isAssignableFrom(pluginClass)) {
+                    name = (M) ((Type) target).type();
+                } else {
+                    name = (M) (extension != null && extension.value() != null && !extension.value().isEmpty() ? extension.value() :
+                            pluginClass.getName());
+                }
+                meta.setExtension(new Name(pluginClass, name));
                 meta.setOrder(Ordered.class.isAssignableFrom(pluginClass) ? ((Ordered) target).order() :
                         (extension == null ? Ordered.ORDER : extension.order()));
                 //判断是否禁用了该插件

@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,12 +27,17 @@ import java.io.InputStreamReader;
 import java.util.*;
 
 /**
- * 禁用管理器
+ * 扩展点禁用管理器，有三种方式配置禁用的扩展点<p/>
+ * <li>通过类路径文件plugin.disable注入，以回车、逗号或分号分割多个配置</li>
+ * <li>通过环境变量PLUGIN_DISABLE注入，以逗号或分号分割多个配置</li>
+ * <li>通过java启动参数plugin.disable注入，以逗号或分号分割多个配置</li>
+ * <p/>
+ * 每个配置的格式为"扩展点全路径类名[:扩展点名称[@供应商]]"
  */
 public class Disable {
 
     protected static Set<String> PLUGIN_DISABLE_CLASS = new HashSet<String>();
-    protected static Map<String, Map<String, String>> PLUGIN_DISABLE = new HashMap<String, Map<String, String>>();
+    protected static Map<String, Map<String, String>> PLUGIN_DISABLE = new HashMap<>();
 
     static {
         parseDisable(loadDisable());
@@ -41,12 +46,12 @@ public class Disable {
     /**
      * 是否禁用
      *
-     * @param meta
-     * @return
+     * @param meta 扩展点元数据
+     * @return 禁用标识
      */
-    public static boolean isDisable(final ExtensionMeta meta) {
-        Name name = meta.getExtension();
-        Name extensible = meta.getExtensible();
+    public static boolean isDisable(final ExtensionMeta<?, ?> meta) {
+        Name<?, ?> name = meta.getExtension();
+        Name<?, String> extensible = meta.getExtensible();
         if (PLUGIN_DISABLE_CLASS.contains(name.getClazz().getName())) {
             return true;
         }
@@ -54,7 +59,7 @@ public class Disable {
         if (extensions == null) {
             return false;
         }
-        String provider = extensions.get(name.getName());
+        String provider = extensions.get(name.getName().toString());
         if (provider == null) {
             return false;
         }
@@ -64,7 +69,7 @@ public class Disable {
     /**
      * 解析禁用
      *
-     * @param disables
+     * @param disables 禁用的插件集合
      */
     protected static void parseDisable(final List<String> disables) {
         for (String disable : disables) {
@@ -78,7 +83,7 @@ public class Disable {
     /**
      * 解析禁用
      *
-     * @param disable
+     * @param disable 禁用的插件
      */
     protected static void parseDisable(final String disable) {
         String[] parts;
@@ -106,11 +111,7 @@ public class Disable {
                         provider = part.substring(pos2 + 1);
                     }
                     if (!extensible.isEmpty() && !extension.isEmpty()) {
-                        extensions = PLUGIN_DISABLE.get(extensible);
-                        if (extensions == null) {
-                            extensions = new HashMap<String, String>();
-                            PLUGIN_DISABLE.put(extensible, extensions);
-                        }
+                        extensions = PLUGIN_DISABLE.computeIfAbsent(extensible, k -> new HashMap<>());
                         extensions.put(extension, provider == null ? "" : provider);
                     }
                 }
@@ -121,7 +122,7 @@ public class Disable {
     /**
      * 读取禁用配置
      *
-     * @return
+     * @return 禁用的插件
      */
     protected static List<String> loadDisable() {
         List<String> disables = new LinkedList<String>();
@@ -131,18 +132,12 @@ public class Disable {
         InputStream is = classLoader.getResourceAsStream("plugin.disable");
         String line;
         if (is != null) {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-            try {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
                 while ((line = reader.readLine()) != null) {
                     line = line.trim();
                     disables.add(line);
                 }
-            } catch (IOException e) {
-            } finally {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                }
+            } catch (IOException ignored) {
             }
         }
         line = System.getenv("PLUGIN_DISABLE");

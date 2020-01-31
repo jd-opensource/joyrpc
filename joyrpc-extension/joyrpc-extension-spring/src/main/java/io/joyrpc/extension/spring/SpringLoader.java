@@ -33,12 +33,13 @@ import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.util.ClassUtils;
-import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Method;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+
+import static org.springframework.util.StringUtils.isEmpty;
 
 /**
  * Spring加载器
@@ -60,15 +61,15 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         List<Plugin<T>> result = new LinkedList<Plugin<T>>();
         if (registry != null) {
             BeanDefinition definition;
-            Class clazz;
+            Class<?> clazz;
             for (String name : registry.getBeanDefinitionNames()) {
                 definition = registry.getBeanDefinition(name);
-                if (!definition.isAbstract() && !StringUtils.isEmpty(definition.getBeanClassName())) {
+                if (!definition.isAbstract() && !isEmpty(definition.getBeanClassName())) {
                     try {
                         clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
                         //工程方法创建Bean，不支持FactoryBean
                         String factoryMethodName = definition.getFactoryMethodName();
-                        if (!StringUtils.isEmpty(factoryMethodName) && StringUtils.isEmpty(definition.getFactoryBeanName())) {
+                        if (!isEmpty(factoryMethodName) && isEmpty(definition.getFactoryBeanName())) {
                             //找到方法
                             Method[] methods = clazz.getMethods();
                             for (Method method : methods) {
@@ -81,10 +82,10 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
                         }
                         if (extensible.isAssignableFrom(clazz)) {
                             //延迟加载，防止Bean还没有初始化好
-                            result.add(new Plugin<T>(new Name(clazz, name), instance,
+                            result.add(new Plugin<T>(new Name<>((Class<T>) clazz, name), instance,
                                     definition.isSingleton(), null, this));
                         }
-                    } catch (Exception e) {
+                    } catch (Exception ignored) {
                     }
                 }
             }

@@ -20,6 +20,7 @@ package io.joyrpc.extension;
  * #L%
  */
 
+import io.joyrpc.extension.ExtensionMeta.AscendingComparator;
 import io.joyrpc.extension.listener.ExtensionListener;
 import io.joyrpc.extension.listener.LoaderEvent;
 import io.joyrpc.extension.spi.SpiLoader;
@@ -28,8 +29,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import static java.util.Collections.sort;
 
 /**
  * 扩展点管理
@@ -47,7 +46,7 @@ public abstract class ExtensionManager {
      * @param name 扩展名称
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展实现
      */
     public static <T, M> T getExtension(final String type, final M name) {
         return SNAPSHOT.getExtension(type, name);
@@ -60,11 +59,11 @@ public abstract class ExtensionManager {
      * @param name       扩展名称
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展实现
      */
     public static <T, M> T getExtension(final Class<T> extensible, final M name) {
-        ExtensionPoint spi = SNAPSHOT.getExtensionPoint(extensible);
-        return spi == null ? null : (T) spi.get(name);
+        ExtensionPoint<T, M> spi = SNAPSHOT.getExtensionPoint(extensible);
+        return spi == null ? null : spi.get(name);
     }
 
     /**
@@ -74,55 +73,55 @@ public abstract class ExtensionManager {
      * @param name       扩展名称
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展实现
      */
     public static <T, M> T getOrLoadExtension(final Class<T> extensible, final M name) {
-        ExtensionPoint spi = SNAPSHOT.getOrLoadExtensionPoint(extensible, null, ExtensionMeta.AscendingComparator.INSTANCE, null);
-        return spi == null ? null : (T) spi.get(name);
+        ExtensionPoint<T, M> spi = SNAPSHOT.getOrLoadExtensionPoint(extensible, null, AscendingComparator.INSTANCE, null);
+        return spi == null ? null : spi.get(name);
     }
 
     /**
      * 获取或加载扩展实现
      *
      * @param extensible 扩展点类
-     * @param <T>        扩展实现
-     * @return
+     * @param <T>
+     * @return 扩展细心
      */
     public static <T> T getOrLoadExtension(final Class<T> extensible) {
-        ExtensionPoint spi = SNAPSHOT.getOrLoadExtensionPoint(extensible, null, ExtensionMeta.AscendingComparator.INSTANCE, null);
-        return spi == null ? null : (T) spi.get();
+        ExtensionPoint<T, ?> spi = SNAPSHOT.getOrLoadExtensionPoint(extensible, null, AscendingComparator.INSTANCE, null);
+        return spi == null ? null : spi.get();
     }
 
     /**
-     * 获取扩展实现
+     * 获取扩展实现迭代
      *
      * @param extensible 扩展点类型
      * @param <T>
-     * @return
+     * @return 扩展实现迭代
      */
     public static <T> Iterable<T> getExtensions(final Class<T> extensible) {
-        ExtensionPoint spi = SNAPSHOT.getExtensionPoint(extensible);
+        ExtensionPoint<T, ?> spi = SNAPSHOT.getExtensionPoint(extensible);
         return spi == null ? null : spi.extensions();
     }
 
     /**
-     * 获取扩展实现
+     * 获取扩展实现迭代
      *
      * @param extensible 扩展点类型
      * @param <T>
-     * @return
+     * @return 扩展实现迭代
      */
     public static <T> Iterable<T> getOrLoadExtensions(final Class<T> extensible) {
-        ExtensionPoint spi = SNAPSHOT.getOrLoadExtensionPoint(extensible, null, ExtensionMeta.AscendingComparator.INSTANCE, null);
+        ExtensionPoint<T, ?> spi = SNAPSHOT.getOrLoadExtensionPoint(extensible, null, AscendingComparator.INSTANCE, null);
         return spi == null ? null : spi.extensions();
     }
 
     /**
-     * 获取扩展点实现
+     * 获取扩展点实现迭代
      *
      * @param type 类型
      * @param <T>
-     * @return
+     * @return 扩展点实现迭代
      */
     public static <T> Iterable<T> get(final String type) {
         return SNAPSHOT.getExtensions(type);
@@ -131,70 +130,70 @@ public abstract class ExtensionManager {
     /**
      * 获取扩展点
      *
-     * @param extensible
-     * @return
+     * @param extensible 扩展点类
+     * @return 扩展点对象
      */
     public static <T, M> ExtensionPoint<T, M> getOrLoadExtensionPoint(final Class<T> extensible) {
-        return SNAPSHOT.getOrLoadExtensionPoint(extensible, null, ExtensionMeta.AscendingComparator.INSTANCE, null);
+        return SNAPSHOT.getOrLoadExtensionPoint(extensible, null, AscendingComparator.INSTANCE, null);
     }
 
     /**
      * 获取扩展点
      *
-     * @param extensible
-     * @param loader
+     * @param extensible 扩展点类
+     * @param loader     扩展点加载器
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展点对象
      */
     public static <T, M> ExtensionPoint<T, M> getOrLoadExtensionPoint(final Class<T> extensible, final ExtensionLoader loader) {
-        return SNAPSHOT.getOrLoadExtensionPoint(extensible, loader, ExtensionMeta.AscendingComparator.INSTANCE, null);
+        return SNAPSHOT.getOrLoadExtensionPoint(extensible, loader, AscendingComparator.INSTANCE, null);
     }
 
     /**
      * 获取扩展点
      *
-     * @param extensible
-     * @param comparator
+     * @param extensible 扩展点类
+     * @param comparator 排序器
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展点对象
      */
     public static <T, M> ExtensionPoint<T, M> getOrLoadExtensionPoint(final Class<T> extensible,
-                                                                      final Comparator<ExtensionMeta<T, M>> comparator) {
+                                                                      final Comparator<ExtensionMeta<?, ?>> comparator) {
         return SNAPSHOT.getOrLoadExtensionPoint(extensible, null, comparator, null);
     }
 
     /**
      * 获取扩展点
      *
-     * @param extensible
-     * @param loader
-     * @param comparator
+     * @param extensible 扩展点类
+     * @param loader     类加载器
+     * @param comparator 排序器
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展点对象
      */
     public static <T, M> ExtensionPoint<T, M> getOrLoadExtensionPoint(final Class<T> extensible,
                                                                       final ExtensionLoader loader,
-                                                                      final Comparator<ExtensionMeta<T, M>> comparator) {
+                                                                      final Comparator<ExtensionMeta<?, ?>> comparator) {
         return SNAPSHOT.getOrLoadExtensionPoint(extensible, loader, comparator, null);
     }
 
     /**
      * 获取扩展点
      *
-     * @param extensible
-     * @param loader
-     * @param comparator
-     * @param classify
+     * @param extensible 扩展点类
+     * @param loader     扩展点加载器
+     * @param comparator 排序器
+     * @param classify   分类器
      * @param <T>
      * @param <M>
-     * @return
+     * @return 扩展点对象
      */
     public static <T, M> ExtensionPoint<T, M> getOrLoadExtensionPoint(final Class<T> extensible,
                                                                       final ExtensionLoader loader,
-                                                                      final Comparator<ExtensionMeta<T, M>> comparator,
+                                                                      final Comparator<ExtensionMeta<?, ?>> comparator,
                                                                       final Classify<T, M> classify) {
         return SNAPSHOT.getOrLoadExtensionPoint(extensible, loader, comparator, classify);
     }
@@ -202,7 +201,7 @@ public abstract class ExtensionManager {
     /**
      * 加载扩展点
      *
-     * @param extensibles
+     * @param extensibles 扩展点类集合
      */
     public static void loadExtension(final Collection<Class<?>> extensibles) {
         SNAPSHOT.loadExtension(extensibles);
@@ -211,8 +210,8 @@ public abstract class ExtensionManager {
     /**
      * 加载扩展点
      *
-     * @param extensibles
-     * @param loader
+     * @param extensibles 扩展点类集合
+     * @param loader      加载器
      */
     public static void loadExtension(final Collection<Class<?>> extensibles, final ExtensionLoader loader) {
         SNAPSHOT.loadExtension(extensibles, loader);
@@ -221,7 +220,7 @@ public abstract class ExtensionManager {
     /**
      * 加载扩展点
      *
-     * @param scanner
+     * @param scanner 扩展点扫描器
      */
     public static void loadExtension(final ExtensionScanner scanner) {
         if (scanner != null) {
@@ -232,8 +231,8 @@ public abstract class ExtensionManager {
     /**
      * 初始化扫描插件并加载
      *
-     * @param scanner
-     * @param loader
+     * @param scanner 扩展点扫描器
+     * @param loader  扩展点加载器
      */
     public static void loadExtension(final ExtensionScanner scanner, final ExtensionLoader loader) {
         if (scanner != null) {
@@ -244,7 +243,7 @@ public abstract class ExtensionManager {
     /**
      * 注册插件加载器
      *
-     * @param loader
+     * @param loader 扩展点加载器
      */
     public synchronized static void register(final ExtensionLoader loader) {
         apply(SNAPSHOT.register(loader));
@@ -253,7 +252,7 @@ public abstract class ExtensionManager {
     /**
      * 比较
      *
-     * @param snapshot
+     * @param snapshot 快照
      */
     protected static void apply(final Snapshot snapshot) {
         boolean flag = SNAPSHOT == snapshot;
@@ -268,7 +267,7 @@ public abstract class ExtensionManager {
     /**
      * 注销插件加载器
      *
-     * @param loader
+     * @param loader 注销扩展点加载器
      */
     public synchronized static void deregister(final ExtensionLoader loader) {
         apply(SNAPSHOT.deregister(loader));
@@ -277,8 +276,8 @@ public abstract class ExtensionManager {
     /**
      * 添加监听器
      *
-     * @param listener
-     * @return
+     * @param listener 监听器
+     * @return 成功标识
      */
     public static boolean addListener(final ExtensionListener listener) {
         if (listener == null) {
@@ -292,11 +291,17 @@ public abstract class ExtensionManager {
      */
     protected static class Snapshot {
 
-        // 扩展点名称
-        protected ConcurrentMap<String, ExtensionSpi> names = new ConcurrentHashMap<String, ExtensionSpi>();
-        // 扩展点
-        protected ConcurrentMap<Class, ExtensionSpi> extensions = new ConcurrentHashMap<Class, ExtensionSpi>();
-        // 加载器
+        /**
+         * 扩展点名称
+         */
+        protected ConcurrentMap<String, ExtensionSpi> names = new ConcurrentHashMap<>();
+        /**
+         * 扩展点
+         */
+        protected ConcurrentMap<Class, ExtensionSpi> extensions = new ConcurrentHashMap<>();
+        /**
+         * 加载器
+         */
         protected ExtensionLoader loader;
 
         public Snapshot() {
@@ -323,7 +328,7 @@ public abstract class ExtensionManager {
         /**
          * 注册插件加载器
          *
-         * @param loader
+         * @param loader 扩展点加载器
          */
         public <T, M> Snapshot register(final ExtensionLoader loader) {
             if (loader == null) {
@@ -352,15 +357,14 @@ public abstract class ExtensionManager {
             for (Map.Entry<Class, ExtensionSpi> entry : extensions.entrySet()) {
                 spi = entry.getValue();
                 name = spi.name;
-                metas = new LinkedList<ExtensionMeta<T, M>>();
                 //原有的插件
-                metas.addAll(spi.metas);
+                metas = new LinkedList<>(spi.metas);
                 //加载新插件
                 load(name.getClazz(), name, wrapper, spi.classify, metas);
                 //排序
-                sort(metas, spi.comparator);
+                metas.sort(spi.comparator);
                 //构造新的扩展点
-                result.add(new ExtensionSpi(name, metas, spi.comparator, spi.classify));
+                result.add(new ExtensionSpi<>(name, metas, spi.comparator, spi.classify));
             }
             return result;
         }
@@ -368,7 +372,7 @@ public abstract class ExtensionManager {
         /**
          * 注销插件加载器
          *
-         * @param loader
+         * @param loader 扩展点加载器
          */
         public <T, M> Snapshot deregister(final ExtensionLoader loader) {
             if (loader == null) {
@@ -398,14 +402,14 @@ public abstract class ExtensionManager {
             for (Map.Entry<Class, ExtensionSpi> entry : extensions.entrySet()) {
                 spi = entry.getValue();
                 name = spi.name;
-                metas = new LinkedList<ExtensionMeta<T, M>>();
+                metas = new LinkedList<>();
                 for (ExtensionMeta<T, M> meta : spi.metas) {
                     if (!excludes.contains(meta.loader)) {
                         metas.add(meta);
                     }
                 }
                 //构造新的扩展点
-                result.add(new ExtensionSpi(name, metas, spi.comparator, spi.classify));
+                result.add(new ExtensionSpi<>(name, metas, spi.comparator, spi.classify));
             }
             return result;
 
@@ -428,14 +432,14 @@ public abstract class ExtensionManager {
         }
 
         /**
-         * 获取扩展点实现
+         * 获取扩展实现迭代
          *
          * @param type 类型
          * @param <T>
-         * @return
+         * @return 扩展实现迭代
          */
         public <T, M> Iterable<T> getExtensions(final String type) {
-            ExtensionPoint<T, M> spi = names.get(type);
+            ExtensionPoint<T, M> spi = (ExtensionPoint<T, M>) names.get(type);
             return spi == null ? null : spi.extensions();
         }
 
@@ -445,38 +449,38 @@ public abstract class ExtensionManager {
          * @param type 类型
          * @param name 扩展名称
          * @param <T>
-         * @return
+         * @return 扩展实现
          */
         public <T, M> T getExtension(final String type, final M name) {
-            ExtensionPoint<T, M> spi = names.get(type);
+            ExtensionPoint<T, M> spi = (ExtensionPoint<T, M>) names.get(type);
             return spi == null ? null : (T) spi.get(name);
         }
 
         /**
-         * 获取插件接口
+         * 获取扩展点
          *
-         * @param extensible
-         * @return
+         * @param extensible 扩展点类
+         * @return 扩展点对象
          */
         public <T, M> ExtensionPoint<T, M> getExtensionPoint(final Class<T> extensible) {
-            return extensions.get(extensible);
+            return (ExtensionPoint<T, M>) extensions.get(extensible);
         }
 
         /**
          * 获取或加载扩展点
          *
-         * @param extensible
-         * @param loader
-         * @param comparator
-         * @param classify
+         * @param extensible 扩展点类
+         * @param loader     扩展点加载器
+         * @param comparator 扩展点排序器
+         * @param classify   扩展点分类器
          * @param <T>
          * @param <M>
-         * @return
+         * @return 扩展点
          */
-        public <T, M> ExtensionPoint getOrLoadExtensionPoint(final Class<T> extensible,
-                                                             final ExtensionLoader loader,
-                                                             final Comparator<ExtensionMeta<T, M>> comparator,
-                                                             final Classify<T, M> classify) {
+        public <T, M> ExtensionPoint<T, M> getOrLoadExtensionPoint(final Class<T> extensible,
+                                                                   final ExtensionLoader loader,
+                                                                   final Comparator<ExtensionMeta<?, ?>> comparator,
+                                                                   final Classify<T, M> classify) {
             if (extensible == null) {
                 return null;
             }
@@ -486,16 +490,15 @@ public abstract class ExtensionManager {
                 //获取扩展点注解
                 Extensible annotation = extensible.getAnnotation(Extensible.class);
                 //构造扩展点名称
-                Name extensibleName = new Name(extensible, annotation != null && annotation.value() != null
-                        && !annotation.value().isEmpty() ? annotation.value() : extensible.getName());
+                Name<T, String> extensibleName = new Name<>(extensible, annotation != null && !annotation.value().isEmpty() ? annotation.value() : extensible.getName());
                 //加载插件
                 List<ExtensionMeta<T, M>> metas = new LinkedList<ExtensionMeta<T, M>>();
                 load(extensible, extensibleName, loader, classify, metas);
                 //排序
-                Comparator c = comparator == null ? ExtensionMeta.AscendingComparator.INSTANCE : comparator;
-                sort(metas, c);
+                Comparator<ExtensionMeta<?, ?>> c = comparator == null ? AscendingComparator.INSTANCE : comparator;
+                metas.sort(c);
 
-                result = add(new ExtensionSpi(extensibleName, metas, c, classify));
+                result = (ExtensionPoint<T, M>) add(new ExtensionSpi(extensibleName, metas, c, classify));
             }
             return result;
         }
@@ -503,20 +506,21 @@ public abstract class ExtensionManager {
         /**
          * 加载扩展点
          *
-         * @param extensible
-         * @param extensibleName
-         * @param loader
-         * @param classify
-         * @param metas
+         * @param extensible     扩展类型
+         * @param extensibleName 扩展点名称
+         * @param loader         扩展加载器
+         * @param classify       扩展分类器
+         * @param metas          扩展元数据集合
          * @param <T>
          * @param <M>
          */
-        protected <T, M> void load(final Class<T> extensible, final Name extensibleName, final ExtensionLoader loader,
-                                   final Classify<T, M> classify, final List<ExtensionMeta<T, M>> metas) {
+        protected <T, M> void load(final Class<T> extensible, final Name<T, String> extensibleName,
+                                   final ExtensionLoader loader, final Classify<T, M> classify,
+                                   final List<ExtensionMeta<T, M>> metas) {
             //加载插件
             Collection<Plugin<T>> plugins = loader == null ? this.loader.load(extensible) : loader.load(extensible);
             for (Plugin<T> plugin : plugins) {
-                Class<?> pluginClass = plugin.name.getClazz();
+                Class<T> pluginClass = plugin.name.getClazz();
                 Extension extension = pluginClass.getAnnotation(Extension.class);
                 ExtensionMeta<T, M> meta = new ExtensionMeta<T, M>();
                 //记录加载器信息，便于卸载加载器
@@ -527,20 +531,19 @@ public abstract class ExtensionManager {
                 meta.setInstantiation(plugin.instantiation == null ? Instantiation.ClazzInstance.INSTANCE : plugin.instantiation);
                 meta.setTarget(plugin.target);
                 meta.setSingleton(plugin.isSingleton() != null ? plugin.isSingleton() :
-                        (Prototype.class.isAssignableFrom(pluginClass) ? false :
-                                (extension == null ? true : extension.singleton())));
+                        (!Prototype.class.isAssignableFrom(pluginClass) && (extension == null || extension.singleton())));
                 //获取插件，不存在则创建
                 T target = meta.getTarget();
                 M name;
                 if (classify != null) {
                     name = classify.type(meta);
                 } else if (Type.class.isAssignableFrom(pluginClass)) {
-                    name = (M) ((Type) target).type();
+                    name = ((Type<M>) target).type();
                 } else {
-                    name = (M) (extension != null && extension.value() != null && !extension.value().isEmpty() ? extension.value() :
+                    name = (M) (extension != null && !extension.value().isEmpty() ? extension.value() :
                             pluginClass.getName());
                 }
-                meta.setExtension(new Name(pluginClass, name));
+                meta.setExtension(new Name<>(pluginClass, name));
                 meta.setOrder(Ordered.class.isAssignableFrom(pluginClass) ? ((Ordered) target).order() :
                         (extension == null ? Ordered.ORDER : extension.order()));
                 //判断是否禁用了该插件
@@ -554,7 +557,7 @@ public abstract class ExtensionManager {
         /**
          * 加载扩展点集合
          *
-         * @param extensibles
+         * @param extensibles 扩展点集合
          */
         public void loadExtension(final Collection<Class<?>> extensibles) {
             loadExtension(extensibles, loader);
@@ -563,13 +566,13 @@ public abstract class ExtensionManager {
         /**
          * 加载扩展点集合
          *
-         * @param extensibles
-         * @param loader
+         * @param extensibles 扩展点集合
+         * @param loader      加载器
          */
         public void loadExtension(final Collection<Class<?>> extensibles, final ExtensionLoader loader) {
             if (extensibles != null) {
                 ExtensionLoader extensionLoader = loader == null ? this.loader : loader;
-                for (Class extensible : extensibles) {
+                for (Class<?> extensible : extensibles) {
                     getOrLoadExtensionPoint(extensible, extensionLoader, null, null);
                 }
             }

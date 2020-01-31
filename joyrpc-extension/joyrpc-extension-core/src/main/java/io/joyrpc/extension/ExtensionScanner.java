@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +54,7 @@ public interface ExtensionScanner {
                 while (urls.hasMoreElements()) {
                     scan(classLoader, urls.nextElement(), classes);
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
             return classes;
         }
@@ -62,27 +62,20 @@ public interface ExtensionScanner {
         /**
          * 加载文件中的类
          *
-         * @param classLoader
-         * @param url
-         * @param classes
+         * @param classLoader 类加载器
+         * @param url         url
+         * @param classes     类集合
          */
         protected void scan(final ClassLoader classLoader, final URL url, final Set<Class<?>> classes) {
-            BufferedReader input = null;
-            try {
-                input = new BufferedReader(new InputStreamReader(url.openStream()));
+            try (BufferedReader input = new BufferedReader(new InputStreamReader(url.openStream()))) {
                 String line;
                 while ((line = input.readLine()) != null) {
-                    classes.add(classLoader.loadClass(line));
-                }
-            } catch (IOException e) {
-            } catch (ClassNotFoundException e) {
-            } finally {
-                if (input != null) {
                     try {
-                        input.close();
-                    } catch (IOException e) {
+                        classes.add(classLoader.loadClass(line));
+                    } catch (ClassNotFoundException ignored) {
                     }
                 }
+            } catch (IOException ignored) {
             }
         }
     }

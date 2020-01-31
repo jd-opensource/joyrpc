@@ -536,7 +536,7 @@ public abstract class ExtensionManager {
                 T target = meta.getTarget();
                 M name;
                 if (classify != null) {
-                    name = classify.type(meta);
+                    name = classify.type(target, meta.getName());
                 } else if (Type.class.isAssignableFrom(pluginClass)) {
                     name = ((Type<M>) target).type();
                 } else {

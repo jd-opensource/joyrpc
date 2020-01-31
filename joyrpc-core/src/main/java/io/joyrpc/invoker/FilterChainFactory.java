@@ -21,18 +21,12 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Invoker;
-import io.joyrpc.Result;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.extension.Extensible;
-import io.joyrpc.filter.Filter;
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
-
-import javax.validation.ConstraintValidatorContext;
-import java.util.concurrent.CompletableFuture;
 
 /**
- * 构造处理链
+ * 过滤链工厂类<p/>
+ * 不同的实现加载不同的扩展点，所以扩展点验证需要委托给过滤链工厂类
  */
 @Extensible("filterChainFactory")
 public interface FilterChainFactory {
@@ -58,9 +52,8 @@ public interface FilterChainFactory {
     /**
      * 验证配置的过滤器插件是否存在
      *
-     * @param config
-     * @param context
-     * @return
+     * @param config 配置
+     * @return 异常信息
      */
-    boolean validFilters(final AbstractInterfaceConfig config, final ConstraintValidatorContext context);
+    String validate(final AbstractInterfaceConfig config);
 }

@@ -18,7 +18,6 @@ import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
-import javax.validation.ConstraintValidatorContext;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -46,44 +45,32 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     }
 
     @Override
-    public boolean validFilters(AbstractInterfaceConfig config, ConstraintValidatorContext context) {
-        String value = config.getFilter();
-        if (value != null && !value.isEmpty()) {
-            String message = null;
-            ExtensionPoint<? extends Filter, String> point = config instanceof AbstractConsumerConfig ? CONSUMER_FILTER : PROVIDER_FILTER;
-            Class clazz = config instanceof AbstractConsumerConfig ? ConsumerFilter.class : ProviderFilter.class;
-            String[] values = split(value, SEMICOLON_COMMA_WHITESPACE);
-            for (String v : values) {
-                if (v.charAt(0) != '-' && null == point.get(v)) {
-                    //过滤掉黑名单
-                    message = String.format("No such extension \'%s\' of %s. ", v, clazz.getName());
-                    break;
-                }
-            }
-            if (message != null) {
-                context.disableDefaultConstraintViolation();
-                context.buildConstraintViolationWithTemplate(message)
-                        .addPropertyNode("filter")
-                        .addConstraintViolation();
-                return false;
+    public String validate(final AbstractInterfaceConfig config) {
+        ExtensionPoint<? extends Filter, String> point = config instanceof AbstractConsumerConfig ? CONSUMER_FILTER : PROVIDER_FILTER;
+        Class<?> clazz = config instanceof AbstractConsumerConfig ? ConsumerFilter.class : ProviderFilter.class;
+        String[] filters = split(config.getFilter(), SEMICOLON_COMMA_WHITESPACE);
+        for (String filter : filters) {
+            if (filter.charAt(0) != '-' && null == point.get(filter)) {
+                //过滤掉黑名单
+                return String.format("No such extension '%s' of %s. ", filter, clazz.getName());
             }
         }
-        return true;
+        return null;
     }
 
     /**
      * 构造过滤链
      *
-     * @param cluster
-     * @param clazz
-     * @param className
-     * @param url
-     * @param last
-     * @param extension
-     * @return
+     * @param cluster   集群
+     * @param clazz     接口类
+     * @param className 接口类名
+     * @param url       参数
+     * @param last      最后调用器
+     * @param extension 过滤链扩展点
+     * @return 调用
      */
     protected <T extends Filter> Invoker build(final Cluster cluster,
-                                               final Class clazz,
+                                               final Class<?> clazz,
                                                final String className,
                                                final URL url,
                                                final Invoker last,
@@ -111,9 +98,9 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     /**
      * 获取所有配置filter
      *
-     * @param url
-     * @param extension
-     * @return
+     * @param url       参数
+     * @param extension 过滤链扩展点
+     * @return 过滤器集合
      */
     protected <T extends Filter> List<Filter> getFilters(final URL url, final ExtensionPoint<T, String> extension) {
         // 获取url里面所有-XXX需要排除的filter
@@ -145,7 +132,7 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     }
 
     /**
-     * Filter的调用
+     * 过滤器调用
      */
     static class FilterInvoker implements Invoker {
         /**

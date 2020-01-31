@@ -21,12 +21,11 @@ package io.joyrpc.config.validator;
  */
 
 import io.joyrpc.config.AbstractInterfaceConfig;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.invoker.FilterChainFactory;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
-
-import java.util.Optional;
 
 import static io.joyrpc.Plugin.FILTER_CHAIN_FACTORY;
 import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
@@ -38,13 +37,20 @@ public class FilterValidator implements ConstraintValidator<ValidateFilter, Abst
 
     @Override
     public boolean isValid(final AbstractInterfaceConfig config, final ConstraintValidatorContext context) {
-        String chainFactoryName = Optional.ofNullable(config.getParameter(FILTER_CHAIN_FACTORY_OPTION.getName()))
-                .orElse(FILTER_CHAIN_FACTORY_OPTION.getValue());
-        FilterChainFactory chainFactory = FILTER_CHAIN_FACTORY.getOrDefault(chainFactoryName);
-        return chainFactory.validFilters(config, context);
-    }
-
-    @Override
-    public void initialize(final ValidateFilter validate) {
+        //判断插件配置
+        String value = config.getFilter();
+        if (value != null && !value.isEmpty()) {
+            MapParametric parametric = new MapParametric(config.getParameters());
+            FilterChainFactory chainFactory = FILTER_CHAIN_FACTORY.getOrDefault(parametric.getString(FILTER_CHAIN_FACTORY_OPTION));
+            String message = chainFactory.validate(config);
+            if (message != null && !message.isEmpty()) {
+                context.disableDefaultConstraintViolation();
+                context.buildConstraintViolationWithTemplate(message)
+                        .addPropertyNode("filter")
+                        .addConstraintViolation();
+                return false;
+            }
+        }
+        return true;
     }
 }

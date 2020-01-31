@@ -41,10 +41,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.GenericService.GENERIC;
@@ -111,7 +108,7 @@ public class MethodOption {
      * @param interfaceName  接口名称
      * @param url            URL
      */
-    public MethodOption(final Class interfaceClass, final String interfaceName, final URL url) {
+    public MethodOption(final Class<?> interfaceClass, final String interfaceName, final URL url) {
         this.interfaceName = interfaceName;
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList(url);
         this.maxRetry = url.getInteger(RETRIES_OPTION);
@@ -137,20 +134,20 @@ public class MethodOption {
     /**
      * 获取参数名称
      *
-     * @param methodName
-     * @param option
-     * @return
+     * @param methodName 方法名称
+     * @param option     选项
+     * @return 参数名称
      */
-    protected String getKey(final String methodName, final URLOption option) {
+    protected String getKey(final String methodName, final URLOption<?> option) {
         return METHOD_KEY.apply(methodName, option.getName());
     }
 
     /**
      * 获取参数名称
      *
-     * @param methodName
-     * @param name
-     * @return
+     * @param methodName 方法名称
+     * @param name       参数
+     * @return 参数名称
      */
     protected String getKey(final String methodName, final String name) {
         return METHOD_KEY.apply(methodName, name);
@@ -159,23 +156,20 @@ public class MethodOption {
     /**
      * 构建异常重试类
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 异常黑白名单
      */
     protected BlackWhiteList<Class<? extends Throwable>> buildFailoverBlackWhiteList(final URL url) {
-        Set<String> names = new HashSet<>();
         //内置的异常类名
-        names.addAll(INNER_EXCEPTIONS.computeIfAbsent(interfaceName, this::getInnerExceptions));
+        Set<String> names = new HashSet<>(INNER_EXCEPTIONS.computeIfAbsent(interfaceName, this::getInnerExceptions));
         //当前URL配置的异常
         String value = url.getString(FAILOVER_WHEN_THROWABLE_OPTION);
         if (value != null && !value.isEmpty()) {
             String[] classes = split(value, SEMICOLON_COMMA_WHITESPACE);
-            for (String cl : classes) {
-                names.add(cl);
-            }
+            Collections.addAll(names, classes);
         }
         Set<Class<? extends Throwable>> failoverClass = new HashSet<>();
-        Class c;
+        Class<?> c;
         for (String name : names) {
             try {
                 c = forName(name);
@@ -191,10 +185,10 @@ public class MethodOption {
     }
 
     /**
-     * 获取选项
+     * 获取方法选项
      *
-     * @param methodName
-     * @return
+     * @param methodName 方法名称
+     * @return 方法选项
      */
     public Option getOption(final String methodName) {
         return options.get(methodName);
@@ -203,8 +197,8 @@ public class MethodOption {
     /**
      * 读取内置的异常配置信息
      *
-     * @param interfaceName
-     * @return
+     * @param interfaceName 接口名称
+     * @return 异常类名
      */
     protected Set<String> getInnerExceptions(final String interfaceName) {
         Set<String> names = new HashSet<>();
@@ -235,7 +229,7 @@ public class MethodOption {
         /**
          * 隐式传参
          */
-        protected Map<String, ? extends Object> implicits;
+        protected Map<String, ?> implicits;
         /**
          * 超时时间
          */
@@ -248,18 +242,18 @@ public class MethodOption {
         /**
          * 构造函数
          *
-         * @param implicits
-         * @param timeout
-         * @param failoverPolicy
+         * @param implicits      隐式传参
+         * @param timeout        超时时间
+         * @param failoverPolicy 重试策略
          */
-        public Option(Map<String, ? extends Object> implicits, int timeout,
+        public Option(Map<String, ?> implicits, int timeout,
                       FailoverPolicy<RequestMessage<Invocation>, Result> failoverPolicy) {
             this.implicits = implicits;
             this.timeout = timeout;
             this.failoverPolicy = failoverPolicy;
         }
 
-        public Map<String, ? extends Object> getImplicits() {
+        public Map<String, ?> getImplicits() {
             return implicits;
         }
 
@@ -288,8 +282,8 @@ public class MethodOption {
         /**
          * 构造函数
          *
-         * @param failoverBlackWhiteList
-         * @param exceptionPredication
+         * @param failoverBlackWhiteList 异常黑白名单
+         * @param exceptionPredication   异常断言
          */
         public MyExceptionPolicy(final BlackWhiteList<Class<? extends Throwable>> failoverBlackWhiteList,
                                  final ExceptionPredication exceptionPredication) {

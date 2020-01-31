@@ -320,9 +320,9 @@ public class Invocation implements Serializable {
     /**
      * 添加扩展属性
      *
-     * @param map
+     * @param map 参数
      */
-    public void addAttachments(final Map<String, ? extends Object> map) {
+    public void addAttachments(final Map<String, ?> map) {
         if (map != null) {
             if (attachments == null) {
                 attachments = new HashMap<>();

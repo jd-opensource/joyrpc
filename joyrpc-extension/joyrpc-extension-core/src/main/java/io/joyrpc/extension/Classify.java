@@ -28,21 +28,10 @@ public interface Classify<T, M> {
     /**
      * 获取类型
      *
-     * @param obj 扩展对象
+     * @param obj  扩展对象
+     * @param name 扩展点元数据名称
      * @return 类型
      */
-    M type(T obj);
-
-    /**
-     * 获取类型
-     *
-     * @param meta 扩展元数据
-     * @return 类型
-     */
-    //TODO 是否需要
-    default M type(ExtensionMeta<T, M> meta) {
-        T target = meta.getTarget();
-        return target == null ? null : type(target);
-    }
+    M type(T obj, Name<T, String> name);
 
 }

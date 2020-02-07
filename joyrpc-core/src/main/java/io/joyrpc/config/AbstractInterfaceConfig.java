@@ -317,11 +317,11 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     /**
-     * Sets methods.
+     * add methods.
      *
      * @param methods the methods
      */
-    public void setMethods(List<MethodConfig> methods) {
+    public void addMethods(List<MethodConfig> methods) {
         if (this.methods == null) {
             this.methods = new ConcurrentHashMap<>();
         }

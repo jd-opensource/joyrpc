@@ -38,6 +38,10 @@
 
   - 节点过滤掉不支持的客户端协议，避免连接错误，并且定期尝试
   
+  - 添加initConnectTimeout配置，初始化连接超时时间，从第一次接收到集群连接连接事件开始计算，默认值15s
+  
+  - initTimeout配置默认值由0改为90000ms
+  
 - 处理链
 
   - 服务提供者在收到调用请求，如果本地没有请求指定的服务抛出ShutdownExecption，让客户端主动断开连接
@@ -54,9 +58,11 @@
   
   - 支持Java8接口上的默认方法和静态方法调用
   
+  - 增加处理链工厂类，把处理链的验证委托给处理链工厂类，因为不同的实现会加载不同的插件
+  
 - 工具类
     
-  - ClassUtils的getPublicMethods返回公共的方法，包括静态方法，支持Java8接口上的静态方法调用
+  - ClassUtils的getPublicMethods返回公共的方法，包括静态方法，支持Java8接口上的静态方法调用，调整获取getter和setter方法，必须有对应的字段
   
 - Dependency
 
@@ -87,6 +93,10 @@
   - 修改在接口上使用@Alias注解，消费者不能正确的调用和拿不到配置的问题。会使用Alias配置的名称替换ConsumerConfig配置的接口名称
   
   - 修复Javassist代理在获取数组类型的名称错误问题
+  
+- 工具类
+     
+  - 修复ClassUtils中的isWriteable方法，final修饰的field仍判定可写的问题
 
 ## 1.0.4-SNAPSHOT
 

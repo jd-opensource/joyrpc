@@ -66,13 +66,7 @@ public class GenericFilter extends AbstractProviderFilter {
         if (!invocation.isGeneric()) {
             // 如果不是generic请求，直接执行下一filter
             return invoker.invoke(request);
-        } else {
-            //移掉RequestContext中的generic属性，防止在A调B调C的场景中，generic属性传递下去
-            RequestContext context = request.getContext();
-            context = context == null ? RequestContext.getContext() : context;
-            context.removeAttachment(GENERIC_OPTION.getName());
         }
-
 
         CompletableFuture<Result> future = null;
         GenericSerializer[] serializers = new GenericSerializer[1];

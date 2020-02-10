@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,30 +21,40 @@ package io.joyrpc.extension;
  */
 
 /**
- * 扩展点实例
+ * 用于扩展点加载的时候描述扩展点信息
  */
 public class Plugin<T> {
-    //实例元数据
-    protected Name<? extends T, String> name;
-    //实例化接口
+    /**
+     * 实例名称
+     */
+    protected Name<T, String> name;
+    /**
+     * 构造器
+     */
     protected Instantiation instantiation;
-    //是否是单例
+    /**
+     * 是否是单例
+     */
     protected Boolean singleton;
-    //单例
+    /**
+     * 扩展实现单例
+     */
     protected T target;
-    //加载器
+    /**
+     * 扩展点加载器
+     */
     protected Object loader;
 
     public Plugin() {
     }
 
-    public Plugin(Name<? extends T, String> name, T target, Object loader) {
+    public Plugin(Name<T, String> name, T target, Object loader) {
         this.name = name;
         this.target = target;
         this.loader = loader;
     }
 
-    public Plugin(Name<? extends T, String> name, Instantiation instantiation, Boolean singleton, T target, Object loader) {
+    public Plugin(Name<T, String> name, Instantiation instantiation, Boolean singleton, T target, Object loader) {
         this.name = name;
         this.instantiation = instantiation;
         this.singleton = singleton;
@@ -52,11 +62,11 @@ public class Plugin<T> {
         this.loader = loader;
     }
 
-    public Name<? extends T, String> getName() {
+    public Name<T, String> getName() {
         return name;
     }
 
-    public void setName(Name<? extends T, String> name) {
+    public void setName(Name<T, String> name) {
         this.name = name;
     }
 

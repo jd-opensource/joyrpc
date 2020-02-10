@@ -22,10 +22,7 @@ package io.joyrpc.spring;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.cluster.discovery.config.Configure;
-import io.joyrpc.config.ProviderConfig;
-import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.config.ServerConfig;
-import io.joyrpc.config.Warmup;
+import io.joyrpc.config.*;
 import io.joyrpc.spring.event.ConsumerReferDoneEvent;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
@@ -58,6 +55,10 @@ import static io.joyrpc.spring.ConsumerSpring.REFERS;
 public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBean, DisposableBean,
         ApplicationContextAware, ApplicationListener, BeanNameAware {
 
+    /**
+     * 参数配置
+     */
+    protected List<ParameterConfig> params;
     /**
      * slf4j logger for this class
      */
@@ -316,5 +317,23 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
             }
         }
         return interfaceClass;
+    }
+
+    public List<ParameterConfig> getParams() {
+        return params;
+    }
+
+    public void setParams(List<ParameterConfig> params) {
+        this.params = params;
+        if (params != null) {
+            params.forEach(param -> {
+                if (param != null
+                        && io.joyrpc.util.StringUtils.isNotEmpty(param.getKey())
+                        && io.joyrpc.util.StringUtils.isNotEmpty(param.getValue())) {
+                    String key = param.isHide() && !param.getKey().startsWith(".") ? "." + param.getKey() : param.getKey();
+                    setParameter(key, param.getValue());
+                }
+            });
+        }
     }
 }

@@ -22,6 +22,7 @@ package io.joyrpc.spring.schema;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
+import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.beans.factory.support.ManagedMap;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.w3c.dom.Element;
@@ -57,7 +58,7 @@ public class AbstractInterfaceBeanDefinitionParser extends AbstractBeanDefinitio
                           final ParserContext context) {
             NodeList nodes = element.getChildNodes();
             if (nodes != null && nodes.getLength() > 0) {
-                ManagedMap methods = new ManagedMap();
+                ManagedList methods = new ManagedList();
                 Node node;
                 String methodName;
                 MethodBeanDefinitionParser parser = new MethodBeanDefinitionParser();
@@ -68,7 +69,7 @@ public class AbstractInterfaceBeanDefinitionParser extends AbstractBeanDefinitio
                         if (isEmpty(methodName)) {
                             throw new IllegalStateException("method name attribute == null");
                         }
-                        methods.put(methodName, new BeanDefinitionHolder(
+                        methods.add(new BeanDefinitionHolder(
                                 parser.parse(((Element) node), context), id + "." + methodName));
                     }
                 }

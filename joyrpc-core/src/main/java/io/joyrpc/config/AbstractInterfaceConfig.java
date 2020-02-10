@@ -244,14 +244,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         this.alias = alias;
     }
 
-    public Map<String, MethodConfig> getMethods() {
-        return methods;
-    }
-
-    public void setMethods(Map<String, MethodConfig> methods) {
-        this.methods = methods;
-    }
-
     public boolean isRegister() {
         return register;
     }
@@ -317,13 +309,31 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     /**
-     * Sets methods.
+     * add methods.
      *
      * @param methods the methods
+     */
+    public void addMethods(List<MethodConfig> methods) {
+        if (this.methods == null) {
+            this.methods = new ConcurrentHashMap<>();
+        }
+        if (methods != null) {
+            for (MethodConfig config : methods) {
+                this.methods.put(config.getName(), config);
+            }
+        }
+    }
+
+    /**
+     * set methods.
+     *
+     * @param methods
      */
     public void setMethods(List<MethodConfig> methods) {
         if (this.methods == null) {
             this.methods = new ConcurrentHashMap<>();
+        } else {
+            this.methods.clear();
         }
         if (methods != null) {
             for (MethodConfig config : methods) {

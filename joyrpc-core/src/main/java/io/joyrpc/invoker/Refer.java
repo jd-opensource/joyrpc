@@ -56,8 +56,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 
 import static io.joyrpc.Plugin.*;
-import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
-import static io.joyrpc.constants.Constants.ROUTE_OPTION;
+import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
 import static io.joyrpc.invoker.InvokerManager.NAME;
 
@@ -190,7 +189,8 @@ public class Refer extends AbstractInvoker {
         this.cluster.addHandler(config);
         this.distribution = buildDistribution(buildRouter(url, interfaceClass), buildRoute(url, loadBalance));
         //处理链
-        this.chain = FILTER_CHAIN_FACTORY.get().build(this, this::distribute);
+        this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
+                .build(this, this::distribute);
         //加载符合条件的透传插件，例如在MESH环境加载MeshTransmit
         this.transmits = TRANSMIT.extensions();
         this.injections = NODE_REQUEST_INJECTION.extensions(o -> o.test());

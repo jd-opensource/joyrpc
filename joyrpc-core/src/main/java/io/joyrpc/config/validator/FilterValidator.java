@@ -20,20 +20,15 @@ package io.joyrpc.config.validator;
  * #L%
  */
 
-import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
-import io.joyrpc.extension.ExtensionPoint;
-import io.joyrpc.filter.ConsumerFilter;
-import io.joyrpc.filter.Filter;
-import io.joyrpc.filter.ProviderFilter;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.invoker.FilterChainFactory;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 
-import static io.joyrpc.Plugin.CONSUMER_FILTER;
-import static io.joyrpc.Plugin.PROVIDER_FILTER;
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
-import static io.joyrpc.util.StringUtils.split;
+import static io.joyrpc.Plugin.FILTER_CHAIN_FACTORY;
+import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
 
 /**
  * 过滤器验证
@@ -42,21 +37,13 @@ public class FilterValidator implements ConstraintValidator<ValidateFilter, Abst
 
     @Override
     public boolean isValid(final AbstractInterfaceConfig config, final ConstraintValidatorContext context) {
-
+        //判断插件配置
         String value = config.getFilter();
         if (value != null && !value.isEmpty()) {
-            String message = null;
-            ExtensionPoint<? extends Filter, String> point = config instanceof AbstractConsumerConfig ? CONSUMER_FILTER : PROVIDER_FILTER;
-            Class clazz = config instanceof AbstractConsumerConfig ? ConsumerFilter.class : ProviderFilter.class;
-            String[] values = split(value, SEMICOLON_COMMA_WHITESPACE);
-            for (String v : values) {
-                if (v.charAt(0) != '-' && null == point.get(v)) {
-                    //过滤掉黑名单
-                    message = String.format("No such extension \'%s\' of %s. ", v, clazz.getName());
-                    break;
-                }
-            }
-            if (message != null) {
+            MapParametric parametric = new MapParametric(config.getParameters());
+            FilterChainFactory chainFactory = FILTER_CHAIN_FACTORY.getOrDefault(parametric.getString(FILTER_CHAIN_FACTORY_OPTION));
+            String message = chainFactory.validate(config);
+            if (message != null && !message.isEmpty()) {
                 context.disableDefaultConstraintViolation();
                 context.buildConstraintViolationWithTemplate(message)
                         .addPropertyNode("filter")
@@ -65,9 +52,5 @@ public class FilterValidator implements ConstraintValidator<ValidateFilter, Abst
             }
         }
         return true;
-    }
-
-    @Override
-    public void initialize(final ValidateFilter validate) {
     }
 }

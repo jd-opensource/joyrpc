@@ -21,16 +21,12 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Invoker;
-import io.joyrpc.Result;
+import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.extension.Extensible;
-import io.joyrpc.filter.Filter;
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
-
-import java.util.concurrent.CompletableFuture;
 
 /**
- * 构造处理链
+ * 过滤链工厂类<p/>
+ * 不同的实现加载不同的扩展点，所以扩展点验证需要委托给过滤链工厂类
  */
 @Extensible("filterChainFactory")
 public interface FilterChainFactory {
@@ -54,58 +50,10 @@ public interface FilterChainFactory {
     Invoker build(Exporter exporter, Invoker last);
 
     /**
-     * Filter的调用
+     * 验证配置的过滤器插件是否存在
+     *
+     * @param config 配置
+     * @return 异常信息
      */
-    class FilterInvoker implements Invoker {
-        /**
-         * 过滤器
-         */
-        protected final Filter filter;
-        /**
-         * 后续调用
-         */
-        protected final Invoker next;
-        /**
-         * 名称
-         */
-        protected final String name;
-
-        /**
-         * 构造函数
-         *
-         * @param filter 过滤链
-         * @param next   下一个调用
-         * @param name   名称
-         */
-        public FilterInvoker(Filter filter, Invoker next, String name) {
-            this.filter = filter;
-            this.next = next;
-            this.name = name;
-        }
-
-        @Override
-        public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
-            return filter.invoke(next, request);
-        }
-
-        @Override
-        public CompletableFuture<Void> close() {
-            CompletableFuture<Void> result = new CompletableFuture<>();
-            filter.close().whenComplete((v, t) -> next.close().whenComplete((o, s) -> {
-                if (t == null && s == null) {
-                    result.complete(null);
-                } else if (t != null) {
-                    result.completeExceptionally(t);
-                } else {
-                    result.completeExceptionally(s);
-                }
-            }));
-            return result;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-    }
+    String validate(final AbstractInterfaceConfig config);
 }

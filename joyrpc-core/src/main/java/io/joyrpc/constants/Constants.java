@@ -398,6 +398,8 @@ public class Constants {
     public static final URLOption<String> ALIAS_OPTION = new URLOption<>("alias", "");
     public static final URLOption<Long> START_TIME_OPTION = new URLOption<>("startTime", 0L); //provider启动时间戳
     public static final URLOption<Boolean> SERVICE_MESH_OPTION = new URLOption<>(SERVICE_MESH_KEY, false);
+    public static final URLOption<String> FILTER_CHAIN_FACTORY_OPTION = new URLOption<>("filterChainFactory", "default");
+
     /**
      * 消费者调用超时时间
      */
@@ -636,6 +638,7 @@ public class Constants {
     public static final URLOption<Integer> INIT_SIZE_OPTION = new URLOption<>("initSize", 5);
     public static final URLOption<Integer> MIN_SIZE_OPTION = new URLOption<>("minSize", 0);
     public static final URLOption<Long> INIT_TIMEOUT_OPTION = new URLOption<>("initTimeout", 90000L);
+    public static final URLOption<Long> INIT_CONNECT_TIMEOUT_OPTION = new URLOption<>("initConnectTimeout", 15000L);
     public static final URLOption<Integer> CONNECT_TIMEOUT_OPTION = new URLOption<>("connectTimeout", 5000);
     public static final URLOption<Integer> WRITE_BUFFER_HIGH_WATERMARK_OPTION = new URLOption<>("highWaterMark", DEFAULT_HIGH_WATER_MARK);
     public static final URLOption<Integer> WRITE_BUFFER_LOW_WATERMARK_OPTION = new URLOption<>("lowWaterMark", DEFAULT_LOW_WATER_MARK);

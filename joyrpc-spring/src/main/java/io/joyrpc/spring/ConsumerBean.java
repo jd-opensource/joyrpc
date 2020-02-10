@@ -22,6 +22,8 @@ package io.joyrpc.spring;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerConfig;
+import io.joyrpc.config.ParameterConfig;
+import io.joyrpc.util.StringUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
@@ -29,11 +31,18 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.*;
 import org.springframework.context.event.ContextRefreshedEvent;
 
+import java.util.List;
+
 /**
  * 消费者
  */
 public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBean, FactoryBean,
         ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
+
+    /**
+     * 参数配置
+     */
+    protected List<ParameterConfig> params;
 
     /**
      * spring处理器
@@ -126,5 +135,23 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     @Alias("configure")
     public void setConfigureName(String configureName) {
         spring.setConfigureName(configureName);
+    }
+
+    public List<ParameterConfig> getParams() {
+        return params;
+    }
+
+    public void setParams(List<ParameterConfig> params) {
+        this.params = params;
+        if (params != null) {
+            params.forEach(param -> {
+                if (param != null
+                        && StringUtils.isNotEmpty(param.getKey())
+                        && StringUtils.isNotEmpty(param.getValue())) {
+                    String key = param.isHide() && !param.getKey().startsWith(".") ? "." + param.getKey() : param.getKey();
+                    setParameter(key, param.getValue());
+                }
+            });
+        }
     }
 }

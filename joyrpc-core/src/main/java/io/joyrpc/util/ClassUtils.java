@@ -1051,9 +1051,10 @@ public class ClassUtils {
          */
         protected MethodMeta getMethodMeta() {
             if (methodMeta == null) {
+                FieldMeta fieldMeta = getFieldMeta();
                 synchronized (this) {
                     if (methodMeta == null) {
-                        methodMeta = new MethodMeta(type);
+                        methodMeta = new MethodMeta(type, name -> fieldMeta.getField(name) != null);
                     }
                 }
             }
@@ -1347,7 +1348,7 @@ public class ClassUtils {
          */
         protected Class type;
         /**
-         * 公共非静态方法的重载信息
+         * 公共重载信息
          */
         protected Map<String, OverloadMethod> overloadMethods;
         /**
@@ -1360,16 +1361,17 @@ public class ClassUtils {
         protected Map<String, Method> setter;
 
         /**
-         * 公共非静态方法
+         * 公共方法
          */
         protected List<Method> methods;
 
         /**
          * 构造函数
          *
-         * @param type
+         * @param type      类型
+         * @param predicate 是否是字段
          */
-        public MethodMeta(Class type) {
+        public MethodMeta(Class type, Predicate<String> predicate) {
             this.type = type;
             if (!type.isPrimitive() && !type.isArray()) {
                 Method[] publicMethods = type.getMethods();
@@ -1382,20 +1384,32 @@ public class ClassUtils {
                     if (!method.getDeclaringClass().equals(Object.class)) {
                         overloadMethods.computeIfAbsent(method.getName(), k -> new OverloadMethod(type, k)).add(method);
                         methods.add(method);
-                        name = method.getName();
-                        if (name.startsWith("get")) {
-                            if (name.length() > 3 && method.getParameterCount() == 0
-                                    && void.class != method.getReturnType()) {
-                                getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
-                            }
-                        } else if (name.startsWith("is")) {
-                            if (name.length() > 2 && method.getParameterCount() == 0
-                                    && boolean.class == method.getReturnType()) {
-                                getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
-                            }
-                        } else if (name.startsWith("set")) {
-                            if (name.length() > 3 && method.getParameterCount() == 1) {
-                                setter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
+                        //getter和setter方法，过滤掉静态方法
+                        if (!Modifier.isStatic(method.getModifiers())) {
+                            name = method.getName();
+                            if (name.startsWith("get")) {
+                                if (name.length() > 3 && method.getParameterCount() == 0
+                                        && void.class != method.getReturnType()) {
+                                    name = name.substring(3, 4).toLowerCase() + name.substring(4);
+                                    if ((predicate == null || predicate.test(name))) {
+                                        getter.put(name, method);
+                                    }
+                                }
+                            } else if (name.startsWith("is")) {
+                                if (name.length() > 2 && method.getParameterCount() == 0
+                                        && boolean.class == method.getReturnType()) {
+                                    name = name.substring(2, 3).toLowerCase() + name.substring(3);
+                                    if ((predicate == null || predicate.test(name))) {
+                                        getter.put(name, method);
+                                    }
+                                }
+                            } else if (name.startsWith("set")) {
+                                if (name.length() > 3 && method.getParameterCount() == 1) {
+                                    name = name.substring(3, 4).toLowerCase() + name.substring(4);
+                                    if ((predicate == null || predicate.test(name))) {
+                                        setter.put(name, method);
+                                    }
+                                }
                             }
                         }
                     }

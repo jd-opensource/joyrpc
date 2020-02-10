@@ -1,22 +1,32 @@
 package io.joyrpc.invoker.chain;
 
 import io.joyrpc.Invoker;
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.ClusterAware;
+import io.joyrpc.config.AbstractConsumerConfig;
+import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.*;
+import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.filter.Filter;
+import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.Refer;
 import io.joyrpc.permission.StringBlackWhiteList;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.CONSUMER_FILTER;
 import static io.joyrpc.Plugin.PROVIDER_FILTER;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * 默认处理链工厂类
@@ -34,19 +44,33 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
         return build(null, exporter.getInterfaceClass(), exporter.getInterfaceName(), exporter.getUrl(), last, PROVIDER_FILTER);
     }
 
+    @Override
+    public String validate(final AbstractInterfaceConfig config) {
+        ExtensionPoint<? extends Filter, String> point = config instanceof AbstractConsumerConfig ? CONSUMER_FILTER : PROVIDER_FILTER;
+        Class<?> clazz = config instanceof AbstractConsumerConfig ? ConsumerFilter.class : ProviderFilter.class;
+        String[] filters = split(config.getFilter(), SEMICOLON_COMMA_WHITESPACE);
+        for (String filter : filters) {
+            if (filter.charAt(0) != '-' && null == point.get(filter)) {
+                //过滤掉黑名单
+                return String.format("No such extension '%s' of %s. ", filter, clazz.getName());
+            }
+        }
+        return null;
+    }
+
     /**
      * 构造过滤链
      *
-     * @param cluster
-     * @param clazz
-     * @param className
-     * @param url
-     * @param last
-     * @param extension
-     * @return
+     * @param cluster   集群
+     * @param clazz     接口类
+     * @param className 接口类名
+     * @param url       参数
+     * @param last      最后调用器
+     * @param extension 过滤链扩展点
+     * @return 调用
      */
     protected <T extends Filter> Invoker build(final Cluster cluster,
-                                               final Class clazz,
+                                               final Class<?> clazz,
                                                final String className,
                                                final URL url,
                                                final Invoker last,
@@ -74,9 +98,9 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     /**
      * 获取所有配置filter
      *
-     * @param url
-     * @param extension
-     * @return
+     * @param url       参数
+     * @param extension 过滤链扩展点
+     * @return 过滤器集合
      */
     protected <T extends Filter> List<Filter> getFilters(final URL url, final ExtensionPoint<T, String> extension) {
         // 获取url里面所有-XXX需要排除的filter
@@ -105,5 +129,61 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
 
         return result;
 
+    }
+
+    /**
+     * 过滤器调用
+     */
+    static class FilterInvoker implements Invoker {
+        /**
+         * 过滤器
+         */
+        protected final Filter filter;
+        /**
+         * 后续调用
+         */
+        protected final Invoker next;
+        /**
+         * 名称
+         */
+        protected final String name;
+
+        /**
+         * 构造函数
+         *
+         * @param filter 过滤链
+         * @param next   下一个调用
+         * @param name   名称
+         */
+        public FilterInvoker(Filter filter, Invoker next, String name) {
+            this.filter = filter;
+            this.next = next;
+            this.name = name;
+        }
+
+        @Override
+        public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
+            return filter.invoke(next, request);
+        }
+
+        @Override
+        public CompletableFuture<Void> close() {
+            CompletableFuture<Void> result = new CompletableFuture<>();
+            filter.close().whenComplete((v, t) -> next.close().whenComplete((o, s) -> {
+                if (t == null && s == null) {
+                    result.complete(null);
+                } else if (t != null) {
+                    result.completeExceptionally(t);
+                } else {
+                    result.completeExceptionally(s);
+                }
+            }));
+            return result;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
     }
 }

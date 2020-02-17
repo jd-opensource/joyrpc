@@ -603,8 +603,8 @@ public class ExtensionSelector<T, M, C, K> {
 ```xml
 <dependency>
     <groupId>com.jd.laf</groupId>
-    <artifactId>laf-extension-core</artifactId>
-    <version>${laf-extension.version}</version>
+    <artifactId>joyrpc-extension-core</artifactId>
+    <version>${joyrpc-extension.version}</version>
 </dependency>
 ```
 
@@ -615,8 +615,8 @@ public class ExtensionSelector<T, M, C, K> {
 ```xml
 <dependency>
     <groupId>com.jd.laf</groupId>
-    <artifactId>laf-extension-spring</artifactId>
-    <version>${laf-extension.version}</version>
+    <artifactId>joyrpc-extension-spring</artifactId>
+    <version>${joyrpc-extension.version}</version>
 </dependency>
 ```
 
@@ -633,8 +633,8 @@ public class ExtensionSelector<T, M, C, K> {
 ```xml
 <dependency>
     <groupId>com.jd.laf</groupId>
-    <artifactId>laf-extension-springboot-starter</artifactId>
-    <version>${laf-extension.version}</version>
+    <artifactId>joyrpc-extension-springboot</artifactId>
+    <version>${joyrpc-extension.version}</version>
 </dependency>
 ```
 

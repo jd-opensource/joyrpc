@@ -602,7 +602,7 @@ public class ExtensionSelector<T, M, C, K> {
 
 ```xml
 <dependency>
-    <groupId>com.jd.laf</groupId>
+    <groupId>io.joyrpc</groupId>
     <artifactId>joyrpc-extension-core</artifactId>
     <version>${joyrpc-extension.version}</version>
 </dependency>
@@ -614,7 +614,7 @@ public class ExtensionSelector<T, M, C, K> {
 
 ```xml
 <dependency>
-    <groupId>com.jd.laf</groupId>
+    <groupId>io.joyrpc</groupId>
     <artifactId>joyrpc-extension-spring</artifactId>
     <version>${joyrpc-extension.version}</version>
 </dependency>
@@ -623,7 +623,7 @@ public class ExtensionSelector<T, M, C, K> {
 在Spring的配置文件中配置SpringLoader
 
 ```xml
-<bean class="com.jd.laf.extension.spring.SpringLoader"/>
+<bean class="io.joyrpc.extension.spring.SpringLoader"/>
 ```
 
 #### Springboot环境
@@ -632,7 +632,7 @@ public class ExtensionSelector<T, M, C, K> {
 
 ```xml
 <dependency>
-    <groupId>com.jd.laf</groupId>
+    <groupId>io.joyrpc</groupId>
     <artifactId>joyrpc-extension-springboot</artifactId>
     <version>${joyrpc-extension.version}</version>
 </dependency>
@@ -644,12 +644,12 @@ public class ExtensionSelector<T, M, C, K> {
 
 1). 基于java SPI进行实现，并配置到相关的文件里面。例如JsonProvider的扩展配置如下
 
-src/main/resources/META-INF/services/com.jd.laf.binding.marshaller.JsonProvider
+src/main/resources/META-INF/services/io.joyrpc.binding.marshaller.JsonProvider
 
 该文件内容为各个扩展实现的全路径类名
 
 ```
-com.jd.laf.web.vertx.marshaller.JacksonProvider
+io.joyrpc.web.vertx.marshaller.JacksonProvider
 ```
 
 2). 基于Spring注册相关的实现
@@ -659,20 +659,20 @@ com.jd.laf.web.vertx.marshaller.JacksonProvider
 通常建议在工程包的根路径下定义Plugin接口类，在其中定义扩展常量，其它地方引用来获取扩展
 
 ```java
-package com.jd.laf.web.vertx;
+package io.joyrpc.web.vertx;
 
-import com.jd.laf.extension.ExtensionMeta;
-import com.jd.laf.extension.ExtensionPoint;
-import com.jd.laf.extension.ExtensionPointLazy;
-import com.jd.laf.extension.ExtensionSelector;
-import com.jd.laf.extension.Selector.CacheSelector;
-import com.jd.laf.extension.Selector.MatchSelector;
-import com.jd.laf.web.vertx.lifecycle.Registrar;
-import com.jd.laf.web.vertx.message.CustomCodec;
-import com.jd.laf.web.vertx.pool.PoolFactory;
-import com.jd.laf.web.vertx.render.Render;
-import com.jd.laf.web.vertx.response.ErrorSupplier;
-import com.jd.laf.web.vertx.service.Daemon;
+import io.joyrpc.extension.ExtensionMeta;
+import io.joyrpc.extension.ExtensionPoint;
+import io.joyrpc.extension.ExtensionPointLazy;
+import io.joyrpc.extension.ExtensionSelector;
+import io.joyrpc.extension.Selector.CacheSelector;
+import io.joyrpc.extension.Selector.MatchSelector;
+import io.joyrpc.web.vertx.lifecycle.Registrar;
+import io.joyrpc.web.vertx.message.CustomCodec;
+import io.joyrpc.web.vertx.pool.PoolFactory;
+import io.joyrpc.web.vertx.render.Render;
+import io.joyrpc.web.vertx.response.ErrorSupplier;
+import io.joyrpc.web.vertx.service.Daemon;
 
 import java.util.Comparator;
 

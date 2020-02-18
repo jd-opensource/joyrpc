@@ -71,6 +71,8 @@
   - 升级Spring为5.2.1.RELEASE版本
   
   - 升级Hazelcast为3.12.5版本
+  
+  - 升级Protostuff为1.6.2版本，支持Object[]元素为null。
 
 ### Bugfixes
 

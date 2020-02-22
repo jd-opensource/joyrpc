@@ -137,7 +137,7 @@ public class Cluster {
      */
     protected long initConnectTimeout;
     /**
-     * 是否验证初始化建连（即初始化连接超时则启动失败）
+     * 是否启用初始化建连超时
      */
     protected boolean check;
     /**
@@ -604,6 +604,7 @@ public class Cluster {
                                 new InitializationException(
                                         String.format("initialization timeout, used %d ms.", SystemClock.now() - beginTime)))));
                 if (!cluster.check) {
+                    //TODO 为啥不启用建立超时，还要生成任务？
                     this.checkTask = new CheckTask("Check-" + cluster.name,
                             SystemClock.now() + cluster.initTimeout, trigger);
                 }
@@ -692,6 +693,7 @@ public class Cluster {
                     candidate();
                 } else if (!cluster.check && event.getType() == FULL) {
                     //check为false，事件类型为FULL，直接触发ready
+                    //TODO 为啥要这个逻辑
                     trigger.fireReady();
                 }
             });
@@ -852,6 +854,7 @@ public class Cluster {
             //重置可用节点，因为有些节点可能在这次选举中被放弃了
             readys = new ArrayList<>(connects.values());
             //如果check为false，添加定时任务，当所有节点建完连接之后，无论成功还是失败，直接fire
+            //TODO 判断条件为啥要这么做？
             if (checkTask != null && checkTask.initSemaphore(semaphore) && readys.isEmpty()) {
                 timer().add(checkTask);
             }
@@ -1288,11 +1291,11 @@ public class Cluster {
          */
         protected boolean check;
         /**
-         * 就绪事件
+         * 就绪处理器
          */
         protected Runnable ready;
         /**
-         * 超时事件
+         * 超时处理器
          */
         protected Runnable whenTimeout;
         /**

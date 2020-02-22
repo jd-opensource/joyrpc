@@ -696,6 +696,9 @@ public class Cluster {
                     //TODO 为啥要这个逻辑
                     trigger.fireReady();
                 }
+                if (event.getType() == FULL) {
+                    trigger.onClusterEvent();
+                }
             });
         }
 

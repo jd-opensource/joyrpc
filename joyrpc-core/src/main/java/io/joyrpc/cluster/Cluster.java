@@ -60,7 +60,6 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
-import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.util.Status.CLOSED;
 import static io.joyrpc.util.StringUtils.toSimpleString;
 import static io.joyrpc.util.Timer.timer;
@@ -125,7 +124,7 @@ public class Cluster {
      */
     protected int minSize;
     /**
-     * 初始化建连的数量
+     * 达到初始化建连的数量则自动起来
      */
     protected int initSize;
     /**
@@ -137,7 +136,7 @@ public class Cluster {
      */
     protected long initConnectTimeout;
     /**
-     * 是否启用初始化建连超时
+     * 当初始化超时的时候，是否验证必须要有连接
      */
     protected boolean check;
     /**
@@ -576,10 +575,6 @@ public class Cluster {
          * 补充节点的名称
          */
         protected final String supplyTask;
-        /**
-         * check任务
-         */
-        protected CheckTask checkTask;
 
         /**
          * 构造函数
@@ -603,11 +598,6 @@ public class Cluster {
                         () -> ready.accept(new AsyncResult<>(this,
                                 new InitializationException(
                                         String.format("initialization timeout, used %d ms.", SystemClock.now() - beginTime)))));
-                if (!cluster.check) {
-                    //TODO 为啥不启用建立超时，还要生成任务？
-                    this.checkTask = new CheckTask("Check-" + cluster.name,
-                            SystemClock.now() + cluster.initTimeout, trigger);
-                }
             }
         }
 
@@ -673,7 +663,7 @@ public class Cluster {
                 return;
             }
             offer(() -> {
-                int add = 0;
+                int add;
                 switch (event.getType()) {
                     case CLEAR:
                         //清理
@@ -682,22 +672,21 @@ public class Cluster {
                     case UPDATE:
                         //增量更新
                         add = onUpdateEvent(event.getDatum());
+                        if (add > 0) {
+                            //新增了节点，重新选举
+                            candidate();
+                        }
                         break;
                     case FULL:
                         //全量更新
                         add = onFullEvent(event.getDatum());
+                        if (add > 0) {
+                            //新增了节点，重新选举
+                            candidate();
+                        }
+                        //第一次全量事件，触发连接超时检测
+                        trigger.onFull(add);
                         break;
-                }
-                if (add > 0) {
-                    //新增了节点，重新选举
-                    candidate();
-                } else if (!cluster.check && event.getType() == FULL) {
-                    //check为false，事件类型为FULL，直接触发ready
-                    //TODO 为啥要这个逻辑
-                    trigger.fireReady();
-                }
-                if (event.getType() == FULL) {
-                    trigger.onClusterEvent();
                 }
             });
         }
@@ -856,11 +845,6 @@ public class Cluster {
             candidate(result.getDiscards(), (s, n) -> discard(n), null);
             //重置可用节点，因为有些节点可能在这次选举中被放弃了
             readys = new ArrayList<>(connects.values());
-            //如果check为false，添加定时任务，当所有节点建完连接之后，无论成功还是失败，直接fire
-            //TODO 判断条件为啥要这么做？
-            if (checkTask != null && checkTask.initSemaphore(semaphore) && readys.isEmpty()) {
-                timer().add(checkTask);
-            }
         }
 
         /**
@@ -1139,90 +1123,6 @@ public class Cluster {
     }
 
     /**
-     * check 任务
-     */
-    protected static class CheckTask implements Timer.TimeTask {
-
-        /**
-         * 任务名称
-         */
-        protected String name;
-        /**
-         * 清理时间
-         */
-        protected long time;
-        /**
-         * 清理时间间隔
-         */
-        protected int interval = 1000;
-        /**
-         * 任务结束时间
-         */
-        protected long endTime;
-        /**
-         * 信号量
-         */
-        protected AtomicInteger semaphore;
-        /**
-         * trigger
-         */
-        protected Trigger trigger;
-
-        /**
-         * 构造方法
-         *
-         * @param name
-         * @param endTime
-         */
-        public CheckTask(String name, long endTime, Trigger trigger) {
-            this.name = name;
-            this.time = SystemClock.now() + interval;
-            this.endTime = endTime;
-            this.trigger = trigger;
-        }
-
-        @Override
-        public String getName() {
-            return name;
-        }
-
-        @Override
-        public long getTime() {
-            return time;
-        }
-
-        /**
-         * 初始化信号量
-         *
-         * @param semaphore
-         * @return
-         */
-        public boolean initSemaphore(AtomicInteger semaphore) {
-            if (this.semaphore == null) {
-                synchronized (this) {
-                    if (this.semaphore == null) {
-                        this.semaphore = semaphore;
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        @Override
-        public void run() {
-            if (semaphore.get() <= 0) {
-                trigger.fireReady();
-            } else {
-                time = SystemClock.now() + interval;
-                if (time < endTime) {
-                    timer().add(this);
-                }
-            }
-        }
-    }
-
-    /**
      * 延迟连接节点
      */
     protected static class DelayedNode implements Delayed {
@@ -1312,7 +1212,7 @@ public class Cluster {
         /**
          * 第一次收到cluster事件
          */
-        protected AtomicBoolean firstOnClusterEvent = new AtomicBoolean(false);
+        protected AtomicBoolean firstConnect = new AtomicBoolean(false);
 
         /**
          * 构造函数
@@ -1334,9 +1234,9 @@ public class Cluster {
             this.ready = ready;
             this.whenTimeout = whenTimeout;
             if (timeout > 0) {
-                //超时检测，check为false，执行ready
-                timer().add("ReadyTask-" + clusterName, SystemClock.now() + timeout,
-                        () -> fire(check ? whenTimeout : ready));
+                //超时检测
+                timer().add("TimeoutTask-" + clusterName, SystemClock.now() + timeout,
+                        () -> fire(semaphore.get() < initSize || !check ? ready : whenTimeout));
             }
         }
 
@@ -1358,15 +1258,20 @@ public class Cluster {
         }
 
         /**
-         * 第一次接收到集群事件，触发超时检查任务
+         * 接收到集群全量事件，触发连接超时检查任务
+         *
+         * @param size 节点数量
          */
-        public void onClusterEvent() {
-            if (firstOnClusterEvent.compareAndSet(false, true)
-                    && check
-                    && timeout > 0
-                    && connectTimeout > 0) {
-                timer().add("ReadyTask-OnClusterEvent-" + clusterName, SystemClock.now() + connectTimeout,
-                        () -> fire(whenTimeout));
+        public void onFull(int size) {
+            if (firstConnect.compareAndSet(false, true)) {
+                if (size == 0 && !check) {
+                    //没有服务提供者，不需要初始化建立连接
+                    semaphore.set(0L);
+                    fire(ready);
+                } else if (connectTimeout > 0) {
+                    timer().add("ConnectTimeoutTask-" + clusterName, SystemClock.now() + connectTimeout,
+                            () -> fire(semaphore.get() < initSize || !check ? ready : whenTimeout));
+                }
             }
         }
 
@@ -1386,14 +1291,6 @@ public class Cluster {
                 return true;
             }
             return false;
-        }
-
-        /**
-         * 触发ready
-         */
-        public void fireReady() {
-            semaphore.set(0L);
-            fire(ready);
         }
 
         /**

@@ -949,10 +949,18 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
 
         /**
          * 这个方法用来做 Trace 追踪的增强点，不要随便修改
+         *
+         * @param invoker 调用器
+         * @param request 请求
+         * @param async   异步标识
+         * @return 返回值
+         * @throws Throwable 异常
          */
         protected Object doInvoke(Invoker invoker, RequestMessage<Invocation> request, boolean async) throws Throwable {
             try {
                 return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
+            } catch (CompletionException | ExecutionException e) {
+                throw e.getCause() != null ? e.getCause() : e;
             } finally {
                 //调用结束，使用新的上下文
                 Map<String, Object> session = request.getContext().getSession();
@@ -965,25 +973,26 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          *
          * @param invoker 调用器
          * @param request 请求
-         * @return
-         * @throws Throwable
+         * @return 返回值
+         * @throws Throwable 异常
          */
         protected Object syncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
             CompletableFuture<Result> future = invoker.invoke(request);
-            try {
-                //正常同步返回，处理Java8的future.get内部先自循环造成的性能问题
-                Result result = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
-                if (result.isException()) {
-                    throw result.getException();
-                }
-                return result.getValue();
-            } catch (ExecutionException e) {
-                throw e.getCause() != null ? e.getCause() : e;
+            //正常同步返回，处理Java8的future.get内部先自循环造成的性能问题
+            Result result = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
+            if (result.isException()) {
+                throw result.getException();
             }
+            return result.getValue();
         }
 
         /**
          * 异步调用
+         *
+         * @param invoker 调用器
+         * @param request 请求
+         * @return 返回值
+         * @throws Throwable 异常
          */
         protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
             //异步调用，业务逻辑执行完毕，不清理IO线程的上下文

@@ -1007,7 +1007,7 @@ public class Cluster {
                 } else {
                     logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
                 }
-                onNodeDisconnect(result.getResult(), cluster.getRetryTime(e));
+                onNodeDisconnect(node, cluster.getRetryTime(e));
             }
         }
 

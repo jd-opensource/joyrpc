@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.naming;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -233,7 +233,7 @@ public class AbstractRegistar implements Registar {
      */
     public CompletableFuture<Void> open() {
         //多次调用也能拿到正确的Future
-        return switcher.open(f->{
+        return switcher.open(f -> {
             //启动事件监听器
             publishers.values().forEach(o -> o.start());
             dispatcher = new Thread(AbstractRegistar.this::schedule, getClass().getSimpleName());
@@ -375,7 +375,7 @@ public class AbstractRegistar implements Registar {
             targets = provider.apply(url, meta.getUrl());
         } catch (ProtocolException e) {
             //协议异常
-            logger.error(String.format("Unrecoverable error occurs while updating %s cluster %s.", name, meta.getName(), time), e);
+            logger.error(String.format("Unrecoverable error occurs while updating %s cluster %s.", name, meta.getName()), e);
             time = 0;
         } catch (Throwable e) {
             error = true;
@@ -386,7 +386,7 @@ public class AbstractRegistar implements Registar {
             if (meta.getUpdates() == 1 && backups != null) {
                 //第一次调用失败，尝试使用备份恢复的数据
                 targets = backups.get(meta.getName());
-                logger.warn(String.format("Error occurs while updating %s cluster %s. using backup data. retry in %d(ms)", name, meta.getName()), time, e);
+                logger.warn(String.format("Error occurs while updating %s cluster %s. using backup data. retry in %d(ms)", name, meta.getName(), time), e);
             } else {
                 logger.error(String.format("Error occurs while updating %s cluster %s. retry in %d(ms)", name, meta.getName(), time), e);
             }

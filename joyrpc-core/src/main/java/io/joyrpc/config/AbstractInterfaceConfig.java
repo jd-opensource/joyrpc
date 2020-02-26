@@ -738,7 +738,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             Map<String, String> updates = event.getDatum();
             if (!waitingConfig.isDone()) {
                 //触发URL变化
-                logger.info("Success subscribe global config " + config.name());
+                logger.info("Success subscribing global config " + config.name());
                 attributes = updates;
                 //加上全局配置和接口配置，再添加实例配置
                 waitingConfig.complete(configure(updates));
@@ -850,6 +850,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                         //订阅配置
                         if (config.subscribe) {
                             subscribeUrl = buildSubscribedUrl(configureRef, serviceUrl);
+                            logger.info("Start subscribing global config " + config.name());
                             configureRef.subscribe(subscribeUrl, configHandler);
                         }
                         future.complete(null);
@@ -885,6 +886,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                     //原来也订阅了
                     configureRef.unsubscribe(oldUrl, configHandler);
                 }
+                logger.info("Start resubscribing config " + config.name());
                 configureRef.subscribe(newUrl, configHandler);
                 subscribeUrl = newUrl;
                 return true;

@@ -168,7 +168,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * 打开
      */
     protected void doOpen() {
-
+        logger.info("Start connecting to registry " + name);
     }
 
     @Override

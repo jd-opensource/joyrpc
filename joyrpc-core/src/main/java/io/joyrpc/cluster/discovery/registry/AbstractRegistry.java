@@ -937,6 +937,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     //没有任务则等待10秒
                     waitTime = 10000L;
                 }
+            } else {
+                logger.info(String.format("Wait %d(ms) to execute %s", waitTime, task.getName()));
             }
             return waitTime;
         }

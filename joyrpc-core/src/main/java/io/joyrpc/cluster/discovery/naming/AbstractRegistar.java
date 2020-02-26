@@ -53,7 +53,7 @@ import static io.joyrpc.cluster.event.ClusterEvent.ShardEventType.ADD;
  */
 public class AbstractRegistar implements Registar {
     protected static final Logger logger = LoggerFactory.getLogger(AbstractRegistar.class);
-    public static final URLOption<Long> UPDATE_INTERVAL = new URLOption("updateInterval", 0L);
+    public static final URLOption<Long> UPDATE_INTERVAL = new URLOption<>("updateInterval", 10000L);
     /**
      * 目录服务名称
      */
@@ -113,7 +113,7 @@ public class AbstractRegistar implements Registar {
     /**
      * 等待锁
      */
-    protected Object mutex = new Object();
+    protected final Object mutex = new Object();
     /**
      * 开关
      */
@@ -197,7 +197,7 @@ public class AbstractRegistar implements Registar {
         }
         return switcher.reader().quietAnyway(() -> {
             Publisher<ClusterEvent> publisher = publishers.get(getKey(url));
-            return publisher == null ? false : publisher.removeHandler(handler);
+            return publisher != null && publisher.removeHandler(handler);
         });
     }
 
@@ -235,7 +235,7 @@ public class AbstractRegistar implements Registar {
         //多次调用也能拿到正确的Future
         return switcher.open(f -> {
             //启动事件监听器
-            publishers.values().forEach(o -> o.start());
+            publishers.values().forEach(Publisher::start);
             dispatcher = new Thread(AbstractRegistar.this::schedule, getClass().getSimpleName());
             dispatcher.setDaemon(true);
             dispatcher.start();
@@ -255,7 +255,7 @@ public class AbstractRegistar implements Registar {
                 dispatcher.interrupt();
             }
             //关闭事件监听器
-            publishers.values().forEach(o -> o.close());
+            publishers.values().forEach(Publisher::close);
             // 备份一下数据
             if (dirty.compareAndSet(true, false)) {
                 backup();
@@ -304,7 +304,7 @@ public class AbstractRegistar implements Registar {
             synchronized (mutex) {
                 try {
                     mutex.wait(Math.max(waitTime, 500L));
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                 }
             }
         }

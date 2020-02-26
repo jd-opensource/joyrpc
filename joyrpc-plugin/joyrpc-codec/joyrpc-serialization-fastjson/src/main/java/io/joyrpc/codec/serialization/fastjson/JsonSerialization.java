@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.fastjson;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,7 +35,6 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.protocol.message.Invocation;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
@@ -230,7 +229,7 @@ public class JsonSerialization implements Serialization, Json {
                 for (String feature : features) {
                     try {
                         set.add(SerializerFeature.valueOf(feature));
-                    } catch (IllegalArgumentException e) {
+                    } catch (IllegalArgumentException ignored) {
                     }
                 }
 
@@ -246,7 +245,7 @@ public class JsonSerialization implements Serialization, Json {
         public <T> void serialize(final OutputStream os, final T object) throws SerializerException {
             try {
                 JSON.writeJSONString(os, StandardCharsets.UTF_8, object, serializeConfig, null, null, DEFAULT_GENERATE_FEATURE, serializerFeatures);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new SerializerException("Error occurred while serializing class " + object.getClass().getName(), e);
             }
         }
@@ -302,7 +301,7 @@ public class JsonSerialization implements Serialization, Json {
             }
             try {
                 return JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -314,7 +313,7 @@ public class JsonSerialization implements Serialization, Json {
             }
             try {
                 return JSON.parseObject(is, StandardCharsets.UTF_8, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }

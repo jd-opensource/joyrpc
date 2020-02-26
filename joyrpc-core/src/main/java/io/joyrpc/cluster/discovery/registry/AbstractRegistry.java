@@ -846,7 +846,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected void addNewTask(final Task task) {
             //TODO 重试的任务是否应该放在后面？
-            logger.info("add task " + task.getName());
+            if (logger.isDebugEnabled()) {
+                logger.debug("add task " + task.getName());
+            }
             tasks.offerFirst(task);
             if (waiter != null) {
                 waiter.wakeup();
@@ -945,7 +947,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     waitTime = 10000L;
                 }
             } else if (task != null) {
-                logger.info(String.format("Wait %d(ms) to execute %s", waitTime, task.getName()));
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Wait %d(ms) to execute %s", waitTime, task.getName()));
+                }
             }
             return waitTime;
         }
@@ -962,7 +966,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 task.completeExceptionally(new IllegalStateException("url is removed."));
             } else {
                 try {
-                    logger.info(String.format("Start calling task %s, remain tasks %d", task.getName(), tasks.size()));
+                    if (logger.isDebugEnabled()) {
+                        logger.debug(String.format("Start calling task %s, remain tasks %d", task.getName(), tasks.size()));
+                    }
                     //执行任务
                     task.call().whenComplete((v, t) -> {
                         if (!isOpen()) {

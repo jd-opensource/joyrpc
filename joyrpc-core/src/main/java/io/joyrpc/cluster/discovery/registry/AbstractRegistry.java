@@ -396,6 +396,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
         public StateFuture<URL> getFuture() {
             return future;
         }
+
+        public String name() {
+            return "";
+        }
     }
 
     /**
@@ -444,6 +448,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public int decRef() {
             return counter.decrementAndGet();
+        }
+
+        @Override
+        public String name() {
+            return key;
         }
 
         /**
@@ -642,7 +651,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
         public void deregister(final Registion registion, final int maxRetries) {
             Registion remove = registers.remove(registion.getKey());
             if (remove != null) {
-                addNewTask(new Task(remove.getUrl(), remove.getFuture().getCloseFuture(), () -> doDeregister(remove),
+                addNewTask(new Task("registering " + registion.name(), remove.getUrl(),
+                        remove.getFuture().getCloseFuture(), () -> doDeregister(remove),
                         0, 0, maxRetries,
                         t -> (t == null || retry(t)) && !registers.containsKey(remove.getKey())));
             }
@@ -829,6 +839,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         protected void addNewTask(final Task task) {
             //TODO 重试的任务是否应该放在后面？
+            logger.info("add task " + task.getName());
             tasks.offerFirst(task);
             if (waiter != null) {
                 waiter.wakeup();
@@ -848,7 +859,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
                                                                              final T subscription,
                                                                              final Function<T, CompletableFuture<Void>> function) {
             CompletableFuture<URL> future = subscription.getFuture().getOpenFuture();
-            addNewTask(new Task(subscription.getUrl(), future, () -> function.apply(subscription),
+            addNewTask(new Task("subscribing " + subscription.name(), subscription.getUrl(),
+                    future, () -> function.apply(subscription),
                     0, 0, -1, r -> subscriptions.containsKey(subscription.getKey())));
             return future;
         }
@@ -941,6 +953,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 task.completeExceptionally(new IllegalStateException("url is removed."));
             } else {
                 try {
+                    logger.info(String.format("Start calling task %s, remain tasks %d", task.getName(), tasks.size()));
                     //执行任务
                     task.call().whenComplete((v, t) -> {
                         if (!isOpen()) {
@@ -1043,7 +1056,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 if ((openFuture.isDone() || !openFuture.completeExceptionally(new IllegalStateException()))
                         && !openFuture.isCompletedExceptionally()
                         && !openFuture.isCancelled()) {
-                    addNewTask(new Task(v.getUrl(), closeFuture, () -> function.apply(v), 0, 0, 0, null));
+                    addNewTask(new Task("unsubsribing " + v.name(), v.getUrl(), closeFuture,
+                            () -> function.apply(v), 0, 0, 0, null));
                 } else {
                     closeFuture.complete(v.getUrl());
                 }
@@ -1180,6 +1194,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected static class Task implements Callable<CompletableFuture<Void>> {
         /**
+         * 名称
+         */
+        protected String name;
+        /**
          * URL
          */
         protected URL url;
@@ -1211,6 +1229,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
+         * @param name       名称
          * @param url        url
          * @param future     future
          * @param callable   执行代码
@@ -1222,8 +1241,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *                   <li><0 永久重试</li>
          * @param predicate  异常断言
          */
-        public Task(URL url, CompletableFuture<URL> future, Callable<CompletableFuture<Void>> callable, long retryTime,
+        public Task(String name, URL url, CompletableFuture<URL> future, Callable<CompletableFuture<Void>> callable, long retryTime,
                     int retry, int maxRetries, Predicate<Throwable> predicate) {
+            this.name = name;
             this.url = url;
             this.future = future;
             this.callable = callable;
@@ -1231,6 +1251,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
             this.retry = retry;
             this.maxRetries = maxRetries;
             this.predicate = predicate;
+        }
+
+        public String getName() {
+            return name;
         }
 
         public long getRetryTime() {
@@ -1498,6 +1522,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
 
         @Override
+        public String name() {
+            return "cluster " + key;
+        }
+
+        @Override
         protected ClusterEvent createFullEvent(final EventHandler<ClusterEvent> handler) {
             return new ClusterEvent(this, handler, UpdateType.FULL, version, full());
         }
@@ -1657,6 +1686,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
         @Override
         public boolean persistable() {
             return full && datum != null;
+        }
+
+        @Override
+        public String name() {
+            return "config " + key;
         }
 
         @Override

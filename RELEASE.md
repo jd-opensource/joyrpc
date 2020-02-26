@@ -99,6 +99,8 @@
 - 工具类
      
   - 修复ClassUtils中的isWriteable方法，final修饰的field仍判定可写的问题
+  
+  - JdkHttpClient可能读取数据不完整
 
 ## 1.0.4-SNAPSHOT
 

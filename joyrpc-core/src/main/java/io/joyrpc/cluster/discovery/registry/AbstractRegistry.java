@@ -569,7 +569,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 任务队列
          */
-        protected final Deque<Task> tasks = new LinkedBlockingDeque<>();
+        protected final Deque<Task> tasks = new ConcurrentLinkedDeque<>();
         /**
          * 任务派发
          */

@@ -177,7 +177,18 @@ public class AbstractRegistar implements Registar {
                 publisher.start();
             }
             if (publisher.addHandler(handler)) {
-                ClusterMeta meta = clusters.computeIfAbsent(key, o -> create(url, key));
+                AtomicBoolean add = new AtomicBoolean(false);
+                ClusterMeta meta = clusters.computeIfAbsent(key, o -> {
+                    add.set(true);
+                    return create(url, key);
+                });
+                //新增加的节点，要先放到clusters里面，才能进行后续通知
+                if (add.get()) {
+                    //通知等待线程，有新的待更新数据
+                    synchronized (mutex) {
+                        mutex.notifyAll();
+                    }
+                }
                 List<Shard> shards = meta.getShards();
                 if (shards != null && !shards.isEmpty()) {
                     List<ShardEvent> events = new ArrayList<>(shards.size());
@@ -275,10 +286,6 @@ public class AbstractRegistar implements Registar {
         //创建集群元数据，添加到任务队列
         ClusterMeta meta = new ClusterMeta(url, name);
         deque.offerFirst(meta);
-        //通知等待线程，有新的待更新数据
-        synchronized (mutex) {
-            mutex.notifyAll();
-        }
         return meta;
     }
 

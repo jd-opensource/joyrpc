@@ -1040,20 +1040,18 @@ public class Cluster {
          * @param retryTime 重连时间
          */
         protected void onNodeDisconnect(final Node node, final long retryTime) {
-            //确保在拿到开关执行，这个时候不在选举
-            //两个地方调用，连接不成功，或者连接成功后断开连接
-            //拿到当前节点，如果不存在或者是新的节点则直接丢弃
+            //节点断开，这个时候有可能注册中心事件造成不存在了
             if (exists(node)) {
-                //判断是否连接成功过
-                if (connects.remove(node.getName(), node)) {
-                    readys = new ArrayList<>(connects.values());
-                }
                 //如果没有下线，则尝试重连
                 node.getRetry().setRetryTime(retryTime);
                 //把当前节点放回到后备节点
                 backups.offer(new DelayedNode(node));
-                supplies.incrementAndGet();
+            }
+            //把它从连接节点里面删除
+            if (connects.remove(node.getName(), node)) {
+                readys = new ArrayList<>(connects.values());
                 //补充新节点
+                supplies.incrementAndGet();
                 supply(true);
             }
         }

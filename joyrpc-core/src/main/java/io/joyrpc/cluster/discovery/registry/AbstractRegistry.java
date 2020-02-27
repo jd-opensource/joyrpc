@@ -47,7 +47,6 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -708,23 +707,13 @@ public abstract class AbstractRegistry implements Registry, Configure {
                                                                                   final Subscription<M> subscription,
                                                                                   final Function<URLKey, T> creationFunc,
                                                                                   final Function<T, CompletableFuture<Void>> doFunc) {
-            AtomicReference<T> ref = new AtomicReference<>();
-            //在锁里面
-            subscriptions.compute(subscription.getKey(), (key, v) -> {
-                if (v == null) {
-                    v = creationFunc.apply(subscription);
-                    v.addHandler(subscription.getHandler());
-                    ref.set(v);
-                } else {
-                    v.addHandler(subscription.getHandler());
+            Maps.computeIfAbsent(subscriptions, subscription.getKey(), key -> creationFunc.apply(subscription), (v, added) -> {
+                v.addHandler(subscription.getHandler());
+                if (added) {
+                    //需要在后面执行，否则addBookingTask太快，还没有被添加到subscriptions就执行了，会被直接丢弃
+                    addBookingTask(subscriptions, v, doFunc);
                 }
-                return v;
             });
-            //需要在后面执行，否则addBookingTask太快，还没有被添加到subscriptions就执行了，会被直接丢弃
-            T sub = ref.get();
-            if (sub != null) {
-                addBookingTask(subscriptions, sub, doFunc);
-            }
         }
 
         /**

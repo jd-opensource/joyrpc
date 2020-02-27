@@ -88,7 +88,7 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
             //防止被覆盖
             names.putIfAbsent(name, meta);
             //相同名称，不同供应商的插件集合
-            List<ExtensionMeta<T, M>> metas = Maps.computeIfAbsent(multiNames, name, t -> new CopyOnWriteArrayList<>());
+            List<ExtensionMeta<T, M>> metas = multiNames.computeIfAbsent(name, t -> new CopyOnWriteArrayList<>());
             metas.add(meta);
 
             if (name instanceof String && meta.getProvider() != null && !meta.getProvider().isEmpty()) {

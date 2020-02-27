@@ -31,6 +31,7 @@ import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.exception.ProtocolException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.Maps;
 import io.joyrpc.util.Switcher;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
@@ -177,18 +178,16 @@ public class AbstractRegistar implements Registar {
                 publisher.start();
             }
             if (publisher.addHandler(handler)) {
-                AtomicBoolean add = new AtomicBoolean(false);
-                ClusterMeta meta = clusters.computeIfAbsent(key, o -> {
-                    add.set(true);
-                    return create(url, key);
-                });
-                //新增加的节点，要先放到clusters里面，才能进行后续通知
-                if (add.get()) {
-                    //通知等待线程，有新的待更新数据
-                    synchronized (mutex) {
-                        mutex.notifyAll();
+                ClusterMeta meta = Maps.computeIfAbsent(clusters, key, k -> create(url, key), (v, added) -> {
+                    if (added) {
+                        deque.offerFirst(v);
+                        //通知等待线程，有新的待更新数据
+                        synchronized (mutex) {
+                            mutex.notifyAll();
+                        }
                     }
-                }
+                });
+
                 List<Shard> shards = meta.getShards();
                 if (shards != null && !shards.isEmpty()) {
                     List<ShardEvent> events = new ArrayList<>(shards.size());
@@ -199,6 +198,17 @@ public class AbstractRegistar implements Registar {
             }
             return false;
         });
+    }
+
+    /**
+     * 构建集群元数据
+     *
+     * @param url  url
+     * @param name 名称
+     * @return
+     */
+    protected ClusterMeta create(final URL url, final String name) {
+        return new ClusterMeta(url, name);
     }
 
     @Override
@@ -273,20 +283,6 @@ public class AbstractRegistar implements Registar {
             }
             return CompletableFuture.completedFuture(null);
         });
-    }
-
-    /**
-     * 创建集群
-     *
-     * @param url
-     * @param name
-     * @return
-     */
-    protected ClusterMeta create(final URL url, final String name) {
-        //创建集群元数据，添加到任务队列
-        ClusterMeta meta = new ClusterMeta(url, name);
-        deque.offerFirst(meta);
-        return meta;
     }
 
     /**

@@ -969,6 +969,7 @@ public class Cluster {
          * @param node 节点
          */
         protected void supply(final Node node) {
+            node.getState().initial(node::setState);
             offer(() -> {
                 if (exists(node)) {
                     node.retry.incrementTimes();

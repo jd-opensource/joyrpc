@@ -1041,16 +1041,16 @@ public class Cluster {
          * @param retryTime 重连时间
          */
         protected void onNodeDisconnect(final Node node, final long retryTime) {
+            //把它从连接节点里面删除
+            if (connects.remove(node.getName(), node)) {
+                readys = new ArrayList<>(connects.values());
+            }
             //节点断开，这个时候有可能注册中心事件造成不存在了
             if (exists(node)) {
                 //如果没有下线，则尝试重连
                 node.getRetry().setRetryTime(retryTime);
                 //把当前节点放回到后备节点
                 backups.offer(new DelayedNode(node));
-            }
-            //把它从连接节点里面删除
-            if (connects.remove(node.getName(), node)) {
-                readys = new ArrayList<>(connects.values());
                 //补充新节点
                 supplies.incrementAndGet();
                 supply(true);

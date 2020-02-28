@@ -191,6 +191,11 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             }
 
             @Override
+            public boolean candidate(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CANDIDATE);
+            }
+
+            @Override
             public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
                 return function.apply(this, CLOSING);
             }
@@ -204,6 +209,7 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             public boolean initial(final BiFunction<ShardState, ShardState, Boolean> function) {
                 return function.apply(this, INITIAL);
             }
+
         };
 
         private int type;

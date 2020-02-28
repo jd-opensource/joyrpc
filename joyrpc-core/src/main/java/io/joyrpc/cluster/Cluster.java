@@ -615,7 +615,12 @@ public class Cluster {
                     //遍历任务执行
                     Runnable runnable;
                     while ((runnable = tasks.poll()) != null && isOpened()) {
-                        runnable.run();
+                        //捕获异常，避免运行时
+                        try {
+                            runnable.run();
+                        } catch (Throwable e) {
+                            logger.error("Error occurs while running task . caused by " + e.getMessage(), e);
+                        }
                     }
                     //清空任务标识
                     taskOwner.set(false);
@@ -641,9 +646,7 @@ public class Cluster {
                 logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
                 offer(() -> node.close(r -> {
                     //连接断开了，则进行关闭
-                    if (r.isSuccess()) {
-                        onNodeDisconnect(node, cluster.getRetryTime(null));
-                    }
+                    onNodeDisconnect(node, cluster.getRetryTime(null));
                 }));
             }
             cluster.clusterPublisher.offer(event);
@@ -685,7 +688,7 @@ public class Cluster {
                             candidate();
                         }
                         //第一次全量事件，触发连接超时检测
-                        trigger.onFull(add);
+                        Optional.ofNullable(trigger).ifPresent(t -> t.onFull(add));
                         break;
                 }
             });
@@ -1047,6 +1050,8 @@ public class Cluster {
             }
             //节点断开，这个时候有可能注册中心事件造成不存在了
             if (exists(node)) {
+                //强制设置一下连接断开，避免在open失败没有正常设置好就触发了
+                node.getState().disconnect(node::setState);
                 //如果没有下线，则尝试重连
                 node.getRetry().setRetryTime(retryTime);
                 //把当前节点放回到后备节点

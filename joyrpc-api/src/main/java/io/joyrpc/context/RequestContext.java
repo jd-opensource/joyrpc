@@ -21,19 +21,12 @@ package io.joyrpc.context;
  */
 
 
-import io.joyrpc.constants.Constants;
-import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
-
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
-import static io.joyrpc.constants.Constants.HIDDEN_KEY_SESSION;
-import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 
 /**
  * Title: 请求上下文，用于隐式传参 <br>
@@ -47,16 +40,29 @@ import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 public class RequestContext {
 
     /**
+     * 内部使用的key前缀，防止和自定义key冲突
+     */
+    protected static final char INTERNAL_KEY_PREFIX = '_';
+    /**
+     * 隐藏的key前缀，隐藏的key只能在filter里拿到，在RpcContext里拿不到，不过可以设置
+     */
+    protected static final char HIDE_KEY_PREFIX = '.';
+    /**
+     * 隐藏属性的key：session
+     */
+    protected static final String HIDDEN_KEY_SESSION = HIDE_KEY_PREFIX + "session";
+
+    /**
      * The constant LOCAL.
      */
     // todo InheritableThreadLocal 有问题
     protected static final ThreadLocal<RequestContext> LOCAL = ThreadLocal.withInitial(() -> new RequestContext());
 
-    public static final Predicate<String> NONE_INTERNAL_KEY = (o) -> o == null || o.charAt(0) != Constants.INTERNAL_KEY_PREFIX;
+    public static final Predicate<String> NONE_INTERNAL_KEY = (o) -> o == null || o.charAt(0) != INTERNAL_KEY_PREFIX;
 
     public static final Predicate<String> INTERNAL_KEY = NONE_INTERNAL_KEY.negate();
 
-    public static final Predicate<String> NONE_HIDDEN_KEY = (o) -> o == null || o.charAt(0) != Constants.HIDE_KEY_PREFIX;
+    public static final Predicate<String> NONE_HIDDEN_KEY = (o) -> o == null || o.charAt(0) != HIDE_KEY_PREFIX;
 
     public static final Predicate<String> HIDDEN_KEY = NONE_HIDDEN_KEY.negate();
 
@@ -65,7 +71,7 @@ public class RequestContext {
             return false;
         }
         char ch = o.charAt(0);
-        return ch != Constants.HIDE_KEY_PREFIX && ch != Constants.INTERNAL_KEY_PREFIX;
+        return ch != HIDE_KEY_PREFIX && ch != INTERNAL_KEY_PREFIX;
     };
 
     public static final Function<String, String> INTERNAL_TO_HIDDEN = (k) -> HIDE_KEY_PREFIX + k.substring(1);
@@ -185,7 +191,7 @@ public class RequestContext {
     /**
      * 设置异步调用
      *
-     * @param async
+     * @param async 异步标识
      * @return
      */
     public RequestContext setAsync(final boolean async) {
@@ -361,15 +367,6 @@ public class RequestContext {
     }
 
     /**
-     * 把扩展属性作为参数
-     *
-     * @return
-     */
-    public Parametric asParametric() {
-        return new MapParametric(attachments);
-    }
-
-    /**
      * 设置Session的属性值<br>
      * 注：Session是一种特殊的 隐式传参，客户端线程不会主动删除，需要用户自己写代码清理
      *
@@ -484,7 +481,7 @@ public class RequestContext {
     /**
      * 设置上下文
      *
-     * @param context
+     * @param context 上下文
      */
     public static void restore(final RequestContext context) {
         LOCAL.set(context);

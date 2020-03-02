@@ -8,14 +8,15 @@
     <packaging>pom</packaging>
     <version>1.0.5-SNAPSHOT</version>
     <modules>
-        <module>joyrpc-spring</module>
-        <module>joyrpc-test</module>
+        <module>joyrpc-extension</module>
+        <module>joyrpc-api</module>
         <module>joyrpc-core</module>
         <module>joyrpc-plugin</module>
-        <module>joyrpc-all</module>
-        <module>joyrpc-extension</module>
+        <module>joyrpc-spring</module>
         <module>joyrpc-springboot</module>
+        <module>joyrpc-test</module>
         <module>joyrpc-example</module>
+        <module>joyrpc-all</module>
     </modules>
     <name>joyrpc</name>
     <properties>

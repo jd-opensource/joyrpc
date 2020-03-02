@@ -14,6 +14,11 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
         </dependency>

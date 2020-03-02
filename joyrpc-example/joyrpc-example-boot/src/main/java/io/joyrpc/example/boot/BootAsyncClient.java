@@ -20,11 +20,15 @@ package io.joyrpc.example.boot;
  * #L%
  */
 
+import io.joyrpc.context.RequestContext;
 import io.joyrpc.example.service.AsyncDemoService;
 import io.joyrpc.exception.NoAliveProviderException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiConsumer;
 
 @SpringBootApplication
 public class BootAsyncClient {
@@ -33,22 +37,37 @@ public class BootAsyncClient {
         System.setProperty("spring.profiles.active", "async-client");
         ConfigurableApplicationContext run = SpringApplication.run(BootAsyncClient.class, args);
         AsyncDemoService consumer = run.getBean(AsyncDemoService.class);
+        AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
-                System.out.println(consumer.sayHello("helloWold").get());
+                long value = counter.incrementAndGet();
+                RequestContext.getContext().setAttachment("counter", value);
+                consumer.sayHello("helloWold").whenComplete(new MyConsumer(value, Thread.currentThread()));
                 Thread.sleep(200L);
             } catch (InterruptedException e) {
                 break;
-            } catch (Exception e) {
-                try {
-                    Thread.sleep(1000L);
-                } catch (InterruptedException ex) {
-                }
-                if (e instanceof NoAliveProviderException) {
-                    System.out.println(e.getMessage());
-                } else {
-                    e.printStackTrace();
-                }
+            }
+        }
+    }
+
+    protected static class MyConsumer implements BiConsumer<String, Throwable> {
+        protected long counter;
+        protected Thread thread;
+
+        public MyConsumer(long counter, Thread thread) {
+            this.counter = counter;
+            this.thread = thread;
+        }
+
+        @Override
+        public void accept(String s, Throwable throwable) {
+            long cnt = RequestContext.getContext().getAttachment("counter");
+            if (throwable == null) {
+                System.out.println("thread switch:" + (Thread.currentThread() != thread) + ",counter:" + cnt + ",response:" + s);
+            } else if (throwable instanceof NoAliveProviderException) {
+                System.out.println("thread switch:" + (Thread.currentThread() != thread) + ",counter:" + cnt + ",error:" + throwable.getMessage());
+            } else {
+                throwable.printStackTrace();
             }
         }
     }

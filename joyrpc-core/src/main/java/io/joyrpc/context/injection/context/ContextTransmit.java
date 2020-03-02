@@ -57,7 +57,13 @@ public class ContextTransmit implements Transmit {
     }
 
     @Override
-    public void restore(final RequestMessage<Invocation> request, final DefaultSession session) {
+    public void restoreOnComplete(final RequestMessage<Invocation> request) {
+        //确保在异步调用场景，whenComplete执行的用户业务代码能拿到调用上下文
+        RequestContext.restore(request.getContext());
+    }
+
+    @Override
+    public void restoreOnReceive(final RequestMessage<Invocation> request, final DefaultSession session) {
         RequestContext context = request.getContext();
         Map<String, Object> attachments = request.getPayLoad().getAttachments();
         if (attachments != null && !attachments.isEmpty()) {

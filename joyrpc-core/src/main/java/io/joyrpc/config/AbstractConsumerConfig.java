@@ -37,6 +37,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
+import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.RpcException;
@@ -67,6 +68,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.joyrpc.GenericService.GENERIC;
+import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.Status.*;
@@ -835,6 +837,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         protected Map<String, Optional<MethodHandle>> handles = new ConcurrentHashMap<>();
 
         /**
+         * 透传插件
+         */
+        protected Iterable<Transmit> transmits = TRANSMIT.extensions();
+
+        /**
          * 构造函数
          *
          * @param invoker
@@ -997,10 +1004,9 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             CompletableFuture<Object> response = new CompletableFuture<>();
             CompletableFuture<Result> future = invoker.invoke(request);
             future.whenComplete((res, err) -> {
-                //需要在这里判断是否要进行恢复
+                //判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
                 if (request.getThread() != Thread.currentThread()) {
-                    //确保在whenComplete执行的用户业务代码能拿到调用上下文
-                    RequestContext.restore(request.getContext());
+                    transmits.forEach(o -> o.restoreOnComplete(request));
                 }
                 Throwable throwable = err == null ? res.getException() : err;
                 if (throwable != null) {

@@ -391,6 +391,20 @@ public class RequestContext {
     }
 
     /**
+     * 删除会话上下文
+     *
+     * @param key 属性
+     * @return 本对象
+     * @see #getSession
+     */
+    public RequestContext removeSession(final String key) {
+        if (key != null && session != null) {
+            session.remove(key);
+        }
+        return this;
+    }
+
+    /**
      * 查询Session的属性值<br>
      * 注：Session是一种特殊的 隐式传参，客户端不会主动删除，需要用户自己写代码清理
      *

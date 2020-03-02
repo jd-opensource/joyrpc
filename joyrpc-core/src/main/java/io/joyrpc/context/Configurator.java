@@ -20,6 +20,7 @@ package io.joyrpc.context;
  * #L%
  */
 
+import io.joyrpc.cluster.Region;
 import io.joyrpc.extension.Extensible;
 
 import java.util.*;
@@ -42,7 +43,7 @@ public interface Configurator {
      * 服务提供者和消费者过滤掉的属性
      */
     Predicate<String> CONFIG_ALLOWED = new ExcludeAttrPredicate(new HashSet<>(Arrays.asList(
-            Environment.DATA_CENTER, Environment.REGION, "proxy", "generic", "dynamic", "register", "subscribe")));
+            Region.DATA_CENTER, Region.REGION, "proxy", "generic", "dynamic", "register", "subscribe")));
 
     /**
      * 动态配置

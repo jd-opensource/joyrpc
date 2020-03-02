@@ -1,5 +1,6 @@
 package io.joyrpc.cluster.discovery;
 
+import io.joyrpc.cluster.Region;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.Version;
 import io.joyrpc.context.Environment;
@@ -30,8 +31,8 @@ public interface Normalizer {
         params.put(KEY_APPID, GlobalContext.getString(APPLICATION_ID));
         params.put(KEY_APPNAME, GlobalContext.getString(APPLICATION_NAME));
         params.put(KEY_APPINSID, GlobalContext.getString(APPLICATION_INSTANCE));
-        params.put(REGION, GlobalContext.getString(REGION));
-        params.put(DATA_CENTER, GlobalContext.getString(DATA_CENTER));
+        params.put(Region.REGION, GlobalContext.getString(Region.REGION));
+        params.put(Region.DATA_CENTER, GlobalContext.getString(Region.DATA_CENTER));
         params.put(Constants.JAVA_VERSION_KEY, GlobalContext.getString(Environment.JAVA_VERSION));
         params.put(ROLE_OPTION.getName(), url.getString(ROLE_OPTION));
         params.put(SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));

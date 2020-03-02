@@ -86,8 +86,8 @@ public class MemoryRegistry extends AbstractRegistry {
     public MemoryRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         Environment environment = ENVIRONMENT.get();
-        region = new DefaultRegion(environment.getString(Environment.REGION),
-                environment.getString(Environment.DATA_CENTER));
+        region = new DefaultRegion(environment.getString(Region.REGION),
+                environment.getString(Region.DATA_CENTER));
     }
 
     @Override

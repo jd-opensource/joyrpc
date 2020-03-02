@@ -27,6 +27,8 @@ import io.joyrpc.config.validator.ValidateInterface;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
@@ -305,7 +307,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 取消发布
      */
     public CompletableFuture<Void> unexport() {
-        return unexport(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return unexport(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
@@ -628,7 +631,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          * @return
          */
         public CompletableFuture<Void> close() {
-            return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+            Parametric parametric = new MapParametric(GlobalContext.getContext());
+            return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
         }
 
         /**

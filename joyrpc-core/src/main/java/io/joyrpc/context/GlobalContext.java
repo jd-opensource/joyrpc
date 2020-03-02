@@ -22,9 +22,6 @@ package io.joyrpc.context;
 
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
-import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
-import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -310,15 +307,6 @@ public class GlobalContext {
     }
 
     /**
-     * 作为参数对象，便于获取值
-     *
-     * @return
-     */
-    public static Parametric asParametric() {
-        return new MapParametric(getOrCreate());
-    }
-
-    /**
      * 获取接口参数
      *
      * @param interfaceId the interface id
@@ -397,11 +385,11 @@ public class GlobalContext {
     }
 
     /**
-     * 作为参数对象，便于获取值
+     * 获取全局动态配置
      *
-     * @return
+     * @return 全局动态配置
      */
-    public static Parametric asParametric(final String interfaceId) {
-        return new MapParametric(getInterfaceConfig(interfaceId));
+    public static Map<String, String> getGlobalSetting() {
+        return getInterfaceConfig(GLOBAL_SETTING);
     }
 }

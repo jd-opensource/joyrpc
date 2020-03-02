@@ -36,6 +36,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.IllegalConfigureException;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.DashboardAware;
@@ -641,7 +642,8 @@ public class InvokerManager {
      * @return
      */
     public CompletableFuture<Void> close() {
-        return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
@@ -654,7 +656,8 @@ public class InvokerManager {
         CompletableFuture<Void> result = new CompletableFuture<>();
         //保存所有的注册中心
         Set<Registry> registries = new HashSet<>(5);
-        long timeout = GlobalContext.asParametric().getPositiveLong(OFFLINE_TIMEOUT_OPTION);
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        long timeout = parametric.getPositiveLong(OFFLINE_TIMEOUT_OPTION);
         //广播下线消息
         offline(timeout, gracefully).whenComplete((k, s) ->
                 //关闭服务

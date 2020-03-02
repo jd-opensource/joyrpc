@@ -26,6 +26,8 @@ import io.joyrpc.cluster.discovery.naming.ClusterProvider;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.StringUtils;
 
@@ -115,7 +117,8 @@ public class FixRegistar extends AbstractRegistar {
             String[] shards = StringUtils.split(value, delimiterPredicate);
             int j = 0;
             URL nodeUrl;
-            String defProtocol = GlobalContext.asParametric().getString(Constants.PROTOCOL_KEY);
+            Parametric parametric = new MapParametric(GlobalContext.getContext());
+            String defProtocol = parametric.getString(Constants.PROTOCOL_KEY);
             Integer defPort = url.getInteger(Constants.PORT_OPTION);
             for (String shard : shards) {
                 nodeUrl = URL.valueOf(shard, defProtocol, defPort, null);

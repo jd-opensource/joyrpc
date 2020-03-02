@@ -22,6 +22,8 @@ package io.joyrpc.util;
 
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,11 +129,10 @@ public class Shutdown {
         // 增加jvm关闭事件
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                doShutdown().get(GlobalContext.asParametric().getPositiveLong(Constants.SHUTDOWN_TIMEOUT_OPTION),
+                Parametric parametric = new MapParametric(GlobalContext.getContext());
+                doShutdown().get(parametric.getPositiveLong(Constants.SHUTDOWN_TIMEOUT_OPTION),
                         TimeUnit.MILLISECONDS);
-            } catch (InterruptedException e) {
-            } catch (ExecutionException e) {
-            } catch (TimeoutException e) {
+            } catch (InterruptedException | ExecutionException | TimeoutException ignored) {
             }
         }, "Shutdown"));
     }

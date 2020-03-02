@@ -21,6 +21,7 @@ package io.joyrpc.util;
  */
 
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.thread.NamedThreadFactory;
 import org.slf4j.Logger;
@@ -33,8 +34,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.TIMER_THREADS;
@@ -185,7 +184,7 @@ public class Timer {
         if (timer == null) {
             synchronized (Timer.class) {
                 if (timer == null) {
-                    Parametric parametric = GlobalContext.asParametric();
+                    Parametric parametric = new MapParametric(GlobalContext.getContext());
                     timer = new Timer("default", 200, 300,
                             parametric.getPositive(TIMER_THREADS, Math.min(ENVIRONMENT.get().cpuCores() * 2 + 2, 10)));
                 }

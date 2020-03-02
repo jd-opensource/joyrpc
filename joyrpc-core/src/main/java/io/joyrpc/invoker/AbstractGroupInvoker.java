@@ -23,6 +23,8 @@ package io.joyrpc.invoker;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 
 import java.util.*;
@@ -121,7 +123,8 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
 
     @Override
     public CompletableFuture<Void> close() {
-        return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     @Override

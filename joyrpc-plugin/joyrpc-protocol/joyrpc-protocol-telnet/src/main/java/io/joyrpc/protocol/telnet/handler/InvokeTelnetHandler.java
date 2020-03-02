@@ -29,6 +29,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.SerializerException;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
@@ -47,14 +48,12 @@ import org.slf4j.LoggerFactory;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.codec.Hex.encode;
-import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
@@ -244,9 +243,9 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
     protected TelnetResponse authenticate(final String interfaceId, final String password, final boolean isGlobal, final Channel channel) {
         InetSocketAddress address = channel.getRemoteAddress();
         String remoteIp = Ipv4.toIp(address);
-        Parametric parametric = GlobalContext.asParametric(GLOBAL_SETTING);
+        Parametric parametric = new MapParametric(GlobalContext.getGlobalSetting());
         // 注册中心配的密码
-        String invokePassword = !isGlobal ? GlobalContext.asParametric(interfaceId).getString(Constants.SETTING_INVOKE_TOKEN, "")
+        String invokePassword = !isGlobal ? GlobalContext.get(interfaceId, Constants.SETTING_INVOKE_TOKEN, "")
                 : parametric.getString(Constants.SETTING_SERVER_SUDO_PASSWD, "");
         Lan lan = new Lan(parametric.getString(Constants.SETTING_SERVER_SUDO_WHITELIST), true);
         // 此处验证密码 设置过sudo passwd可以调用

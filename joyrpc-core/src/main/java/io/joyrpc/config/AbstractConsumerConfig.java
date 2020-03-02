@@ -966,15 +966,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * @throws Throwable 异常
          */
         protected Object doInvoke(Invoker invoker, RequestMessage<Invocation> request, boolean async) throws Throwable {
-            try {
-                return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
-            } catch (CompletionException | ExecutionException e) {
-                throw e.getCause() != null ? e.getCause() : e;
-            } finally {
-                //调用结束，使用新的上下文
-                Map<String, Object> session = request.getContext().getSession();
-                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
-            }
+            return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
         }
 
         /**
@@ -986,13 +978,21 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * @throws Throwable 异常
          */
         protected Object syncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
-            CompletableFuture<Result> future = invoker.invoke(request);
-            //正常同步返回，处理Java8的future.get内部先自循环造成的性能问题
-            Result result = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
-            if (result.isException()) {
-                throw result.getException();
+            try {
+                CompletableFuture<Result> future = invoker.invoke(request);
+                //正常同步返回，处理Java8的future.get内部先自循环造成的性能问题
+                Result result = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
+                if (result.isException()) {
+                    throw result.getException();
+                }
+                return result.getValue();
+            } catch (CompletionException | ExecutionException e) {
+                throw e.getCause() != null ? e.getCause() : e;
+            } finally {
+                //调用结束，使用新的请求上下文，保留会话级别上下文
+                Map<String, Object> session = request.getContext().getSession();
+                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
             }
-            return result.getValue();
         }
 
         /**
@@ -1001,24 +1001,35 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * @param invoker 调用器
          * @param request 请求
          * @return 返回值
-         * @throws Throwable 异常
          */
-        protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
+        protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) {
             //异步调用，业务逻辑执行完毕，不清理IO线程的上下文
             CompletableFuture<Object> response = new CompletableFuture<>();
-            CompletableFuture<Result> future = invoker.invoke(request);
-            future.whenComplete((res, err) -> {
-                //判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
-                if (request.getThread() != Thread.currentThread()) {
-                    transmits.forEach(o -> o.restoreOnComplete(request));
-                }
-                Throwable throwable = err == null ? res.getException() : err;
-                if (throwable != null) {
-                    response.completeExceptionally(throwable);
-                } else {
-                    response.complete(res.getValue());
-                }
-            });
+            try {
+                CompletableFuture<Result> future = invoker.invoke(request);
+                future.whenComplete((res, err) -> {
+                    //判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
+//                    if (request.getThread() != Thread.currentThread()) {
+//                        transmits.forEach(o -> o.restoreOnComplete(request));
+//                    }
+                    Throwable throwable = err == null ? res.getException() : err;
+                    if (throwable != null) {
+                        response.completeExceptionally(throwable);
+                    } else {
+                        response.complete(res.getValue());
+                    }
+                });
+            } catch (CompletionException e) {
+                //调用出错，线程没有切换，保留原有上下文
+                response.completeExceptionally(e.getCause() != null ? e.getCause() : e);
+            } catch (Throwable e) {
+                //调用出错，线程没有切换，保留原有上下文
+                response.completeExceptionally(e);
+            } finally {
+                //调用结束，使用新的请求上下文，保留会话级别上下文
+                Map<String, Object> session = request.getContext().getSession();
+                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
+            }
             return response;
         }
 

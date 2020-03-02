@@ -1,6 +1,6 @@
 隐式传参
 ==
-通过 RequestContext 上的 setAttachment 和 getAttachment 在服务消费方和提供方之间进行参数的隐式传递。
+通过 RequestContext 在服务消费方和提供方之间进行参数的隐式传递。
 >说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
 
 ### Spring配置方式

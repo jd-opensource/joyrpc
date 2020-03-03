@@ -46,13 +46,12 @@ public class ContextTransmit implements Transmit {
         Invocation invocation = request.getPayLoad();
         //复制所有配置参数到invocation
         invocation.addAttachments(context.getAttachments());
-        //会话
-        invocation.addAttachment(HIDDEN_KEY_SESSION, context.getSession());
+        //复制会话参数，在服务端相当于一般的参数
+        invocation.addAttachments(context.getSession());
         //超时时间
-        Object requestTimeout = context.getAttachment(HIDDEN_KEY_TIME_OUT);
+        Object requestTimeout = invocation.getAttachment(HIDDEN_KEY_TIME_OUT);
         if (requestTimeout != null) {
-            context.removeAttachment(HIDDEN_KEY_TIME_OUT);
-            request.getHeader().setTimeout(requestTimeout instanceof Integer ? (Integer) requestTimeout : Integer.valueOf(requestTimeout.toString()));
+            request.getHeader(). setTimeout(requestTimeout instanceof Number ? ((Number) requestTimeout).intValue() : Integer.parseInt(requestTimeout.toString()));
         }
     }
 

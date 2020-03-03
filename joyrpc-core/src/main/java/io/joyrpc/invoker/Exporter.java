@@ -190,7 +190,9 @@ public class Exporter extends AbstractInvoker {
                 //预热失败，则自动退出
                 result.completeExceptionally(t);
             } else {
-                logger.info("Success warmuping provider " + name);
+                if (warmup != null) {
+                    logger.info("Success warmuping provider " + name);
+                }
                 server.open(r -> {
                     if (!r.isSuccess()) {
                         result.completeExceptionally(new InitializationException(String.format("Error occurs while open server : %s error", name), r.getThrowable()));

@@ -22,6 +22,7 @@ package io.joyrpc.context;
 
 
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -51,6 +52,8 @@ public class RequestContext {
      * 隐藏属性的key：session
      */
     protected static final String HIDDEN_KEY_SESSION = HIDE_KEY_PREFIX + "session";
+
+    public static final String INTERNAL_KEY_TRACE = INTERNAL_KEY_PREFIX + "trace";
 
     /**
      * The constant LOCAL.
@@ -107,28 +110,33 @@ public class RequestContext {
     protected CompletableFuture<?> future;
 
     /**
-     * The Attachments.
+     * 所有参数的合计
      */
     protected Map<String, Object> attachments;
     /**
-     * 会话
+     * 一起调用生效，自动清理
      */
-    protected Map<String, Object> session;
-
+    protected Map<String, Object> requests;
     /**
-     * 构造函数
+     * 在本地JVM持续调用生效，需要手动清理
      */
-    public RequestContext() {
-    }
-
+    protected Map<String, Object> sessions;
     /**
-     * 构造函数
-     *
-     * @param session
+     * 调用链生效，需要手动清理
      */
-    public RequestContext(Map<String, Object> session) {
-        this.session = session;
-    }
+    protected Map<String, Object> traces;
+    /**
+     * 服务端收到的请求，会在调用链处理完毕后清理掉
+     */
+    protected Map<String, Object> callers;
+    /**
+     * 类型
+     */
+    protected ContentType type;
+    /**
+     * 是否脏，大部分情况是写入参数并不读取，可以延迟进行合并
+     */
+    protected volatile boolean dirty;
 
     /**
      * Is provider side.
@@ -267,7 +275,15 @@ public class RequestContext {
      * @return attachment attachment
      */
     public <T> T getAttachment(final String key) {
-        return attachments == null || key == null ? null : (T) attachments.get(key);
+        if (key == null) {
+            return null;
+        }
+        //延迟合并
+        if (dirty) {
+            compute();
+            dirty = false;
+        }
+        return attachments == null ? null : (T) attachments.get(key);
     }
 
     /**
@@ -289,44 +305,21 @@ public class RequestContext {
      * @param predicate 判断key合法性
      * @return context attachment
      */
-    public RequestContext setAttachment(final String key, final Object value, final Predicate<String> predicate) {
+    protected RequestContext setAttachment(final String key, final Object value, final Predicate<String> predicate) {
         if (key == null) {
             return this;
+        } else if (value == null) {
+            removeAttachment(key);
         } else if (predicate != null && !predicate.test(key)) {
             throw new IllegalArgumentException("key is illegal, the key is " + key);
         } else {
-            if (attachments == null) {
-                attachments = new HashMap<>();
+            if (requests == null) {
+                requests = new HashMap<>();
             }
-            if (value == null) {
-                attachments.remove(key);
-            } else {
-                attachments.put(key, value);
-            }
+            requests.put(key, value);
+            dirty = true;
         }
         return this;
-    }
-
-    /**
-     * remove attachment.
-     *
-     * @param key the key
-     * @return context rpc context
-     */
-    public RequestContext removeAttachment(final String key) {
-        if (attachments != null && key != null) {
-            attachments.remove(key);
-        }
-        return this;
-    }
-
-    /**
-     * get attachments.
-     *
-     * @return attachments attachments
-     */
-    public Map<String, Object> getAttachments() {
-        return attachments;
     }
 
     /**
@@ -336,7 +329,7 @@ public class RequestContext {
      * @return context attachments
      */
     public <T extends Object> RequestContext setAttachments(final Map<String, T> attachments) {
-        return setAttachments(attachments, VALID_KEY);
+        return setAttachments(attachments, NONE_INTERNAL_KEY);
     }
 
     /**
@@ -346,60 +339,132 @@ public class RequestContext {
      * @param predicate 验证key合法性
      * @return 上下文
      */
-    public <T extends Object> RequestContext setAttachments(final Map<String, T> context, final Predicate<String> predicate) {
+    protected <T extends Object> RequestContext setAttachments(final Map<String, T> context, final Predicate<String> predicate) {
         if (context != null && !context.isEmpty()) {
-            Map<String, Object> session = (Map<String, Object>) context.remove(HIDDEN_KEY_SESSION);
-            if (session != null) {
-                setSession(session);
-            }
             String key;
             for (Map.Entry<String, T> entry : context.entrySet()) {
                 key = entry.getKey();
                 if (predicate == null || predicate.test(key)) {
-                    if (attachments == null) {
-                        attachments = new HashMap<>();
+                    if (requests == null) {
+                        requests = new HashMap<>();
                     }
-                    attachments.put(key, entry.getValue());
+                    requests.put(key, entry.getValue());
                 }
             }
+            dirty = true;
         }
         return this;
     }
 
     /**
-     * 设置Session的属性值<br>
-     * 注：Session是一种特殊的 隐式传参，客户端线程不会主动删除，需要用户自己写代码清理
+     * remove attachment.
+     *
+     * @param key the key
+     * @return 原有的值
+     */
+    public Object removeAttachment(final String key) {
+        Object result = null;
+        if (requests != null && key != null) {
+            result = requests.remove(key);
+            if (result != null) {
+                dirty = true;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * get attachments.
+     *
+     * @return attachments attachments
+     */
+    public Map<String, Object> getAttachments() {
+        if (dirty) {
+            compute();
+            dirty = false;
+        }
+        return attachments == null ? null : Collections.unmodifiableMap(attachments);
+    }
+
+    public Map<String, Object> getRequests() {
+        return requests == null ? null : Collections.unmodifiableMap(requests);
+    }
+
+    /**
+     * 得到会话参数<br>
+     *
+     * @return session属性map
+     */
+    public Map<String, Object> getSessions() {
+        return sessions == null ? null : Collections.unmodifiableMap(sessions);
+    }
+
+    /**
+     * 设置会话参数
+     *
+     * @param session session属性map
+     * @return 本对象
+     */
+    public RequestContext setSessions(final Map<String, Object> session) {
+        return setSessions(session, NONE_INTERNAL_KEY);
+    }
+
+    /**
+     * 设置会话参数
+     *
+     * @param context   上下文
+     * @param predicate 验证key合法性
+     * @return 上下文
+     */
+    protected RequestContext setSessions(final Map<String, Object> context, final Predicate<String> predicate) {
+        if (context != null && !context.isEmpty()) {
+            String key;
+            for (Map.Entry<String, Object> entry : context.entrySet()) {
+                key = entry.getKey();
+                if (predicate == null || predicate.test(key)) {
+                    if (sessions == null) {
+                        sessions = new HashMap<>();
+                    }
+                    sessions.put(key, entry.getValue());
+                }
+            }
+            dirty = true;
+        }
+        return this;
+    }
+
+    /**
+     * 设置会话参数
      *
      * @param key   属性
      * @param value 值
      * @return 本对象
-     * @see #getSession
-     * @see #clearSession()
      */
     public RequestContext setSession(final String key, final Object value) {
-        if (key != null) {
-            if (session == null) {
-                session = new HashMap<>();
-            }
-            if (value == null) {
-                session.remove(key);
-            } else {
-                session.put(key, value);
-            }
-        }
-        return this;
+        return setSession(key, value, NONE_INTERNAL_KEY);
     }
 
     /**
-     * 删除会话上下文
+     * 设置会话参数
      *
-     * @param key 属性
+     * @param key       the key
+     * @param value     the value
+     * @param predicate 判断key合法性
      * @return 本对象
-     * @see #getSession
      */
-    public RequestContext removeSession(final String key) {
-        if (key != null && session != null) {
-            session.remove(key);
+    protected RequestContext setSession(final String key, final Object value, final Predicate<String> predicate) {
+        if (key == null) {
+            return this;
+        } else if (value == null) {
+            removeSession(key);
+        } else if (predicate != null && !predicate.test(key)) {
+            throw new IllegalArgumentException("key is illegal, the key is " + key);
+        } else {
+            if (sessions == null) {
+                sessions = new HashMap<>();
+            }
+            sessions.put(key, value);
+            dirty = true;
         }
         return this;
     }
@@ -410,70 +475,337 @@ public class RequestContext {
      *
      * @param key 属性
      * @return 值
-     * @see #setSession
+     * @see #setSessions
      * @see #clearSession()
      */
     public Object getSession(final String key) {
-        return session == null || key == null ? null : session.get(key);
+        return sessions == null || key == null ? null : sessions.get(key);
     }
 
     /**
-     * 设置session<br>
-     * 注：Session是一种特殊的 隐式传参，客户端不会主动删除，需要用户自己写代码清理
+     * 删除会话上下文
      *
-     * @param session session属性map
-     * @return 本对象
+     * @param key 属性
+     * @return 原有的值
      */
-    public RequestContext setSession(final Map<String, Object> session) {
-        this.session = session;
-        return this;
+    public Object removeSession(final String key) {
+        Object result = null;
+        if (key != null && sessions != null) {
+            result = sessions.remove(key);
+            if (result != null) {
+                dirty = true;
+            }
+        }
+        return result;
     }
 
     /**
-     * 得到session<br>
-     * 注：Session是一种特殊的 隐式传参，客户端不会主动删除，需要用户自己写代码清理
+     * 获取调用链参数
      *
      * @return session属性map
      */
-    public Map<String, Object> getSession() {
-        return session;
+    public Map<String, Object> getTraces() {
+        return traces == null ? null : Collections.unmodifiableMap(traces);
     }
 
     /**
-     * 删除session
+     * 获取调用者参数
      *
+     * @return
+     */
+    public Map<String, Object> getCallers() {
+        return callers == null ? null : Collections.unmodifiableMap(callers);
+    }
+
+    /**
+     * 设置调用链参数
+     *
+     * @param traces session属性map
      * @return 本对象
      */
-    public RequestContext clearSession() {
-        session = null;
+    protected RequestContext setTraces(final Map<String, Object> traces) {
+        this.traces = traces;
+        dirty = true;
         return this;
     }
 
     /**
-     * 清除扩展属性.
+     * 设置调用链跟踪属性
+     *
+     * @param key   属性
+     * @param value 值
+     * @return 本对象
      */
-    public RequestContext clearAttachments() {
+    public RequestContext setTrace(final String key, final Object value) {
+        return setTrace(key, value, NONE_INTERNAL_KEY);
+    }
+
+    /**
+     * 设置调用链跟踪属性
+     *
+     * @param key       the key
+     * @param value     the value
+     * @param predicate 判断key合法性
+     * @return 本对象
+     */
+    protected RequestContext setTrace(final String key, final Object value, final Predicate<String> predicate) {
+        if (key == null) {
+            return this;
+        } else if (value == null) {
+            removeTrace(key);
+        } else if (predicate != null && !predicate.test(key)) {
+            throw new IllegalArgumentException("key is illegal, the key is " + key);
+        } else {
+            if (traces == null) {
+                traces = new HashMap<>();
+            }
+            traces.put(key, value);
+            dirty = true;
+        }
+        return this;
+    }
+
+    /**
+     * 删除调用链参数
+     *
+     * @param key 属性
+     * @return 原有的值
+     */
+    public Object removeTrace(final String key) {
+        Object result = null;
+        if (key != null && traces != null) {
+            result = traces.remove(key);
+            if (result != null) {
+                dirty = true;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 设置调用者
+     *
+     * @param callers 调用者参数
+     * @return 本对象
+     */
+    protected RequestContext setCallers(final Map<String, Object> callers) {
+        this.callers = callers;
+        dirty = true;
+        return this;
+    }
+
+    /**
+     * 清理全部参数
+     *
+     * @return
+     */
+    protected RequestContext clear() {
         provider = false;
         remoteAddress = null;
         localAddress = null;
         future = null;
+        requests = null;
+        sessions = null;
+        traces = null;
+        callers = null;
         attachments = null;
         return this;
     }
 
     /**
-     * 拷贝一份
-     *
-     * @return
+     * 清除当前调用参数
      */
-    public RequestContext copy() {
-        RequestContext result = new RequestContext(session);
-        result.provider = provider;
-        result.remoteAddress = remoteAddress;
-        result.localAddress = localAddress;
-        result.future = future;
-        result.attachments = attachments == null ? null : new HashMap<>(attachments);
-        return result;
+    public RequestContext clearAttachments() {
+        remoteAddress = null;
+        localAddress = null;
+        attachments = null;
+
+        return this;
+    }
+
+    /**
+     * 清理会话参数
+     *
+     * @return 本对象
+     */
+    public RequestContext clearSession() {
+        sessions = null;
+
+        return this;
+    }
+
+    /**
+     * 清除调用链参数
+     */
+    public RequestContext clearTrace() {
+        traces = null;
+
+        return this;
+    }
+
+    /**
+     * 合并
+     *
+     * @param target 任务
+     * @param type   类型
+     */
+    protected void merge(final Map<String, Object> target, final ContentType type) {
+        if (attachments == null) {
+            if (target == null) {
+                return;
+            }
+            attachments = target;
+            this.type = type;
+        } else if (target == null) {
+            return;
+        }
+        if (this.type == ContentType.MERGE) {
+            attachments.putAll(target);
+        } else if (this.type != type) {
+            this.type = ContentType.MERGE;
+            Map<String, Object> result = new HashMap<>(attachments.size() + target.size());
+            result.putAll(attachments);
+            result.putAll(target);
+            attachments = result;
+        }
+    }
+
+    /**
+     * 计算参数
+     */
+    protected void compute() {
+        merge(callers, ContentType.ONLY_CALLER);
+        merge(requests, ContentType.ONLY_REQUEST);
+        merge(sessions, ContentType.ONLY_SESSION);
+        merge(traces, ContentType.ONLY_TRACE);
+    }
+
+    /**
+     * 上下文修改器
+     */
+    public static class InnerContext {
+
+        /**
+         *
+         */
+        protected RequestContext context;
+
+        /**
+         * 构造函数
+         *
+         * @param context 请求上下文
+         */
+        public InnerContext(RequestContext context) {
+            this.context = context;
+        }
+
+        public Map<String, Object> getCaller() {
+            return context.callers;
+        }
+
+        public Map<String, Object> getTraces() {
+            return context.traces;
+        }
+
+        public Map<String, Object> getSessions() {
+            return context.sessions;
+        }
+
+        public Map<String, Object> getRequests() {
+            return context.requests;
+        }
+
+        /**
+         * 设置调用者
+         *
+         * @param callers 调用者参数
+         */
+        public void setCallers(final Map<String, Object> callers) {
+            context.setCallers(callers);
+        }
+
+        /**
+         * 设置调用链参数
+         *
+         * @param traces session属性map
+         */
+        public void setTraces(final Map<String, Object> traces) {
+            context.setTraces(traces);
+        }
+
+        /**
+         * 设置会话参数
+         *
+         * @param sessions 会话参数
+         */
+        public void setSessions(final Map<String, Object> sessions) {
+            context.sessions = sessions;
+            context.dirty = true;
+        }
+
+        /**
+         * 设置扩展参数
+         *
+         * @param requests 扩展参数
+         */
+        public void setRequests(final Map<String, Object> requests) {
+            context.requests = requests;
+            context.dirty = true;
+        }
+
+        /**
+         * 创建新的上下文
+         *
+         * @return
+         */
+        public RequestContext create() {
+            RequestContext result = new RequestContext();
+            result.sessions = context.sessions;
+            result.callers = context.callers;
+            result.traces = context.traces;
+            result.dirty = true;
+            return result;
+        }
+
+        /**
+         * 清理扩展属性
+         *
+         * @return
+         */
+        public void clear() {
+            context.clear();
+        }
+    }
+
+    /**
+     * 内容类型，按照顺序进行合并
+     */
+    protected enum ContentType {
+        MERGE(-1),
+        ONLY_CALLER(0),
+        ONLY_REQUEST(1),
+        ONLY_SESSION(2),
+        ONLY_TRACE(3);
+        /**
+         * 顺序
+         */
+        private int order;
+
+        ContentType(int order) {
+            this.order = order;
+        }
+
+        public int getOrder() {
+            return order;
+        }
+    }
+
+    /**
+     * 更新类型
+     */
+    protected enum UpdateType {
+        UPDATE,
+        REMOVE
     }
 
     /**

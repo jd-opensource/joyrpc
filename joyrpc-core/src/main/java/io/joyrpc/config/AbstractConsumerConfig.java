@@ -37,6 +37,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
+import io.joyrpc.context.RequestContext.InnerContext;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
@@ -62,7 +63,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -990,8 +990,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 throw e.getCause() != null ? e.getCause() : e;
             } finally {
                 //调用结束，使用新的请求上下文，保留会话级别上下文
-                Map<String, Object> session = request.getContext().getSession();
-                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
+                InnerContext context = new InnerContext(request.getContext());
+                RequestContext.restore(context.create());
             }
         }
 
@@ -1027,8 +1027,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 response.completeExceptionally(e);
             } finally {
                 //调用结束，使用新的请求上下文，保留会话级别上下文
-                Map<String, Object> session = request.getContext().getSession();
-                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
+                InnerContext context = new InnerContext(request.getContext());
+                RequestContext.restore(context.create());
             }
             return response;
         }

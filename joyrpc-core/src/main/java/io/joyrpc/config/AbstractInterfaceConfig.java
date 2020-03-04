@@ -22,6 +22,7 @@ package io.joyrpc.config;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
@@ -30,7 +31,6 @@ import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.config.validator.*;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.Configurator;
-import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
@@ -738,7 +738,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             Map<String, String> updates = event.getDatum();
             if (!waitingConfig.isDone()) {
                 //触发URL变化
-                logger.info("Success subscribe global config " + config.name());
+                logger.info("Success subscribing global config " + config.name());
                 attributes = updates;
                 //加上全局配置和接口配置，再添加实例配置
                 waitingConfig.complete(configure(updates));
@@ -850,6 +850,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                         //订阅配置
                         if (config.subscribe) {
                             subscribeUrl = buildSubscribedUrl(configureRef, serviceUrl);
+                            logger.info("Start subscribing global config " + config.name());
                             configureRef.subscribe(subscribeUrl, configHandler);
                         }
                         future.complete(null);
@@ -885,6 +886,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                     //原来也订阅了
                     configureRef.unsubscribe(oldUrl, configHandler);
                 }
+                logger.info("Start resubscribing config " + config.name());
                 configureRef.subscribe(newUrl, configHandler);
                 subscribeUrl = newUrl;
                 return true;
@@ -914,8 +916,8 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             Configurator.update(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), result, GLOBAL_ALLOWED);
             //本地接口静态配置,数据中心和区域在注册中心里面会动态更新到全局上下文里面
             Map<String, String> parameters = url.getParameters();
-            parameters.remove(Environment.DATA_CENTER);
-            parameters.remove(Environment.REGION);
+            parameters.remove(Region.DATA_CENTER);
+            parameters.remove(Region.REGION);
             result.putAll(parameters);
             //注册中心下发的接口动态配置
             Configurator.update(GlobalContext.getInterfaceConfig(path), result, GLOBAL_ALLOWED);

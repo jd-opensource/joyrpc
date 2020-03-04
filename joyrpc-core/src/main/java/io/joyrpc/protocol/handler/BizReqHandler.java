@@ -113,9 +113,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             final Exporter service = exporter;
             future.whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
 
-        } catch (ClassNotFoundException e) {
-            sendException(channel, new RpcException(error(invocation, channel, e.getMessage())), request, null);
-        } catch (NoSuchMethodException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
             sendException(channel, new RpcException(error(invocation, channel, e.getMessage())), request, null);
         } catch (LafException e) {
             sendException(channel, e, request, exporter);
@@ -181,7 +179,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
         DefaultSession session = (DefaultSession) request.getSession();
         Invocation invocation = request.getPayLoad();
-        transmits.forEach(o -> o.restore(request, session));
+        transmits.forEach(o -> o.restoreOnReceive(request, session));
         invocation.apply(session);
         //类名，如果不存在则从会话里面获取
         String className = invocation.getClassName();

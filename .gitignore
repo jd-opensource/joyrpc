@@ -5,6 +5,7 @@ target/
 .settings/
 .idea/
 *.iml
+.factorypath
 .DS_Store
 Thumbs.db
 dependency-reduced-pom.xml

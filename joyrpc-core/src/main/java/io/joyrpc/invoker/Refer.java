@@ -434,7 +434,7 @@ public class Refer extends AbstractInvoker {
         //取消配置订阅
         CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe consumer config " + name));
         //关闭集群
-        final CompletableFuture<Void> future3 = new CompletableFuture();
+        final CompletableFuture<Void> future3 = new CompletableFuture<>();
         cluster.close(r -> {
             logger.info("Success close cluster " + name);
             future3.complete(null);
@@ -478,7 +478,7 @@ public class Refer extends AbstractInvoker {
      * @return
      */
     protected CompletableFuture<Void> deregister() {
-        CompletableFuture<Void> future = new CompletableFuture();
+        CompletableFuture<Void> future = new CompletableFuture<>();
         if (registerUrl != null) {
             //URL里面注册的类是实际的interfaceClass，不是proxyClass
             //TODO 要确保各个注册中心实现在服务有问题的情况下，能快速的注销掉
@@ -495,7 +495,7 @@ public class Refer extends AbstractInvoker {
      * @return
      */
     protected CompletableFuture<Void> unsubscribe() {
-        CompletableFuture<Void> future = new CompletableFuture();
+        CompletableFuture<Void> future = new CompletableFuture<>();
         //订阅
         if (subscribeUrl != null) {
             // todo 不能保证执行成功

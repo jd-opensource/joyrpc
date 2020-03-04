@@ -33,6 +33,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -50,6 +51,10 @@ public class StandardValidator implements InterfaceValidator {
      * 标准推荐类
      */
     protected Set<Class> standards = new HashSet<>();
+    /**
+     * 不建议的类
+     */
+    protected Set<Class> noRecommendations = new CopyOnWriteArraySet<>();
 
     /**
      * 构造函数
@@ -87,7 +92,7 @@ public class StandardValidator implements InterfaceValidator {
             } else {
                 return true;
             }
-        }), new MyConsumer(checker, c -> standards.contains(c)));
+        }), new MyConsumer(checker, c -> standards.contains(c), noRecommendations));
     }
 
 
@@ -115,16 +120,22 @@ public class StandardValidator implements InterfaceValidator {
          * 标准类检查
          */
         protected Function<Class, Boolean> standard;
+        /**
+         * 不建议的类
+         */
+        protected Set<Class> noRecommendations;
 
         /**
          * 构造函数
          *
          * @param checker
          * @param standard
+         * @param noRecommendations
          */
-        public MyConsumer(final GenericChecker checker, Function<Class, Boolean> standard) {
+        public MyConsumer(final GenericChecker checker, Function<Class, Boolean> standard, Set<Class> noRecommendations) {
             this.checker = checker;
             this.standard = standard;
+            this.noRecommendations = noRecommendations;
         }
 
         @Override
@@ -243,7 +254,10 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onNotStandard(final Class clazz) {
-            logger.warn(String.format("This type is not recommended. %s", clazz));
+            if (noRecommendations.add(clazz)) {
+                //防止多次输出日志
+                logger.warn(String.format("This type is not recommended. %s", clazz));
+            }
         }
     }
 

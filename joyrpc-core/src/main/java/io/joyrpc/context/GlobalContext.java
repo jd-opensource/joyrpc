@@ -22,9 +22,6 @@ package io.joyrpc.context;
 
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
-import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
-import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,8 +32,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
-import static io.joyrpc.cluster.Region.DATA_CENTER;
-import static io.joyrpc.cluster.Region.REGION;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.PropertiesUtils.read;
 
@@ -277,45 +272,12 @@ public class GlobalContext {
     }
 
     /**
-     * 重置region上下文信息
-     *
-     * @param region
-     */
-    public static void updateRegion(final String region) {
-        if (region != null && !region.isEmpty()) {
-            ENVIRONMENT.get().put(Environment.REGION, region);
-            getOrCreate().put(REGION, region);
-        }
-    }
-
-    /**
-     * 重置dataCenter上下文信息
-     *
-     * @param dataCenter
-     */
-    public static void updateDataCenter(final String dataCenter) {
-        if (dataCenter != null && !dataCenter.isEmpty()) {
-            ENVIRONMENT.get().put(Environment.DATA_CENTER, dataCenter);
-            getOrCreate().put(DATA_CENTER, dataCenter);
-        }
-    }
-
-    /**
      * 上下文信息
      *
      * @return the context
      */
     public static Map<String, Object> getContext() {
         return getOrCreate();
-    }
-
-    /**
-     * 作为参数对象，便于获取值
-     *
-     * @return
-     */
-    public static Parametric asParametric() {
-        return new MapParametric(getOrCreate());
     }
 
     /**
@@ -397,11 +359,11 @@ public class GlobalContext {
     }
 
     /**
-     * 作为参数对象，便于获取值
+     * 获取全局动态配置
      *
-     * @return
+     * @return 全局动态配置
      */
-    public static Parametric asParametric(final String interfaceId) {
-        return new MapParametric(getInterfaceConfig(interfaceId));
+    public static Map<String, String> getGlobalSetting() {
+        return getInterfaceConfig(GLOBAL_SETTING);
     }
 }

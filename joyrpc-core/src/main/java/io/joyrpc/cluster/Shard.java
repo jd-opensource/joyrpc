@@ -20,7 +20,6 @@ package io.joyrpc.cluster;
  * #L%
  */
 
-import io.joyrpc.context.Environment;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 
@@ -191,6 +190,11 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             }
 
             @Override
+            public boolean candidate(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CANDIDATE);
+            }
+
+            @Override
             public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
                 return function.apply(this, CLOSING);
             }
@@ -204,6 +208,7 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             public boolean initial(final BiFunction<ShardState, ShardState, Boolean> function) {
                 return function.apply(this, INITIAL);
             }
+
         };
 
         private int type;
@@ -389,8 +394,8 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         public DefaultShard(final URL url) {
             this(url.getAddress(),
-                    url.getString(Environment.REGION),
-                    url.getString(Environment.DATA_CENTER),
+                    url.getString(Region.REGION),
+                    url.getString(Region.DATA_CENTER),
                     url.getProtocol(),
                     url,
                     url.getPositiveInt(WEIGHT),

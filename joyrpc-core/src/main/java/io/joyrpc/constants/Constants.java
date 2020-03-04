@@ -632,6 +632,7 @@ public class Constants {
 
     public static final URLOption<Boolean> TCP_NODELAY = new URLOption<>("tcpNoDelay", Boolean.TRUE);
     public static final String USE_EPOLL_KEY = "useEpoll";
+    public static final String REUSE_PORT_KEY = "reusePort";
 
     public static final URLOption<Boolean> BUFFER_POOLED_OPTION = new URLOption<>("buffer.pooled", false);
     public static final URLOption<Integer> INIT_SIZE_OPTION = new URLOption<>("initSize", 5);
@@ -646,7 +647,8 @@ public class Constants {
     public static final URLOption<Boolean> SO_KEEPALIVE_OPTION = new URLOption<>("soKeepAlive", Boolean.TRUE);
     public static final URLOption<Integer> SO_BACKLOG_OPTION = new URLOption<>("soBacklog", 35536);
     public static final URLOption<Integer> SO_TIMEOUT_OPTION = new URLOption<>("soTimeout", 10000);
-    public static final String REUSE_PORT_KEY = "reusePort";
+    public static final URLOption<Boolean> SO_REUSE_PORT_OPTION = new URLOption<>(REUSE_PORT_KEY, true);
+
 
     /**
      * 会话超时时间

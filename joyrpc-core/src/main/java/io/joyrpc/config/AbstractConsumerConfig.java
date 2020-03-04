@@ -37,9 +37,13 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
+import io.joyrpc.context.RequestContext.InnerContext;
+import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.RpcException;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -59,7 +63,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,6 +70,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.joyrpc.GenericService.GENERIC;
+import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.Status.*;
@@ -343,7 +347,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      * @return
      */
     public CompletableFuture<Void> unrefer() {
-        return unrefer(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return unrefer(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
@@ -730,7 +735,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * @return
          */
         public CompletableFuture<Void> close() {
-            return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+            Parametric parametric = new MapParametric(GlobalContext.getContext());
+            return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
         }
 
         /**
@@ -835,6 +841,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         protected Map<String, Optional<MethodHandle>> handles = new ConcurrentHashMap<>();
 
         /**
+         * 透传插件
+         */
+        protected Iterable<Transmit> transmits = TRANSMIT.extensions();
+
+        /**
          * 构造函数
          *
          * @param invoker
@@ -871,9 +882,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             //分组Failover调用，需要在这里设置创建时间和超时时间，不能再Refer里面。否则会重置。
             request.setCreateTime(SystemClock.now());
             //超时时间为0，Refer会自动修正，便于分组重试
-            request.getHeader().
-
-                    setTimeout(0);
+            request.getHeader().setTimeout(0);
             //当前线程
             request.setThread(Thread.currentThread());
             //当前线程上下文
@@ -949,15 +958,15 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
 
         /**
          * 这个方法用来做 Trace 追踪的增强点，不要随便修改
+         *
+         * @param invoker 调用器
+         * @param request 请求
+         * @param async   异步标识
+         * @return 返回值
+         * @throws Throwable 异常
          */
         protected Object doInvoke(Invoker invoker, RequestMessage<Invocation> request, boolean async) throws Throwable {
-            try {
-                return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
-            } finally {
-                //调用结束，使用新的上下文
-                Map<String, Object> session = request.getContext().getSession();
-                RequestContext.restore(new RequestContext(session == null ? null : new HashMap<>(session)));
-            }
+            return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
         }
 
         /**
@@ -965,43 +974,62 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          *
          * @param invoker 调用器
          * @param request 请求
-         * @return
-         * @throws Throwable
+         * @return 返回值
+         * @throws Throwable 异常
          */
         protected Object syncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
-            CompletableFuture<Result> future = invoker.invoke(request);
             try {
+                CompletableFuture<Result> future = invoker.invoke(request);
                 //正常同步返回，处理Java8的future.get内部先自循环造成的性能问题
                 Result result = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
                 if (result.isException()) {
                     throw result.getException();
                 }
                 return result.getValue();
-            } catch (ExecutionException e) {
+            } catch (CompletionException | ExecutionException e) {
                 throw e.getCause() != null ? e.getCause() : e;
+            } finally {
+                //调用结束，使用新的请求上下文，保留会话级别上下文
+                InnerContext context = new InnerContext(request.getContext());
+                RequestContext.restore(context.create());
             }
         }
 
         /**
          * 异步调用
+         *
+         * @param invoker 调用器
+         * @param request 请求
+         * @return 返回值
          */
-        protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
+        protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) {
             //异步调用，业务逻辑执行完毕，不清理IO线程的上下文
             CompletableFuture<Object> response = new CompletableFuture<>();
-            CompletableFuture<Result> future = invoker.invoke(request);
-            future.whenComplete((res, err) -> {
-                //需要在这里判断是否要进行恢复
-                if (request.getThread() != Thread.currentThread()) {
-                    //确保在whenComplete执行的用户业务代码能拿到调用上下文
-                    RequestContext.restore(request.getContext());
-                }
-                Throwable throwable = err == null ? res.getException() : err;
-                if (throwable != null) {
-                    response.completeExceptionally(throwable);
-                } else {
-                    response.complete(res.getValue());
-                }
-            });
+            try {
+                CompletableFuture<Result> future = invoker.invoke(request);
+                future.whenComplete((res, err) -> {
+                    //判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
+//                    if (request.getThread() != Thread.currentThread()) {
+//                        transmits.forEach(o -> o.restoreOnComplete(request));
+//                    }
+                    Throwable throwable = err == null ? res.getException() : err;
+                    if (throwable != null) {
+                        response.completeExceptionally(throwable);
+                    } else {
+                        response.complete(res.getValue());
+                    }
+                });
+            } catch (CompletionException e) {
+                //调用出错，线程没有切换，保留原有上下文
+                response.completeExceptionally(e.getCause() != null ? e.getCause() : e);
+            } catch (Throwable e) {
+                //调用出错，线程没有切换，保留原有上下文
+                response.completeExceptionally(e);
+            } finally {
+                //调用结束，使用新的请求上下文，保留会话级别上下文
+                InnerContext context = new InnerContext(request.getContext());
+                RequestContext.restore(context.create());
+            }
             return response;
         }
 

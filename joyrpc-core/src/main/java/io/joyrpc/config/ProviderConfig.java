@@ -27,6 +27,8 @@ import io.joyrpc.config.validator.ValidateInterface;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
@@ -171,6 +173,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         if (null == delay || delay <= 0) {
             future.complete(null);
         } else {
+            logger.info(String.format("Delay exporting service %s(%s) %d(ms)", getInterfaceClazz(), getAlias(), delay));
             Thread thread = new Thread(() -> {
                 try {
                     Thread.sleep(delay);
@@ -201,11 +204,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
             //延迟加载
             delay().whenComplete((v, t) -> {
                 if (status != Status.EXPORTING || future != exportFuture) {
-                    future.completeExceptionally(new InitializationException("state is illegal."));
                     logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", name()));
+                    future.completeExceptionally(new InitializationException("state is illegal."));
                 } else if (t != null) {
-                    future.completeExceptionally(t);
                     logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
+                    future.completeExceptionally(t);
                     unexport();
                 } else {
                     //开始创建服务
@@ -304,7 +307,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 取消发布
      */
     public CompletableFuture<Void> unexport() {
-        return unexport(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return unexport(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
@@ -627,7 +631,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          * @return
          */
         public CompletableFuture<Void> close() {
-            return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+            Parametric parametric = new MapParametric(GlobalContext.getContext());
+            return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
         }
 
         /**

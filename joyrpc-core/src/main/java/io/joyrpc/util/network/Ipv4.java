@@ -12,9 +12,9 @@ package io.joyrpc.util.network;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,31 +37,31 @@ public class Ipv4 {
     /**
      * 管理IP
      */
-    public static String MANAGE_IP_DEF = "10.";
+    public static String MANAGE_IP;
     /**
      * 网卡
      */
     public static String NET_INTERFACE;
-
     /**
      * 任意地址
      */
     public static final String ANYHOST = "0.0.0.0";
-
     /**
      * 内网地址
      */
     public static final Lan INTRANET = new Lan("172.16.0.0/12;192.168.0.0/16;10.0.0.0/8");
-
-    public static final String NIC = "nic";
-
-    public static final String MANAGE_IP = "manage_ip";
-
+    /**
+     * 本地绑定的网卡
+     */
+    public static final String LOCAL_NIC_KEY = "LOCAL_NIC";
+    /**
+     * 管理IP
+     */
+    public static final String MANAGE_IP_KEY = "MANAGE_IP";
     /**
      * 最小端口
      */
     public static final int MIN_PORT = 0;
-
     /**
      * 最小用户端口
      */
@@ -83,27 +83,27 @@ public class Ipv4 {
     /**
      * 本地首选的IP
      */
-    protected static String localIp;
+    protected static String LOCAL_IP;
 
     static {
         //从环境变量里面获取默认的网卡和管理网络
         Map<String, String> env = System.getenv();
-        NET_INTERFACE = System.getProperty(NIC, env.get(NIC));
-        MANAGE_IP_DEF = System.getProperty(MANAGE_IP, env.getOrDefault(MANAGE_IP, MANAGE_IP_DEF));
-        /**
-         * 缓存本地IP
-         */
+        NET_INTERFACE = System.getProperty(LOCAL_NIC_KEY, env.get(LOCAL_NIC_KEY));
+        MANAGE_IP = System.getProperty(MANAGE_IP_KEY, env.get(MANAGE_IP_KEY));
         try {
             LOCAL_IPS = new HashSet<>(getLocalIps());
-        } catch (SocketException e) {
+            //绑定到某个网卡上
+            if (NET_INTERFACE != null && !NET_INTERFACE.isEmpty()) {
+                LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);
+            }
+        } catch (SocketException ignored) {
         }
     }
 
     /**
      * 是否默认地址 0.0.0.0
      *
-     * @param host
-     *         地址
+     * @param host 地址
      * @return 是否默认地址
      */
     public static boolean isAnyHost(String host) {
@@ -112,18 +112,18 @@ public class Ipv4 {
 
     /**
      * 是否是本地IP
-     * @param ip
-     * @return
+     * @param ip ip
+     * @return 本地IP标识
      */
     public static boolean isLocalIp(final String ip) {
-        return ip == null || LOCAL_IPS == null ? false : LOCAL_IPS.contains(ip);
+        return ip != null && LOCAL_IPS != null && LOCAL_IPS.contains(ip);
     }
 
     /**
      * 得到本机所有的地址
      *
      * @return 本机所有的地址
-     * @throws SocketException
+     * @throws SocketException 网络异常
      */
     public static List<String> getLocalIps() throws SocketException {
         return getLocalIps(null, null);
@@ -135,7 +135,7 @@ public class Ipv4 {
      * @param nic     网卡
      * @param exclude 排除的地址
      * @return 地址列表
-     * @throws SocketException
+     * @throws SocketException 网络异常
      */
     public static List<String> getLocalIps(final String nic, final String exclude) throws SocketException {
         List<String> result = new ArrayList<String>();
@@ -191,7 +191,7 @@ public class Ipv4 {
      */
     public static String getLocalIp(final String nic, final String manageIp) throws SocketException {
         List<String> ips = getLocalIps(nic, manageIp);
-        if (ips != null && !ips.isEmpty()) {
+        if (!ips.isEmpty()) {
             if (ips.size() == 1) {
                 return ips.get(0);
             }
@@ -222,13 +222,13 @@ public class Ipv4 {
      * @return 本机地址
      */
     public static String getLocalIp() {
-        if (localIp == null) {
+        if (LOCAL_IP == null) {
             try {
-                localIp = getLocalIp(NET_INTERFACE, MANAGE_IP_DEF);
-            } catch (SocketException e) {
+                LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);
+            } catch (SocketException ignored) {
             }
         }
-        return localIp;
+        return LOCAL_IP;
     }
 
     /**
@@ -241,23 +241,23 @@ public class Ipv4 {
         if (remote == null) {
             return getLocalIp();
         }
-        if (localIp == null) {
+        if (LOCAL_IP == null) {
             try {
                 InetAddress address = getLocalAddress(remote);
-                localIp = address.getHostAddress();
+                LOCAL_IP = address.getHostAddress();
             } catch (IOException e) {
                 getLocalIp();
             }
         }
-        return localIp;
+        return LOCAL_IP;
     }
 
     /**
      * 是否是本地域名
-     * @param host
-     * @return
+     * @param host 主机
+     * @return 本地域名标识
      */
-    public static boolean isLocalHost(String host) {
+    public static boolean isLocalHost(final String host) {
         return host == null || host.isEmpty() || "localhost".equals(host) || "127.0.0.1".equals(host);
     }
 
@@ -294,24 +294,18 @@ public class Ipv4 {
             return null;
         }
         // 去连一下远程地址
-        Socket socket = new Socket();
-        try {
+        try (Socket socket = new Socket()) {
             socket.connect(remote, 1000);
             // 得到本地地址
             return socket.getLocalAddress();
-        } finally {
-            try {
-                socket.close();
-            } catch (Throwable e) {
-            }
         }
     }
 
     /**
-     * 判断该IP是否在网络短中
-     * @param segments
-     * @param ip
-     * @return
+     * 判断该IP是否在网段中
+     * @param segments 网段
+     * @param ip ip
+     * @return IP是否在网段中
      */
     public static boolean contains(final List<Segment> segments, final String ip) {
         if (segments == null || segments.isEmpty() || ip == null || ip.isEmpty()) {
@@ -324,15 +318,15 @@ public class Ipv4 {
                     return true;
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignored) {
         }
         return false;
     }
 
     /**
      * 判断该IP是否在网络短中
-     * @param segments
-     * @param ip
+     * @param segments 网段
+     * @param ip ip
      * @return
      */
     public static boolean contains(final List<Segment> segments, final long ip) {
@@ -360,7 +354,7 @@ public class Ipv4 {
         if (address instanceof InetSocketAddress) {
             InetSocketAddress isa = (InetSocketAddress) address;
             String host = isa.getAddress().getHostAddress();
-            return new StringBuffer(host.length() + 6).append(host).append(':').append(isa.getPort()).toString();
+            return host + ':' + isa.getPort();
         } else {
             return address.toString();
         }
@@ -402,7 +396,7 @@ public class Ipv4 {
         builder.append(address[pos++] & 0xFF).append('.');
         builder.append(address[pos++] & 0xFF).append('.');
         builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos++] & 0xFF);
+        builder.append(address[pos] & 0xFF);
         return builder.toString();
     }
 
@@ -423,7 +417,7 @@ public class Ipv4 {
      * @param hex     字符串是否是16进制模式
      * @return 字节数组
      */
-    public static byte[] toByte(String address, boolean hex) {
+    public static byte[] toByte(final String address, final boolean hex) {
         if (address == null) {
             return null;
         }
@@ -442,13 +436,13 @@ public class Ipv4 {
                     buf[pos++] = (byte) Integer.parseInt(address.substring(0, 2), 16);
                     buf[pos++] = (byte) Integer.parseInt(address.substring(2, 4), 16);
                     buf[pos++] = (byte) Integer.parseInt(address.substring(4, 6), 16);
-                    buf[pos++] = (byte) Integer.parseInt(address.substring(6, 8), 16);
+                    buf[pos] = (byte) Integer.parseInt(address.substring(6, 8), 16);
                     break;
                 default:
                     return null;
             }
         } else {
-            // IP地址
+            // IP地址，第5个元素表示端口
             int[] parts = parseAddress(address);
             if (parts == null) {
                 return null;
@@ -461,7 +455,7 @@ public class Ipv4 {
             buf[pos++] = (byte) parts[0];
             buf[pos++] = (byte) parts[1];
             buf[pos++] = (byte) parts[2];
-            buf[pos++] = (byte) parts[3];
+            buf[pos] = (byte) parts[3];
         }
         return buf;
     }
@@ -537,7 +531,7 @@ public class Ipv4 {
         builder.append(address[pos++] & 0xFF).append('.');
         builder.append(address[pos++] & 0xFF).append('.');
         builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos++] & 0xFF);
+        builder.append(address[pos] & 0xFF);
         if (address.length >= 6) {
             builder.append(':').append(port);
         }
@@ -796,20 +790,20 @@ public class Ipv4 {
      * @return IP字符串
      */
     public static String toIp(long ip) {
-        StringBuffer sb = new StringBuffer(20);
+        StringBuilder builder = new StringBuilder(20);
         long part1 = (ip & 0xFFFFFFFF) >>> 24;
         long part2 = (ip & 0x00FFFFFF) >>> 16;
         long part3 = (ip & 0x0000FFFF) >>> 8;
         long part4 = ip & 0x000000FF;
         //直接右移24位
-        sb.append(part1).append('.');
+        builder.append(part1).append('.');
         //将高8位置0，然后右移16位
-        sb.append(part2).append('.');
+        builder.append(part2).append('.');
         //将高16位置0，然后右移8位
-        sb.append(part3).append('.');
+        builder.append(part3).append('.');
         //将高24位置0
-        sb.append(part4);
-        return sb.toString();
+        builder.append(part4);
+        return builder.toString();
     }
 
 

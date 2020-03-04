@@ -21,6 +21,7 @@ package io.joyrpc.util;
  */
 
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.thread.NamedThreadFactory;
 import org.slf4j.Logger;
@@ -183,7 +184,7 @@ public class Timer {
         if (timer == null) {
             synchronized (Timer.class) {
                 if (timer == null) {
-                    Parametric parametric = GlobalContext.asParametric();
+                    Parametric parametric = new MapParametric(GlobalContext.getContext());
                     timer = new Timer("default", 200, 300,
                             parametric.getPositive(TIMER_THREADS, Math.min(ENVIRONMENT.get().cpuCores() * 2 + 2, 10)));
                 }
@@ -656,5 +657,53 @@ public class Timer {
          * @return
          */
         boolean cancel();
+    }
+
+    /**
+     * 代理任务
+     */
+    public static class DelegateTask implements TimeTask {
+        /**
+         * 名称
+         */
+        protected String name;
+        /**
+         * 时间
+         */
+        protected long time;
+        /**
+         * 执行代码
+         */
+        protected Runnable runnable;
+
+        /**
+         * 构造函数
+         *
+         * @param name     名称
+         * @param time     时间
+         * @param runnable 执行代码
+         */
+        public DelegateTask(final String name, final long time, final Runnable runnable) {
+            this.name = name;
+            this.time = time;
+            this.runnable = runnable;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
+
+        @Override
+        public long getTime() {
+            return time;
+        }
+
+        @Override
+        public void run() {
+            if (runnable != null) {
+                runnable.run();
+            }
+        }
     }
 }

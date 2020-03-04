@@ -23,8 +23,6 @@ package io.joyrpc.cluster.discovery.registry.memory;
 import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
-import io.joyrpc.cluster.discovery.config.ConfigHandler;
-import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
@@ -55,19 +53,14 @@ public class MemoryRegistry extends AbstractRegistry {
     protected Region region;
 
     /**
-     * 注册的地址
-     */
-    protected Map<String, AtomicReference<Topology>> urls = new ConcurrentHashMap<>();
-
-    /**
-     * 注册的地址
+     * 配置地址
      */
     protected Map<String, AtomicReference<Config>> configDatum = new ConcurrentHashMap<>();
 
     /**
      * 构造函数
      *
-     * @param url
+     * @param url url
      */
     public MemoryRegistry(URL url) {
         this(null, url, null);
@@ -76,8 +69,8 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
+     * @param name 名称
+     * @param url  url
      */
     public MemoryRegistry(String name, URL url) {
         this(name, url, null);
@@ -86,15 +79,15 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
-     * @param backup
+     * @param name   名称
+     * @param url    url
+     * @param backup 备份
      */
     public MemoryRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         Environment environment = ENVIRONMENT.get();
-        region = new DefaultRegion(environment.getString(Environment.REGION),
-                environment.getString(Environment.DATA_CENTER));
+        region = new DefaultRegion(environment.getString(Region.REGION),
+                environment.getString(Region.DATA_CENTER));
     }
 
     @Override
@@ -107,11 +100,16 @@ public class MemoryRegistry extends AbstractRegistry {
         return region.getDataCenter();
     }
 
+    @Override
+    protected RegistryController<? extends AbstractRegistry> create() {
+        return new MemoryController(this);
+    }
+
     /**
      * 更新配置
      *
-     * @param url
-     * @param values
+     * @param url    url
+     * @param values 配置
      */
     public void update(final URL url, final Map<String, String> values) {
         if (url == null) {
@@ -123,7 +121,8 @@ public class MemoryRegistry extends AbstractRegistry {
     /**
      * 更新配置
      *
-     * @param values
+     * @param key    键
+     * @param values 配置
      */
     public void update(final String key, final Map<String, String> values) {
         if (key == null) {
@@ -131,120 +130,25 @@ public class MemoryRegistry extends AbstractRegistry {
         }
         AtomicReference<Config> ref = configDatum.computeIfAbsent(key, k -> new AtomicReference<>());
         Config oldDatum;
-        Config newDatum;
         long version;
-        Map<String, String> datum;
         while (true) {
             oldDatum = ref.get();
             version = oldDatum == null ? 0 : oldDatum.getVersion() + 1;
-            datum = values == null ? new HashMap<>() : new HashMap<>(values);
-            newDatum = new Config(version, datum);
+            final Config newDatum = new Config(version, values == null ? new HashMap<>() : new HashMap<>(values));
             if (ref.compareAndSet(oldDatum, newDatum)) {
-                ConfigMeta meta = configs.get(key);
-                if (meta != null) {
-                    meta.handle((new ConfigEvent(this, null, version, datum)));
-                }
+                state.whenOpen(c -> ((MemoryController) c).update(key, newDatum));
                 return;
             }
             LockSupport.parkNanos(1);
         }
     }
 
-    @Override
-    protected CompletableFuture<Void> doRegister(final URLKey urlKey) {
-        AtomicReference<Topology> ref = urls.computeIfAbsent(urlKey.getKey(), key -> new AtomicReference<>());
-        long version = update(urlKey, ref, (urls, url) -> urls.add(url));
-        if (version >= 0) {
-            ClusterMeta meta = clusters.get(urlKey.getKey());
-            if (meta != null) {
-                List<ShardEvent> shards = new ArrayList<>(1);
-                shards.add(new ShardEvent(createShard(urlKey.getUrl()), ShardEventType.ADD));
-                meta.handle((new ClusterEvent(this, null, UpdateType.UPDATE, version, shards)));
-            }
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
-    /**
-     * 原子更新
-     *
-     * @param urlKey
-     * @param ref
-     * @param function
-     * @return 最新的版本
-     */
-    protected long update(final URLKey urlKey, final AtomicReference<Topology> ref, final BiFunction<List<URL>, URL, Boolean> function) {
-        Topology oldDatum;
-        Topology newDatum;
-        long version;
-        List<URL> urls;
-        while (true) {
-            oldDatum = ref.get();
-            version = oldDatum == null ? 0 : oldDatum.getVersion() + 1;
-            urls = oldDatum == null ? new ArrayList<>(0) : new ArrayList<>(oldDatum.urls);
-            if (!function.apply(urls, urlKey.getUrl())) {
-                return -1;
-            }
-            newDatum = new Topology(version, urls);
-            if (ref.compareAndSet(oldDatum, newDatum)) {
-                return version;
-            }
-            LockSupport.parkNanos(1);
-        }
-    }
-
-    @Override
-    protected CompletableFuture<Void> doDeregister(final URLKey urlKey) {
-        AtomicReference<Topology> ref = urls.get(urlKey.getKey());
-        if (ref != null) {
-            long version = update(urlKey, ref, (urls, url) -> urls.remove(url));
-            if (version >= 0) {
-                ClusterMeta meta = clusters.get(urlKey.getKey());
-                if (meta != null) {
-                    List<ShardEvent> shards = new ArrayList<>(1);
-                    shards.add(new ShardEvent(createShard(urlKey.getUrl()), ShardEventType.DELETE));
-                    meta.handle((new ClusterEvent(this, null, UpdateType.UPDATE, ref.get().getVersion(),
-                            shards)));
-                }
-            }
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
-    protected CompletableFuture<Void> doSubscribe(final URLKey urlKey, final ClusterHandler handler) {
-        ClusterMeta meta = clusters.get(urlKey.getKey());
-        if (meta != null) {
-            AtomicReference<Topology> ref = urls.get(urlKey.getKey());
-            Topology topology = ref != null ? ref.get() : null;
-            List<ShardEvent> shards = new ArrayList<>(topology == null ? 0 : topology.getUrls().size());
-            if (topology != null) {
-                topology.getUrls().forEach(url -> shards.add(new ShardEvent(createShard(url), ShardEventType.ADD)));
-            }
-            long version = topology == null ? 0 : topology.getVersion();
-            meta.handle(new ClusterEvent(this, null, UpdateType.FULL, version, shards));
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
-    protected CompletableFuture<Void> doSubscribe(final URLKey urlKey, final ConfigHandler handler) {
-        ConfigMeta meta = configs.get(urlKey.getKey());
-        if (meta != null) {
-            AtomicReference<Config> ref = configDatum.get(urlKey.getKey());
-            Config config = ref != null ? ref.get() : null;
-            long version = config == null ? 0 : config.getVersion();
-            Map<String, String> data = config != null ? config.getData() : new HashMap<>();
-            meta.handle(new ConfigEvent(this, null, version, data));
-        }
-        return CompletableFuture.completedFuture(null);
-    }
 
     /**
      * 创建分片
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 分片
      */
     protected Shard createShard(final URL url) {
         //TODO 目前只支持单URL
@@ -258,19 +162,143 @@ public class MemoryRegistry extends AbstractRegistry {
     }
 
     /**
+     * 控制器
+     */
+    protected static class MemoryController extends RegistryController<MemoryRegistry> {
+
+        /**
+         * 注册的地址
+         */
+        protected Map<String, AtomicReference<Topology>> urls = new ConcurrentHashMap<>();
+
+        /**
+         * 构造函数
+         *
+         * @param registry 注册中心
+         */
+        public MemoryController(final MemoryRegistry registry) {
+            super(registry);
+        }
+
+        /**
+         * 配置发生变化
+         *
+         * @param key    键
+         * @param config 配置
+         */
+        public void update(final String key, final Config config) {
+            ConfigBooking booking = configs.get(key);
+            if (booking != null) {
+                booking.handle((new ConfigEvent(this, null, config.getVersion(), config.getData())));
+            }
+        }
+
+        /**
+         * 原子更新
+         *
+         * @param url      url
+         * @param ref      拓扑引用
+         * @param function 函数
+         * @return 最新的版本
+         */
+        protected long update(final URLKey url,
+                              final AtomicReference<Topology> ref,
+                              final BiFunction<List<URL>, URL, Boolean> function) {
+            Topology oldDatum;
+            Topology newDatum;
+            long version;
+            List<URL> urls;
+            while (true) {
+                oldDatum = ref.get();
+                version = oldDatum == null ? 0 : oldDatum.getVersion() + 1;
+                urls = oldDatum == null ? new ArrayList<>(0) : new ArrayList<>(oldDatum.urls);
+                if (!function.apply(urls, url.getUrl())) {
+                    return -1;
+                }
+                newDatum = new Topology(version, urls);
+                if (ref.compareAndSet(oldDatum, newDatum)) {
+                    return version;
+                }
+                LockSupport.parkNanos(1);
+            }
+        }
+
+        @Override
+        protected CompletableFuture<Void> doRegister(final Registion registion) {
+            AtomicReference<Topology> ref = urls.computeIfAbsent(registion.getKey(), key -> new AtomicReference<>());
+            long version = update(registion, ref, List::add);
+            if (version >= 0) {
+                ClusterBooking booking = clusters.get(registion.getKey());
+                if (booking != null) {
+                    List<ShardEvent> shards = new ArrayList<>(1);
+                    shards.add(new ShardEvent(registry.createShard(registion.getUrl()), ShardEventType.ADD));
+                    booking.handle((new ClusterEvent(this, null, UpdateType.UPDATE, version, shards)));
+                }
+            }
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doDeregister(final Registion registion) {
+            AtomicReference<Topology> ref = urls.get(registion.getKey());
+            if (ref != null) {
+                long version = update(registion, ref, List::remove);
+                if (version >= 0) {
+                    ClusterBooking booking = clusters.get(registion.getKey());
+                    if (booking != null) {
+                        List<ShardEvent> shards = new ArrayList<>(1);
+                        shards.add(new ShardEvent(registry.createShard(registion.getUrl()), ShardEventType.DELETE));
+                        booking.handle((new ClusterEvent(this, null, UpdateType.UPDATE, ref.get().getVersion(),
+                                shards)));
+                    }
+                }
+            }
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
+            AtomicReference<Topology> ref = urls.get(booking.getKey());
+            Topology topology = ref != null ? ref.get() : null;
+            List<ShardEvent> shards = new ArrayList<>(topology == null ? 0 : topology.getUrls().size());
+            if (topology != null) {
+                topology.getUrls().forEach(u -> shards.add(new ShardEvent(registry.createShard(u), ShardEventType.ADD)));
+            }
+            long version = topology == null ? 0 : topology.getVersion();
+            booking.handle(new ClusterEvent(this, null, UpdateType.FULL, version, shards));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
+            AtomicReference<Config> ref = registry.configDatum.get(booking.getKey());
+            Config config = ref != null ? ref.get() : null;
+            booking.handle(new ConfigEvent(this, null,
+                    config == null ? 0 : config.getVersion(),
+                    config == null ? new HashMap<>() : config.getData()));
+            return CompletableFuture.completedFuture(null);
+        }
+
+    }
+
+    /**
      * 集群的拓扑结构数据
      */
     protected static class Topology {
-        //当前版本
+        /**
+         * 当前版本
+         */
         protected long version;
-        //URL
+        /**
+         * URL
+         */
         protected List<URL> urls;
 
         /**
          * 构造函数
          *
-         * @param version
-         * @param urls
+         * @param version 版本
+         * @param urls    url
          */
         public Topology(long version, List<URL> urls) {
             this.version = version;
@@ -288,19 +316,23 @@ public class MemoryRegistry extends AbstractRegistry {
     }
 
     /**
-     * 集群的拓扑结构数据
+     * 配置数据
      */
     protected static class Config {
-        //当前版本
+        /**
+         * 当前版本
+         */
         protected long version;
-        //URL
+        /**
+         * 数据
+         */
         protected Map<String, String> data;
 
         /**
          * 构造函数
          *
-         * @param version
-         * @param data
+         * @param version 版本
+         * @param data    数据
          */
         public Config(long version, Map<String, String> data) {
             this.version = version;

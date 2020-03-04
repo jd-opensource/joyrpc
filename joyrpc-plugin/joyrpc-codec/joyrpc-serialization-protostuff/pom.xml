@@ -12,7 +12,7 @@
     <artifactId>joyrpc-serialization-protostuff</artifactId>
 
     <properties>
-        <protostuff.version>1.5.9</protostuff.version>
+        <protostuff.version>1.6.2</protostuff.version>
     </properties>
 
     <dependencies>

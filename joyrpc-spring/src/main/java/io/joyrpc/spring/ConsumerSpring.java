@@ -140,7 +140,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                 config.setRegistry(applicationContext.getBean(registryName, RegistryConfig.class));
             } else {
                 Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
-                if (beans != null && !beans.isEmpty()) {
+                if (!beans.isEmpty()) {
                     Map.Entry<String, RegistryConfig> entry = beans.entrySet().iterator().next();
                     config.setRegistry(entry.getValue());
                     logger.info(String.format("detect registryConfig: %s for %s", entry.getKey(), config.getId()));
@@ -153,7 +153,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                 config.setConfigure(applicationContext.getBean(configureName, Configure.class));
             } else {
                 Map<String, Configure> beans = applicationContext.getBeansOfType(Configure.class, false, false);
-                if (beans != null && !beans.isEmpty()) {
+                if (!beans.isEmpty()) {
                     Map.Entry<String, Configure> entry = beans.entrySet().iterator().next();
                     config.setConfigure(entry.getValue());
                     logger.info(String.format("detect configure: %s for %s", entry.getKey(), config.getId()));
@@ -188,9 +188,8 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
             try {
                 latch.await();
                 if (referThrowable != null) {
-                    logger.error(String.format("Failed refer %s/%s, while be system exit, caused by %s",
-                            config.getInterfaceClazz(), config.getAlias(), referThrowable.getMessage()),
-                            referThrowable);
+                    logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
+                            config.getInterfaceClazz(), config.getAlias(), referThrowable.getMessage()));
                     System.exit(1);
                 } else if (REFERS.decrementAndGet() == 0) {
                     applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));

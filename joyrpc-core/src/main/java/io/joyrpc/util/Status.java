@@ -54,9 +54,18 @@ public enum Status {
     /**
      * 是否关闭
      *
-     * @return
+     * @return 关闭标识
      */
     public boolean isClose() {
         return false;
     }
+
+    /**
+     * 是否在打开
+     * @return 打开标识
+     */
+    public boolean isOpen() {
+        return !isClose();
+    }
+
 }

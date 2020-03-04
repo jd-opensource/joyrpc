@@ -27,6 +27,7 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.session.DefaultSession;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static io.joyrpc.constants.Constants.*;
@@ -42,39 +43,51 @@ public class ContextTransmit implements Transmit {
 
     @Override
     public void inject(final RequestMessage<Invocation> request) {
-        RequestContext context = request.getContext();
+        RequestContext.InnerContext context = new InnerContext(request.getContext());
         Invocation invocation = request.getPayLoad();
         //复制所有配置参数到invocation
-        invocation.addAttachments(context.getAttachments());
-        //会话
-        invocation.addAttachment(HIDDEN_KEY_SESSION, context.getSession());
+        invocation.addAttachments(context.getRequests());
+        invocation.addAttachments(context.getSessions());
+        invocation.addAttachment(INTERNAL_KEY_TRACE, context.getTraces());
         //超时时间
-        Object requestTimeout = context.getAttachment(HIDDEN_KEY_TIME_OUT);
+        Object requestTimeout = invocation.getAttachment(HIDDEN_KEY_TIME_OUT);
         if (requestTimeout != null) {
-            context.removeAttachment(HIDDEN_KEY_TIME_OUT);
-            request.getHeader().setTimeout(requestTimeout instanceof Integer ? (Integer) requestTimeout : Integer.valueOf(requestTimeout.toString()));
+            request.getHeader().setTimeout(requestTimeout instanceof Number ? ((Number) requestTimeout).intValue() : Integer.parseInt(requestTimeout.toString()));
         }
     }
 
     @Override
-    public void restore(final RequestMessage<Invocation> request, final DefaultSession session) {
-        RequestContext context = request.getContext();
+    public void restoreOnComplete(final RequestMessage<Invocation> request) {
+        //确保在异步调用场景，whenComplete执行的用户业务代码能拿到调用上下文
+        RequestContext.restore(request.getContext());
+    }
+
+    @Override
+    public void restoreOnReceive(final RequestMessage<Invocation> request, final DefaultSession session) {
+        RequestContext.InnerContext context = new InnerContext(request.getContext());
         Map<String, Object> attachments = request.getPayLoad().getAttachments();
-        if (attachments != null && !attachments.isEmpty()) {
-            //复制所有非内部属性，内部处理了HIDDEN_KEY_SESSION
-            context.setAttachments(attachments, NONE_INTERNAL_KEY.and((o) -> !GENERIC_OPTION.getName().equals(o)));
+        //获取待写入数据条数
+        int attachmentSize = attachments != null && !attachments.isEmpty() ? attachments.size() : 0;
+        int sessionSize = session != null && session.getRemoteAppId() != null ? 3 : 0;
+        int size = attachmentSize + sessionSize;
+        if (size == 0) {
+            return;
+        }
+        Map<String, Object> callers = new HashMap<>(size);
+        //写入透传的数据
+        if (attachmentSize > 0) {
+            context.setTraces((Map<String, Object>) attachments.remove(INTERNAL_KEY_TRACE));
             //复制内部属性，转换成隐藏属性
-            attachments.forEach((k, v) -> {
-                if (INTERNAL_KEY.test(k)) {
-                    context.setAttachment(INTERNAL_TO_HIDDEN.apply(k), v, o -> true);
-                }
-            });
+            attachments.forEach((k, v) -> callers.put(INTERNAL_KEY.test(k) ? INTERNAL_TO_HIDDEN.apply(k) : k, v));
         }
         //优先使用会话里面值，防止透传
-        if (session != null && session.getRemoteAppId() != null) {
-            context.setAttachment(HIDDEN_KEY_APPID, session.getRemoteAppId());
-            context.setAttachment(HIDDEN_KEY_APPNAME, session.getRemoteAppName());
-            context.setAttachment(HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
+        if (sessionSize > 0) {
+            callers.put(HIDDEN_KEY_APPID, session.getRemoteAppId());
+            callers.put(HIDDEN_KEY_APPNAME, session.getRemoteAppName());
+            callers.put(HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
+        }
+        if (!callers.isEmpty()) {
+            context.setCallers(callers);
         }
     }
 }

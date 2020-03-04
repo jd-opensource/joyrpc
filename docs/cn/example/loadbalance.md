@@ -6,12 +6,13 @@
 
   ````xml
     <beans>
-      <joyrpc:consumer loadbalance="randomWeight" />
+      <joyrpc:consumer loadbalance="randomWeight" sticky=”false"/>
     </beans>
   ````
-目前支持如下几种策略:
 
-  |名称|配置|说明|
-  | :----: | :---- | :---- |
-  | 加权随机负载均衡（默认) | randomWeight | 1.按provider端配置的权重的进行随机，可以方便的调整  <br/>2.调用量越大分布越均匀 |
-  | 自适应 | adaptive | 按TP值及可用率（异常会影响可用率）做负载判断优先选择TP值高且可用率高的连接（先TP后可用率） |
+参数说明
+
+| 参数 | 名称 | 类型 | 默认值 | 说明 |
+| :----: | :---- | :---- |:---- |:---- |
+| loadbalance | 负载均衡算法 |  String | randomWeight |  randomWeight:加权随机负载均衡，会根据服务节点权重进行负载 <br/> adaptive:自适应负载均衡，会根据服务端承受能力来进行动态负载<br/>roundRobin:轮询算法
+| sticky | 粘连算法 | Boolean | false | 是否尽量保持同一个目标地址 |

@@ -353,7 +353,7 @@ public class Invocation implements Serializable {
     /**
      * 移除扩展信息
      *
-     * @param key
+     * @param key 键
      * @return
      */
     public Object removeAttachment(final String key) {

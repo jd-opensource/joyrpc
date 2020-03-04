@@ -128,13 +128,11 @@ public class NettyServerTransport extends AbstractServerTransport {
      * @param sslContext
      */
     protected ServerBootstrap configure(final ServerBootstrap bootstrap, final SslContext sslContext) {
-        boolean reusePort = url.getBoolean(Constants.REUSE_PORT_KEY, Constants.isLinux(url) ? Boolean.TRUE : Boolean.FALSE);
-
         //io.netty.bootstrap.Bootstrap - Unknown channel option 'SO_BACKLOG' for channel
         bootstrap.channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                 .childHandler(new MyChannelInitializer(url, sslContext))
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
-                .option(ChannelOption.SO_REUSEADDR, reusePort)   //disable this on windows, open it on linux
+                .option(ChannelOption.SO_REUSEADDR, url.getBoolean(Constants.SO_REUSE_PORT_OPTION))
                 .option(ChannelOption.SO_BACKLOG, url.getPositiveInt(Constants.SO_BACKLOG_OPTION))
                 .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
                 .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(url.getPositiveInt(Constants.WRITE_BUFFER_LOW_WATERMARK_OPTION),

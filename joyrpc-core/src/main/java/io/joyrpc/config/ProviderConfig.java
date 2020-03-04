@@ -507,7 +507,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         this.delay = delay;
     }
 
-    public Boolean isDynamic() {
+    public Boolean getDynamic() {
         return dynamic;
     }
 

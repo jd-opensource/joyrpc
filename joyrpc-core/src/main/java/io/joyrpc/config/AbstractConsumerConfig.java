@@ -476,7 +476,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.loadbalance = loadbalance;
     }
 
-    public Boolean isGeneric() {
+    public Boolean getGeneric() {
         return generic;
     }
 
@@ -492,7 +492,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.sticky = sticky;
     }
 
-    public Boolean isCheck() {
+    public Boolean getCheck() {
         return check;
     }
 
@@ -508,7 +508,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.serialization = serialization;
     }
 
-    public Boolean isInjvm() {
+    public Boolean getInjvm() {
         return injvm;
     }
 

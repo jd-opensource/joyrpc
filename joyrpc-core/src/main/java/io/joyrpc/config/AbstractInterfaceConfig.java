@@ -304,7 +304,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         this.validation = validation;
     }
 
-    public Boolean isValidation() {
+    public Boolean getValidation() {
         return validation;
     }
 

@@ -38,7 +38,7 @@ public interface GenericService {
     /**
      * 判断是否是泛化类型
      */
-    static final Predicate<Class<?>> GENERIC = GenericService.class::isAssignableFrom;
+    Predicate<Class<?>> GENERIC = GenericService.class::isAssignableFrom;
 
     /**
      * 泛化调用，和老接口兼容
@@ -48,7 +48,7 @@ public interface GenericService {
      * @param args           参数列表
      * @return 返回值
      */
-    default Object $invoke(String method, String[] parameterTypes, Object[] args) {
+    default Object $invoke(final String method, final String[] parameterTypes, final Object[] args) {
         try {
             return $async(method, parameterTypes, args).get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {

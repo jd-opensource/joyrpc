@@ -31,6 +31,8 @@ import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.HeadKey;
+import io.joyrpc.context.RequestContext;
+import io.joyrpc.context.RequestContext.InnerContext;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventHandler;
@@ -52,6 +54,7 @@ import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -143,7 +146,7 @@ public class Refer extends AbstractInvoker {
     /**
      * 本地的服务
      */
-    protected volatile Invoker localProvider;
+    protected volatile LocalInvoker localProvider;
     /**
      * 本地的服务列表
      */
@@ -222,8 +225,9 @@ public class Refer extends AbstractInvoker {
         this.publisher = publisher;
         if (inJvm) {
             this.publisher.addHandler(localHandler);
-            this.localProvider = localFunc.apply(exporterName);
-            if (localProvider != null) {
+            Invoker provider = localFunc.apply(exporterName);
+            if (provider != null) {
+                localProvider = new LocalInvoker(provider);
                 logger.info("Bind to local provider " + exporterName);
             }
         }
@@ -429,8 +433,15 @@ public class Refer extends AbstractInvoker {
 
         if (inJvm) {
             if (localProvider != null) {
-                //本地调用，不需要透传标识
-                return localProvider.invoke(request);
+                InnerContext context = new InnerContext(RequestContext.getContext());
+                Map<String, Object> caller = context.getCaller();
+                try {
+                    context.setCallers(null);
+                    //本地调用，不需要透传标识
+                    return localProvider.invoke(request);
+                } finally {
+                    context.setCallers(caller);
+                }
             }
         }
         return distribution.distribute(request);
@@ -553,15 +564,17 @@ public class Refer extends AbstractInvoker {
                 case OPEN:
                     localProviders.add(event.getInvoker());
                     if (localProvider == null) {
-                        localProvider = event.getInvoker();
+                        localProvider = new LocalInvoker(event.getInvoker());
                         logger.info("Bind to local provider " + exporterName);
                     }
                     break;
                 case CLOSE:
                     localProviders.remove(event.getInvoker());
-                    if (localProvider == event.getInvoker()) {
-                        localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
-                        logger.info("Change to remote provider " + exporterName);
+                    if (localProvider != null && localProvider.getInvoker() == event.getInvoker()) {
+                        localProvider = localProviders.isEmpty() ? null : new LocalInvoker(localProviders.iterator().next());
+                        if (localProvider == null) {
+                            logger.info("Change to remote provider " + exporterName);
+                        }
                     }
                     break;
             }
@@ -579,6 +592,59 @@ public class Refer extends AbstractInvoker {
 
     public Registry getRegistry() {
         return registry;
+    }
+
+    /**
+     * 本地调用
+     */
+    protected static class LocalInvoker implements Invoker {
+        /**
+         * 本地服务
+         */
+        protected Invoker invoker;
+
+        public LocalInvoker(Invoker invoker) {
+            this.invoker = invoker;
+        }
+
+        @Override
+        public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
+            InnerContext context = new InnerContext(RequestContext.getContext());
+            //本地调用，在一个线程里面，提前复制一份上下文，调用完再恢复
+            Map<String, Object> callers = context.getCaller();
+            Map<String, Object> requests = context.getRequests();
+            Map<String, Object> sessions = context.getSessions();
+            Map<String, Object> traces = context.getTraces();
+            try {
+                int requestSize = requests == null ? 0 : requests.size();
+                int sessionSize = sessions == null ? 0 : sessions.size();
+                int size = requestSize + sessionSize;
+                Map<String, Object> newCallers = null;
+                if (size > 0) {
+                    newCallers = new HashMap<>(size);
+                    if (requestSize > 0) {
+                        newCallers.putAll(requests);
+                    }
+                    if (sessionSize > 0) {
+                        newCallers.putAll(sessions);
+                    }
+                }
+                context.setTraces(traces == null ? null : new HashMap<>(traces));
+                context.setSessions(null);
+                context.setRequests(null);
+                context.setCallers(newCallers);
+                return invoker.invoke(request);
+            } finally {
+                context.setRequests(requests);
+                context.setSessions(sessions);
+                context.setTraces(traces);
+                context.setCallers(callers);
+            }
+        }
+
+        public Invoker getInvoker() {
+            return invoker;
+        }
     }
 
 }

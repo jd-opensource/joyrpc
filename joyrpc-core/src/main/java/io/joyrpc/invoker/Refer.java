@@ -223,6 +223,9 @@ public class Refer extends AbstractInvoker {
         if (inJvm) {
             this.publisher.addHandler(localHandler);
             this.localProvider = localFunc.apply(exporterName);
+            if (localProvider != null) {
+                logger.info("Bind to local provider " + exporterName);
+            }
         }
     }
 
@@ -551,12 +554,14 @@ public class Refer extends AbstractInvoker {
                     localProviders.add(event.getInvoker());
                     if (localProvider == null) {
                         localProvider = event.getInvoker();
+                        logger.info("Bind to local provider " + exporterName);
                     }
                     break;
                 case CLOSE:
                     localProviders.remove(event.getInvoker());
                     if (localProvider == event.getInvoker()) {
                         localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
+                        logger.info("Change to remote provider " + exporterName);
                     }
                     break;
             }

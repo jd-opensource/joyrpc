@@ -221,13 +221,13 @@ public class Refer extends AbstractInvoker {
         this.injections = NODE_REQUEST_INJECTION.extensions(o -> o.test());
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
         this.publisher = publisher;
-        if (inJvm) {
-            this.publisher.addHandler(localHandler);
-            Invoker provider = localFunc.apply(exporterName);
-            if (provider != null) {
-                localProvider = provider;
-                logger.info("Bind to local provider " + exporterName);
-            }
+        this.publisher.addHandler(localHandler);
+        Invoker provider = localFunc.apply(exporterName);
+        if (provider != null) {
+            localProvider = provider;
+            //有本地节点，不需要等到节点建连成功
+            cluster.setCheck(false);
+            logger.info("Bind to local provider " + exporterName);
         }
     }
 
@@ -429,7 +429,7 @@ public class Refer extends AbstractInvoker {
      */
     protected CompletableFuture<Result> distribute(final RequestMessage<Invocation> request) {
         //本地调用
-        if (localProvider != null) {
+        if (inJvm && localProvider != null) {
             RequestContext srcCtx = RequestContext.getContext();
             RequestContext targetCtx = new RequestContext();
             try {
@@ -564,6 +564,7 @@ public class Refer extends AbstractInvoker {
                     localProviders.add(event.getInvoker());
                     if (localProvider == null) {
                         localProvider = event.getInvoker();
+                        cluster.setCheck(false);
                         logger.info("Bind to local provider " + exporterName);
                     }
                     break;

@@ -512,6 +512,10 @@ public class Cluster {
         return registar;
     }
 
+    public void setCheck(boolean check) {
+        this.check = check;
+        Optional.ofNullable(controller).ifPresent(o -> o.setCheck(check));
+    }
 
     /**
      * 控制器<br/>
@@ -762,6 +766,10 @@ public class Cluster {
 
         public long getVersion() {
             return version;
+        }
+
+        public void setCheck(boolean check) {
+            Optional.ofNullable(trigger).ifPresent(o -> o.setCheck(check));
         }
 
         public ClusterHandler getClusterHandler() {
@@ -1279,6 +1287,10 @@ public class Cluster {
             }
         }
 
+        public void setCheck(boolean check) {
+            this.check = check;
+        }
+
         /**
          * 关闭
          */
@@ -1304,7 +1316,8 @@ public class Cluster {
          */
         public boolean acquire() {
             if (semaphore.decrementAndGet() == 0) {
-                return fire(ready);
+                fire(ready);
+                return true;
             }
             return false;
         }

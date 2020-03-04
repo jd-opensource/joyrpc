@@ -35,6 +35,7 @@ import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
+import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
@@ -88,12 +89,18 @@ public class InvokerManager {
      * 名称函数
      */
     public static final BiFunction<String, String, String> NAME = (className, alias) -> className + "/" + alias;
+    protected static final String EVENT_PUBLISHER_GROUP = "event.invoker";
+    protected static final String EVENT_PUBLISHER_NAME = "default";
+    protected static final PublisherConfig EVENT_PUBLISHER_CONF = PublisherConfig.builder().timeout(1000).build();
 
     /**
      * 全局的生成器
      */
     public static final InvokerManager INSTANCE = new InvokerManager();
-
+    /**
+     * 事件通知器
+     */
+    protected Publisher<ExporterEvent> publisher;
     /**
      * 业务服务引用
      */
@@ -124,6 +131,8 @@ public class InvokerManager {
 
     protected InvokerManager() {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
+        this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_GROUP, EVENT_PUBLISHER_NAME, EVENT_PUBLISHER_CONF);
+        this.publisher.start();
     }
 
     /**
@@ -480,11 +489,10 @@ public class InvokerManager {
             }
             serializationRegister(config.getProxyClass(), callbackManager);
             //refer的名称和key保持一致，便于删除
-            return new Refer(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler, cluster, loadBalance, container,
-                    (v, t) -> {
-                        //关闭回调，移除集群和引用
-                        refers.remove(v.getName());
-                    });
+            return new Refer(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler,
+                    cluster, loadBalance, container, this.publisher,
+                    InvokerManager::getFirstExporter,
+                    (v, t) -> refers.remove(v.getName()));
         });
     }
 
@@ -582,7 +590,7 @@ public class InvokerManager {
                 o -> {
                     callbackManager.register(config.getProxyClass());
                     serializationRegister(config.getProxyClass(), callbackManager);
-                    return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler, getServer(url),
+                    return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler, getServer(url), publisher,
                             c -> {
                                 Map<Integer, Exporter> map = exports.get(c.getName());
                                 if (map != null) {
@@ -653,6 +661,7 @@ public class InvokerManager {
      * @return
      */
     public CompletableFuture<Void> close(final boolean gracefully) {
+        publisher.close();
         CompletableFuture<Void> result = new CompletableFuture<>();
         //保存所有的注册中心
         Set<Registry> registries = new HashSet<>(5);

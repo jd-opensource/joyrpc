@@ -33,6 +33,8 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.Transmit;
+import io.joyrpc.event.EventHandler;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.NoAliveProviderException;
 import io.joyrpc.exception.ShutdownExecption;
 import io.joyrpc.exception.TransportException;
@@ -50,10 +52,13 @@ import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
@@ -114,7 +119,7 @@ public class Refer extends AbstractInvoker {
     /**
      * 本地服务的名称
      */
-    protected String exporter;
+    protected String exporterName;
     /**
      * 方法选项
      */
@@ -131,22 +136,39 @@ public class Refer extends AbstractInvoker {
      * 分发异常处理插件
      */
     protected Iterable<ExceptionHandler> exceptionHandlers;
-
+    /**
+     * 事件通知器
+     */
+    protected Publisher<ExporterEvent> publisher;
+    /**
+     * 本地的服务
+     */
+    protected volatile Invoker localProvider;
+    /**
+     * 本地的服务列表
+     */
+    protected Set<Invoker> localProviders = new HashSet<>();
+    /**
+     * 本地服务事件处理器
+     */
+    protected EventHandler<ExporterEvent> localHandler = this::onEvent;
 
     /**
      * 构造函数
      *
-     * @param name
-     * @param url
-     * @param config
-     * @param registry
-     * @param configure
-     * @param subscribeUrl
-     * @param configHandler
-     * @param cluster
-     * @param loadBalance
-     * @param container
-     * @param closing
+     * @param name          名称
+     * @param url           url
+     * @param config        配置
+     * @param registry      注册中心
+     * @param configure     配置中心
+     * @param subscribeUrl  订阅URL
+     * @param configHandler 配置处理器
+     * @param cluster       集群
+     * @param loadBalance   负载均衡
+     * @param container     回调容器
+     * @param publisher     消息总线
+     * @param localFunc     本地服务函数
+     * @param closing       关闭函数
      */
     protected Refer(final String name,
                     final URL url,
@@ -159,6 +181,8 @@ public class Refer extends AbstractInvoker {
                     final Cluster cluster,
                     final LoadBalance loadBalance,
                     final CallbackContainer container,
+                    final Publisher<ExporterEvent> publisher,
+                    final Function<String, Invoker> localFunc,
                     final BiConsumer<Refer, ? super Throwable> closing) {
         this.name = name;
         this.url = url;
@@ -181,7 +205,7 @@ public class Refer extends AbstractInvoker {
         this.interfaceName = url.getPath();
 
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
-        this.exporter = NAME.apply(interfaceName, alias);
+        this.exporterName = NAME.apply(interfaceName, alias);
 
         //接口级别的隐藏参数，保留以"."开头
         this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
@@ -195,6 +219,11 @@ public class Refer extends AbstractInvoker {
         this.transmits = TRANSMIT.extensions();
         this.injections = NODE_REQUEST_INJECTION.extensions(o -> o.test());
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
+        this.publisher = publisher;
+        if (inJvm) {
+            this.publisher.addHandler(localHandler);
+            this.localProvider = localFunc.apply(exporterName);
+        }
     }
 
     /**
@@ -396,10 +425,9 @@ public class Refer extends AbstractInvoker {
     protected CompletableFuture<Result> distribute(final RequestMessage<Invocation> request) {
 
         if (inJvm) {
-            Exporter exporter = InvokerManager.getFirstExporter(this.exporter);
-            if (exporter != null) {
+            if (localProvider != null) {
                 //本地调用，不需要透传标识
-                return exporter.invoke(request);
+                return localProvider.invoke(request);
             }
         }
         return distribution.distribute(request);
@@ -427,6 +455,7 @@ public class Refer extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Void> doClose() {
+        publisher.removeHandler(localHandler);
         //注销节点事件
         cluster.removeHandler(config);
         //从注册中心注销，最多重试1次
@@ -508,6 +537,31 @@ public class Refer extends AbstractInvoker {
     @Override
     protected Throwable shutdownException() {
         return new ShutdownExecption("Refer is shutdown.", false);
+    }
+
+    /**
+     * 事件处理器
+     *
+     * @param event 事件
+     */
+    protected void onEvent(final ExporterEvent event) {
+        if (event.name.equals(exporterName)) {
+            switch (event.getType()) {
+                case OPEN:
+                    localProviders.add(event.getInvoker());
+                    if (localProvider == null) {
+                        localProvider = event.getInvoker();
+                    }
+                    break;
+                case CLOSE:
+                    localProviders.remove(event.getInvoker());
+                    if (localProvider == event.getInvoker()) {
+                        localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
+                    }
+                    break;
+            }
+
+        }
     }
 
     public Cluster getCluster() {

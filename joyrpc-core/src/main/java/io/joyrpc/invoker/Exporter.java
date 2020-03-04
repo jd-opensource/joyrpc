@@ -31,9 +31,11 @@ import io.joyrpc.config.Warmup;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.RequestContext;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.ShutdownExecption;
 import io.joyrpc.extension.URL;
+import io.joyrpc.invoker.ExporterEvent.EventType;
 import io.joyrpc.permission.Authenticator;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -124,6 +126,10 @@ public class Exporter extends AbstractInvoker {
      * 预热
      */
     protected Warmup warmup;
+    /**
+     * 事件通知器
+     */
+    protected Publisher<ExporterEvent> publisher;
 
     /**
      * 构造函数
@@ -137,6 +143,7 @@ public class Exporter extends AbstractInvoker {
      * @param subscribeUrl  订阅配置的URL
      * @param configHandler 配置监听器
      * @param server        服务
+     * @param publisher     事件总线
      * @param closing       关闭消费者
      */
     protected Exporter(final String name,
@@ -148,6 +155,7 @@ public class Exporter extends AbstractInvoker {
                        final URL subscribeUrl,
                        final ConfigHandler configHandler,
                        final Server server,
+                       final Publisher<ExporterEvent> publisher,
                        final Consumer<Exporter> closing) {
         this.name = name;
         this.config = config;
@@ -179,6 +187,7 @@ public class Exporter extends AbstractInvoker {
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
         this.authenticator = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
+        this.publisher = publisher;
     }
 
     @Override
@@ -247,6 +256,7 @@ public class Exporter extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Void> doClose() {
+        publisher.offer(new ExporterEvent(EventType.CLOSE, name, this));
         CompletableFuture<Void> future1 = deregister().whenComplete((v, t) -> logger.info("Success deregister provider config " + name));
         CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe provider config " + name));
         //关闭服务
@@ -334,10 +344,10 @@ public class Exporter extends AbstractInvoker {
             for (int i = 0; i < registries.size(); i++) {
                 futures[i] = registries.get(i).register(url);
             }
-
             //所有注册成功
             CompletableFuture.allOf(futures).whenComplete((v, t) -> {
                 if (t == null) {
+                    publisher.offer(new ExporterEvent(EventType.OPEN, name, this));
                     result.complete(null);
                 } else {
                     result.completeExceptionally(new InitializationException(String.format("Open registry : %s error", url), t));

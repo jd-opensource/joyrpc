@@ -41,6 +41,7 @@ import io.joyrpc.codec.serialization.*;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.Configurator;
+import io.joyrpc.context.ContextSupplier;
 import io.joyrpc.context.Environment;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.RespInjection;
@@ -203,6 +204,12 @@ public interface Plugin {
      * 环境插件
      */
     ExtensionPoint<Environment, String> ENVIRONMENT = new ExtensionPointLazy<>(Environment.class);
+
+    /**
+     * 全局变量提供者插件
+     */
+    ExtensionPoint<ContextSupplier, String> CONTEXT_SUPPLIER = new ExtensionPointLazy<>(ContextSupplier.class);
+
 
     /**
      * 事件总线

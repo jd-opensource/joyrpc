@@ -27,13 +27,12 @@ import io.joyrpc.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static io.joyrpc.Plugin.CONTEXT_SUPPLIER;
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.PropertiesUtils.read;
@@ -67,15 +66,33 @@ public class GlobalContext {
         if (context == null) {
             synchronized (GlobalContext.class) {
                 if (context == null) {
-                    //加载环境变量
-                    Environment env = ENVIRONMENT.get();
+                    //上下文变量识别插件
+                    List<ContextSupplier> suppliers = new LinkedList<>();
+                    CONTEXT_SUPPLIER.extensions().forEach(suppliers::add);
+                    //变量识别函数
+                    Function<String, Object> recognizer = key -> {
+                        Object result = null;
+                        for (ContextSupplier supplier : suppliers) {
+                            result = supplier.recognize(key);
+                            if (result != null) {
+                                if (result instanceof CharSequence) {
+                                    if (((CharSequence) result).length() > 0) {
+                                        return result.toString();
+                                    }
+                                } else {
+                                    return result;
+                                }
+                            }
+                        }
+                        return null;
+                    };
                     Map<String, Object> target = new ConcurrentHashMap<>(100);
                     //允许用户在配置文件里面修改协议版本和名称
                     doPut(target, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
                     doPut(target, PROTOCOL_KEY, Version.PROTOCOL);
                     doPut(target, BUILD_VERSION_KEY, Version.BUILD_VERSION);
                     //读取系统内置的和用户的配置
-                    loadConfig(new String[]{"META-INF/system_context", "user_context"}, target, env);
+                    loadConfig(new String[]{"META-INF/system_context", "user_context"}, target, recognizer);
                     //变量兼容
                     doPut(target, KEY_APPAPTH, target.get(Environment.APPLICATION_PATH));
                     doPut(target, KEY_APPID, target.get(Environment.APPLICATION_ID));
@@ -100,15 +117,15 @@ public class GlobalContext {
      *
      * @param resources
      * @param target
-     * @param env
+     * @param supplier
      */
-    protected static void loadConfig(final String[] resources, final Map<String, Object> target, final Environment env) {
+    protected static void loadConfig(final String[] resources, final Map<String, Object> target, final Function<String, Object> supplier) {
         List<String> lines = Resource.lines(resources, true);
         for (String line : lines) {
             int pos = line.indexOf('=');
             String key = line;
             String value = null;
-            Property property;
+            Object result;
             if (pos >= 0) {
                 key = line.substring(0, pos);
                 value = line.substring(pos + 1);
@@ -119,9 +136,9 @@ public class GlobalContext {
             }
             if (value == null || value.isEmpty()) {
                 if (el) {
-                    property = env.getProperty(key);
-                    if (property != null) {
-                        target.put(key, property.getValue());
+                    result = supplier.apply(key);
+                    if (result != null) {
+                        target.put(key, result);
                     }
                 }
             } else if (!el) {
@@ -131,9 +148,9 @@ public class GlobalContext {
                 for (String part : parts) {
                     if (EXPRESSION.test(part)) {
                         part = part.substring(1, part.length() - 1);
-                        property = env.getProperty(part);
-                        if (property != null) {
-                            target.put(key, property.getValue());
+                        result = supplier.apply(part);
+                        if (result != null) {
+                            target.put(key, result);
                             break;
                         }
                     } else {

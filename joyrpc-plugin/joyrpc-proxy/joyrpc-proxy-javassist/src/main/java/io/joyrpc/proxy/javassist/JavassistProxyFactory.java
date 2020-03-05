@@ -235,8 +235,9 @@ public class JavassistProxyFactory implements ProxyFactory {
                     builder.append(name).append("==null?(long)0:((Long)").append(name).append(").longValue()");
                 } else if (Short.TYPE == cl) {
                     builder.append(name).append("==null?(short)0:((Short)").append(name).append(").shortValue()");
+                } else {
+                    throw new RuntimeException(name + " is unknown primitive type.");
                 }
-                throw new RuntimeException(name + " is unknown primitive type.");
             } else {
                 getName(cl, builder.append('(')).append(')').append(name);
             }

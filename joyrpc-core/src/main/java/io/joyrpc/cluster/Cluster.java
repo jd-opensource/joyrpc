@@ -79,7 +79,7 @@ public class Cluster {
     public static final PublisherConfig EVENT_PUBLISHER_METRIC_CONF = PublisherConfig.builder().timeout(1000).build();
     public static final String EVENT_PUBLISHER_CLUSTER = "event.cluster";
     public static final PublisherConfig EVENT_PUBLISHER_CLUSTER_CONF = PublisherConfig.builder().timeout(1000).build();
-    public static final List<String> DEAD_MSG = Resource.lines(new String[]{"network_error", "META-INF/network_error"}, false);
+    public static final List<String> DEAD_MSG = Resource.lines(new String[]{"META-INF/system_network_error", "user_network_error"}, true);
     /**
      * 名称
      */

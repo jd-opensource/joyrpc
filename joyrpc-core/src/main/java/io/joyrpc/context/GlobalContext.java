@@ -74,15 +74,13 @@ public class GlobalContext {
                     doPut(target, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
                     doPut(target, PROTOCOL_KEY, Version.PROTOCOL);
                     doPut(target, BUILD_VERSION_KEY, Version.BUILD_VERSION);
-                    //读取系统内置的配置
-                    loadConfig("META-INF/system_context", target, env);
+                    //读取系统内置的和用户的配置
+                    loadConfig(new String[]{"META-INF/system_context", "user_context"}, target, env);
                     //变量兼容
                     doPut(target, KEY_APPAPTH, target.get(Environment.APPLICATION_PATH));
                     doPut(target, KEY_APPID, target.get(Environment.APPLICATION_ID));
                     doPut(target, KEY_APPNAME, target.get(Environment.APPLICATION_NAME));
                     doPut(target, KEY_APPINSID, target.get(Environment.APPLICATION_INSTANCE));
-                    //读取用户的配置
-                    loadConfig("global_context", target, env);
                     //打印默认的上下文
                     if (logger.isInfoEnabled()) {
                         String line = System.getProperty("line.separator");
@@ -100,12 +98,12 @@ public class GlobalContext {
     /**
      * 加载配置
      *
-     * @param resource
+     * @param resources
      * @param target
      * @param env
      */
-    protected static void loadConfig(final String resource, final Map<String, Object> target, final Environment env) {
-        List<String> lines = Resource.lines(resource);
+    protected static void loadConfig(final String[] resources, final Map<String, Object> target, final Environment env) {
+        List<String> lines = Resource.lines(resources, true);
         for (String line : lines) {
             int pos = line.indexOf('=');
             String key = line;

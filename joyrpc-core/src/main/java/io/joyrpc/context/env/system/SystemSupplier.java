@@ -46,7 +46,7 @@ public class SystemSupplier implements EnvironmentSupplier {
 
     @Override
     public Map<String, String> environment() {
-        List<String> names = Resource.lines(new String[]{"system_env", "META-INF/system_env"}, false);
+        List<String> names = Resource.lines(new String[]{"META-INF/system_env", "user_env"}, true);
         //重命名规则
         List<Pair<String, String[]>> renameRules = new LinkedList<>();
         for (String name : names) {

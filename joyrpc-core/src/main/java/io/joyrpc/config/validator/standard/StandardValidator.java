@@ -62,7 +62,7 @@ public class StandardValidator implements InterfaceValidator {
      * 构造函数
      */
     public StandardValidator() {
-        List<String> names = Resource.lines(new String[]{"standard_type", "META-INF/standard_type"}, false);
+        List<String> names = Resource.lines(new String[]{"META-INF/system_standard_type", "user_standard_type"}, true);
         for (String name : names) {
             name = name.trim();
             if (!name.isEmpty()) {

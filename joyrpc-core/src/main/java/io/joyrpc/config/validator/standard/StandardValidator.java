@@ -24,14 +24,16 @@ import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.GenericChecker.Scope;
+import io.joyrpc.util.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.ValidationException;
-import java.io.*;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BiConsumer;
@@ -60,23 +62,15 @@ public class StandardValidator implements InterfaceValidator {
      * 构造函数
      */
     public StandardValidator() {
-        InputStream in = getClassLoader(this.getClass()).getResourceAsStream("standards");
-        if (in == null) {
-            logger.error("standards file is not found.");
-        } else {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-                br.lines().forEach(o -> {
-                    String name = o.trim();
-                    if (!name.isEmpty()) {
-                        try {
-                            standards.add(forName(o));
-                        } catch (ClassNotFoundException e) {
-                            logger.error("class in standards file is not found ." + o);
-                        }
-                    }
-                });
-            } catch (IOException e) {
-                logger.error("Error occurs while reading standard file. ", e);
+        List<String> names = Resource.lines(new String[]{"standard_type", "META-INF/standard_type"}, false);
+        for (String name : names) {
+            name = name.trim();
+            if (!name.isEmpty()) {
+                try {
+                    standards.add(forName(name));
+                } catch (ClassNotFoundException e) {
+                    logger.error("class in standards file is not found ." + name);
+                }
             }
         }
     }

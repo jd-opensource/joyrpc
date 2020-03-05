@@ -135,9 +135,11 @@ public class JavassistProxyFactory implements ProxyFactory {
 
             StringBuilder builder = new StringBuilder(1000);
             for (int i = 0; i < methods.length; i++) {
-                source(mCtc, methods[i], i, builder);
-                mCtc.addMethod(CtMethod.make(builder.toString(), mCtc));
-                builder.setLength(0);
+                if (!Modifier.isStatic(methods[i].getModifiers())) {
+                    source(mCtc, methods[i], i, builder);
+                    mCtc.addMethod(CtMethod.make(builder.toString(), mCtc));
+                    builder.setLength(0);
+                }
             }
             mCtc.addMethod(CtMethod.make("public void setInvocationHandler(" + InvocationHandler.class.getName() + " h){ invocationHandler=$1; }", mCtc));
             return mCtc.toClass();

@@ -38,6 +38,11 @@ import javax.ws.rs.PathParam;
 @Provider(name = "provider-demoService", alias = "2.0-Boot")
 public class DemoServiceImpl implements DemoService {
 
+    @Override
+    public int test(int count) {
+        return count;
+    }
+
     @GET
     @Path(value = "/hello/{name}")
     @Override

@@ -29,6 +29,8 @@ public interface DemoService {
 
     String sayHello(@NotNull String str);
 
+    int test(int count);
+
     default String echo(String str) {
         return sayHello(str);
     }

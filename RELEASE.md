@@ -114,7 +114,9 @@
   
 - Proxy
 
-  - javassist基本类型报错问题  
+  - javassist基本类型报错问题
+  
+  - javassist包装静态方法报错，过滤掉静态方法
   
 - 工具类
      

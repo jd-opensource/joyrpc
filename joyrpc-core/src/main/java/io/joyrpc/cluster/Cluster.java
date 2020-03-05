@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
@@ -512,9 +513,14 @@ public class Cluster {
         return registar;
     }
 
+    /**
+     * 设置当初始化超时的时候，是否验证必须要有连接。<br/>
+     * 在应用同时提供服务并消费自身的服务时候，在应用优雅启动阶段需要设置为False。
+     *
+     * @param check 验证标识
+     */
     public void setCheck(boolean check) {
         this.check = check;
-        Optional.ofNullable(controller).ifPresent(o -> o.setCheck(check));
     }
 
     /**
@@ -597,7 +603,7 @@ public class Cluster {
             } else {
                 long beginTime = SystemClock.now();
                 this.trigger = new Trigger(cluster.name, cluster.initSize,
-                        cluster.initTimeout, cluster.initConnectTimeout, cluster.check,
+                        cluster.initTimeout, cluster.initConnectTimeout, () -> cluster.check,
                         () -> ready.accept(new AsyncResult<>(this)),
                         () -> ready.accept(new AsyncResult<>(this,
                                 new InitializationException(
@@ -766,10 +772,6 @@ public class Cluster {
 
         public long getVersion() {
             return version;
-        }
-
-        public void setCheck(boolean check) {
-            Optional.ofNullable(trigger).ifPresent(o -> o.setCheck(check));
         }
 
         public ClusterHandler getClusterHandler() {
@@ -1204,7 +1206,7 @@ public class Cluster {
         /**
          * 是否验证初始化建连成功
          */
-        protected boolean check;
+        protected Supplier<Boolean> check;
         /**
          * 就绪处理器
          */
@@ -1236,7 +1238,7 @@ public class Cluster {
          * @param whenTimeout 超时处理器
          */
         public Trigger(final String clusterName, final int initSize, final long timeout, final long connectTimeout,
-                       boolean check, final Runnable ready, final Runnable whenTimeout) {
+                       Supplier<Boolean> check, final Runnable ready, final Runnable whenTimeout) {
             this.clusterName = clusterName;
             this.initSize = initSize;
             this.semaphore = new AtomicLong(initSize);
@@ -1248,7 +1250,7 @@ public class Cluster {
             if (timeout > 0) {
                 //超时检测
                 timer().add("TimeoutTask-" + clusterName, SystemClock.now() + timeout,
-                        () -> fire(semaphore.get() < initSize || !check ? ready : whenTimeout));
+                        () -> fire(semaphore.get() < initSize || !check.get() ? ready : whenTimeout));
             }
         }
 
@@ -1276,19 +1278,15 @@ public class Cluster {
          */
         public void onFull(int size) {
             if (firstConnect.compareAndSet(false, true)) {
-                if (size == 0 && !check) {
+                if (size == 0 && !check.get()) {
                     //没有服务提供者，不需要初始化建立连接
                     semaphore.set(0L);
                     fire(ready);
                 } else if (connectTimeout > 0) {
                     timer().add("ConnectTimeoutTask-" + clusterName, SystemClock.now() + connectTimeout,
-                            () -> fire(semaphore.get() < initSize || !check ? ready : whenTimeout));
+                            () -> fire(semaphore.get() < initSize || !check.get() ? ready : whenTimeout));
                 }
             }
-        }
-
-        public void setCheck(boolean check) {
-            this.check = check;
         }
 
         /**

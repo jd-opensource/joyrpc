@@ -558,27 +558,28 @@ public class Refer extends AbstractInvoker {
      * @param event 事件
      */
     protected void onEvent(final ExporterEvent event) {
-        if (event.name.equals(exporterName)) {
-            switch (event.getType()) {
-                case OPEN:
-                    localProviders.add(event.getInvoker());
+        if (!event.name.equals(exporterName)) {
+            return;
+        }
+        switch (event.getType()) {
+            case INITIAL:
+            case OPEN:
+                localProviders.add(event.getInvoker());
+                if (localProvider == null) {
+                    localProvider = event.getInvoker();
+                    cluster.setCheck(false);
+                    logger.info("Bind to local provider " + exporterName);
+                }
+                break;
+            case CLOSE:
+                localProviders.remove(event.getInvoker());
+                if (localProvider == event.getInvoker()) {
+                    localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
                     if (localProvider == null) {
-                        localProvider = event.getInvoker();
-                        cluster.setCheck(false);
-                        logger.info("Bind to local provider " + exporterName);
+                        logger.info("Change to remote provider " + exporterName);
                     }
-                    break;
-                case CLOSE:
-                    localProviders.remove(event.getInvoker());
-                    if (localProvider == event.getInvoker()) {
-                        localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
-                        if (localProvider == null) {
-                            logger.info("Change to remote provider " + exporterName);
-                        }
-                    }
-                    break;
-            }
-
+                }
+                break;
         }
     }
 

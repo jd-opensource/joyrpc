@@ -20,12 +20,20 @@ package io.joyrpc.example.service;
  * #L%
  */
 
-import io.joyrpc.annotation.Alias;
+import javax.validation.constraints.NotNull;
 
-import java.util.concurrent.CompletableFuture;
+/**
+ * Trace service
+ */
+public interface TraceService {
 
-@Alias("io.joyrpc.example.service.DemoService")
-public interface AsyncDemoService {
+    String sayHello(@NotNull String str);
 
-    CompletableFuture<String> sayHello(String str);
+    default String echo(String str) {
+        return sayHello(str);
+    }
+
+    static String hello(String v) {
+        return v;
+    }
 }

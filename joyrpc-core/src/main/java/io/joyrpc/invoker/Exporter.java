@@ -188,6 +188,7 @@ public class Exporter extends AbstractInvoker {
                 .build(this, this::invokeMethod);
         this.authenticator = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
         this.publisher = publisher;
+        this.publisher.offer(new ExporterEvent(EventType.INITIAL, name, this));
     }
 
     @Override

@@ -21,7 +21,7 @@ package io.joyrpc.example.boot;
  */
 
 import io.joyrpc.context.RequestContext;
-import io.joyrpc.example.service.AsyncDemoService;
+import io.joyrpc.example.service.AsyncTraceService;
 import io.joyrpc.exception.NoAliveProviderException;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -36,13 +36,14 @@ public class BootAsyncClient {
     public static void main(String[] args) {
         System.setProperty("spring.profiles.active", "async-client");
         ConfigurableApplicationContext run = SpringApplication.run(BootAsyncClient.class, args);
-        AsyncDemoService consumer = run.getBean(AsyncDemoService.class);
+        AsyncTraceService consumer = run.getBean(AsyncTraceService.class);
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
                 long value = counter.incrementAndGet();
                 RequestContext context = RequestContext.getContext();
                 context.setAttachment("counter", value);
+                context.setTrace("tracer", Boolean.TRUE);
                 consumer.sayHello("helloWold").whenComplete(new MyConsumer(context, Thread.currentThread()));
                 Thread.sleep(200L);
             } catch (InterruptedException e) {

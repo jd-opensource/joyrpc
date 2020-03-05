@@ -42,6 +42,7 @@ public class ExporterEvent implements Event {
      * 事件类型
      */
     public enum EventType {
+        INITIAL,
         OPEN,
         CLOSE
     }

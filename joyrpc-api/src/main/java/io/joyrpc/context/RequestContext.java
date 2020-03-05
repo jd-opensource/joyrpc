@@ -609,6 +609,7 @@ public class RequestContext {
         traces = null;
         callers = null;
         attachments = null;
+        dirty = false;
         return this;
     }
 
@@ -619,7 +620,7 @@ public class RequestContext {
         remoteAddress = null;
         localAddress = null;
         attachments = null;
-
+        dirty = true;
         return this;
     }
 
@@ -630,7 +631,7 @@ public class RequestContext {
      */
     public RequestContext clearSession() {
         sessions = null;
-
+        dirty = true;
         return this;
     }
 
@@ -639,7 +640,7 @@ public class RequestContext {
      */
     public RequestContext clearTrace() {
         traces = null;
-
+        dirty = true;
         return this;
     }
 
@@ -686,7 +687,7 @@ public class RequestContext {
     public static class InnerContext {
 
         /**
-         *
+         * 上下文
          */
         protected RequestContext context;
 

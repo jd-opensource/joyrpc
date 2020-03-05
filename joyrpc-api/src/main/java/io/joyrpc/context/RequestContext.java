@@ -802,14 +802,6 @@ public class RequestContext {
     }
 
     /**
-     * 更新类型
-     */
-    protected enum UpdateType {
-        UPDATE,
-        REMOVE
-    }
-
-    /**
      * 获取上下文.
      *
      * @return context context

@@ -24,8 +24,6 @@ import com.sun.management.OperatingSystemMXBean;
 import io.joyrpc.context.EnvironmentSupplier;
 import io.joyrpc.context.OsType;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.permission.BlackWhiteList;
-import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.util.Pair;
 import io.joyrpc.util.Resource;
 
@@ -49,38 +47,17 @@ public class SystemSupplier implements EnvironmentSupplier {
     @Override
     public Map<String, String> environment() {
         List<String> names = Resource.lines(new String[]{"system_env", "META-INF/system_env"}, false);
-
-        //黑白名单
-        HashSet<String> whites = new HashSet<>();
-        HashSet<String> blacks = new HashSet<>();
-        HashSet<String> renames = new HashSet<>();
-        //未重命名的环境变量名称
-        HashSet<String> unrenames = new HashSet<>();
         //重命名规则
         List<Pair<String, String[]>> renameRules = new LinkedList<>();
         for (String name : names) {
-            if (name.charAt(0) == '-') {
-                //黑名单
-                blacks.add(name.substring(1));
-            } else {
-                //判断重命名
-                String source = name;
-                String alias = null;
-                int pos = name.indexOf('=');
-                if (pos >= 0) {
-                    alias = name.substring(0, pos);
-                    source = name.substring(pos + 1);
-                }
-                if (alias == null) {
-                    unrenames.add(source);
-                    whites.add(source);
-                } else if (!alias.isEmpty()) {
+            //判断重命名
+            int pos = name.indexOf('=');
+            if (pos >= 0) {
+                String alias = name.substring(0, pos);
+                String source = name.substring(pos + 1);
+                if (!alias.isEmpty()) {
                     String[] parts = split(source, SEMICOLON_COMMA_WHITESPACE);
                     renameRules.add(Pair.of(alias, parts));
-                    for (String part : parts) {
-                        whites.add(part);
-                        renames.add(part);
-                    }
                 }
             }
         }
@@ -88,43 +65,19 @@ public class SystemSupplier implements EnvironmentSupplier {
         //从系统环境获取
         Map<String, String> env = System.getenv();
         Map<String, String> result = new HashMap<>(env.size());
-        //保存重命名的变量
-        Map<String, String> candidates = new HashMap<>(env.size());
-        BlackWhiteList<String> bwl = new StringBlackWhiteList(whites, blacks);
         for (Map.Entry<String, String> entry : env.entrySet()) {
-            if (bwl.isValid(entry.getKey())) {
-                if (renames.contains(entry.getKey())) {
-                    if (unrenames.contains(entry.getKey())) {
-                        result.putIfAbsent(entry.getKey(), entry.getValue());
-                    }
-                    candidates.put(entry.getKey(), entry.getValue());
-                } else {
-                    result.putIfAbsent(entry.getKey(), entry.getValue());
-                }
-            }
+            result.putIfAbsent(entry.getKey(), entry.getValue());
         }
         //从系统属性和jvm参数获取
         Properties properties = System.getProperties();
         properties.forEach((k, v) -> {
-            String key = k.toString();
-            if (bwl.isValid(key)) {
-                String value = v.toString();
-                if (renames.contains(key)) {
-                    if (unrenames.contains(key)) {
-                        result.putIfAbsent(key, value);
-                    }
-                    candidates.put(key, value);
-                } else {
-                    result.putIfAbsent(key, value);
-                }
-            }
+            result.putIfAbsent(k.toString(), v.toString());
         });
-
         //遍历重命名
         String value;
         for (Pair<String, String[]> rule : renameRules) {
             for (String part : rule.getValue()) {
-                value = candidates.get(part);
+                value = result.get(part);
                 if (value != null) {
                     if (result.putIfAbsent(rule.getKey(), value) != null) {
                         break;

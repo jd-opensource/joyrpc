@@ -22,18 +22,22 @@ package io.joyrpc.context;
 
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
+import io.joyrpc.util.Resource;
+import io.joyrpc.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.PropertiesUtils.read;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 
 /**
  * 全局参数
@@ -52,6 +56,7 @@ public class GlobalContext {
      * 接口配置map<接口名，<key,value>>，
      */
     protected final static Map<String, Map<String, String>> interfaceConfigs = new ConcurrentHashMap<>();
+    protected static final Predicate<String> EXPRESSION = v -> v != null && v.startsWith("[") && v.endsWith("]");
 
     /**
      * 构造上下文
@@ -63,36 +68,84 @@ public class GlobalContext {
             synchronized (GlobalContext.class) {
                 if (context == null) {
                     //加载环境变量
-                    Environment environment = ENVIRONMENT.get();
-                    Collection<Property> properties = environment.properties();
-                    Map<String, Object> map = new ConcurrentHashMap<>(Math.max(properties.size(), 200));
+                    Environment env = ENVIRONMENT.get();
+                    Map<String, Object> target = new ConcurrentHashMap<>(100);
                     //允许用户在配置文件里面修改协议版本和名称
-                    doPut(map, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
-                    doPut(map, PROTOCOL_KEY, Version.PROTOCOL);
-                    doPut(map, BUILD_VERSION_KEY, Version.BUILD_VERSION);
-                    //优先读取系统内置的配置
-                    loadResource(map, "META-INF/system_context.properties");
-                    //环境变量覆盖
-                    properties.forEach(o -> map.put(o.getKey(), o.getValue()));
+                    doPut(target, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
+                    doPut(target, PROTOCOL_KEY, Version.PROTOCOL);
+                    doPut(target, BUILD_VERSION_KEY, Version.BUILD_VERSION);
+                    //读取系统内置的配置
+                    loadConfig("META-INF/system_context", target, env);
                     //变量兼容
-                    doPut(map, KEY_APPAPTH, map.get(Environment.APPLICATION_PATH));
-                    doPut(map, KEY_APPID, map.get(Environment.APPLICATION_ID));
-                    doPut(map, KEY_APPNAME, map.get(Environment.APPLICATION_NAME));
-                    doPut(map, KEY_APPINSID, map.get(Environment.APPLICATION_INSTANCE));
+                    doPut(target, KEY_APPAPTH, target.get(Environment.APPLICATION_PATH));
+                    doPut(target, KEY_APPID, target.get(Environment.APPLICATION_ID));
+                    doPut(target, KEY_APPNAME, target.get(Environment.APPLICATION_NAME));
+                    doPut(target, KEY_APPINSID, target.get(Environment.APPLICATION_INSTANCE));
                     //读取用户的配置
-                    loadResource(map, environment.getString(CONTEXT_RESOURCE, "global_context.properties"));
+                    loadConfig("global_context", target, env);
                     //打印默认的上下文
                     if (logger.isInfoEnabled()) {
                         String line = System.getProperty("line.separator");
                         StringBuilder builder = new StringBuilder(1000).append("default context:").append(line);
-                        map.forEach((k, v) -> builder.append("\t").append(k).append('=').append(v.toString()).append(line));
+                        target.forEach((k, v) -> builder.append("\t").append(k).append('=').append(v.toString()).append(line));
                         logger.info(builder.toString());
                     }
-                    context = map;
+                    context = target;
                 }
             }
         }
         return context;
+    }
+
+    /**
+     * 加载配置
+     *
+     * @param resource
+     * @param target
+     * @param env
+     */
+    protected static void loadConfig(final String resource, final Map<String, Object> target, final Environment env) {
+        List<String> lines = Resource.lines(resource);
+        for (String line : lines) {
+            int pos = line.indexOf('=');
+            String key = line;
+            String value = null;
+            Property property;
+            if (pos >= 0) {
+                key = line.substring(0, pos);
+                value = line.substring(pos + 1);
+            }
+            boolean el = EXPRESSION.test(key);
+            if (el) {
+                key = key.substring(1, key.length() - 1);
+            }
+            if (value == null || value.isEmpty()) {
+                if (el) {
+                    property = env.getProperty(key);
+                    if (property != null) {
+                        target.put(key, property.getValue());
+                    }
+                }
+            } else if (!el) {
+                target.put(key, value);
+            } else {
+                String[] parts = StringUtils.split(value, SEMICOLON_COMMA_WHITESPACE);
+                for (String part : parts) {
+                    if (EXPRESSION.test(part)) {
+                        part = part.substring(1, part.length() - 1);
+                        property = env.getProperty(part);
+                        if (property != null) {
+                            target.put(key, property.getValue());
+                            break;
+                        }
+                    } else {
+                        target.put(key, value);
+                        break;
+                    }
+                }
+            }
+
+        }
     }
 
     /**

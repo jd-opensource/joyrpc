@@ -1,13 +1,1 @@
-#注册中心地址
-registry.address
-#java启动属性
-user.language
-user.name
-os.arch
-os.version
-file.encoding
-user.timezone
-user.country
-java.version
-java.class.version
-java.specification.version
+#环境变量重命名

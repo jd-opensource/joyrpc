@@ -40,8 +40,13 @@ public class RpcAutoConfiguration {
     public static RpcDefinitionPostProcessor rpcDefinitionPostProcessor(ApplicationContext applicationContext,
                                                                         ConfigurableEnvironment environment,
                                                                         ResourceLoader resourceLoader) {
-
         return new RpcDefinitionPostProcessor(applicationContext, environment, resourceLoader);
+    }
+
+    @ConditionalOnMissingBean
+    @Bean(name = RpcContextSupplier.BEAN_NAME)
+    public static RpcContextSupplier rpcContextSupplier(ConfigurableEnvironment environment) {
+        return new RpcContextSupplier(environment);
     }
 
 }

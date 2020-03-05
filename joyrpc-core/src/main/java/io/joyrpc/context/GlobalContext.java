@@ -154,7 +154,7 @@ public class GlobalContext {
                             break;
                         }
                     } else {
-                        target.put(key, value);
+                        target.put(key, part);
                         break;
                     }
                 }

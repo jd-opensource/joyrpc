@@ -137,7 +137,7 @@ public class BroadcastRegistry extends AbstractRegistry {
     public BroadcastRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.cfg = new Config();
-        int cpus = ENVIRONMENT.get().getInteger(Environment.CPU_CORES) * 2;
+        int cpus = ENVIRONMENT.get().cpuCores() * 2;
         Properties properties = cfg.getProperties();
         properties.setProperty("hazelcast.operation.thread.count", String.valueOf(cpus));
         properties.setProperty("hazelcast.operation.generic.thread.count", String.valueOf(cpus));

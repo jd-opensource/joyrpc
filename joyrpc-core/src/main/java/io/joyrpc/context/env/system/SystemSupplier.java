@@ -26,19 +26,22 @@ import io.joyrpc.context.OsType;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
+import io.joyrpc.util.Pair;
 import io.joyrpc.util.Resource;
 
 import java.lang.management.ManagementFactory;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static io.joyrpc.context.Environment.*;
 import static io.joyrpc.context.EnvironmentSupplier.SYSTEM_ORDER;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
- * 系统环境变量
+ * 系统环境变量提供者，从环境变量和系统属性获取，支持黑白名单和变量重命名。<br/>
+ * 从类路径"system_env"和"META-INF/system_env"按照顺序找到第一个资源文件进行加载
+ * 黑白名单规则:以'-'开头的是黑名单,'*'代表所有<br/>
+ * 重命名规则:key=key1,key2,key3,按照顺序找到第一个值
  */
 @Extension(value = "system", order = SYSTEM_ORDER)
 public class SystemSupplier implements EnvironmentSupplier {
@@ -46,36 +49,96 @@ public class SystemSupplier implements EnvironmentSupplier {
     @Override
     public Map<String, String> environment() {
         List<String> names = Resource.lines(new String[]{"system_env", "META-INF/system_env"}, false);
+
+        //黑白名单
         HashSet<String> whites = new HashSet<>();
         HashSet<String> blacks = new HashSet<>();
-        names.forEach(o -> {
-            switch (o.charAt(0)) {
-                case '-':
-                    blacks.add(o.substring(1));
-                    break;
-                case '+':
-                    whites.add(o.substring(1));
-                    break;
-                default:
-                    whites.add(o);
+        HashSet<String> renames = new HashSet<>();
+        //未重命名的环境变量名称
+        HashSet<String> unrenames = new HashSet<>();
+        //重命名规则
+        List<Pair<String, String[]>> renameRules = new LinkedList<>();
+        for (String name : names) {
+            if (name.charAt(0) == '-') {
+                //黑名单
+                blacks.add(name.substring(1));
+            } else {
+                //判断重命名
+                String source = name;
+                String alias = null;
+                int pos = name.indexOf('=');
+                if (pos >= 0) {
+                    alias = name.substring(0, pos);
+                    source = name.substring(pos + 1);
+                }
+                if (alias == null) {
+                    unrenames.add(source);
+                    whites.add(source);
+                } else if (!alias.isEmpty()) {
+                    String[] parts = split(source, SEMICOLON_COMMA_WHITESPACE);
+                    renameRules.add(Pair.of(alias, parts));
+                    for (String part : parts) {
+                        whites.add(part);
+                        renames.add(part);
+                    }
+                }
             }
-        });
+        }
 
-        BlackWhiteList<String> bwl = new StringBlackWhiteList(whites, blacks);
         //从系统环境获取
         Map<String, String> env = System.getenv();
         Map<String, String> result = new HashMap<>(env.size());
+        //保存重命名的变量
+        Map<String, String> candidates = new HashMap<>(env.size());
+        BlackWhiteList<String> bwl = new StringBlackWhiteList(whites, blacks);
         for (Map.Entry<String, String> entry : env.entrySet()) {
             if (bwl.isValid(entry.getKey())) {
-                result.put(entry.getKey(), entry.getValue());
+                if (renames.contains(entry.getKey())) {
+                    if (unrenames.contains(entry.getKey())) {
+                        result.putIfAbsent(entry.getKey(), entry.getValue());
+                    }
+                    candidates.put(entry.getKey(), entry.getValue());
+                } else {
+                    result.putIfAbsent(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        //从系统属性和jvm参数获取
+        Properties properties = System.getProperties();
+        properties.forEach((k, v) -> {
+            String key = k.toString();
+            if (bwl.isValid(key)) {
+                String value = v.toString();
+                if (renames.contains(key)) {
+                    if (unrenames.contains(key)) {
+                        result.putIfAbsent(key, value);
+                    }
+                    candidates.put(key, value);
+                } else {
+                    result.putIfAbsent(key, value);
+                }
+            }
+        });
+
+        //遍历重命名
+        String value;
+        for (Pair<String, String[]> rule : renameRules) {
+            for (String part : rule.getValue()) {
+                value = candidates.get(part);
+                if (value != null) {
+                    if (result.putIfAbsent(rule.getKey(), value) != null) {
+                        break;
+                    }
+                }
             }
         }
         //从系统运行时获取
-        result.put(MEMORY, String.valueOf(getMemory()));
-        result.put(CPU_CORES, String.valueOf(getCpuCores()));
+        result.putIfAbsent(MEMORY, String.valueOf(getMemory()));
+        result.putIfAbsent(CPU_CORES, String.valueOf(getCpuCores()));
         result.put(PID, String.valueOf(getPid()));
         result.put(START_TIME, String.valueOf(getStartTime()));
         result.put(OS_TYPE, getOsType().toString());
+
         return result;
     }
 

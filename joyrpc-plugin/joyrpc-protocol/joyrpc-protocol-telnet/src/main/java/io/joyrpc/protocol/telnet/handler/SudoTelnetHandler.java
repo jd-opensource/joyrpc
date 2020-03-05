@@ -24,7 +24,6 @@ import io.joyrpc.codec.Hex;
 import io.joyrpc.codec.crypto.Encryptor;
 import io.joyrpc.codec.crypto.Signature;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
@@ -37,7 +36,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
-import static io.joyrpc.Plugin.ENVIRONMENT;
 
 /**
  * @date: 2019/1/22
@@ -69,7 +67,7 @@ public class SudoTelnetHandler extends AbstractTelnetHandler {
             try {
                 Parametric parametric = new MapParametric(GlobalContext.getContext());
                 //应用名称
-                String appName = ENVIRONMENT.get().getString(Environment.APPLICATION_NAME);
+                String appName = parametric.getString(Constants.KEY_APPNAME);
                 //密码
                 String password = parametric.getString(Constants.SETTING_SERVER_SUDO_PASSWD, "");
                 //获取加密算法

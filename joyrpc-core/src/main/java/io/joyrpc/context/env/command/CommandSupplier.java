@@ -22,12 +22,11 @@ package io.joyrpc.context.env.command;
 
 import io.joyrpc.context.EnvironmentSupplier;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.permission.BlackWhiteList;
-import io.joyrpc.permission.StringBlackWhiteList;
-import io.joyrpc.util.Resource;
 
 import java.lang.management.ManagementFactory;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 命令行参数变量
@@ -37,34 +36,8 @@ public class CommandSupplier implements EnvironmentSupplier {
 
     @Override
     public Map<String, String> environment() {
-
-        List<String> names = Resource.lines(new String[]{"system_properties", "META-INF/system_properties"}, false);
-        HashSet<String> whites = new HashSet<>();
-        HashSet<String> blacks = new HashSet<>();
-        names.forEach(o -> {
-            switch (o.charAt(0)) {
-                case '-':
-                    blacks.add(o.substring(1));
-                    break;
-                case '+':
-                    whites.add(o.substring(1));
-                    break;
-                default:
-                    whites.add(o);
-            }
-        });
-        BlackWhiteList<String> bwl = new StringBlackWhiteList(whites, blacks);
-        //从系统属性和jvm参数获取
-        Properties properties = System.getProperties();
         //从系统环境获取
-        Map<String, String> result = new HashMap<>(properties.size());
-        properties.forEach((k, v) -> {
-            String key = k.toString();
-            if (bwl.isValid(key)) {
-                result.put(key, v.toString());
-            }
-        });
-
+        Map<String, String> result = new HashMap<>();
         //从命令行获取
         List<String> args = ManagementFactory.getRuntimeMXBean().getInputArguments();
         for (String arg : args) {

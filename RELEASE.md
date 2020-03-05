@@ -112,6 +112,10 @@
   
   - 应用同时提供服务和该服务的消费者，如果只有一个实例的情况下并且消费者的check参数默认为false，优雅启动会等待连接服务超时启不起来。
   
+- Proxy
+
+  - javassist基本类型报错问题  
+  
 - 工具类
      
   - 修复ClassUtils中的isWriteable方法，final修饰的field仍判定可写的问题

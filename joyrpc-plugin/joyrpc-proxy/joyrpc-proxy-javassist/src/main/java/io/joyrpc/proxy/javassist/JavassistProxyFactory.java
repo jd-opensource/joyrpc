@@ -48,7 +48,7 @@ public class JavassistProxyFactory implements ProxyFactory {
     /**
      * 原始类和代理类的映射
      */
-    protected static final Map<Class, Class> PROXIES = new ConcurrentHashMap();
+    protected static final Map<Class<?>, Class<?>> PROXIES = new ConcurrentHashMap<>();
 
     /**
      * ClassLoader 缓存
@@ -63,7 +63,7 @@ public class JavassistProxyFactory implements ProxyFactory {
     @Override
     public <T> T getProxy(final Class<T> clz, final InvocationHandler invoker, final ClassLoader classLoader) throws ProxyException {
         try {
-            Class clazz = PROXIES.get(clz);
+            Class<?> clazz = PROXIES.get(clz);
             if (clazz == null) {
                 ClassPool mPool = ClassPool.getDefault();
                 //添加类加载器，防止重复添加
@@ -117,7 +117,15 @@ public class JavassistProxyFactory implements ProxyFactory {
             this.methods = methods;
         }
 
-        public Class build(final ClassPool classPool) throws CannotCompileException, NotFoundException {
+        /**
+         * 构建类
+         *
+         * @param classPool 类池
+         * @return 类
+         * @throws CannotCompileException
+         * @throws NotFoundException
+         */
+        public Class<?> build(final ClassPool classPool) throws CannotCompileException, NotFoundException {
 
             CtClass mCtc = classPool.makeClass(className);
             mCtc.addInterface(classPool.get(interfaceName));
@@ -166,7 +174,7 @@ public class JavassistProxyFactory implements ProxyFactory {
             builder.append(')');
             //异常
             Class<?>[] et = method.getExceptionTypes();
-            if (et != null && et.length > 0) {
+            if (et.length > 0) {
                 builder.append(" throws ");
                 for (int i = 0; i < et.length; i++) {
                     if (i > 0) {
@@ -183,7 +191,7 @@ public class JavassistProxyFactory implements ProxyFactory {
             for (int j = 0; j < parameterType.length; j++) {
                 builder.append(" args[").append(j).append("] = ($w)$").append(j + 1).append(";");
             }
-            builder.append(" Object result = invocationHandler.invoke(this, methods[" + index + "], args);");
+            builder.append(" Object result = invocationHandler.invoke(this, methods[").append(index).append("], args);");
             if (!Void.TYPE.equals(returnType)) {
                 builder.append(" return ");
                 asArgument(returnType, "result", builder).append(';');
@@ -191,6 +199,13 @@ public class JavassistProxyFactory implements ProxyFactory {
             builder.append('}');
         }
 
+        /**
+         * 添加修饰符
+         *
+         * @param mod     修饰符变量
+         * @param builder 字符串构建器
+         * @return 字符串构建器
+         */
         protected StringBuilder modifier(final int mod, final StringBuilder builder) {
             if (Modifier.isPublic(mod)) {
                 builder.append("public");
@@ -270,5 +285,4 @@ public class JavassistProxyFactory implements ProxyFactory {
             return builder;
         }
     }
-
 }

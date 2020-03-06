@@ -56,9 +56,9 @@ public class HealthProbe {
     /**
      * 获取单例
      *
-     * @return
+     * @return 探针
      */
-    public static final HealthProbe getInstance() {
+    public static HealthProbe getInstance() {
         if (INSTANCE == null) {
             synchronized (HealthProbe.class) {
                 if (INSTANCE == null) {

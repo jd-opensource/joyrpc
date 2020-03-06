@@ -19,3 +19,7 @@
 [pid]
 [start.time]
 [os.type]
+[appPath]=[application.path]
+[appId]=[application.id]
+[appName]=[application.name]
+[appInsId]=[application.instance]

@@ -20,7 +20,6 @@ package io.joyrpc.constants;
  * #L%
  */
 
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.OsType;
 import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.extension.URL;
@@ -259,6 +258,8 @@ public class Constants {
     public static final String PROTOCOL_KEY = "protocol";
 
     public static final String PROTOCOL_VERSION_KEY = "protocol.version";
+
+    public static final String KEY_PID = "pid";
 
     /**
      * 当前所在文件夹地址

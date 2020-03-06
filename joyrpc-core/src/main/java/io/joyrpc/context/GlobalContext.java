@@ -33,9 +33,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.CONTEXT_SUPPLIER;
-import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.PropertiesUtils.read;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 
 /**
@@ -93,11 +91,6 @@ public class GlobalContext {
                     doPut(target, BUILD_VERSION_KEY, Version.BUILD_VERSION);
                     //读取系统内置的和用户的配置
                     loadConfig(new String[]{"META-INF/system_context", "user_context"}, target, recognizer);
-                    //变量兼容
-                    doPut(target, KEY_APPAPTH, target.get(Environment.APPLICATION_PATH));
-                    doPut(target, KEY_APPID, target.get(Environment.APPLICATION_ID));
-                    doPut(target, KEY_APPNAME, target.get(Environment.APPLICATION_NAME));
-                    doPut(target, KEY_APPINSID, target.get(Environment.APPLICATION_INSTANCE));
                     //打印默认的上下文
                     if (logger.isInfoEnabled()) {
                         String line = System.getProperty("line.separator");
@@ -164,27 +157,20 @@ public class GlobalContext {
     }
 
     /**
-     * 从资源文件加载
-     *
-     * @param map
-     * @param resource
-     */
-    protected static void loadResource(final Map<String, Object> map, final String resource) {
-        try {
-            read(resource, (k, v) -> doPut(map, k, v));
-        } catch (Exception e) {
-            logger.error("Error occurs while reading global config from " + resource, e);
-        }
-    }
-
-    /**
      * 获取进程号
      *
      * @return
      */
     public static Integer getPid() {
         if (pid == null) {
-            pid = ENVIRONMENT.get().getInteger(Environment.PID);
+            Object value = get(KEY_PID);
+            if (value != null) {
+                if (value instanceof Number) {
+                    pid = ((Number) value).intValue();
+                } else if (value instanceof CharSequence) {
+                    pid = Integer.parseInt(value.toString());
+                }
+            }
         }
         return pid;
     }

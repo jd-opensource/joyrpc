@@ -9,9 +9,9 @@ package io.joyrpc.proxy;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,7 +25,6 @@ import io.joyrpc.extension.Extensible;
 import io.joyrpc.util.ClassUtils;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 
 /**
  * The interface Proxy factory.
@@ -57,16 +56,5 @@ public interface ProxyFactory {
      * @throws ProxyException
      */
     <T> T getProxy(Class<T> clz, InvocationHandler invoker, ClassLoader classLoader) throws ProxyException;
-
-    /**
-     * 根据方法参数动态生成参数包装类，便于支持grpc调用
-     *
-     * @param method
-     * @return
-     * @throws ProxyException
-     */
-    default Class generateParameterCls(final Class clz, final Method method) throws ProxyException {
-        return null;
-    }
 
 }

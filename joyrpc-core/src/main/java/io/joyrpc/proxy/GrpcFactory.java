@@ -38,7 +38,8 @@ public interface GrpcFactory {
     /**
      * 动态生成参数和返回值的包装类，便于支持grpc调用
      *
-     * @param method
+     * @param clz    类型
+     * @param method 方法
      * @return
      * @throws ProxyException
      */

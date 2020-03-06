@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.hessian2;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,6 +33,9 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * hessian2序列化协议
@@ -58,7 +61,7 @@ public class Hessian2Serialization implements Serialization, BlackList.BlackList
     @Override
     public void updateBlack(final String blackList) {
         List<String> remotes = blackList == null || blackList.isEmpty() ?
-                new ArrayList<>(0) : Arrays.asList(blackList.split("[;,\\s\\n]"));
+                new ArrayList<>(0) : Arrays.asList(split(blackList, SEMICOLON_COMMA_WHITESPACE));
         Hessian2Serializer.BLACK_LIST.updateBlack(remotes);
     }
 

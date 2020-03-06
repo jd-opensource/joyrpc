@@ -58,7 +58,7 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         if (extensible == null) {
             return null;
         }
-        List<Plugin<T>> result = new LinkedList<Plugin<T>>();
+        List<Plugin<T>> result = new LinkedList<>();
         if (registry != null) {
             BeanDefinition definition;
             Class<?> clazz;

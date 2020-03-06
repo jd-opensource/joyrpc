@@ -20,11 +20,15 @@ package io.joyrpc.context;
  * #L%
  */
 
+import io.joyrpc.extension.Extension;
+
 import static io.joyrpc.Plugin.ENVIRONMENT;
+import static io.joyrpc.context.ContextSupplier.CONTEXT_ORDER;
 
 /**
  * 环境变量识别上下文
  */
+@Extension(value = "environment", order = CONTEXT_ORDER)
 public class EnvironmentContextSupplier implements ContextSupplier {
 
     protected Environment env;

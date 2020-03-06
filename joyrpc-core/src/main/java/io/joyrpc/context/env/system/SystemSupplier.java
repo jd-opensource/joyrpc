@@ -24,16 +24,14 @@ import com.sun.management.OperatingSystemMXBean;
 import io.joyrpc.context.EnvironmentSupplier;
 import io.joyrpc.context.OsType;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.util.Pair;
-import io.joyrpc.util.Resource;
 
 import java.lang.management.ManagementFactory;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import static io.joyrpc.context.Environment.*;
 import static io.joyrpc.context.EnvironmentSupplier.SYSTEM_ORDER;
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
-import static io.joyrpc.util.StringUtils.split;
 
 /**
  * 系统环境变量提供者，从环境变量和系统属性获取，支持黑白名单和变量重命名。<br/>
@@ -46,22 +44,6 @@ public class SystemSupplier implements EnvironmentSupplier {
 
     @Override
     public Map<String, String> environment() {
-        List<String> names = Resource.lines(new String[]{"META-INF/system_env", "user_env"}, true);
-        //重命名规则
-        List<Pair<String, String[]>> renameRules = new LinkedList<>();
-        for (String name : names) {
-            //判断重命名
-            int pos = name.indexOf('=');
-            if (pos >= 0) {
-                String alias = name.substring(0, pos);
-                String source = name.substring(pos + 1);
-                if (!alias.isEmpty()) {
-                    String[] parts = split(source, SEMICOLON_COMMA_WHITESPACE);
-                    renameRules.add(Pair.of(alias, parts));
-                }
-            }
-        }
-
         //从系统环境获取
         Map<String, String> env = System.getenv();
         Map<String, String> result = new HashMap<>(env.size());
@@ -70,21 +52,7 @@ public class SystemSupplier implements EnvironmentSupplier {
         }
         //从系统属性和jvm参数获取
         Properties properties = System.getProperties();
-        properties.forEach((k, v) -> {
-            result.putIfAbsent(k.toString(), v.toString());
-        });
-        //遍历重命名
-        String value;
-        for (Pair<String, String[]> rule : renameRules) {
-            for (String part : rule.getValue()) {
-                value = result.get(part);
-                if (value != null) {
-                    if (result.putIfAbsent(rule.getKey(), value) != null) {
-                        break;
-                    }
-                }
-            }
-        }
+        properties.forEach((k, v) -> result.putIfAbsent(k.toString(), v.toString()));
         //从系统运行时获取
         result.putIfAbsent(MEMORY, String.valueOf(getMemory()));
         result.putIfAbsent(CPU_CORES, String.valueOf(getCpuCores()));

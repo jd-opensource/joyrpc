@@ -5,6 +5,10 @@ package io.joyrpc.context;
  */
 public interface ContextSupplier {
 
+    int CONTEXT_ORDER = 100;
+
+    int SPRING_ORDER = CONTEXT_ORDER + 10;
+
     /**
      * 识别上下文
      *

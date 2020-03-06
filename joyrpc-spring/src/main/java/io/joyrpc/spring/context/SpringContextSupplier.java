@@ -1,4 +1,4 @@
-package io.joyrpc.spring.boot;
+package io.joyrpc.spring.context;
 
 /*-
  * #%L
@@ -21,23 +21,27 @@ package io.joyrpc.spring.boot;
  */
 
 import io.joyrpc.context.ContextSupplier;
+import io.joyrpc.extension.Extension;
 import org.springframework.core.env.ConfigurableEnvironment;
+
+import static io.joyrpc.context.ContextSupplier.SPRING_ORDER;
 
 /**
  * RPC上下文变量识别
  *
  * @description:
  */
-public class RpcContextSupplier implements ContextSupplier {
+@Extension(value = "spring", order = SPRING_ORDER)
+public class SpringContextSupplier implements ContextSupplier {
 
-    public static final String BEAN_NAME = "rpcContextSupplier";
+    public static final String BEAN_NAME = "springContextSupplier";
 
     /**
      * 环境配置
      */
     protected ConfigurableEnvironment environment;
 
-    public RpcContextSupplier(ConfigurableEnvironment environment) {
+    public SpringContextSupplier(ConfigurableEnvironment environment) {
         this.environment = environment;
     }
 

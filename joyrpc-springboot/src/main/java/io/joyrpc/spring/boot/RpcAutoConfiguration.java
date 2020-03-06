@@ -20,6 +20,8 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
+import io.joyrpc.spring.context.SpringContextSupplier;
+import io.joyrpc.spring.context.SpringEnvironmentSupplier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
@@ -44,9 +46,15 @@ public class RpcAutoConfiguration {
     }
 
     @ConditionalOnMissingBean
-    @Bean(name = RpcContextSupplier.BEAN_NAME)
-    public static RpcContextSupplier rpcContextSupplier(ConfigurableEnvironment environment) {
-        return new RpcContextSupplier(environment);
+    @Bean(name = SpringContextSupplier.BEAN_NAME)
+    public static SpringContextSupplier springContextSupplier(ConfigurableEnvironment environment) {
+        return new SpringContextSupplier(environment);
+    }
+
+    @ConditionalOnMissingBean
+    @Bean(name = SpringEnvironmentSupplier.BEAN_NAME)
+    public static SpringEnvironmentSupplier springEnvironmentSupplier(ConfigurableEnvironment environment) {
+        return new SpringEnvironmentSupplier(environment);
     }
 
 }

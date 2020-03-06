@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,6 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.authentication.AuthenticationRequest;
 import io.joyrpc.protocol.message.authentication.AuthenticationResponse;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.DefaultSession;
@@ -84,23 +83,26 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         }
         //判断认证算法是否一致
         Authenticator authenticator = exporter.getAuthenticator();
-        if (!authenticator.type().equals(authReq.getType())) {
+        if (authenticator == null) {
+            //没有配置认证
+            session.setAuthenticated(true);
+            channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), new AuthenticationResponse(PASS)), sendFailed);
+        } else if (!authenticator.type().equals(authReq.getType())) {
+            //认证类型不对
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
                     new AuthenticationResponse(NOT_PASS,
                             String.format("authenticator must be %s. class=%s,alias=%s,port=%d",
                                     authenticator.type(), className, alias, port))),
                     sendFailed);
-            return;
-        }
-        try {
-            AuthenticationResponse response = authenticator == null ? new AuthenticationResponse(PASS, null) :
-                    authenticator.authenticate(exporter.getUrl(), authReq);
-            session.setAuthenticated(response.isSuccess());
-
-            channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), response), sendFailed);
-        } catch (Exception e) {
-            channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
-                    new AuthenticationResponse(NOT_PASS, e.getMessage())), sendFailed);
+        } else {
+            try {
+                AuthenticationResponse response = authenticator.authenticate(exporter.getUrl(), authReq);
+                session.setAuthenticated(response.isSuccess());
+                channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), response), sendFailed);
+            } catch (Exception e) {
+                channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
+                        new AuthenticationResponse(NOT_PASS, e.getMessage())), sendFailed);
+            }
         }
 
     }

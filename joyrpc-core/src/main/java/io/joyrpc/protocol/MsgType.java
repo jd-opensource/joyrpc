@@ -68,11 +68,11 @@ public enum MsgType {
     /**
      * 认证请求
      */
-    AuthenticationReq((byte) 16, true, AuthenticationRequest.class),
+    AuthenticationReq((byte) 17, true, AuthenticationRequest.class),
     /**
      * 认证应答
      */
-    AuthenticationResp((byte) 16, false, AuthenticationResponse.class);
+    AuthenticationResp((byte) 18, false, AuthenticationResponse.class);
 
     /**
      * 类型
@@ -137,11 +137,14 @@ public enum MsgType {
                 return OfflineReq;
             case 16:
                 return OfflineResp;
+            case 17:
+                return AuthenticationReq;
+            case 18:
+                return AuthenticationResp;
             default:
                 return null;
         }
     }
-
 
     public byte getType() {
         return type;

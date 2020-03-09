@@ -82,11 +82,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         request.setContext(RequestContext.getContext());
         Invocation invocation = request.getPayLoad();
         Channel channel = context.getChannel();
-        //对应服务端协议，设置认证信息
-        ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
-        if (protocol != null) {
-            request.setAuthentication(protocol::isAuthenticated);
-        }
 
         if (request.isTimeout(request::getReceiveTime)) {
             // 客户端已经超时的请求
@@ -109,6 +104,13 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             if (exporter == null) {
                 //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
                 throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
+            }
+            //对应服务端协议，设置认证信息
+            if (exporter.getAuthenticator() != null) {
+                ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
+                if (protocol != null) {
+                    request.setAuthentication(protocol::isAuthenticated);
+                }
             }
 
             ChannelTransport transport = channel.getAttribute(Channel.CHANNEL_TRANSPORT);

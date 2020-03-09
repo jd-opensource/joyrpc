@@ -62,7 +62,7 @@ public class JoyClientProtocol extends AbstractProtocol implements ClientProtoco
     }
 
     @Override
-    public Message negotiation(final URL clusterUrl, final Client client) {
+    public Message negotiate(final URL clusterUrl, final Client client) {
         //构造协商请求
         NegotiationRequest negotiation = new NegotiationRequest(clusterUrl,
                 new NegotiationOption(Constants.SERIALIZATION_OPTION, "msgpack", "json0", "json1"),
@@ -83,7 +83,7 @@ public class JoyClientProtocol extends AbstractProtocol implements ClientProtoco
     }
 
     @Override
-    public Message authorization(final URL clusterUrl, final Client client) {
+    public Message authenticate(final URL clusterUrl, final Client client) {
         Authenticator authenticator = AUTHENTICATOR.get(clusterUrl.getString(Constants.AUTHENTICATION_OPTION));
         if (authenticator != null && authenticator.support(clusterUrl)) {
             AuthenticationRequest request = authenticator.identity(clusterUrl);

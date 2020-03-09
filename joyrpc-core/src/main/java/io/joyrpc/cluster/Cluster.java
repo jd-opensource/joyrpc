@@ -101,9 +101,9 @@ public class Cluster {
      */
     protected EndpointFactory factory;
     /**
-     * 授权认证提供者
+     * 身份认证提供者
      */
-    protected Function<URL, Message> authorization;
+    protected Function<URL, Message> authentication;
     /**
      * 仪表盘提供者
      */
@@ -186,7 +186,7 @@ public class Cluster {
     }
 
     public Cluster(final String name, final URL url, final Registar registar, final Candidature candidature,
-                   final EndpointFactory factory, final Function<URL, Message> authorization,
+                   final EndpointFactory factory, final Function<URL, Message> authentication,
                    final DashboardFactory<Dashboard> dashboardFactory,
                    final Iterable<? extends MetricHandler> metricHandlers,
                    final Publisher<NodeEvent> clusterPublisher) {
@@ -198,7 +198,7 @@ public class Cluster {
         Objects.requireNonNull(this.registar, "registar can not be null.");
         this.candidature = candidature != null ? candidature : CANDIDATURE.get(url.getString(CANDIDATURE_OPTION), CANDIDATURE_OPTION.getValue());
         this.factory = factory != null ? factory : ENDPOINT_FACTORY.getOrDefault(url.getString("endpointFactory"));
-        this.authorization = authorization;
+        this.authentication = authentication;
         this.initSize = url.getInteger(Constants.INIT_SIZE_OPTION);
         this.minSize = url.getInteger(Constants.MIN_SIZE_OPTION);
         this.initTimeout = url.getLong(Constants.INIT_TIMEOUT_OPTION);
@@ -441,7 +441,7 @@ public class Cluster {
     protected Node createNode(final Shard shard, final NodeHandler handler) {
         return new Node(name, url, shard,
                 factory,
-                authorization,
+                authentication,
                 handler,
                 dashboardFactory == null ? null : dashboardFactory.create(url, DashboardType.Node),
                 metricPublisher);

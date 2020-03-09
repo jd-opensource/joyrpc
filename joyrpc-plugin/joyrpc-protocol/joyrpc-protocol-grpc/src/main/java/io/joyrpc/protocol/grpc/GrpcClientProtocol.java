@@ -84,7 +84,7 @@ public class GrpcClientProtocol extends AbstractProtocol implements ClientProtoc
     }
 
     @Override
-    public Message negotiation(URL clusterUrl, final Client client) {
+    public Message negotiate(URL clusterUrl, final Client client) {
         NegotiationResponse response = new NegotiationResponse();
         //设置可用的序列化插件
         response.setSerializations(SERIALIZATIONS);

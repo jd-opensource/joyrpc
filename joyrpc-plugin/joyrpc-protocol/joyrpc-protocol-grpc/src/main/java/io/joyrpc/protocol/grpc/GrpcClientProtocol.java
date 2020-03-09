@@ -33,13 +33,13 @@ import io.joyrpc.protocol.handler.ResponseChannelHandler;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 
 import java.util.Arrays;
@@ -108,6 +108,11 @@ public class GrpcClientProtocol extends AbstractProtocol implements ClientProtoc
         response.addAttribute(ALIAS_OPTION.getName(), clusterUrl.getString(ALIAS_OPTION));
         // 构造协商响应消息
         return new ResponseMessage<>(new MessageHeader(MsgType.NegotiationResp.getType()), response);
+    }
+
+    @Override
+    public boolean authentication() {
+        return false;
     }
 
     @Override

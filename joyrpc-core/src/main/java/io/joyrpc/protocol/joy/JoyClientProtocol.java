@@ -95,11 +95,6 @@ public class JoyClientProtocol extends AbstractProtocol implements ClientProtoco
     }
 
     @Override
-    public boolean authentication() {
-        return true;
-    }
-
-    @Override
     public Session session(final URL clusterUrl, final Client client) {
         return new DefaultSession();
     }

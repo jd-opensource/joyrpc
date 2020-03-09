@@ -31,6 +31,7 @@ import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
@@ -81,6 +82,11 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         request.setContext(RequestContext.getContext());
         Invocation invocation = request.getPayLoad();
         Channel channel = context.getChannel();
+        //对应服务端协议，设置认证信息
+        ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
+        if (protocol != null) {
+            request.setAuthentication(protocol::isAuthenticated);
+        }
 
         if (request.isTimeout(request::getReceiveTime)) {
             // 客户端已经超时的请求
@@ -181,6 +187,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         Invocation invocation = request.getPayLoad();
         transmits.forEach(o -> o.restoreOnReceive(request, session));
         invocation.apply(session);
+
         //类名，如果不存在则从会话里面获取
         String className = invocation.getClassName();
         if (className == null || className.isEmpty()) {

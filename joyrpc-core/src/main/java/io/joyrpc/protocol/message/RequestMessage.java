@@ -9,9 +9,9 @@ package io.joyrpc.protocol.message;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,9 +25,11 @@ import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.SystemClock;
 
 import java.net.InetSocketAddress;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
@@ -77,6 +79,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * 用于生成应答消息，便于传递请求的上下文
      */
     protected transient Supplier<ResponseMessage> responseSupplier;
+    /**
+     * 判断是否已经认证过
+     */
+    protected transient Predicate<Session> authentication;
 
     /**
      * 构造函数
@@ -252,6 +258,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setTimeout(long timeout) {
         this.timeout = timeout;
+    }
+
+    public Predicate<Session> getAuthentication() {
+        return authentication;
+    }
+
+    public void setAuthentication(Predicate<Session> authentication) {
+        this.authentication = authentication;
     }
 
     public Supplier<ResponseMessage> getResponseSupplier() {

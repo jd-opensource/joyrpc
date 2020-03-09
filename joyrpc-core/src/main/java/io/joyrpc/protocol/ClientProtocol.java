@@ -64,15 +64,6 @@ public interface ClientProtocol extends Protocol {
     }
 
     /**
-     * 协议是否支持身份认证消息
-     *
-     * @return 支持身份认证消息标识
-     */
-    default boolean authentication() {
-        return false;
-    }
-
-    /**
      * 构造session对象
      *
      * @param clusterUrl 集群url

@@ -111,11 +111,6 @@ public class GrpcClientProtocol extends AbstractProtocol implements ClientProtoc
     }
 
     @Override
-    public boolean authentication() {
-        return false;
-    }
-
-    @Override
     public Session session(final URL clusterUrl, Client client) {
         return new DefaultSession();
     }

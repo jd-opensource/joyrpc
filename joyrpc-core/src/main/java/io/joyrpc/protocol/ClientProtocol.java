@@ -69,7 +69,7 @@ public interface ClientProtocol extends Protocol {
      * @return 支持身份认证消息标识
      */
     default boolean authentication() {
-        return true;
+        return false;
     }
 
     /**

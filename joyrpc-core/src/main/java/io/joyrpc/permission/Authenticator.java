@@ -9,9 +9,9 @@ package io.joyrpc.permission;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,8 @@ import io.joyrpc.extension.Type;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.authentication.AuthenticationRequest;
 import io.joyrpc.protocol.message.authentication.AuthenticationResponse;
+
+import java.util.Map;
 
 /**
  * 认证接口
@@ -47,6 +49,14 @@ public interface Authenticator extends Type<String> {
      * @return
      */
     AuthenticationRequest identity(URL url);
+
+    /**
+     * 构造身份请求，可用于服务端收到请求时候构造身份信息
+     *
+     * @param attachments 扩展信息
+     * @return 身份请求
+     */
+    AuthenticationRequest identity(Map<String, Object> attachments);
 
     /**
      * 进行认证

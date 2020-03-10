@@ -9,9 +9,9 @@ package io.joyrpc.protocol.http.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -88,7 +88,7 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
 
     @Override
     public Object received(final ChannelContext ctx, final Object msg) {
-        if (msg == null || !(msg instanceof HttpRequestMessage)) {
+        if (!(msg instanceof HttpRequestMessage)) {
             return msg;
         }
         HttpRequestMessage message = (HttpRequestMessage) msg;
@@ -130,9 +130,9 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     /**
      * 把HTTP请求转换成joy请求
      *
-     * @param channel
-     * @param msg
-     * @param isKeepAlive
+     * @param channel     通道
+     * @param msg         消息
+     * @param isKeepAlive 保持连接
      * @return
      * @throws Exception
      */
@@ -167,7 +167,7 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     /**
      * 创建请求消息头
      *
-     * @return
+     * @return 消息头
      */
     protected MessageHeader createHeader() {
         return new MessageHeader(MsgType.BizReq.getType(), (byte) Serialization.JSON_ID, PROTOCOL_NUMBER);
@@ -176,12 +176,12 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     /**
      * 解析参数
      *
-     * @param invocation
-     * @param message
-     * @param parametric
-     * @param url
-     * @param params
-     * @return
+     * @param invocation 请求
+     * @param message    消息
+     * @param parametric 参数化
+     * @param url        url
+     * @param params     参数名
+     * @return 参数值对象
      */
     protected Object[] parseArgs(final Invocation invocation,
                                  final HttpRequestMessage message,
@@ -250,8 +250,8 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
      * @param value     字符串
      * @return
      */
-    protected Object convert(final Class clazz, final Method method, final Parameter parameter, final int index, final String value) {
-        Class type = parameter.getType();
+    protected Object convert(final Class<?> clazz, final Method method, final Parameter parameter, final int index, final String value) {
+        Class<?> type = parameter.getType();
         if (String.class.equals(type)) {
             try {
                 return URLDecoder.decode(value, "UTF-8");
@@ -265,7 +265,7 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
         } else if (short.class.equals(type) || Short.class.equals(type)) {
             return Short.decode(value);
         } else if (char.class.equals(type) || Character.class.equals(type)) {
-            return Character.valueOf(value.charAt(0));
+            return value.charAt(0);
         } else if (int.class.equals(type) || Integer.class.equals(type)) {
             return Integer.decode(value);
         } else if (long.class.equals(type) || Long.class.equals(type)) {
@@ -282,14 +282,14 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     /**
      * 回写数据
      *
-     * @param channel
-     * @param isSuccess
-     * @param message
-     * @param isKeepAlive
-     * @return
+     * @param channel     通道
+     * @param isSuccess   成功标识
+     * @param message     消息
+     * @param isKeepAlive 保持连接
+     * @return 消息长度
      */
     protected int writeBack(final Channel channel, final boolean isSuccess, final String message, final boolean isKeepAlive) {
-        ResponseMessage response = new ResponseMessage();
+        ResponseMessage<ResponsePayload> response = new ResponseMessage<>();
         MessageHeader header = response.getHeader();
         header.addAttribute(HeaderMapping.CONTENT_TYPE.getNum(), isSuccess ? "text/html; charset=UTF-8" : "text/json; charset=UTF-8");
         header.addAttribute(KEEP_ALIVE.getNum(), isKeepAlive);

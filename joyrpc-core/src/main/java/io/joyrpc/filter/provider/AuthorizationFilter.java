@@ -77,7 +77,7 @@ public class AuthorizationFilter extends AbstractProviderFilter {
                     authRequest.addAttribute(Constants.KEY_APPID, invocation.getAttachment(Constants.HIDDEN_KEY_APPID));
                     authRequest.addAttribute(Constants.KEY_APPNAME, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
                     authRequest.addAttribute(Constants.KEY_APPNAME, session.getRemoteAppName());
-                    authRequest.addAttribute(Constants.KEY_APPID, session.getRemoteAppGroup());
+                    authRequest.addAttribute(Constants.KEY_APPID, session.getRemoteAppId());
                     authRequest.addAttribute(Constants.KEY_APPGROUP, session.getRemoteAppGroup());
 
                     sessionAuth = authentication.authenticate(authRequest).isSuccess() ? AUTH_SESSION_SUCCESS : AUTH_SESSION_FAIL;

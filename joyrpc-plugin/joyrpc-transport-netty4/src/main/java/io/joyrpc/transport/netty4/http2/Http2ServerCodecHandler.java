@@ -34,6 +34,9 @@ import io.netty.handler.codec.http2.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+
 /**
  * http2 server端 编解码器
  *
@@ -102,7 +105,12 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
             //获取请求header
             io.joyrpc.transport.http2.Http2Headers reqHeaders = new io.joyrpc.transport.http2.DefaultHttp2Headers();
             if (http2Headers != null) {
-                http2Headers.forEach(t -> reqHeaders.set(t.getKey().toString(), t.getValue().toString()));
+                http2Headers.forEach(t -> {
+                    try {
+                        reqHeaders.set(t.getKey().toString(), URLDecoder.decode(t.getValue().toString(), "UTF-8"));
+                    } catch (UnsupportedEncodingException ignored) {
+                    }
+                });
             }
             //获取请求body
             byte[] content = body != null ? (byte[]) codec.decode(new Http2DecodeContext(channel), new NettyChannelBuffer(body)) : null;

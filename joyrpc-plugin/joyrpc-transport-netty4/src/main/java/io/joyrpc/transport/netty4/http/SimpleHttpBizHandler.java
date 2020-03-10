@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.http;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.handler.codec.http.FullHttpRequest;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.List;
 
 /**
@@ -52,7 +54,12 @@ public class SimpleHttpBizHandler extends MessageToMessageDecoder<FullHttpReques
         HttpMethod method = HttpMethod.valueOf(msg.method().name());
         //headers
         HttpHeaders httpHeaders = new DefaultHttpHeaders();
-        msg.headers().forEach(h -> httpHeaders.set(h.getKey(), h.getValue()));
+        msg.headers().forEach(h -> {
+            try {
+                httpHeaders.set(h.getKey(), URLDecoder.decode(h.getValue(), "UTF-8"));
+            } catch (UnsupportedEncodingException ignored) {
+            }
+        });
         //content
         byte[] content = method == HttpMethod.GET ? new byte[0] : getContentByMsg(msg);
         //创建HttpRequestMessage对象HttpRequestMessage

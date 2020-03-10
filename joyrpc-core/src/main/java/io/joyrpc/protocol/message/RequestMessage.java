@@ -23,13 +23,16 @@ package io.joyrpc.protocol.message;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Authorization;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.SystemClock;
 
 import java.net.InetSocketAddress;
-import java.util.function.Predicate;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -82,7 +85,19 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 判断是否已经认证过
      */
-    protected transient Predicate<Session> authentication;
+    protected transient Function<Session, Integer> authenticated;
+    /**
+     * 身份信息
+     */
+    protected transient Identification identification;
+    /**
+     * 认证
+     */
+    protected transient Authentication authentication;
+    /**
+     * 权限认证
+     */
+    protected transient Authorization authorization;
 
     /**
      * 构造函数
@@ -260,12 +275,36 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.timeout = timeout;
     }
 
-    public Predicate<Session> getAuthentication() {
+    public Function<Session, Integer> getAuthenticated() {
+        return authenticated;
+    }
+
+    public void setAuthenticated(Function<Session, Integer> authenticated) {
+        this.authenticated = authenticated;
+    }
+
+    public Identification getIdentification() {
+        return identification;
+    }
+
+    public void setIdentification(Identification identification) {
+        this.identification = identification;
+    }
+
+    public Authentication getAuthentication() {
         return authentication;
     }
 
-    public void setAuthentication(Predicate<Session> authentication) {
+    public void setAuthentication(Authentication authentication) {
         this.authentication = authentication;
+    }
+
+    public Authorization getAuthorization() {
+        return authorization;
+    }
+
+    public void setAuthorization(Authorization authorization) {
+        this.authorization = authorization;
     }
 
     public Supplier<ResponseMessage> getResponseSupplier() {

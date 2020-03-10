@@ -21,6 +21,7 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Invoker;
+import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -36,7 +37,9 @@ import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.ShutdownExecption;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.ExporterEvent.EventType;
-import io.joyrpc.permission.Authenticator;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Authorization;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.DecoratorServer;
@@ -54,8 +57,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
-import static io.joyrpc.Plugin.AUTHENTICATOR;
-import static io.joyrpc.Plugin.FILTER_CHAIN_FACTORY;
+import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
@@ -119,9 +121,17 @@ public class Exporter extends AbstractInvoker {
      */
     protected Registry subscribe;
     /**
-     * 认证插件
+     * 身份提供者
      */
-    protected Authenticator authenticator;
+    protected Identification identification;
+    /**
+     * 身份认证
+     */
+    protected Authentication authentication;
+    /**
+     * 权限认证
+     */
+    protected Authorization authorization;
     /**
      * 预热
      */
@@ -186,9 +196,18 @@ public class Exporter extends AbstractInvoker {
                 Constants.METHOD_KEY.apply(m.getName(), String.valueOf(HIDE_KEY_PREFIX)), true));
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
-        this.authenticator = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
+        this.identification = IDENTIFICATION.get(url.getString(Constants.IDENTIFICATION_OPTION));
+        this.authentication = AUTHENTICATOR.get(url.getString(Constants.AUTHENTICATION_OPTION));
+        this.authorization = AUTHORIZATION.get(url.getString(Constants.AUTHORIZATION_OPTION));
         this.publisher = publisher;
         this.publisher.offer(new ExporterEvent(EventType.INITIAL, name, this));
+        //设置权限认证信息
+        if (authentication != null && authentication instanceof InvokerAware) {
+            setup((InvokerAware) authentication);
+        }
+        if (authorization != null && authorization instanceof InvokerAware) {
+            setup((InvokerAware) authorization);
+        }
     }
 
     @Override
@@ -287,6 +306,10 @@ public class Exporter extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
+        //注入身份认证信息和鉴权
+        request.setAuthentication(authentication);
+        request.setIdentification(identification);
+        request.setAuthorization(authorization);
         Invocation invocation = request.getPayLoad();
         //设置调用的对象，便于Validate
         invocation.setObject(ref);
@@ -410,7 +433,15 @@ public class Exporter extends AbstractInvoker {
         return port;
     }
 
-    public Authenticator getAuthenticator() {
-        return authenticator;
+    public Authentication getAuthentication() {
+        return authentication;
+    }
+
+    public Identification getIdentification() {
+        return identification;
+    }
+
+    public Authorization getAuthorization() {
+        return authorization;
     }
 }

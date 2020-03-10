@@ -1,1 +1,3 @@
 #环境变量重命名
+#应用名称
+appName=spring.application.name

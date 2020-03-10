@@ -26,6 +26,8 @@ import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 
+import static io.joyrpc.transport.session.Session.AUTH_SESSION_NONE;
+
 /**
  * 服务协议
  */
@@ -62,8 +64,8 @@ public interface ServerProtocol extends Protocol {
      *
      * @return 判断会话是否认证成功
      */
-    default boolean isAuthenticated(final Session session) {
-        return true;
+    default int authenticate(final Session session) {
+        return AUTH_SESSION_NONE;
     }
 
     /**

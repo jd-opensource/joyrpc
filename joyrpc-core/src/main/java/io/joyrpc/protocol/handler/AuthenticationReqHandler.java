@@ -23,7 +23,8 @@ package io.joyrpc.protocol.handler;
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
-import io.joyrpc.permission.Authenticator;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
@@ -34,6 +35,7 @@ import io.joyrpc.protocol.message.authentication.AuthenticationResponse;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.DefaultSession;
+import io.joyrpc.transport.session.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,22 +84,23 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
             return;
         }
         //判断认证算法是否一致
-        Authenticator authenticator = exporter.getAuthenticator();
-        if (authenticator == null) {
+        Identification identification = exporter.getIdentification();
+        Authentication authenticator = exporter.getAuthentication();
+        if (identification == null || authenticator == null) {
             //没有配置认证
-            session.setAuthenticated(true);
+            session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), new AuthenticationResponse(PASS)), sendFailed);
-        } else if (!authenticator.type().equals(authReq.getType())) {
-            //认证类型不对
+        } else if (!identification.type().equals(authReq.getType())) {
+            //身份类型不对
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
                     new AuthenticationResponse(NOT_PASS,
-                            String.format("authenticator must be %s. class=%s,alias=%s,port=%d",
-                                    authenticator.type(), className, alias, port))),
+                            String.format("identification must be %s. class=%s,alias=%s,port=%d",
+                                    identification.type(), className, alias, port))),
                     sendFailed);
         } else {
             try {
-                AuthenticationResponse response = authenticator.authenticate(exporter.getUrl(), authReq);
-                session.setAuthenticated(response.isSuccess());
+                AuthenticationResponse response = authenticator.authenticate(authReq);
+                session.setAuthenticated(response.isSuccess() ? Session.AUTH_SESSION_SUCCESS : Session.AUTH_SESSION_FAIL);
                 channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), response), sendFailed);
             } catch (Exception e) {
                 channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),

@@ -39,6 +39,21 @@ public interface Session {
     String REMOTE_START_TIMESTAMP = "remoteStartTime";
 
     /**
+     * 会话认证成功
+     */
+    int AUTH_SESSION_SUCCESS = 1;
+
+    /**
+     * 会话认证失败
+     */
+    int AUTH_SESSION_FAIL = -1;
+
+    /**
+     * 没有进行会话认证
+     */
+    int AUTH_SESSION_NONE = 0;
+
+    /**
      * 获取会话ID
      *
      * @return
@@ -107,14 +122,14 @@ public interface Session {
      *
      * @return
      */
-    boolean isAuthenticated();
+    int getAuthenticated();
 
     /**
      * 设置认证
      *
      * @param authenticated
      */
-    void setAuthenticated(boolean authenticated);
+    void setAuthenticated(int authenticated);
 
     /**
      * 获取序列化

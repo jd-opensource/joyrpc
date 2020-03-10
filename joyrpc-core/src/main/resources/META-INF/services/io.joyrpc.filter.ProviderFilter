@@ -5,6 +5,6 @@ io.joyrpc.filter.provider.GenericFilter
 io.joyrpc.filter.provider.IPPermissionFilter
 io.joyrpc.filter.provider.LimiterFilter
 io.joyrpc.filter.provider.MethodBlackWhiteListFilter
-io.joyrpc.filter.provider.MethodTokenFilter
+io.joyrpc.filter.provider.AuthorizationFilter
 io.joyrpc.filter.provider.TimeoutFilter
 io.joyrpc.filter.provider.ValidationFilter

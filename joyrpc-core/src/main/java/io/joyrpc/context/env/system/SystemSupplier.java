@@ -21,6 +21,7 @@ package io.joyrpc.context.env.system;
  */
 
 import com.sun.management.OperatingSystemMXBean;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.context.EnvironmentSupplier;
 import io.joyrpc.context.OsType;
 import io.joyrpc.extension.Extension;
@@ -30,7 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
-import static io.joyrpc.context.Environment.*;
 import static io.joyrpc.context.EnvironmentSupplier.SYSTEM_ORDER;
 
 /**
@@ -54,11 +54,11 @@ public class SystemSupplier implements EnvironmentSupplier {
         Properties properties = System.getProperties();
         properties.forEach((k, v) -> result.putIfAbsent(k.toString(), v.toString()));
         //从系统运行时获取
-        result.putIfAbsent(MEMORY, String.valueOf(getMemory()));
-        result.putIfAbsent(CPU_CORES, String.valueOf(getCpuCores()));
-        result.put(PID, String.valueOf(getPid()));
-        result.put(START_TIME, String.valueOf(getStartTime()));
-        result.put(OS_TYPE, getOsType().toString());
+        result.putIfAbsent(Constants.KEY_MEMORY, String.valueOf(getMemory()));
+        result.putIfAbsent(Constants.KEY_CPU_CORES, String.valueOf(getCpuCores()));
+        result.put(Constants.KEY_PID, String.valueOf(getPid()));
+        result.put(Constants.KEY_START_TIME, String.valueOf(getStartTime()));
+        result.put(Constants.KEY_OS_TYPE, getOsType().toString());
 
         return result;
     }
@@ -102,7 +102,7 @@ public class SystemSupplier implements EnvironmentSupplier {
      * @return
      */
     protected OsType getOsType() {
-        return OsType.detect(System.getProperty(OS_NAME));
+        return OsType.detect(System.getProperty(Constants.KEY_OS_NAME));
     }
 
     /**

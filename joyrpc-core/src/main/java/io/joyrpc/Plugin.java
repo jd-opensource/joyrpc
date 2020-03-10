@@ -56,7 +56,9 @@ import io.joyrpc.invoker.ExceptionHandler;
 import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.GroupInvoker;
 import io.joyrpc.metric.DashboardFactory;
-import io.joyrpc.permission.Authenticator;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Authorization;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.Protocol.ProtocolVersion;
@@ -227,9 +229,18 @@ public interface Plugin {
     ExtensionPoint<Serialization, String> SERIALIZATION = new ExtensionPointLazy<>(Serialization.class);
 
     /**
-     * 认证插件
+     * 身份认证插件
      */
-    ExtensionPoint<Authenticator, String> AUTHENTICATOR = new ExtensionPointLazy<>(Authenticator.class);
+    ExtensionPoint<Authentication, String> AUTHENTICATOR = new ExtensionPointLazy<>(Authentication.class);
+
+    /**
+     * 身份插件
+     */
+    ExtensionPoint<Identification, String> IDENTIFICATION = new ExtensionPointLazy<>(Identification.class);
+    /**
+     * 权限认证
+     */
+    ExtensionPoint<Authorization, String> AUTHORIZATION = new ExtensionPointLazy<>(Authorization.class);
 
     /**
      * JSON提供者

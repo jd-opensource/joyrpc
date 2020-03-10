@@ -1,9 +1,8 @@
 package io.joyrpc.invoker.chain;
 
 import io.joyrpc.Invoker;
+import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
-import io.joyrpc.cluster.Cluster;
-import io.joyrpc.cluster.ClusterAware;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.constants.Constants;
@@ -21,6 +20,7 @@ import io.joyrpc.protocol.message.RequestMessage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.CONSUMER_FILTER;
@@ -36,12 +36,12 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
 
     @Override
     public Invoker build(final Refer refer, final Invoker last) {
-        return build(refer.getCluster(), refer.getInterfaceClass(), refer.getInterfaceName(), refer.getUrl(), last, CONSUMER_FILTER);
+        return build(refer.getUrl(), refer.getBuilder(), last, CONSUMER_FILTER);
     }
 
     @Override
     public Invoker build(final Exporter exporter, final Invoker last) {
-        return build(null, exporter.getInterfaceClass(), exporter.getInterfaceName(), exporter.getUrl(), last, PROVIDER_FILTER);
+        return build(exporter.getUrl(), exporter.getBuilder(), last, PROVIDER_FILTER);
     }
 
     @Override
@@ -61,18 +61,14 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     /**
      * 构造过滤链
      *
-     * @param cluster   集群
-     * @param clazz     接口类
-     * @param className 接口类名
      * @param url       参数
+     * @param consumer  消费者
      * @param last      最后调用器
      * @param extension 过滤链扩展点
      * @return 调用
      */
-    protected <T extends Filter> Invoker build(final Cluster cluster,
-                                               final Class<?> clazz,
-                                               final String className,
-                                               final URL url,
+    protected <T extends Filter> Invoker build(final URL url,
+                                               final Consumer<InvokerAware> consumer,
                                                final Invoker last,
                                                final ExtensionPoint<T, String> extension) {
         List<Filter> filters = getFilters(url, extension);
@@ -81,13 +77,7 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
             Filter filter;
             for (int i = filters.size() - 1; i >= 0; i--) {
                 filter = filters.get(i);
-                filter.setClass(clazz);
-                filter.setClassName(className);
-                filter.setUrl(url);
-                if (cluster != null && filter instanceof ClusterAware) {
-                    ((ClusterAware) filter).setCluster(cluster);
-                }
-                filter.setup();
+                consumer.accept(filter);
                 //需要传入Refer或Exporter的名字，方便并发数控制
                 next = new FilterInvoker(filter, next, last.getName());
             }

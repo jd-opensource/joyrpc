@@ -51,4 +51,34 @@ public abstract class Maps {
         consumer.accept(value, add.get());
         return value;
     }
+
+    /**
+     * 修改
+     *
+     * @param map   Map对象
+     * @param key   键
+     * @param value 值
+     * @param <K>
+     * @param <V>
+     * @return
+     */
+    public static <K, V> V put(final Map<K, V> map, final K key, final V value) {
+        return key == null || value == null ? null : map.put(key, value);
+    }
+
+    /**
+     * 获取值
+     *
+     * @param map       Map对象
+     * @param key       键
+     * @param candidate 候选键
+     * @return 值
+     */
+    public static <K, V> V get(final Map<K, V> map, final K key, final K candidate) {
+        V result = map.get(key);
+        if (result == null) {
+            result = map.get(candidate);
+        }
+        return result;
+    }
 }

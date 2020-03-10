@@ -21,8 +21,10 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Invoker;
+import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.Cluster;
+import io.joyrpc.cluster.ClusterAware;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -581,6 +583,14 @@ public class Refer extends AbstractInvoker {
                 }
                 break;
         }
+    }
+
+    @Override
+    protected void setup(final InvokerAware target) {
+        if (target instanceof ClusterAware) {
+            ((ClusterAware) target).setCluster(cluster);
+        }
+        super.setup(target);
     }
 
     public Cluster getCluster() {

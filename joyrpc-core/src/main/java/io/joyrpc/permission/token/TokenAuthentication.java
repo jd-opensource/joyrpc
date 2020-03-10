@@ -20,11 +20,11 @@ package io.joyrpc.permission.token;
  * #L%
  */
 
+import io.joyrpc.InvokerAware;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.permission.Authenticator;
+import io.joyrpc.permission.Authentication;
 import io.joyrpc.protocol.message.authentication.AuthenticationRequest;
 import io.joyrpc.protocol.message.authentication.AuthenticationResponse;
 
@@ -33,39 +33,54 @@ import java.util.Map;
 import static io.joyrpc.protocol.message.authentication.AuthenticationResponse.NOT_PASS;
 import static io.joyrpc.protocol.message.authentication.AuthenticationResponse.PASS;
 
-@Extension
-public class TokenAuthenticator implements Authenticator {
+/**
+ * 令牌认证
+ */
+@Extension("token")
+public class TokenAuthentication implements Authentication, InvokerAware {
+
+    /**
+     * URL
+     */
+    protected URL url;
+    /**
+     * 接口类，在泛型调用情况下，clazz和clazzName可能不相同
+     */
+    protected Class clazz;
+    /**
+     * 接口类名
+     */
+    protected String className;
+    /**
+     * 认证
+     */
+    protected String token;
+
     @Override
-    public boolean support(final URL url) {
-        String token = url.getString(Constants.HIDDEN_KEY_TOKEN);
-        return token != null && !token.isEmpty();
+    public void setUrl(URL url) {
+        this.url = url;
     }
 
     @Override
-    public AuthenticationRequest identity(final URL url) {
-        AuthenticationRequest result = new AuthenticationRequest(type());
-        result.addAttribute(Constants.HIDDEN_KEY_TOKEN, url.getString(Constants.HIDDEN_KEY_TOKEN));
-        return result;
+    public void setClass(Class clazz) {
+        this.clazz = clazz;
     }
 
     @Override
-    public AuthenticationRequest identity(final Map<String, Object> attachments) {
-        AuthenticationRequest result = new AuthenticationRequest(type());
-        MapParametric parametric = new MapParametric(attachments);
-        result.addAttribute(Constants.HIDDEN_KEY_TOKEN, parametric.getString(Constants.HIDDEN_KEY_TOKEN));
-        return result;
+    public void setClassName(String className) {
+        this.className = className;
     }
 
     @Override
-    public AuthenticationResponse authenticate(final URL url, final AuthenticationRequest request) {
+    public void setup() {
+        token = url.getString(Constants.HIDDEN_KEY_TOKEN);
+    }
+
+    @Override
+    public AuthenticationResponse authenticate(final AuthenticationRequest request) {
         Map<String, String> attributes = request.getAttributes();
-        String token = url.getString(Constants.HIDDEN_KEY_TOKEN);
         boolean pass = token == null || token.isEmpty() || token.equals(attributes == null ? null : attributes.get(Constants.HIDDEN_KEY_TOKEN));
         return new AuthenticationResponse(pass ? PASS : NOT_PASS, pass ? null : "token is invalid.");
     }
 
-    @Override
-    public String type() {
-        return "token";
-    }
 }

@@ -106,10 +106,10 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                 throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
             }
             //对应服务端协议，设置认证信息
-            if (exporter.getAuthenticator() != null) {
+            if (exporter.getAuthentication() != null) {
                 ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
                 if (protocol != null) {
-                    request.setAuthentication(protocol::isAuthenticated);
+                    request.setAuthenticated(protocol::authenticate);
                 }
             }
 

@@ -70,9 +70,11 @@
     
   - 完善上下文透传问题，增加原生调用链支持，服务端A收到客户端B请求后，再调用C和D的时候，只会透传A设置的参数和B携带的调用链参数。另外在A的处理链中，B请求的参数是一致可见的，不会因为调用C后丢失，造成调用D没有携带调用链参数。
 
+  - 完善身份认证、鉴权体系和相关插件
+
 - 工具类
     
-  - ClassUtils的getPublicMethods返回公共的方法，包括静态方法，支持Java8接口上的静态方法调用，调整获取getter和setter方法，必须有对应的字段
+  - ClassUtils的getPublicMethods返回公共的方法，包括静态方法，支持Java8接口上的静态方法调用，调整获取getter和setter方法，必须有对应的字段  
   
 - Dependency
 

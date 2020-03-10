@@ -20,6 +20,7 @@ package io.joyrpc.context;
  * #L%
  */
 
+import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extensible;
 
 import java.text.SimpleDateFormat;
@@ -32,28 +33,6 @@ import java.util.Map;
  */
 @Extensible("environment")
 public interface Environment {
-
-    String CPU_CORES = "host.cpucores";
-    String MEMORY = "host.memory";
-    String DISK_SIZE = "host.disksize";
-    String REGION = "region";
-    String DATA_CENTER = "datacenter";
-    String SYSTEM_NAME = "system.name";
-    String APPLICATION_NAME = "application.name";
-    String APPLICATION_DEPLOY_NAME = "application.deploy.name";
-    String APPLICATION_ID = "application.id";
-    String APPLICATION_GROUP = "application.group";
-    String APPLICATION_PATH = "application.path";
-    String APPLICATION_INSTANCE = "application.instance";
-    String CLIENT_VERSION = "client.version";
-    String USER_HOME = "user.home";
-    String OS_NAME = "os.name";
-    String OS_TYPE = "os.type";
-    String PID = "pid";
-    String START_TIME = "start.time";
-    String JAVA_VERSION = "java.version";
-    String SERVICE_MESH = "service_mesh";
-    String NODE_IP = "NODE.IP";
 
     /**
      * 添加环境变量
@@ -414,7 +393,7 @@ public interface Environment {
      * @return
      */
     default OsType osType() {
-        Property property = getProperty(OS_TYPE);
+        Property property = getProperty(Constants.KEY_OS_TYPE);
         return property == null ? OsType.OTHER : OsType.valueOf(property.getString());
     }
 
@@ -424,7 +403,7 @@ public interface Environment {
      * @return
      */
     default int cpuCores() {
-        Property property = getProperty(CPU_CORES);
+        Property property = getProperty(Constants.KEY_CPU_CORES);
         return property == null ? Runtime.getRuntime().availableProcessors() : property.getInteger();
     }
 

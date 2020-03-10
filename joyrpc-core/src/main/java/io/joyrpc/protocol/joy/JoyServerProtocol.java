@@ -33,6 +33,8 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 
 import static io.joyrpc.protocol.Protocol.JOY_ORDER;
+import static io.joyrpc.transport.session.Session.AUTH_SESSION_FAIL;
+import static io.joyrpc.transport.session.Session.AUTH_SESSION_SUCCESS;
 
 /**
  * Protocol<br>
@@ -46,8 +48,8 @@ public class JoyServerProtocol extends AbstractProtocol implements ServerProtoco
     }
 
     @Override
-    public boolean isAuthenticated(Session session) {
-        return session.isAuthenticated();
+    public int authenticate(Session session) {
+        return session.getAuthenticated();
     }
 
     @Override

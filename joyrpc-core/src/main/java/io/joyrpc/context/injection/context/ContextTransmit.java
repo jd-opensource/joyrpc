@@ -32,6 +32,7 @@ import java.util.Map;
 
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.RequestContext.*;
+import static io.joyrpc.util.Maps.put;
 
 /**
  * r请求上下文传递
@@ -68,7 +69,7 @@ public class ContextTransmit implements Transmit {
         Map<String, Object> attachments = request.getPayLoad().getAttachments();
         //获取待写入数据条数
         int attachmentSize = attachments != null && !attachments.isEmpty() ? attachments.size() : 0;
-        int sessionSize = session != null && session.getRemoteAppId() != null ? 3 : 0;
+        int sessionSize = session != null && (session.getRemoteAppId() != null || session.getRemoteAppName() != null) ? 3 : 0;
         int size = attachmentSize + sessionSize;
         if (size == 0) {
             return;
@@ -82,9 +83,9 @@ public class ContextTransmit implements Transmit {
         }
         //优先使用会话里面值，防止透传
         if (sessionSize > 0) {
-            callers.put(HIDDEN_KEY_APPID, session.getRemoteAppId());
-            callers.put(HIDDEN_KEY_APPNAME, session.getRemoteAppName());
-            callers.put(HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
+            put(callers, HIDDEN_KEY_APPID, session.getRemoteAppId());
+            put(callers, HIDDEN_KEY_APPNAME, session.getRemoteAppName());
+            put(callers, HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
         }
         if (!callers.isEmpty()) {
             context.setCallers(callers);

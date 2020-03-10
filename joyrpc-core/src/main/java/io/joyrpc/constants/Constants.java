@@ -29,7 +29,6 @@ import io.joyrpc.extension.URLOption;
 import java.util.function.BiFunction;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
-import static io.joyrpc.context.Environment.OS_TYPE;
 
 /**
  * 常量定义
@@ -259,22 +258,52 @@ public class Constants {
 
     public static final String PROTOCOL_VERSION_KEY = "protocol.version";
 
+    public final static String KEY_CPU_CORES = "host.cpucores";
+    public final static String KEY_MEMORY = "host.memory";
+    public final static String KEY_DISK_SIZE = "host.disksize";
+    public final static String KEY_CLIENT_VERSION = "client.version";
+    public final static String KEY_USER_HOME = "user.home";
+    public final static String KEY_OS_NAME = "os.name";
+    public final static String KEY_OS_TYPE = "os.type";
+    public final static String KEY_START_TIME = "start.time";
+    public final static String KEY_JAVA_VERSION = "java.version";
+    public final static String KEY_SERVICE_MESH = "service_mesh";
+    public final static String KEY_NODE_IP = "NODE.IP";
+    @Deprecated
+    public final static String APPLICATION_NAME = "application.name";
+    @Deprecated
+    public final static String APPLICATION_ID = "application.id";
+    @Deprecated
+    public final static String APPLICATION_GROUP = "application.group";
+    @Deprecated
+    public final static String APPLICATION_INSTANCE = "application.instance";
+
+
     public static final String KEY_PID = "pid";
+
+    /**
+     * 系统名称
+     */
+    public final static String KEY_SYSTEM_NAME = "systemName";
 
     /**
      * 当前所在文件夹地址
      */
     public final static String KEY_APPAPTH = "appPath";
     /**
-     * 自动部署的appId
+     * 应用ID
      */
     public final static String KEY_APPID = "appId";
     /**
-     * 自动部署的appName
+     * 应用名称
      */
     public final static String KEY_APPNAME = "appName";
     /**
-     * 自动部署的appInsId
+     * 应用分组
+     */
+    public final static String KEY_APPGROUP = "appGroup";
+    /**
+     * 应用实例ID
      */
     public final static String KEY_APPINSID = "appInsId";
     /**
@@ -288,17 +317,17 @@ public class Constants {
      */
     public static final char INTERNAL_KEY_PREFIX = '_';
     /**
-     * 内部使用的key：自动部署appId
+     * 内部使用的key：appId
      */
     @Deprecated
     public static final String INTERNAL_KEY_APPID = INTERNAL_KEY_PREFIX + KEY_APPID;
     /**
-     * 内部使用的key：自动部署appName
+     * 内部使用的key：appName
      */
     @Deprecated
     public static final String INTERNAL_KEY_APPNAME = INTERNAL_KEY_PREFIX + KEY_APPNAME;
     /**
-     * 内部使用的key：自动部署实例Id
+     * 内部使用的key：实例Id
      */
     @Deprecated
     public static final String INTERNAL_KEY_APPINSID = INTERNAL_KEY_PREFIX + KEY_APPINSID;
@@ -331,15 +360,15 @@ public class Constants {
      */
     public static final String HIDDEN_KEY_DESTROY = HIDE_KEY_PREFIX + "destroy";
     /**
-     * 隐藏属性的key：自动部署appId
+     * 隐藏属性的key：appId
      */
     public static final String HIDDEN_KEY_APPID = HIDE_KEY_PREFIX + "appId";
     /**
-     * 隐藏属性的key：自动部署appName
+     * 隐藏属性的key：appName
      */
     public static final String HIDDEN_KEY_APPNAME = HIDE_KEY_PREFIX + "appName";
     /**
-     * 隐藏属性的key：自动部署实例Id
+     * 隐藏属性的key：实例Id
      */
     public static final String HIDDEN_KEY_APPINSID = HIDE_KEY_PREFIX + "appInsId";
     /**
@@ -437,7 +466,18 @@ public class Constants {
      * 连接工厂选项
      */
     public static final URLOption<String> CHANNEL_FACTORY_OPTION = new URLOption<>("channelFactory", "shared");
+    /**
+     * 身份认证
+     */
     public static final URLOption<String> AUTHENTICATION_OPTION = new URLOption<>("authentication", "");
+    /**
+     * 权限认证
+     */
+    public static final URLOption<String> AUTHORIZATION_OPTION = new URLOption<>("authorization", "");
+    /**
+     * 身份配置
+     */
+    public static final URLOption<String> IDENTIFICATION_OPTION = new URLOption<>("identification", "");
 
     /**
      * 优雅下线
@@ -774,7 +814,7 @@ public class Constants {
      */
     public static boolean isLinux(final URL url) {
         try {
-            return url != null && OsType.valueOf(url.getString(OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
+            return url != null && OsType.valueOf(url.getString(KEY_OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
         } catch (IllegalArgumentException e) {
             return false;
         }

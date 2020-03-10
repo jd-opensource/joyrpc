@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,20 +49,25 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
         if (message.isRequest()) {
             NegotiationResponse negotiation;
             //协商
-            AbstractNegotiation payLoad = (AbstractNegotiation) message.getPayLoad();
-            if (payLoad == null) {
-                negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Unkown Error.");
+            Object payLoad = message.getPayLoad();
+            AbstractNegotiation request = payLoad instanceof AbstractNegotiation ? (AbstractNegotiation) payLoad : null;
+            if (request == null) {
+                if (payLoad instanceof Throwable) {
+                    negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, ((Throwable) payLoad).getMessage());
+                } else {
+                    negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Unkown Error.");
+                }
             } else if (Shutdown.isShutdown()) {
                 negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Server is shutdown.");
             } else {
                 //先由服务端推荐默认设置，创建新的协商应答返回
-                negotiation = negotiate(recommendRequest(payLoad));
+                negotiation = negotiate(recommendRequest(request));
                 //协商成功，创建并保存session
                 if (negotiation.isSuccess()) {
                     //复制一份，可用于修改应答的压缩等协议
                     NegotiationResponse clone = negotiation.clone();
                     //重置为请求的扩展信息
-                    clone.setAttributes(payLoad.getAttributes());
+                    clone.setAttributes(request.getAttributes());
                     //构建并保存session
                     session(context, message.getSessionId(), recommendResponse(clone));
                 }

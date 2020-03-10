@@ -33,8 +33,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static io.joyrpc.context.Environment.USER_HOME;
-
 /**
  * 抽象注册中心工厂类
  */
@@ -76,7 +74,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
                 path = GlobalContext.getString(Constants.REGISTRY_BACKUP_PATH_OPTION.getName());
                 if (path == null || path.isEmpty()) {
                     //用户目录
-                    path = System.getProperty(USER_HOME) + File.separator + "rpc_backup";
+                    path = System.getProperty(Constants.KEY_USER_HOME) + File.separator + "rpc_backup";
                 }
             }
             File directory = new File(path + File.separator + name +

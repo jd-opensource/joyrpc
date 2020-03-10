@@ -200,6 +200,7 @@ public class Node implements Shard {
      * 客户端协议
      */
     protected ClientProtocol clientProtocol;
+
     /**
      * 打开的结果
      */
@@ -872,7 +873,23 @@ public class Node implements Shard {
     protected void negotiation(final Client client, final Consumer<AsyncResult<Response>> consumer) {
         handshake(client,
                 () -> negotiate(client),
-                o -> ((NegotiationResponse) o.getPayLoad()).isSuccess() ? null : new ProtocolException("protocol is not support."),
+                o -> {
+                    Object result = o.getPayLoad();
+                    String error = null;
+                    if (result instanceof NegotiationResponse) {
+                        NegotiationResponse response = (NegotiationResponse) result;
+                        if (response.isSuccess()) {
+                            return null;
+                        } else {
+                            error = String.format("Failed negotiating with node(%s) of shard(%s)",
+                                    client.getUrl().getAddress(), shard.getName());
+                        }
+                    } else if (result instanceof Throwable) {
+                        error = String.format("Failed negotiating with node(%s) of shard(%s),caused by %s",
+                                client.getUrl().getAddress(), shard.getName(), ((Throwable) result).getMessage());
+                    }
+                    return new ProtocolException(error == null ? "protocol is not support." : error);
+                },
                 o -> {
                     //协商成功
                     NegotiationResponse response = (NegotiationResponse) o.getPayLoad();

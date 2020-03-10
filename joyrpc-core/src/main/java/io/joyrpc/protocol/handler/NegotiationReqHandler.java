@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,10 +20,9 @@ package io.joyrpc.protocol.handler;
  * #L%
  */
 
-import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.Version;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.Environment;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
@@ -31,15 +30,14 @@ import io.joyrpc.protocol.message.Message;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.AbstractNegotiation;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 
 import java.util.Map;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.Environment.*;
 import static io.joyrpc.transport.session.Session.REMOTE_START_TIMESTAMP;
 
 /**
@@ -59,13 +57,19 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
             Map<String, String> attributes = negotiation.getAttributes();
             response.addAttribute(CONFIG_KEY_INTERFACE, attributes.get(CONFIG_KEY_INTERFACE));
             response.addAttribute(ALIAS_OPTION.getName(), attributes.get(ALIAS_OPTION.getName()));
-            response.addAttribute(Constants.JAVA_VERSION_KEY, GlobalContext.getString(Environment.JAVA_VERSION));
+            response.addAttribute(KEY_JAVA_VERSION, GlobalContext.getString(KEY_JAVA_VERSION));
             response.addAttribute(BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
-            response.addAttribute(APPLICATION_ID, GlobalContext.getString(APPLICATION_ID));
-            response.addAttribute(APPLICATION_NAME, GlobalContext.getString(APPLICATION_NAME));
-            response.addAttribute(APPLICATION_INSTANCE, GlobalContext.getString(APPLICATION_INSTANCE));
-            response.addAttribute(APPLICATION_GROUP, GlobalContext.getString(APPLICATION_GROUP));
-            response.addAttribute(REMOTE_START_TIMESTAMP, GlobalContext.getString(START_TIME));
+            response.addAttribute(KEY_APPID, GlobalContext.getString(KEY_APPID));
+            response.addAttribute(KEY_APPNAME, GlobalContext.getString(KEY_APPNAME));
+            response.addAttribute(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
+            response.addAttribute(KEY_APPGROUP, GlobalContext.getString(KEY_APPGROUP));
+            response.addAttribute(REMOTE_START_TIMESTAMP, GlobalContext.getString(KEY_START_TIME));
+            //兼容
+            response.addAttribute(JAVA_VERSION_KEY, GlobalContext.getString(KEY_JAVA_VERSION));
+            response.addAttribute(APPLICATION_ID, GlobalContext.getString(KEY_APPID));
+            response.addAttribute(APPLICATION_NAME, GlobalContext.getString(KEY_APPNAME));
+            response.addAttribute(APPLICATION_INSTANCE, GlobalContext.getString(KEY_APPINSID));
+            response.addAttribute(APPLICATION_GROUP, GlobalContext.getString(KEY_APPGROUP));
         }
         return response;
     }

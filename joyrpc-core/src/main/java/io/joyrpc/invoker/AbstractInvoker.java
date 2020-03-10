@@ -21,6 +21,7 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Invoker;
+import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.exception.RpcException;
@@ -34,6 +35,7 @@ import io.joyrpc.util.Status;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.function.Consumer;
 
 import static io.joyrpc.util.Status.*;
 
@@ -97,6 +99,10 @@ public abstract class AbstractInvoker implements Invoker {
      * 状态
      */
     protected volatile Status status = CLOSED;
+    /**
+     * 构建器
+     */
+    protected Consumer<InvokerAware> builder = this::setup;
 
     public URL getUrl() {
         return url;
@@ -247,4 +253,19 @@ public abstract class AbstractInvoker implements Invoker {
      */
     protected abstract CompletableFuture<Void> doClose();
 
+    /**
+     * 设置参数
+     *
+     * @param target 目标对象
+     */
+    protected void setup(final InvokerAware target) {
+        target.setClassName(interfaceName);
+        target.setClass(interfaceClass);
+        target.setUrl(url);
+        target.setup();
+    }
+
+    public Consumer<InvokerAware> getBuilder() {
+        return builder;
+    }
 }

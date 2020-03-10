@@ -9,9 +9,9 @@ package io.joyrpc.protocol.http;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,10 +42,10 @@ public class HttpServerProtocol extends AbstractProtocol implements ServerProtoc
 
     @Override
     public boolean match(ChannelBuffer channelBuffer) {
-        Short magiccode_high = channelBuffer.getUnsignedByte(0);
-        Short magiccode_low = channelBuffer.getUnsignedByte(1);
-        byte magic1 = magiccode_high.byteValue();
-        byte magic2 = magiccode_low.byteValue();
+        short highMagicCode = channelBuffer.getUnsignedByte(0);
+        short lowMagicCode = channelBuffer.getUnsignedByte(1);
+        byte magic1 = (byte) highMagicCode;
+        byte magic2 = (byte) lowMagicCode;
 
         return (magic1 == 'G' && magic2 == 'E') || // GET
                 (magic1 == 'P' && magic2 == 'O') || // POST

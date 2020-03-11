@@ -12,9 +12,9 @@ package io.joyrpc.protocol.telnet.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,11 +23,12 @@ package io.joyrpc.protocol.telnet.handler;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.Json;
 import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.Options;
 
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,14 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
 
     public static final String CALLBACK = "callback";
 
+    public BizThreadTelnetHandler() {
+        options = new Options()
+                .addOption(HELP_SHORT, HELP_LONG, false, "show help message for command config")
+                .addOption("p", "port", true, "the threads of server port")
+                .addOption("i", "interval", true, "the interval of output")
+                .addOption("c", "count", true, "number of outputs");
+    }
+
     @Override
     public String type() {
         return "tp";
@@ -50,47 +59,37 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
 
     @Override
     public String description() {
-        return "Usage:\ttp [port] [interval] [count]" + LINE
-                + "Display the threadpool. " + LINE +
-                "If no args, show all threadpool. " + LINE +
-                "If has [port], show threadpool of port [port]. " + LINE +
-                "If has [port] [interval] [count], show threadpool of port [port] time after time. " + LINE;
+        return "Display the thread pool information.";
     }
 
     @Override
     public String shortDescription() {
-        return "Display the threadpool statistics.";
+        return "Display the thread pool information.";
     }
 
     @Override
     public TelnetResponse telnet(Channel channel, String[] args) {
-        Json json = JSON.get();
-        if (args == null || args.length == 0) {
+        CommandLine cmd = getCommand(options, args);
+        if (cmd.hasOption(HELP_SHORT)) {
+            return new TelnetResponse(help());
+        } else if (cmd.getOptions().length == 0) {
             Map<String, Object> result = new HashMap<>(100);
             export(CALLBACK, InvokerManager.getCallbackThreadPool(), result);
             export(InvokerManager.getServers(), result);
-            return new TelnetResponse(json.toJSONString(result));
+            return new TelnetResponse(JSON.get().toJSONString(result));
         } else {
-
-            int interval = 1000;
-            int count = 1;
-            if (args.length > 2) {
-                count = Integer.parseInt(args[2]);
-            }
-            if (args.length > 1) {
-                interval = Integer.parseInt(args[1]);
-            }
-            String port = args[0];
+            String port = cmd.getOptionValue("p", String.valueOf(channel.getLocalAddress().getPort()));
+            int interval = Integer.parseInt(cmd.getOptionValue("i", "1000"));
+            int count = Integer.parseInt(cmd.getOptionValue("c", "1"));
             if (interval < 100 || interval > 5000) {
                 return new TelnetResponse("ERROR:interval must between 100 and 5000");
-            }
-            if (count < 1 || count > 60) {
+            } else if (count < 1 || count > 60) {
                 return new TelnetResponse("ERROR:count must between 1 and 60");
             }
 
             ThreadPoolExecutor pool = getThreadPool(port);
             if (pool != null) {
-                HashMap<String, Map> map = new HashMap<>(1);
+                HashMap<String, Map<String, Object>> map = new HashMap<>(1);
                 StringBuilder builder = new StringBuilder(100);
                 //循环
                 for (int i = 0; i < count; i++) {
@@ -110,12 +109,12 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
                         if (i != count - 1) {
                             //最后一个由循环外输出
                             builder.setLength(0);
-                            builder.append(json.toJSONString(map)).append(LINE);
+                            builder.append(JSON.get().toJSONString(map)).append(LINE);
                             channel.send(builder.toString());
                         }
                     }
                 }
-                return new TelnetResponse(json.toJSONString(map));
+                return new TelnetResponse(JSON.get().toJSONString(map));
             } else {
                 return new TelnetResponse("ERROR:Not found threadpool:" + port);
             }
@@ -129,7 +128,9 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
      * @return
      */
     protected ThreadPoolExecutor getThreadPool(final String name) {
-        if (Character.isDigit(name.charAt(0))) {
+        if (name == null) {
+            return null;
+        } else if (Character.isDigit(name.charAt(0))) {
             Server server = InvokerManager.getServer(Integer.parseInt(name));
             return server == null ? null : server.getBizThreadPool();
         } else if (CALLBACK.equalsIgnoreCase(name)) {

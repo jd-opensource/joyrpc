@@ -1,6 +1,7 @@
 package io.joyrpc.permission.token;
 
 import io.joyrpc.InvokerAware;
+import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.permission.Authorization;
@@ -16,6 +17,7 @@ import static io.joyrpc.constants.Constants.METHOD_KEY;
 /**
  * 基于令牌的方法权限认证
  */
+@Extension(value = "token")
 public class TokenAuthorization implements Authorization, InvokerAware {
 
     /**

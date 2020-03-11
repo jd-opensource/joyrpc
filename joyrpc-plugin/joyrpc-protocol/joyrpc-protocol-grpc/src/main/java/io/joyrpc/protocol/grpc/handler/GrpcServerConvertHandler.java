@@ -9,9 +9,9 @@ package io.joyrpc.protocol.grpc.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,6 +45,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.http2.*;
 import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.GrpcType.ClassWrapper;
 import io.joyrpc.util.Pair;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
@@ -87,7 +88,7 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         if (message instanceof Http2RequestMessage) {
             Http2RequestMessage http2Req = (Http2RequestMessage) message;
             try {
-                return convert(http2Req, ctx.getChannel(), SystemClock.now());
+                return input(http2Req, ctx.getChannel(), SystemClock.now());
             } catch (Throwable e) {
                 logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 MessageHeader header = new MessageHeader();
@@ -106,7 +107,7 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         if (message instanceof GrpcResponseMessage) {
             GrpcResponseMessage grpcResp = (GrpcResponseMessage) message;
             try {
-                return convert(grpcResp);
+                return output(grpcResp);
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while wrote grpc response from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 throw new RpcException(grpcResp.getHeader(), e);
@@ -124,9 +125,9 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
      * @return
      * @throws Exception
      */
-    protected RequestMessage<Invocation> convert(final Http2RequestMessage message,
-                                                 final Channel channel,
-                                                 final long receiveTime) throws Exception {
+    protected RequestMessage<Invocation> input(final Http2RequestMessage message,
+                                               final Channel channel,
+                                               final long receiveTime) throws Exception {
         if (message.getStreamId() <= 0) {
             return null;
         }
@@ -146,21 +147,25 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         header.setTimeout(getTimeout(parametric, GrpcUtil.TIMEOUT));
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), message.getStreamId());
         header.addAttribute(ACCEPT_ENCODING.getNum(), parametric.getString(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
-        //获取压缩类型
-        Compression compression = getCompression(parametric, GrpcUtil.MESSAGE_ENCODING);
+
         //构造invocation
-        Invocation invocation = Invocation.build(url, headerMap, EXCEPTION_SUPPLIER);
-        //构造消息输入流
-        UnsafeByteArrayInputStream in = new UnsafeByteArrayInputStream(message.content());
-        in.read(new byte[5], 0, 5);
-        Object[] args = new Object[invocation.getMethod().getParameterCount()];
+        Invocation invocation = Invocation.build(url, parametric, EXCEPTION_SUPPLIER);
         //获取 grpcType
         GrpcType grpcType = getGrpcType(invocation.getClazz(), invocation.getMethodName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
-        GrpcType.ClassWrapper reqWrapper = grpcType.getRequest();
+        //构造消息输入流
+        UnsafeByteArrayInputStream in = new UnsafeByteArrayInputStream(message.content());
+        int compressed = in.read();
+        if (in.skip(4) < 4) {
+            throw new IOException(String.format("request data is not full. id=%d", message.getBizMsgId()));
+        }
+        Object[] args = new Object[invocation.getMethod().getParameterCount()];
+        ClassWrapper reqWrapper = grpcType.getRequest();
         //如果方法没有参数，则返回null
         if (reqWrapper != null) {
             //获取反序列化插件
             Serializer serializer = getSerialization(parametric, GrpcUtil.CONTENT_ENCODING, serialization).getSerializer();
+            //获取压缩类型
+            Compression compression = compressed == 0 ? null : getCompression(parametric, GrpcUtil.MESSAGE_ENCODING);
             //反序列化 wrapper
             Object wrapperObj = serializer.deserialize(compression == null ? in : compression.decompress(in), reqWrapper.getClazz());
             //isWrapper为true，为包装对象，遍历每个field，逐个取值赋值给args数组，否则，直接赋值args[0]
@@ -189,60 +194,71 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
      * @param message
      * @return
      */
-    protected Http2ResponseMessage convert(final GrpcResponseMessage message) throws IOException {
-        int streamId = (Integer) message.getHeader().getAttributes().get(HeaderMapping.STREAM_ID.getNum());
+    protected Http2ResponseMessage output(final GrpcResponseMessage message) throws IOException {
+        MessageHeader header = message.getHeader();
+        int streamId = (Integer) header.getAttributes().get(HeaderMapping.STREAM_ID.getNum());
         ResponsePayload responsePayload = (ResponsePayload) message.getPayLoad();
-        if (!responsePayload.isError()) {
-            //http2 header
-            Http2Headers headers = new DefaultHttp2Headers();
-            headers.status("200");
-            headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
-            //获取payload
-            Object payLoad = responsePayload.getResponse();
-            //获取 grpcType
-            GrpcType grpcType = message.getGrpcType();
-            GrpcType.ClassWrapper respWrapper = grpcType.getResponse();
-            //设置反正值
-            Object respObj;
-            if (respWrapper.isWrapper()) {
-                respObj = newInstance(respWrapper.getClazz());
-                setValue(respWrapper.getClazz(), F_RESULT, respObj, payLoad);
-            } else {
-                respObj = payLoad;
-            }
-            //设置content
-            UnsafeByteArrayOutputStream outputStream = new UnsafeByteArrayOutputStream();
-            //是否压缩
-            outputStream.write(0);
-            //长度(占位)
-            outputStream.write(new byte[]{0, 0, 0, 0}, 0, 4);
-            //序列化
-            serialization.getSerializer().serialize(outputStream, respObj);
-            //获取 content 字节数组
-            byte[] content = outputStream.toByteArray();
-            //压缩处理
-            Pair<String, Compression> pair = null;
-            if (content.length > 1024) {
-                pair = getEncoding((String) message.getHeader().getAttribute(ACCEPT_ENCODING.getNum()));
-            }
-            if (pair != null) {
-                UnsafeByteArrayOutputStream compressionOutputStream = new UnsafeByteArrayOutputStream();
-                compressionOutputStream.write(new byte[]{1, 0, 0, 0, 0});
-                content = compress(pair.getValue(), compressionOutputStream, content, 5, content.length - 5);
-                headers.set(GrpcUtil.MESSAGE_ENCODING, pair.getKey());
-            }
-            //设置数据长度
-            int length = content.length - 5;
-            content[1] = (byte) (length >>> 24);
-            content[2] = (byte) (length >>> 16);
-            content[3] = (byte) (length >>> 8);
-            content[4] = (byte) length;
-            return new DefaultHttp2ResponseMessage(streamId, message.getHeader().getMsgId(),
-                    headers, content, buildEndHttp2Headers());
-        } else {
-            return new DefaultHttp2ResponseMessage(streamId, message.getHeader().getMsgId(),
+        if (responsePayload.isError()) {
+            return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(),
                     null, null, buildErrorEndHttp2Headers(responsePayload.getException()));
         }
+        //http2 header
+        Http2Headers headers = new DefaultHttp2Headers();
+        headers.status("200");
+        headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
+        GrpcType grpcType = message.getGrpcType();
+        Object respObj = wrapPayload(responsePayload, grpcType);
+        //设置content
+        UnsafeByteArrayOutputStream baos = new UnsafeByteArrayOutputStream();
+        //是否压缩
+        baos.write(0);
+        //长度(占位)
+        baos.write(new byte[]{0, 0, 0, 0}, 0, 4);
+        //序列化
+        serialization.getSerializer().serialize(baos, respObj);
+        //获取 content 字节数组
+        byte[] content = baos.toByteArray();
+        //压缩处理
+        Pair<String, Compression> pair = null;
+        if (content.length > 1024) {
+            pair = getEncoding((String) header.getAttribute(ACCEPT_ENCODING.getNum()));
+        }
+        if (pair != null) {
+            //复用缓冲区
+            baos.reset();
+            baos.write(new byte[]{1, 0, 0, 0, 0});
+            content = compress(pair.getValue(), baos, content, 5, content.length - 5);
+            headers.set(GrpcUtil.MESSAGE_ENCODING, pair.getKey());
+        }
+        //设置数据长度
+        int length = content.length - 5;
+        content[1] = (byte) (length >>> 24);
+        content[2] = (byte) (length >>> 16);
+        content[3] = (byte) (length >>> 8);
+        content[4] = (byte) length;
+        return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(),
+                headers, content, buildEndHttp2Headers());
+    }
+
+    /**
+     * 包装payload
+     *
+     * @param payload
+     * @param grpcType
+     * @return
+     */
+    protected Object wrapPayload(final ResponsePayload payload, final GrpcType grpcType) {
+        //获取 grpcType
+        ClassWrapper respWrapper = grpcType.getResponse();
+        //设置反正值
+        Object result;
+        if (respWrapper.isWrapper()) {
+            result = newInstance(respWrapper.getClazz());
+            setValue(respWrapper.getClazz(), F_RESULT, result, payload.getResponse());
+        } else {
+            result = payload.getResponse();
+        }
+        return result;
     }
 
     /**

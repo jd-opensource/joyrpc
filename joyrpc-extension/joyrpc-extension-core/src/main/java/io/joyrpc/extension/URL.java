@@ -30,6 +30,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.BiConsumer;
 
 /**
  *
@@ -1448,6 +1449,13 @@ public final class URL implements Serializable, Parametric {
      */
     public URL remove() {
         return new URL(protocol, user, password, host, port, path, new HashMap<String, String>());
+    }
+
+    @Override
+    public void foreach(final BiConsumer<String, Object> consumer) {
+        if (consumer != null && parameters != null) {
+            parameters.forEach(consumer::accept);
+        }
     }
 
     /**

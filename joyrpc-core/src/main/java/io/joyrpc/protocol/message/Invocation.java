@@ -450,16 +450,15 @@ public class Invocation implements Serializable {
      * 构建HTTP请求
      *
      * @param url
-     * @param headers
+     * @param parametric
      * @param supplier
      * @return
      * @throws ClassNotFoundException
      * @throws NoSuchMethodException
      * @throws MethodOverloadException
      */
-    public static Invocation build(final URL url, final Map<CharSequence, Object> headers, final Supplier<LafException> supplier)
+    public static Invocation build(final URL url, final Parametric parametric, final Supplier<LafException> supplier)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        Parametric parametric = new MapParametric(headers);
         String path = url.getPath();
         String[] parts = path == null ? new String[0] : StringUtils.split(path, '/');
         String className;
@@ -491,14 +490,28 @@ public class Invocation implements Serializable {
         invocation.setClazz(ifaceClass);
         invocation.setMethod(method);
         //隐式传参
-        String key;
-        for (Map.Entry<CharSequence, Object> entry : headers.entrySet()) {
-            key = entry.getKey().toString();
+        parametric.foreach((key, value) -> {
             if (!key.isEmpty() && key.charAt(0) == Constants.HIDE_KEY_PREFIX) {
-                invocation.addAttachment(key, entry.getValue());
+                invocation.addAttachment(key, value);
             }
-        }
+        });
         return invocation;
+    }
+
+    /**
+     * 构建HTTP请求
+     *
+     * @param url
+     * @param headers
+     * @param supplier
+     * @return
+     * @throws ClassNotFoundException
+     * @throws NoSuchMethodException
+     * @throws MethodOverloadException
+     */
+    public static Invocation build(final URL url, final Map<CharSequence, Object> headers, final Supplier<LafException> supplier)
+            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
+        return build(url, new MapParametric(headers), supplier);
     }
 
     @Override

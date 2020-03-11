@@ -26,6 +26,7 @@ package io.joyrpc.extension;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.function.BiConsumer;
 
 /**
  * Map参数
@@ -458,5 +459,12 @@ public final class MapParametric implements Parametric {
     @Override
     public Byte getPositiveByte(final URLBiOption<Byte> option) {
         return option == null ? null : getPositive(option.getName(), option.getCandidate(), option.getValue());
+    }
+
+    @Override
+    public void foreach(final BiConsumer<String, Object> consumer) {
+        if (consumer != null && parameters != null) {
+            parameters.forEach((k, v) -> consumer.accept(k.toString(), v));
+        }
     }
 }

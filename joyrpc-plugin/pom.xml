@@ -17,7 +17,6 @@
         <module>joyrpc-protocol</module>
         <module>joyrpc-proxy</module>
         <module>joyrpc-registry</module>
-        <module>joyrpc-trace-opentracing</module>
         <module>joyrpc-transport-netty4</module>
         <module>joyrpc-transport-resteasy</module>
     </modules>

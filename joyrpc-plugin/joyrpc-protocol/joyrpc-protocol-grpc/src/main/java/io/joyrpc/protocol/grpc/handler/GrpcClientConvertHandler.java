@@ -271,7 +271,24 @@ public class GrpcClientConvertHandler extends AbstractHttpHandler {
         String path = "/" + invocation.getClassName() + "/" + invocation.getMethodName();
         //创建http2header对象
         Http2Headers headers = new DefaultHttp2Headers().authority(authority).path(path).method(HttpMethod.POST).scheme("http");
-        //TODO 隐藏参数
+        //隐藏参数
+        Map<String, Object> attachments = invocation.getAttachments();
+        if (attachments != null) {
+            attachments.forEach((key, value) -> {
+                if (value != null) {
+                    Class<?> clazz = value.getClass();
+                    if (CharSequence.class.isAssignableFrom(clazz)
+                            || clazz.isPrimitive() || clazz.isEnum()
+                            || Boolean.class == clazz
+                            || Number.class.isAssignableFrom(clazz)) {
+                        headers.set(key, value.toString());
+                    } else {
+                        //其它的转换成JSON
+                        headers.set(key, JSON.get().toJSONString(value));
+                    }
+                }
+            });
+        }
         headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
         headers.set(GrpcUtil.TE_HEADER.name(), GrpcUtil.TE_TRAILERS);
         headers.set(GrpcUtil.USER_AGENT_KEY.name(), USER_AGENT);

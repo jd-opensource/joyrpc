@@ -9,9 +9,9 @@ package io.joyrpc.filter.comsumer;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,9 @@ package io.joyrpc.filter.comsumer;
  */
 
 import io.joyrpc.Invoker;
+import io.joyrpc.constants.Constants;
+import io.joyrpc.constants.Version;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.filter.AbstractTracingFilter;
 import io.joyrpc.filter.ConsumerFilter;
@@ -42,11 +45,10 @@ public class ConsumerTracingFilter extends AbstractTracingFilter implements Cons
     @Override
     public Span tracing(final Tracer tracer, final Invoker invoker, final RequestMessage<Invocation> request) {
         String name = name(request);
-        //TODO 拿不到远端的地址
         Invocation invocation = request.getPayLoad();
         Tracer.SpanBuilder builder = tracer.buildSpan(name)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_CLIENT)
-                .withTag(Tags.COMPONENT.getKey(), "joy")
+                .withTag(Tags.COMPONENT.getKey(), GlobalContext.getString(Constants.PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION))
                 .withTag(Tags.PEER_SERVICE.getKey(), invocation.getClassName())
                 .withTag(REQUEST_ID, request.getMsgId());
         //会自动成为当前活动Span的子节点

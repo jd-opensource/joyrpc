@@ -9,9 +9,9 @@ package io.joyrpc.filter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import io.joyrpc.Result;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
+import io.joyrpc.trace.Tracers;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.util.Futures;
 import io.opentracing.Scope;
@@ -32,14 +33,11 @@ import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.noop.NoopTracer;
 import io.opentracing.propagation.TextMap;
-import io.opentracing.util.GlobalTracer;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static io.joyrpc.trace.Plugin.TRACER_FACTORY;
 
 /**
  * Tracing filter.
@@ -76,7 +74,7 @@ public abstract class AbstractTracingFilter extends AbstractFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         //先重全局获取
-        Tracer tracer = getTracer();
+        Tracer tracer = Tracers.getTracer();
         if (tracer == null || tracer instanceof NoopTracer) {
             return invoker.invoke(request);
         }
@@ -96,24 +94,6 @@ public abstract class AbstractTracingFilter extends AbstractFilter {
         }
 
     }
-
-    /**
-     * 获取Tracer
-     *
-     * @return
-     */
-    protected Tracer getTracer() {
-        Tracer tracer = GlobalTracer.get();
-        if (tracer == null) {
-            //没有再从插件工厂获取
-            tracer = TRACER_FACTORY.get().getTracer();
-            if (tracer != null) {
-                GlobalTracer.registerIfAbsent(tracer);
-            }
-        }
-        return tracer;
-    }
-
 
     /**
      * Tracing response message.

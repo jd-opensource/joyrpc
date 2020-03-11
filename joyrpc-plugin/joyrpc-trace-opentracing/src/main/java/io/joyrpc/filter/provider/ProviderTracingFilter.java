@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,9 @@ package io.joyrpc.filter.provider;
  */
 
 import io.joyrpc.Invoker;
-import io.joyrpc.context.RequestContext;
+import io.joyrpc.constants.Constants;
+import io.joyrpc.constants.Version;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.filter.AbstractTracingFilter;
 import io.joyrpc.filter.ProviderFilter;
@@ -34,6 +36,8 @@ import io.opentracing.Tracer;
 import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 
+import java.net.InetSocketAddress;
+
 /**
  * The type Provider tracing filter.
  *
@@ -44,14 +48,15 @@ public class ProviderTracingFilter extends AbstractTracingFilter implements Prov
 
     @Override
     public Span tracing(final Tracer tracer, final Invoker invoker, final RequestMessage<Invocation> request) {
-        RequestContext context = RequestContext.getContext();
         String name = name(request);
         Invocation invocation = request.getPayLoad();
+        InetSocketAddress remoteAddr = request.getRemoteAddress();
         Tracer.SpanBuilder builder = tracer.buildSpan(name)
                 .withTag(Tags.SPAN_KIND.getKey(), Tags.SPAN_KIND_SERVER)
-                .withTag(Tags.COMPONENT.getKey(), "joy")
+                .withTag(Tags.COMPONENT.getKey(), GlobalContext.getString(Constants.PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION))
                 .withTag(Tags.PEER_SERVICE.getKey(), invocation.getClassName())
-                .withTag(Tags.PEER_HOST_IPV4.getKey(), Ipv4.toIp(context.getRemoteAddress()))
+                .withTag(Tags.PEER_HOST_IPV4.getKey(), Ipv4.toIp(remoteAddr))
+                .withTag(Tags.PEER_PORT.getKey(), String.valueOf(remoteAddr.getPort()))
                 .withTag(REQUEST_ID, request.getMsgId());
         SpanContext spanContext = tracer.extract(Format.Builtin.TEXT_MAP, new TraceTextMap(request));
         if (spanContext != null) {

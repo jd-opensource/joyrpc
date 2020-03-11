@@ -64,9 +64,9 @@ import static io.joyrpc.util.GrpcType.F_RESULT;
 /**
  * grpc client端消息转换handler
  */
-public class GrpcClientConvertHandler extends AbstractHttpHandler {
+public class GrpcClienttHandler extends AbstractHttpHandler {
 
-    private final static Logger logger = LoggerFactory.getLogger(GrpcClientConvertHandler.class);
+    private final static Logger logger = LoggerFactory.getLogger(GrpcClienttHandler.class);
 
     protected static final String USER_AGENT = "joyrpc";
 

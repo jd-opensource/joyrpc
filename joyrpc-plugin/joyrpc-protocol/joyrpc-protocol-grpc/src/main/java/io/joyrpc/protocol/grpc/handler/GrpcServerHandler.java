@@ -20,7 +20,6 @@ package io.joyrpc.protocol.grpc.handler;
  * #L%
  */
 
-import io.grpc.Status;
 import io.grpc.internal.GrpcUtil;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
@@ -36,6 +35,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.grpc.HeaderMapping;
+import io.joyrpc.protocol.grpc.Headers;
 import io.joyrpc.protocol.grpc.message.GrpcResponseMessage;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.MessageHeader;
@@ -43,7 +43,10 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.http2.*;
+import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
+import io.joyrpc.transport.http2.Http2Headers;
+import io.joyrpc.transport.http2.Http2RequestMessage;
+import io.joyrpc.transport.http2.Http2ResponseMessage;
 import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.GrpcType.ClassWrapper;
 import io.joyrpc.util.Pair;
@@ -59,8 +62,6 @@ import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.GRPC_FACTORY;
 import static io.joyrpc.Plugin.SERIALIZATION_SELECTOR;
-import static io.joyrpc.constants.Constants.GRPC_MESSAGE_KEY;
-import static io.joyrpc.constants.Constants.GRPC_STATUS_KEY;
 import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.protocol.grpc.HeaderMapping.ACCEPT_ENCODING;
 import static io.joyrpc.util.ClassUtils.*;
@@ -69,9 +70,9 @@ import static io.joyrpc.util.GrpcType.F_RESULT;
 /**
  * @date: 2019/5/6
  */
-public class GrpcServerConvertHandler extends AbstractHttpHandler {
+public class GrpcServerHandler extends AbstractHttpHandler {
 
-    private final static Logger logger = LoggerFactory.getLogger(GrpcClientConvertHandler.class);
+    private final static Logger logger = LoggerFactory.getLogger(GrpcServerHandler.class);
     public static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(":path interfaceClazz/methodName with alias header or interfaceClazz/alias/methodName");
     /**
      * 默认序列化
@@ -79,7 +80,7 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 
     @Override
-    public Logger getLogger() {
+    protected Logger getLogger() {
         return logger;
     }
 
@@ -105,12 +106,12 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
     @Override
     public Object wrote(final ChannelContext ctx, final Object message) {
         if (message instanceof GrpcResponseMessage) {
-            GrpcResponseMessage grpcResp = (GrpcResponseMessage) message;
+            GrpcResponseMessage<?> response = (GrpcResponseMessage<?>) message;
             try {
-                return output(grpcResp);
+                return output(response);
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while wrote grpc response from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
-                throw new RpcException(grpcResp.getHeader(), e);
+                throw new RpcException(response.getHeader(), e);
             }
         } else {
             return message;
@@ -147,7 +148,6 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         header.setTimeout(getTimeout(parametric, GrpcUtil.TIMEOUT));
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), message.getStreamId());
         header.addAttribute(ACCEPT_ENCODING.getNum(), parametric.getString(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
-
         //构造invocation
         Invocation invocation = Invocation.build(url, parametric, EXCEPTION_SUPPLIER);
         //获取 grpcType
@@ -194,18 +194,16 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
      * @param message
      * @return
      */
-    protected Http2ResponseMessage output(final GrpcResponseMessage message) throws IOException {
+    protected Http2ResponseMessage output(final GrpcResponseMessage<?> message) throws IOException {
         MessageHeader header = message.getHeader();
         int streamId = (Integer) header.getAttributes().get(HeaderMapping.STREAM_ID.getNum());
         ResponsePayload responsePayload = (ResponsePayload) message.getPayLoad();
         if (responsePayload.isError()) {
             return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(),
-                    null, null, buildErrorEndHttp2Headers(responsePayload.getException()));
+                    null, null, Headers.build(responsePayload.getException()));
         }
         //http2 header
-        Http2Headers headers = new DefaultHttp2Headers();
-        headers.status("200");
-        headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
+        Http2Headers headers = Headers.build(false);
         GrpcType grpcType = message.getGrpcType();
         Object respObj = wrapPayload(responsePayload, grpcType);
         //设置content
@@ -237,7 +235,7 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         content[3] = (byte) (length >>> 8);
         content[4] = (byte) length;
         return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(),
-                headers, content, buildEndHttp2Headers());
+                headers, content, Headers.build(true));
     }
 
     /**
@@ -260,34 +258,4 @@ public class GrpcServerConvertHandler extends AbstractHttpHandler {
         }
         return result;
     }
-
-    /**
-     * 设置结束头
-     *
-     * @return
-     */
-    public static Http2Headers buildEndHttp2Headers() {
-        Http2Headers headers = new DefaultHttp2Headers();
-        headers.status("200");
-        headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
-        headers.set(GRPC_STATUS_KEY, Status.Code.OK.value());
-        return headers;
-    }
-
-    /**
-     * 设置异常结束头
-     *
-     * @param throwable
-     * @return
-     */
-    public static Http2Headers buildErrorEndHttp2Headers(Throwable throwable) {
-        String errorMsg = throwable.getClass().getName() + ":" + throwable.getMessage();
-        Http2Headers headers = new DefaultHttp2Headers();
-        headers.status("200");
-        headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
-        headers.set(GRPC_STATUS_KEY, Status.Code.INTERNAL.value());
-        headers.set(GRPC_MESSAGE_KEY, errorMsg);
-        return headers;
-    }
-
 }

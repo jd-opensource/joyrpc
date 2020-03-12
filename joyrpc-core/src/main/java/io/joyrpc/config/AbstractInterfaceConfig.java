@@ -324,6 +324,10 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         }
     }
 
+    public Map<String, MethodConfig> getMethods() {
+        return methods;
+    }
+
     public void setMethods(Map<String, MethodConfig> methods) {
         if (this.methods == null) {
             this.methods = new ConcurrentHashMap<>();

@@ -332,8 +332,10 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         }
         if (methods != null) {
             methods.forEach((key, value) -> {
-                value.setName(key);
-                this.methods.put(key, value);
+                if (value.getName() == null || value.getName().isEmpty()) {
+                    value.setName(key);
+                }
+                this.methods.put(value.getName(), value);
             });
         }
     }

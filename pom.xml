@@ -17,6 +17,7 @@
         <module>joyrpc-test</module>
         <module>joyrpc-example</module>
         <module>joyrpc-all</module>
+        <module>joyrpc-registry-dubbo-zookeeper</module>
     </modules>
     <name>joyrpc</name>
     <properties>

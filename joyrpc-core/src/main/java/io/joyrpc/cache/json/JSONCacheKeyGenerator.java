@@ -36,8 +36,12 @@ public class JSONCacheKeyGenerator implements CacheKeyGenerator {
 
     @Override
     public Object generate(final Invocation invocation) throws CacheException {
+        Object[] args = invocation.getArgs();
+        if (args == null || args.length == 0) {
+            return "";
+        }
         try {
-            return JSON.get().toJSONString(invocation.getArgs());
+            return JSON.get().toJSONString(args);
         } catch (SerializerException e) {
             throw new CacheException("Error occurs while generating cache key", e);
         }

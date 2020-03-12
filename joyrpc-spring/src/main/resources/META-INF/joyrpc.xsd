@@ -293,6 +293,11 @@
                 <xsd:documentation><![CDATA[ 结果缓存容量大小 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
+        <xsd:attribute name="cacheKeyExpression" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 缓存键表达式 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
     </xsd:complexType>
     <xsd:complexType name="method">
         <xsd:annotation>

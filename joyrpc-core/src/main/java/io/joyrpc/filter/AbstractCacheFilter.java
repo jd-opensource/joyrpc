@@ -22,15 +22,11 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.cache.Cache;
-import io.joyrpc.cache.CacheConfig;
-import io.joyrpc.cache.CacheFactory;
-import io.joyrpc.cache.CacheObject;
+import io.joyrpc.cache.*;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
-import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.GenericMethodOption;
@@ -89,6 +85,12 @@ public class AbstractCacheFilter extends AbstractFilter {
                     }
                     return Optional.empty();
                 } else {
+                    //看看是否是表达式
+                    if (generator instanceof CacheKeyGenerator.ExpressionGenerator) {
+                        CacheKeyGenerator.ExpressionGenerator gen = (CacheKeyGenerator.ExpressionGenerator) generator;
+                        gen.setParameters((key, def) -> url.getString(getOption(methodName, key, def)));
+                        gen.setup();
+                    }
                     //判断是否缓存空值
                     boolean cacheNullable = url.getBoolean(getOption(methodName, CACHE_NULLABLE_OPTION.getName(), defCacheNullable));
                     //创建缓存
@@ -192,11 +194,13 @@ public class AbstractCacheFilter extends AbstractFilter {
         /**
          * 构造函数
          *
-         * @param cache
-         * @param generator
-         * @param cacheNullable
+         * @param cache         缓存
+         * @param generator     键生成器
+         * @param cacheNullable 缓存空
          */
-        public CacheMeta(final Cache<Object, Object> cache, final CacheKeyGenerator generator, final boolean cacheNullable) {
+        public CacheMeta(final Cache<Object, Object> cache,
+                         final CacheKeyGenerator generator,
+                         final boolean cacheNullable) {
             this.cache = cache;
             this.generator = generator;
             this.cacheNullable = cacheNullable;
@@ -210,6 +214,10 @@ public class AbstractCacheFilter extends AbstractFilter {
             return generator;
         }
 
+        public boolean isCacheNullable() {
+            return cacheNullable;
+        }
+
         /**
          * 生成Key
          *
@@ -218,7 +226,7 @@ public class AbstractCacheFilter extends AbstractFilter {
          */
         public Object getKey(final Invocation invocation) {
             try {
-                return invocation == null ? null : generator.generate(invocation);
+                return generator.generate(invocation);
             } catch (CacheException e) {
                 logger.error(e.getMessage(), e);
                 return null;

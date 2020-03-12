@@ -1,1 +1,2 @@
 io.joyrpc.cache.json.JSONCacheKeyGenerator
+io.joyrpc.cache.expression.ExpressionCacheKeyGenerator

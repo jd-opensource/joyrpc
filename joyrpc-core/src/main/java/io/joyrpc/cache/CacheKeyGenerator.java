@@ -9,9 +9,9 @@ package io.joyrpc.cache;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,20 +22,40 @@ package io.joyrpc.cache;
 
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Extensible;
+import io.joyrpc.extension.Prototype;
 import io.joyrpc.protocol.message.Invocation;
 
-/**
- * @description:
- */
+import java.util.function.BiFunction;
 
+/**
+ * 缓存键生成器
+ */
 @Extensible(value = "cacheKeyGenerator")
 public interface CacheKeyGenerator {
     /**
      * 产生缓存的Key
      *
-     * @param invocation
-     * @return
-     * @throws CacheException
+     * @param invocation 调用请求
+     * @return 键
+     * @throws CacheException 缓存异常
      */
     Object generate(Invocation invocation) throws CacheException;
+
+    /**
+     * 基于表达式的键生成器
+     */
+    interface ExpressionGenerator extends CacheKeyGenerator, Prototype {
+
+        /**
+         * 设置参数
+         *
+         * @param parameters 参数
+         */
+        void setParameters(BiFunction<String, String, String> parameters);
+
+        /**
+         * 构建表达式
+         */
+        void setup();
+    }
 }

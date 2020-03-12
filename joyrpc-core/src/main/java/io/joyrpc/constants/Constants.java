@@ -645,6 +645,11 @@ public class Constants {
      * 默认缓存键生成算法
      */
     public static final String JSON_CACHE_KEY_GENERATOR = "json";
+
+    /**
+     * 缓存键表达式
+     */
+    public static final String CACHE_KEY_EXPRESSION = "cacheKeyExpression";
     /**
      * 缓存键生成算法选项
      */

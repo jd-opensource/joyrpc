@@ -22,6 +22,7 @@ package io.joyrpc.config;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -34,7 +35,6 @@ import io.joyrpc.context.Configurator;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.StringUtils;
@@ -324,21 +324,17 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         }
     }
 
-    /**
-     * set methods.
-     *
-     * @param methods
-     */
-    public void setMethods(List<MethodConfig> methods) {
+    public void setMethods(Map<String, MethodConfig> methods) {
         if (this.methods == null) {
             this.methods = new ConcurrentHashMap<>();
         } else {
             this.methods.clear();
         }
         if (methods != null) {
-            for (MethodConfig config : methods) {
-                this.methods.put(config.getName(), config);
-            }
+            methods.forEach((key, value) -> {
+                value.setName(key);
+                this.methods.put(key, value);
+            });
         }
     }
 

@@ -21,9 +21,9 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.cache.CacheKeyGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -81,6 +81,10 @@ public class MethodConfig extends AbstractConfig {
      * cache最大容量
      */
     protected Integer cacheCapacity;
+    /**
+     * cache键表达式
+     */
+    protected String cacheKeyExpression;
     /**
      * 是否启动压缩
      */
@@ -184,6 +188,14 @@ public class MethodConfig extends AbstractConfig {
         this.cacheCapacity = cacheCapacity;
     }
 
+    public String getCacheKeyExpression() {
+        return cacheKeyExpression;
+    }
+
+    public void setCacheKeyExpression(String cacheKeyExpression) {
+        this.cacheKeyExpression = cacheKeyExpression;
+    }
+
     public Integer getDstParam() {
         return dstParam;
     }
@@ -246,6 +258,7 @@ public class MethodConfig extends AbstractConfig {
         addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_EXPIRE_TIME_OPTION.getName()), cacheExpireTime);
         addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_CAPACITY_OPTION.getName()), cacheCapacity);
         addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
+        addElement2Map(params, METHOD_KEY.apply(name, CACHE_KEY_EXPRESSION), cacheKeyExpression);
 
         if (null != parameters) {
             parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY.apply(name, k), v));

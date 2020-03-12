@@ -21,6 +21,7 @@ package io.joyrpc;
  */
 
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.MetricHandler;
 import io.joyrpc.cluster.candidate.Candidature;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -47,10 +48,10 @@ import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.RespInjection;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventBus;
+import io.joyrpc.expression.ExpressionProvider;
 import io.joyrpc.extension.*;
 import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.filter.ProviderFilter;
-import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.health.Doctor;
 import io.joyrpc.invoker.ExceptionHandler;
 import io.joyrpc.invoker.FilterChainFactory;
@@ -164,6 +165,10 @@ public interface Plugin {
      */
     ExtensionPoint<GenericSerializer, String> GENERIC_SERIALIZER = new ExtensionPointLazy<>(GenericSerializer.class);
 
+    /**
+     * 表达式插件
+     */
+    ExtensionPoint<ExpressionProvider, String> EXPRESSION_PROVIDER = new ExtensionPointLazy<>(ExpressionProvider.class);
 
     /**
      * 编解码插件选择器

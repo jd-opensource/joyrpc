@@ -34,7 +34,7 @@ import io.joyrpc.context.Configurator;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.filter.cache.CacheKeyGenerator;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.StringUtils;

@@ -644,11 +644,11 @@ public class Constants {
     /**
      * 默认缓存键生成算法
      */
-    public static final String DEFAULT_CACHE_KEY_GENERATOR = "default";
+    public static final String JSON_CACHE_KEY_GENERATOR = "json";
     /**
      * 缓存键生成算法选项
      */
-    public static final URLOption<String> CACHE_KEY_GENERATOR_OPTION = new URLOption<>("cacheKeyGenerator", DEFAULT_CACHE_KEY_GENERATOR);
+    public static final URLOption<String> CACHE_KEY_GENERATOR_OPTION = new URLOption<>("cacheKeyGenerator", JSON_CACHE_KEY_GENERATOR);
     public static final URLOption<Integer> CACHE_EXPIRE_TIME_OPTION = new URLOption<>("cacheExpireTime", -1);
     public static final URLOption<Integer> CACHE_CAPACITY_OPTION = new URLOption<>("cacheCapacity", 10000);
     public static final URLOption<Boolean> CACHE_NULLABLE_OPTION = new URLOption<>("cacheNullable", Boolean.FALSE);

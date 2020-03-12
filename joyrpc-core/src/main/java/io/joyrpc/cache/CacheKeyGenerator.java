@@ -1,4 +1,4 @@
-package io.joyrpc.filter.cache;
+package io.joyrpc.cache;
 
 /*-
  * #%L
@@ -21,25 +21,21 @@ package io.joyrpc.filter.cache;
  */
 
 import io.joyrpc.exception.CacheException;
-import io.joyrpc.exception.SerializerException;
-import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 
-import static io.joyrpc.Plugin.JSON;
-
 /**
- * @description: 参数转json
+ * @description:
  */
-@Extension(value = "default")
-public class DefaultCacheKeyGenerator implements CacheKeyGenerator {
 
-    @Override
-    public Object generate(final Invocation invocation) throws CacheException {
-        try {
-            return JSON.get().toJSONString(invocation.getArgs());
-        } catch (SerializerException e) {
-            throw new CacheException("Error occurs while generating cache key", e);
-        }
-    }
-
+@Extensible(value = "cacheKeyGenerator")
+public interface CacheKeyGenerator {
+    /**
+     * 产生缓存的Key
+     *
+     * @param invocation
+     * @return
+     * @throws CacheException
+     */
+    Object generate(Invocation invocation) throws CacheException;
 }

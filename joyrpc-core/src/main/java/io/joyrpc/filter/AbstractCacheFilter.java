@@ -30,7 +30,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
-import io.joyrpc.filter.cache.CacheKeyGenerator;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.GenericMethodOption;

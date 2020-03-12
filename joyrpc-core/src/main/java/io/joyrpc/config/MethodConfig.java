@@ -23,7 +23,7 @@ package io.joyrpc.config;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.filter.cache.CacheKeyGenerator;
+import io.joyrpc.cache.CacheKeyGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -67,7 +67,7 @@ public class MethodConfig extends AbstractConfig {
     /**
      * cache key 生成器
      */
-    @ValidatePlugin(extensible = CacheKeyGenerator.class, name = "CACHE_KEY_GENERATOR", defaultValue = DEFAULT_CACHE_KEY_GENERATOR)
+    @ValidatePlugin(extensible = CacheKeyGenerator.class, name = "CACHE_KEY_GENERATOR", defaultValue = JSON_CACHE_KEY_GENERATOR)
     protected String cacheKeyGenerator;
     /**
      * 是否启动结果缓存

@@ -50,7 +50,7 @@ import io.joyrpc.event.EventBus;
 import io.joyrpc.extension.*;
 import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.filter.ProviderFilter;
-import io.joyrpc.filter.cache.CacheKeyGenerator;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.health.Doctor;
 import io.joyrpc.invoker.ExceptionHandler;
 import io.joyrpc.invoker.FilterChainFactory;

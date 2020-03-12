@@ -1,4 +1,4 @@
-package io.joyrpc.filter.cache;
+package io.joyrpc.cache.json;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.filter.cache;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,22 +20,27 @@ package io.joyrpc.filter.cache;
  * #L%
  */
 
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.exception.CacheException;
-import io.joyrpc.extension.Extensible;
+import io.joyrpc.exception.SerializerException;
+import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Invocation;
 
-/**
- * @description:
- */
+import static io.joyrpc.Plugin.JSON;
 
-@Extensible(value = "cacheKeyGenerator")
-public interface CacheKeyGenerator {
-    /**
-     * 产生缓存的Key
-     *
-     * @param invocation
-     * @return
-     * @throws CacheException
-     */
-    Object generate(Invocation invocation) throws CacheException;
+/**
+ * 参数转json
+ */
+@Extension(value = "json")
+public class JSONCacheKeyGenerator implements CacheKeyGenerator {
+
+    @Override
+    public Object generate(final Invocation invocation) throws CacheException {
+        try {
+            return JSON.get().toJSONString(invocation.getArgs());
+        } catch (SerializerException e) {
+            throw new CacheException("Error occurs while generating cache key", e);
+        }
+    }
+
 }

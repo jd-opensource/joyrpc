@@ -14,10 +14,9 @@
         <module>joyrpc-plugin</module>
         <module>joyrpc-spring</module>
         <module>joyrpc-springboot</module>
+        <module>joyrpc-all</module>
         <module>joyrpc-test</module>
         <module>joyrpc-example</module>
-        <module>joyrpc-all</module>
-        <module>joyrpc-test/joyrpc-test-expression</module>
     </modules>
     <name>joyrpc</name>
     <properties>

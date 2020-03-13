@@ -21,7 +21,6 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-jexl3</artifactId>
             <version>${commons-jexl3.version}</version>
-            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

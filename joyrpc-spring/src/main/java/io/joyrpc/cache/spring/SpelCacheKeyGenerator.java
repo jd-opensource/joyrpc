@@ -21,11 +21,8 @@ package io.joyrpc.cache.spring;
  */
 
 import io.joyrpc.cache.AbstractExpressionCacheKeyGenerator;
-import io.joyrpc.expression.Expression;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-
-import static io.joyrpc.Plugin.EXPRESSION_PROVIDER;
 
 
 /**
@@ -35,8 +32,7 @@ import static io.joyrpc.Plugin.EXPRESSION_PROVIDER;
 @ConditionalOnClass({"org.springframework.expression.Expression"})
 public class SpelCacheKeyGenerator extends AbstractExpressionCacheKeyGenerator {
 
-    @Override
-    protected Expression create(final String el) {
-        return EXPRESSION_PROVIDER.get("spel").build(el);
+    public SpelCacheKeyGenerator() {
+        super("spel");
     }
 }

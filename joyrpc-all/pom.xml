@@ -153,6 +153,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-expression-jexl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>${commons-compress.version}</version>

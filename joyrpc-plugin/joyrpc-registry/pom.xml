@@ -16,6 +16,7 @@
         <module>joyrpc-registry-etcd</module>
         <module>joyrpc-registry-zk</module>
         <module>joyrpc-registry-broadcast</module>
+
     </modules>
 
     <dependencies>

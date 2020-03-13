@@ -40,9 +40,9 @@ import static io.joyrpc.proxy.GrpcFactory.ORDER_BYTE_BUDDY;
 public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
 
     @Override
-    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> naming) {
+    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> suffix) {
         DynamicType.Builder<?> builder = new ByteBuddy().with(
-                new NamingStrategy.SuffixingRandom(naming.get(), new BaseNameResolver.ForFixedValue(clz.getName()), "")).
+                new NamingStrategy.SuffixingRandom(suffix.get(), new BaseNameResolver.ForFixedValue(clz.getName()), "")).
                 subclass(Object.class);
         for (Parameter parameter : method.getParameters()) {
             builder = builder.defineProperty(parameter.getName(), parameter.getParameterizedType());
@@ -52,11 +52,11 @@ public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
 
     @Override
     protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Supplier<String> naming) {
-        DynamicType.Builder<?> dynamicBuilder = new ByteBuddy().with(
-                new NamingStrategy.SuffixingRandom(naming.get(), clz.getPackage().getName())).
+        DynamicType.Builder<?> builder = new ByteBuddy().with(
+                new NamingStrategy.SuffixingRandom(naming.get(), new BaseNameResolver.ForFixedValue(clz.getName()), "")).
                 subclass(Object.class).
                 defineProperty(GrpcType.F_RESULT, method.getGenericReturnType());
-        return dynamicBuilder.make().load(Thread.currentThread().getContextClassLoader()).getLoaded();
+        return builder.make().load(Thread.currentThread().getContextClassLoader()).getLoaded();
     }
 
 }

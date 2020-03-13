@@ -38,11 +38,11 @@ import static io.joyrpc.proxy.GrpcFactory.ORDER_JAVASSIST;
 public class JavassistGrpcFactory extends AbstractGrpcFactory {
 
     @Override
-    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> suffix) throws Exception {
         //ClassPool：CtClass对象的容器
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
-        CtClass ctClass = pool.makeClass(clz.getName() + "$" + naming.get());
+        CtClass ctClass = pool.makeClass(clz.getName() + "$" + suffix.get());
         //添加字段
         CtField ctField;
         String name;
@@ -68,7 +68,7 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         CtClass ctClass = pool.makeClass(clz.getName() + "$" + naming.get());
         Type type = method.getGenericReturnType();
         String name = GrpcType.F_RESULT;
-        CtField ctField = new CtField(pool.getCtClass(type.toString()), name, ctClass);
+        CtField ctField = new CtField(pool.getCtClass(type.getTypeName()), name, ctClass);
         ctField.setModifiers(Modifier.PRIVATE);
         ctClass.addField(ctField);
         name = name.substring(0, 1).toUpperCase() + name.substring(1);

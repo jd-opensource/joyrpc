@@ -193,7 +193,7 @@ public class Exporter extends AbstractInvoker {
         this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
         //方法透传参数
         this.methodImplicits = new MethodOption.NameKeyOption<>(interfaceClass, m -> url.startsWith(
-                Constants.METHOD_KEY.apply(m.getName(), String.valueOf(HIDE_KEY_PREFIX)), true));
+                Constants.METHOD_KEY_FUNC.apply(m.getName(), String.valueOf(HIDE_KEY_PREFIX)), true));
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
         this.identification = IDENTIFICATION.get(url.getString(Constants.IDENTIFICATION_OPTION));

@@ -417,10 +417,10 @@ public class Constants {
     public static final PublisherConfig EVENT_PUBLISHER_TRANSPORT_CONF = PublisherConfig.builder().timeout(1000).build();
 
 
-
-    /*======================= URL prarmters type =======================*/
-
-    public static final BiFunction<String, String, String> METHOD_KEY = (method, key) -> new StringBuilder(60).append(URL_METHOD_PREX).append(method).append(".").append(key).toString();
+    /**
+     * 方法参数函数
+     */
+    public static final BiFunction<String, String, String> METHOD_KEY_FUNC = (method, key) -> key == null ? null : new StringBuilder(60).append(URL_METHOD_PREX).append(method).append(".").append(key).toString();
 
     /*------------------------ 通用配置 ------------------------*/
     public static final URLOption<String> FILTER_OPTION = new URLOption<>("filter", "");

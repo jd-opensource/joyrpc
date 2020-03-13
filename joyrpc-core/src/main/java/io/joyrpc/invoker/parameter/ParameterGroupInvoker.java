@@ -40,7 +40,7 @@ import io.joyrpc.util.Shutdown;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
-import static io.joyrpc.constants.Constants.METHOD_KEY;
+import static io.joyrpc.constants.Constants.METHOD_KEY_FUNC;
 
 /**
  * 参数分组路由
@@ -61,7 +61,7 @@ public class ParameterGroupInvoker extends AbstractGroupInvoker {
     public void setup() {
         super.setup();
         option = new GenericMethodOption<>(clazz, className, o -> Optional.ofNullable(
-                url.getPositiveInt(new URLBiOption<>(METHOD_KEY.apply(o, Constants.DST_PARAM_OPTION.getName()),
+                url.getPositiveInt(new URLBiOption<>(METHOD_KEY_FUNC.apply(o, Constants.DST_PARAM_OPTION.getName()),
                         Constants.DST_PARAM_OPTION.getName(), () -> null))));
         dstParam = url.getInteger(Constants.DST_PARAM_OPTION.getName());
     }

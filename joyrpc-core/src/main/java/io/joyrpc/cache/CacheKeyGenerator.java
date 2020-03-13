@@ -22,10 +22,9 @@ package io.joyrpc.cache;
 
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Extensible;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.Prototype;
 import io.joyrpc.protocol.message.Invocation;
-
-import java.util.function.BiFunction;
 
 /**
  * 缓存键生成器
@@ -51,7 +50,7 @@ public interface CacheKeyGenerator {
          *
          * @param parameters 参数
          */
-        void setParameters(BiFunction<String, String, String> parameters);
+        void setParametric(Parametric parameters);
 
         /**
          * 构建表达式

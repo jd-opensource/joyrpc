@@ -246,22 +246,22 @@ public class MethodConfig extends AbstractConfig {
     @Override
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.RETRIES_OPTION.getName()), retries);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.TIMEOUT_OPTION.getName()), timeout);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.VALIDATION_OPTION.getName()), validation);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CONCURRENCY_OPTION.getName()), concurrency);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.COMPRESS_OPTION.getName()), compress);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.DST_PARAM_OPTION.getName()), dstParam);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_OPTION.getName()), cache);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_PROVIDER_OPTION.getName()), cacheProvider);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_KEY_GENERATOR_OPTION.getName()), cacheKeyGenerator);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_EXPIRE_TIME_OPTION.getName()), cacheExpireTime);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_CAPACITY_OPTION.getName()), cacheCapacity);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
-        addElement2Map(params, METHOD_KEY.apply(name, CACHE_KEY_EXPRESSION), cacheKeyExpression);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRIES_OPTION.getName()), retries);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.TIMEOUT_OPTION.getName()), timeout);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.VALIDATION_OPTION.getName()), validation);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CONCURRENCY_OPTION.getName()), concurrency);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.COMPRESS_OPTION.getName()), compress);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.DST_PARAM_OPTION.getName()), dstParam);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_OPTION.getName()), cache);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_PROVIDER_OPTION.getName()), cacheProvider);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_KEY_GENERATOR_OPTION.getName()), cacheKeyGenerator);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_EXPIRE_TIME_OPTION.getName()), cacheExpireTime);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_CAPACITY_OPTION.getName()), cacheCapacity);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, CACHE_KEY_EXPRESSION), cacheKeyExpression);
 
         if (null != parameters) {
-            parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY.apply(name, k), v));
+            parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY_FUNC.apply(name, k), v));
         }
         return params;
     }

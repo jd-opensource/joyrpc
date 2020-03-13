@@ -21,10 +21,9 @@ package io.joyrpc.filter;
  */
 
 import io.joyrpc.extension.URL;
-import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
 
-import static io.joyrpc.constants.Constants.METHOD_KEY;
+import static io.joyrpc.constants.Constants.METHOD_KEY_FUNC;
 
 /**
  * 抽象过滤链
@@ -66,18 +65,6 @@ public abstract class AbstractFilter implements Filter {
     /**
      * 获取参数选项
      *
-     * @param method
-     * @param option
-     * @param <T>
-     * @return
-     */
-    protected <T> URLBiOption<T> getOption(final String method, final URLOption<T> option) {
-        return new URLBiOption<>(METHOD_KEY.apply(method, option.getName()), option.getName(), option.get());
-    }
-
-    /**
-     * 获取参数选项
-     *
      * @param method       方法名
      * @param name         参数名称
      * @param defaultValue 默认值
@@ -85,7 +72,7 @@ public abstract class AbstractFilter implements Filter {
      * @return
      */
     protected <T> URLOption<T> getOption(final String method, final String name, final T defaultValue) {
-        return new URLOption<>(METHOD_KEY.apply(method, name), defaultValue);
+        return new URLOption<>(METHOD_KEY_FUNC.apply(method, name), defaultValue);
     }
 
 }

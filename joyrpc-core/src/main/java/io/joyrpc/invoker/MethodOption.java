@@ -139,7 +139,7 @@ public class MethodOption {
      * @return 参数名称
      */
     protected String getKey(final String methodName, final URLOption<?> option) {
-        return METHOD_KEY.apply(methodName, option.getName());
+        return METHOD_KEY_FUNC.apply(methodName, option.getName());
     }
 
     /**
@@ -150,7 +150,7 @@ public class MethodOption {
      * @return 参数名称
      */
     protected String getKey(final String methodName, final String name) {
-        return METHOD_KEY.apply(methodName, name);
+        return METHOD_KEY_FUNC.apply(methodName, name);
     }
 
     /**

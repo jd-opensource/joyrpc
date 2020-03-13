@@ -23,10 +23,12 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cache.*;
+import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.GenericMethodOption;
@@ -71,13 +73,15 @@ public class AbstractCacheFilter extends AbstractFilter {
         } else {
             final Set<String> noneExitsGenerators = new HashSet<>();
             caches = new GenericMethodOption<>(clazz, className, (methodName) -> {
+                String prefix = URL_METHOD_PREX + methodName + ".";
+                WrapperParametric parametric = new WrapperParametric(url, methodName, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
                 //判断是否开启了缓存
-                boolean enable = url.getBoolean(getOption(methodName, CACHE_OPTION.getName(), defEnable));
+                boolean enable = parametric.getBoolean(CACHE_OPTION.getName(), defEnable);
                 if (!enable) {
                     return Optional.empty();
                 }
                 //获取缓存键生成器
-                String keyGenerator = url.getString(getOption(methodName, CACHE_KEY_GENERATOR_OPTION.getName(), defKeyGenerator));
+                String keyGenerator = parametric.getString(CACHE_KEY_GENERATOR_OPTION.getName(), defKeyGenerator);
                 CacheKeyGenerator generator = CACHE_KEY_GENERATOR.get(keyGenerator);
                 if (generator == null) {
                     if (keyGenerator != null && noneExitsGenerators.add(keyGenerator)) {
@@ -86,17 +90,17 @@ public class AbstractCacheFilter extends AbstractFilter {
                     return Optional.empty();
                 } else {
                     //看看是否是表达式
-                    if (generator instanceof CacheKeyGenerator.ExpressionGenerator) {
-                        CacheKeyGenerator.ExpressionGenerator gen = (CacheKeyGenerator.ExpressionGenerator) generator;
-                        gen.setParameters((key, def) -> url.getString(getOption(methodName, key, def)));
+                    if (generator instanceof ExpressionGenerator) {
+                        ExpressionGenerator gen = (ExpressionGenerator) generator;
+                        gen.setParametric(parametric);
                         gen.setup();
                     }
                     //判断是否缓存空值
-                    boolean cacheNullable = url.getBoolean(getOption(methodName, CACHE_NULLABLE_OPTION.getName(), defCacheNullable));
+                    boolean cacheNullable = parametric.getBoolean(CACHE_NULLABLE_OPTION.getName(), defCacheNullable);
                     //创建缓存
                     CacheConfig<Object, Object> cacheConfig = CacheConfig.builder().nullable(cacheNullable).
-                            capacity(url.getInteger(getOption(methodName, CACHE_CAPACITY_OPTION.getName(), defCacheCapacity))).
-                            expireAfterWrite(url.getInteger(getOption(methodName, CACHE_EXPIRE_TIME_OPTION.getName(), defCacheExpireTime))).
+                            capacity(parametric.getInteger(CACHE_CAPACITY_OPTION.getName(), defCacheCapacity)).
+                            expireAfterWrite(parametric.getInteger(CACHE_EXPIRE_TIME_OPTION.getName(), defCacheExpireTime)).
                             build();
                     Cache<Object, Object> cache = cacheFactory.build(methodName, cacheConfig);
                     return Optional.of(new CacheMeta(cache, generator, cacheNullable));

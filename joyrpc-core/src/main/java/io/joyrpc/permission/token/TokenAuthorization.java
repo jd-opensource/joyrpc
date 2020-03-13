@@ -12,7 +12,7 @@ import io.joyrpc.util.GenericMethodOption;
 import java.util.Optional;
 
 import static io.joyrpc.constants.Constants.HIDDEN_KEY_TOKEN;
-import static io.joyrpc.constants.Constants.METHOD_KEY;
+import static io.joyrpc.constants.Constants.METHOD_KEY_FUNC;
 
 /**
  * 基于令牌的方法权限认证
@@ -65,7 +65,7 @@ public class TokenAuthorization implements Authorization, InvokerAware {
         final String defToken = url.getString(HIDDEN_KEY_TOKEN);
         tokens = new GenericMethodOption<>(clazz, className, methodName -> Optional.ofNullable(
                 url.getString(new URLOption<>(
-                        METHOD_KEY.apply(methodName, HIDDEN_KEY_TOKEN), defToken))));
+                        METHOD_KEY_FUNC.apply(methodName, HIDDEN_KEY_TOKEN), defToken))));
 
 
     }

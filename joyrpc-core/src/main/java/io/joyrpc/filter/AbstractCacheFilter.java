@@ -55,7 +55,7 @@ public class AbstractCacheFilter extends AbstractFilter {
     /**
      * 方法缓存配置元数据
      */
-    protected GenericMethodOption<Optional<CacheMeta>> caches;
+    protected GenericMethodOption<Optional<CacheInvoker>> caches;
 
     @Override
     public void setup() {
@@ -103,7 +103,7 @@ public class AbstractCacheFilter extends AbstractFilter {
                             expireAfterWrite(parametric.getInteger(CACHE_EXPIRE_TIME_OPTION.getName(), defCacheExpireTime)).
                             build();
                     Cache<Object, Object> cache = cacheFactory.build(methodName, cacheConfig);
-                    return Optional.of(new CacheMeta(cache, generator, cacheNullable));
+                    return Optional.of(new CacheInvoker(cache, generator));
                 }
             });
         }
@@ -115,49 +115,9 @@ public class AbstractCacheFilter extends AbstractFilter {
         if (caches == null) {
             return invoker.invoke(request);
         }
-        Invocation invocation = request.getPayLoad();
-        Optional<CacheMeta> optional = caches.get(invocation.getMethodName());
-        if (optional == null) {
-            return invoker.invoke(request);
-        }
-        //判断是否开启缓存
-        CacheMeta meta = optional.orElse(null);
-        if (meta == null) {
-            return invoker.invoke(request);
-        }
-        Object key = meta.getKey(invocation);
-        if (key == null) {
-            return invoker.invoke(request);
-        }
-        final CompletableFuture<Result> result = new CompletableFuture<>();
-        //获取缓存
-        CompletableFuture<CacheObject<Object>> future = meta.getCache(key);
-        future.whenComplete((cache, t) -> {
-            if (t == null && cache != null) {
-                result.complete(new Result(request.getContext(), cache.getResult()));
-            } else {
-                //没有拿到缓存
-                if (t != null) {
-                    //有异常
-                    logger.error("Error occurs while reading cache,caused by " + t.getMessage(), t);
-                }
-                //未命中发起远程调用
-                CompletableFuture<Result> invokerFuture = invoker.invoke(request);
-                invokerFuture.whenComplete((r, error) -> {
-                    if (error != null) {
-                        //远程调用异常
-                        result.completeExceptionally(error);
-                    } else {
-                        result.complete(r);
-                        if (!r.isException()) {
-                            //缓存非异常结果
-                            meta.putCache(key, r.getValue());
-                        }
-                    }
-                });
-            }
-        });
-        return result;
+        Optional<CacheInvoker> optional = caches.get(request.getPayLoad().getMethodName());
+        CacheInvoker cacheInvoker = optional.orElse(null);
+        return cacheInvoker == null ? invoker.invoke(request) : cacheInvoker.invoke(invoker, request);
     }
 
     @Override
@@ -181,7 +141,7 @@ public class AbstractCacheFilter extends AbstractFilter {
     /**
      * 缓存元数据
      */
-    protected static class CacheMeta {
+    protected static class CacheInvoker {
         /**
          * 缓存接口
          */
@@ -190,75 +150,74 @@ public class AbstractCacheFilter extends AbstractFilter {
          * 缓存键生成器
          */
         protected final CacheKeyGenerator generator;
-        /**
-         * 是否可以缓存null对象
-         */
-        protected final boolean cacheNullable;
 
         /**
          * 构造函数
          *
-         * @param cache         缓存
-         * @param generator     键生成器
-         * @param cacheNullable 缓存空
+         * @param cache     缓存
+         * @param generator 键生成器
          */
-        public CacheMeta(final Cache<Object, Object> cache,
-                         final CacheKeyGenerator generator,
-                         final boolean cacheNullable) {
+        public CacheInvoker(final Cache<Object, Object> cache, final CacheKeyGenerator generator) {
             this.cache = cache;
             this.generator = generator;
-            this.cacheNullable = cacheNullable;
         }
 
-        public Cache<Object, Object> getCache() {
-            return cache;
-        }
-
-        public CacheKeyGenerator getGenerator() {
-            return generator;
-        }
-
-        public boolean isCacheNullable() {
-            return cacheNullable;
+        /**
+         * 调用
+         *
+         * @param invoker 调用器
+         * @param request 请求
+         * @return
+         */
+        public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
+            Object key = getKey(request.getPayLoad());
+            if (key == null) {
+                return invoker.invoke(request);
+            }
+            final CompletableFuture<Result> result = new CompletableFuture<>();
+            //获取缓存
+            CompletableFuture<CacheObject<Object>> future = cache.get(key);
+            future.whenComplete((c, t) -> {
+                if (t == null && c != null) {
+                    result.complete(new Result(request.getContext(), c.getResult()));
+                } else {
+                    //没有拿到缓存
+                    if (t != null) {
+                        //有异常
+                        logger.error("Error occurs while reading c,caused by " + t.getMessage(), t);
+                    }
+                    //未命中发起远程调用
+                    CompletableFuture<Result> invokerFuture = invoker.invoke(request);
+                    invokerFuture.whenComplete((r, error) -> {
+                        if (error != null) {
+                            //远程调用异常
+                            result.completeExceptionally(error);
+                        } else {
+                            result.complete(r);
+                            if (!r.isException()) {
+                                //缓存非异常结果
+                                cache.put(key, r.getValue());
+                            }
+                        }
+                    });
+                }
+            });
+            return result;
         }
 
         /**
          * 生成Key
          *
-         * @param invocation
-         * @return
+         * @param invocation 获取键
+         * @return 键
          */
-        public Object getKey(final Invocation invocation) {
+        protected Object getKey(final Invocation invocation) {
             try {
                 return generator.generate(invocation);
             } catch (CacheException e) {
                 logger.error(e.getMessage(), e);
                 return null;
             }
-        }
-
-        /**
-         * 获取缓存
-         *
-         * @param key
-         * @return
-         */
-        public CompletableFuture<CacheObject<Object>> getCache(final Object key) {
-            return cache.get(key);
-        }
-
-        /**
-         * 修改缓存
-         *
-         * @param key
-         * @param value
-         * @return
-         */
-        public CompletableFuture<Void> putCache(final Object key, final Object value) {
-            if (!cacheNullable && value == null) {
-                return CompletableFuture.completedFuture(null);
-            }
-            return cache.put(key, value);
         }
     }
 }

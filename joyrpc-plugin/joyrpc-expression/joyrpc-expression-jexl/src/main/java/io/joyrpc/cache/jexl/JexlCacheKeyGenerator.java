@@ -8,7 +8,7 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
  * JEXL3表达式缓存键生成器
  */
 @Extension("jexl")
-@ConditionalOnClass({"org.apache.commons.jexl3.JexlEngine"})
+@ConditionalOnClass({"org.apache.commons.jexl3.JexlBuilder"})
 public class JexlCacheKeyGenerator extends AbstractExpressionCacheKeyGenerator {
 
     public JexlCacheKeyGenerator() {

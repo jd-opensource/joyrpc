@@ -324,23 +324,21 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         }
     }
 
-    public Map<String, MethodConfig> getMethods() {
-        return methods;
-    }
-
-    public void setMethods(Map<String, MethodConfig> methods) {
+    /**
+     * set methods.
+     *
+     * @param methods
+     */
+    public void setMethods(List<MethodConfig> methods) {
         if (this.methods == null) {
             this.methods = new ConcurrentHashMap<>();
         } else {
             this.methods.clear();
         }
         if (methods != null) {
-            methods.forEach((key, value) -> {
-                if (value.getName() == null || value.getName().isEmpty()) {
-                    value.setName(key);
-                }
-                this.methods.put(value.getName(), value);
-            });
+            for (MethodConfig config : methods) {
+                this.methods.put(config.getName(), config);
+            }
         }
     }
 

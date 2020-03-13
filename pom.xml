@@ -17,6 +17,7 @@
         <module>joyrpc-test</module>
         <module>joyrpc-example</module>
         <module>joyrpc-all</module>
+        <module>joyrpc-test/joyrpc-test-expression</module>
     </modules>
     <name>joyrpc</name>
     <properties>
@@ -59,6 +60,7 @@
         <zookeeper.version>3.5.5</zookeeper.version>
         <protobuf.version>3.7.1</protobuf.version>
         <resteasy.version>3.0.8.Final</resteasy.version>
+        <commons-jexl3.version>3.1</commons-jexl3.version>
 
         <license.inceptionYear>2019</license.inceptionYear>
         <license.organizationName>joyrpc.io</license.organizationName>

@@ -24,7 +24,4 @@
             <optional>true</optional>
         </dependency>
     </dependencies>
-    <properties>
-        <commons-jexl3.version>3.1</commons-jexl3.version>
-    </properties>
 </project>

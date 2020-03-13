@@ -11,7 +11,6 @@
 
     <artifactId>joyrpc-test-proxy</artifactId>
 
-
     <dependencies>
         <dependency>
             <groupId>io.joyrpc</groupId>

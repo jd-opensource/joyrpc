@@ -17,9 +17,8 @@
         <module>joyrpc-protocol</module>
         <module>joyrpc-proxy</module>
         <module>joyrpc-registry</module>
-        <module>joyrpc-transport-netty4</module>
-        <module>joyrpc-transport-resteasy</module>
-        <module>joyrpc-expression-jexl</module>
+        <module>joyrpc-expression</module>
+        <module>joyrpc-transport</module>
     </modules>
 
     <dependencies>

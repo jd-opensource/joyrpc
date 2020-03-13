@@ -2,6 +2,7 @@ package io.joyrpc.expression.jexl;
 
 import io.joyrpc.expression.Expression;
 import io.joyrpc.expression.ExpressionProvider;
+import io.joyrpc.extension.Extension;
 import org.apache.commons.jexl3.JexlBuilder;
 import org.apache.commons.jexl3.JexlEngine;
 import org.apache.commons.jexl3.JexlExpression;
@@ -12,6 +13,7 @@ import java.util.Map;
 /**
  * JEXL3表达式引擎提供者
  */
+@Extension("jexl")
 public class JexlProvider implements ExpressionProvider {
 
     /**

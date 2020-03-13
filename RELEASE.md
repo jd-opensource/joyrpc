@@ -136,8 +136,6 @@
   
   - javassist包装静态方法报错，过滤掉静态方法
   
-  - javassist生成grpc应答类报错
-  
 - 工具类
      
   - 修复ClassUtils中的isWriteable方法，final修饰的field仍判定可写的问题

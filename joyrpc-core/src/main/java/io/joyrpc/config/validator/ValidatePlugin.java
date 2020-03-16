@@ -34,37 +34,39 @@ public @interface ValidatePlugin {
     String message() default "";
 
     /**
-     * 接口名称
+     * 扩展类
      *
-     * @return
+     * @return 扩展类
      */
     Class<?> extensible();
 
     /**
-     * 插件定义的类
+     * 定义插件的类，默认是"io.joyrpc.Plugin"
      *
-     * @return
+     * @return 定义插件的类
      */
     Class<?> definition() default io.joyrpc.Plugin.class;
 
     /**
      * 在插件定义类中扩展点名称
      *
-     * @return
+     * @return 扩展点名称
      */
     String name();
 
     /**
      * 默认值
      *
-     * @return
+     * @return 默认值
      */
     String defaultValue() default "";
 
     /**
      * 当配置的插件不存在时候，选择最大权重的可用插件
      *
-     * @return
+     * @return 后续标识</ br>
+     * <li>true 当配置的插件不存在时候，选择最大权重的可用插件</li>
+     * <li>false 当配置的插件不存在时候，不选择最大权重的可用插件</li>
      */
     boolean candidate() default false;
 

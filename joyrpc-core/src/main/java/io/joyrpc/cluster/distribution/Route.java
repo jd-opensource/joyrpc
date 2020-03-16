@@ -35,32 +35,32 @@ import java.util.concurrent.CompletableFuture;
 @Extensible("route")
 public interface Route<T, R> extends Prototype {
     /**
-     * failfast插件常量
+     * 快速失败算法
      */
     String FAIL_FAST = "failfast";
     /**
-     * failover插件常量
+     * 异常重试算法
      */
     String FAIL_OVER = "failover";
 
     /**
-     * pinpoint插件常量
+     * 定点调用算法
      */
     String PIN_POINT = "pinpoint";
 
     /**
-     * Failfast顺序
+     * 快速失败插件顺序
      */
     int ORDER_FAILFAST = 100;
     /**
-     * Failover顺序
+     * 异常重试插件顺序
      */
     int ORDER_FAILOVER = 110;
 
     /**
-     * pinpoint顺序
+     * 定点调用插件顺序
      */
-    int ORDER_PINOINT = 120;
+    int ORDER_PINPOINT = 120;
 
     /**
      * 调用，不能修改候选者节点列表
@@ -74,21 +74,21 @@ public interface Route<T, R> extends Prototype {
     /**
      * 设置URL
      *
-     * @param url
+     * @param url url
      */
     void setUrl(URL url);
 
     /**
      * 设置负载均衡
      *
-     * @param loadBalance
+     * @param loadBalance 负责均衡
      */
     void setLoadBalance(LoadBalance<T> loadBalance);
 
     /**
      * 设置调用方法
      *
-     * @param function
+     * @param function 调用方法
      */
     void setFunction(TriFunction<Node, Node, T, CompletableFuture<R>> function);
 

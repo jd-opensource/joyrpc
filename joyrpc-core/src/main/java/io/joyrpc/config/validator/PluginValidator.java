@@ -57,7 +57,7 @@ public class PluginValidator implements ConstraintValidator<ValidatePlugin, Stri
         } else {
             Object target = plugin.candidate() ? extensionPoint.getOrDefault(v) : extensionPoint.get(v);
             if (target == null) {
-                message = String.format("No such extension \'%s\' of %s", v, plugin.extensible().getName());
+                message = String.format("No such extension '%s' of %s", v, plugin.extensible().getName());
             } else if (!plugin.extensible().isInstance(target)) {
                 message = String.format("%s is not a instance of %s", target.getClass().getName(), plugin.extensible().getName());
             } else {

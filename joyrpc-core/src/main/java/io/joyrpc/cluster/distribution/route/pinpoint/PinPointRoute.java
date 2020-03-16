@@ -41,7 +41,7 @@ import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
 /**
  * 定点调用
  */
-@Extension(value = PIN_POINT, order = Route.ORDER_PINOINT)
+@Extension(value = PIN_POINT, order = Route.ORDER_PINPOINT)
 public class PinPointRoute<T, R> extends AbstractRoute<T, R> {
 
     @Override

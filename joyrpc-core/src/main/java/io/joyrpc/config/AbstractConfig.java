@@ -37,6 +37,20 @@ import java.util.Set;
  */
 public abstract class AbstractConfig {
 
+    public AbstractConfig() {
+    }
+
+    public AbstractConfig(AbstractConfig config) {
+
+    }
+
+    /**
+     * 添加配置项
+     *
+     * @param dest  目标
+     * @param key   键
+     * @param value 值
+     */
     protected void addElement2Map(final Map<String, String> dest, final String key, final Object value) {
         if (null != value) {
             String v = value.toString();
@@ -46,37 +60,60 @@ public abstract class AbstractConfig {
         }
     }
 
-    protected void addElement2Map(final Map<String, String> dest, final URLOption option, final Object value) {
+    /**
+     * 添加配置项
+     *
+     * @param dest   目标
+     * @param option 选项
+     * @param value  值
+     */
+    protected void addElement2Map(final Map<String, String> dest, final URLOption<?> option, final Object value) {
         addElement2Map(dest, option.getName(), value);
     }
 
-    protected void addElement2Map(final Map<String, String> dest, final URLBiOption option, final Object value) {
+    /**
+     * 添加配置项
+     *
+     * @param dest   目标
+     * @param option 选项
+     * @param value  值
+     */
+    protected void addElement2Map(final Map<String, String> dest, final URLBiOption<?> option, final Object value) {
         addElement2Map(dest, option.getName(), value);
     }
 
+    /**
+     * 添加配置项
+     *
+     * @param params 目标
+     * @return
+     */
     protected Map<String, String> addAttribute2Map(Map<String, String> params) {
         return params;
     }
 
-    public AbstractConfig() {
-    }
-
-    public AbstractConfig(AbstractConfig config) {
-
-    }
-
+    /**
+     * 创建配置项
+     *
+     * @return 配置项
+     */
     protected Map<String, String> addAttribute2Map() {
         Map<String, String> result = new HashMap<>();
         addAttribute2Map(result);
         return result;
     }
 
+    /**
+     * 名称
+     *
+     * @return 名称
+     */
     protected String name() {
         return "";
     }
 
     /**
-     * 验证
+     * 调用JSR303进行配置项验证
      */
     public void validate() {
         Validator validator = Validation.buildDefaultValidatorFactory().getValidator();

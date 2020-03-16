@@ -97,12 +97,12 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      */
     protected Boolean generic = false;
     /**
-     * 集群处理，默认是failfast
+     * 集群处理算法
      */
     @ValidatePlugin(extensible = Route.class, name = "ROUTE", defaultValue = DEFAULT_ROUTE)
     protected String cluster;
     /**
-     * The Loadbalance. 负载均衡
+     * 负载均衡算法
      */
     @ValidatePlugin(extensible = LoadBalance.class, name = "LOADBALANCE", defaultValue = DEFAULT_LOADBALANCE)
     protected String loadbalance;
@@ -153,7 +153,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      * channel创建模式
      * shared:共享(默认),unshared:独享
      */
-    @ValidatePlugin(extensible = ChannelManagerFactory.class, name = "CHANNEL_MANAGER_FACTORY", defaultValue = DEFAULT_HANNEL_FACTORY)
+    @ValidatePlugin(extensible = ChannelManagerFactory.class, name = "CHANNEL_MANAGER_FACTORY", defaultValue = DEFAULT_CHANNEL_FACTORY)
     protected String channelFactory;
     /**
      * 路由规则

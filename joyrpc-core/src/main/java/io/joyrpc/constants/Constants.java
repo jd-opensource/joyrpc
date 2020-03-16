@@ -454,18 +454,18 @@ public class Constants {
     /**
      * 分发选项
      */
-    public static final URLOption<String> ROUTE_OPTION = new URLOption<>("route", "failover");
+    public static final URLOption<String> ROUTE_OPTION = new URLOption<>("route", DEFAULT_ROUTE);
     public static final URLOption<String> FAILOVER_WHEN_THROWABLE_OPTION = new URLOption<>("failoverWhenThrowable", "");
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
     /**
      * 默认连接工厂
      */
-    public static final String DEFAULT_HANNEL_FACTORY = "shared";
+    public static final String DEFAULT_CHANNEL_FACTORY = "shared";
     /**
      * 连接工厂选项
      */
-    public static final URLOption<String> CHANNEL_FACTORY_OPTION = new URLOption<>("channelFactory", "shared");
+    public static final URLOption<String> CHANNEL_FACTORY_OPTION = new URLOption<>("channelFactory", DEFAULT_CHANNEL_FACTORY);
     /**
      * 身份认证
      */
@@ -511,7 +511,7 @@ public class Constants {
     /**
      * 负载均衡选项
      */
-    public static final URLOption<String> LOADBALANCE_OPTION = new URLOption<>("loadbalance", "randomWeight");
+    public static final URLOption<String> LOADBALANCE_OPTION = new URLOption<>("loadbalance", DEFAULT_LOADBALANCE);
     public static final URLOption<Boolean> STICKY_OPTION = new URLOption<>("sticky", false);
     public static final URLOption<Boolean> IN_JVM_OPTION = new URLOption<>("injvm", true);
     public static final URLOption<Boolean> CHECK_OPTION = new URLOption<>("check", true);
@@ -555,7 +555,7 @@ public class Constants {
     /**
      * 分组路由选项
      */
-    public static final URLOption<String> GROUP_ROUTER_OPTION = new URLOption<>("groupRouter", "parameter");
+    public static final URLOption<String> GROUP_ROUTER_OPTION = new URLOption<>("groupRouter", DEFAULT_GROUP_ROUTER);
 
     /*------------------------ Provider配置 ------------------------*/
     public static final URLOption<Integer> WEIGHT_OPTION = new URLOption<>("weight", 100);

@@ -248,6 +248,26 @@
                 <xsd:documentation><![CDATA[ 方法重试次数 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
+        <xsd:attribute name="retryOnlyOncePerNode" type="xsd:boolean" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 每个节点只调用一次 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="failoverWhenThrowable" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 可以重试的逗号分隔的异常全路径类名 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="failoverPredication" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 重试异常判断接口插件 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="failoverSelector" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 异常重试目标节点选择器 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
         <xsd:attribute name="validation" type="xsd:string" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 是否校验参数 ]]></xsd:documentation>
@@ -357,6 +377,26 @@
                         <xsd:documentation><![CDATA[ 失败后重试次数 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
+                <xsd:attribute name="retryOnlyOncePerNode" type="xsd:boolean" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 每个节点只调用一次 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="failoverWhenThrowable" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 可以重试的逗号分隔的异常全路径类名 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="failoverPredication" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 重试异常判断接口插件 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="failoverSelector" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 异常重试目标节点选择器 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
                 <xsd:attribute name="loadbalance" type="xsd:string" use="optional">
                     <xsd:annotation>
                         <xsd:documentation><![CDATA[ 负载均衡算法插件名称 ]]></xsd:documentation>
@@ -410,16 +450,6 @@
                 <xsd:attribute name="warmupDuration" type="xsd:string" use="optional">
                     <xsd:annotation>
                         <xsd:documentation><![CDATA[ 预热时间 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="failoverWhenThrowable" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 可以重试的逗号分隔的异常全路径类名 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="failoverPredication" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 重试异常判断接口插件 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
             </xsd:extension>

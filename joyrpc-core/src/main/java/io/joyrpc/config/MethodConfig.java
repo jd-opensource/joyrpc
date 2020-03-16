@@ -22,6 +22,8 @@ package io.joyrpc.config;
 
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
+import io.joyrpc.cluster.distribution.ExceptionPredication;
+import io.joyrpc.cluster.distribution.FailoverSelector;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 
@@ -51,6 +53,24 @@ public class MethodConfig extends AbstractConfig {
      * The Retries. 失败后重试次数
      */
     protected Integer retries;
+    /**
+     * 每个节点只调用一次
+     */
+    protected Boolean retryOnlyOncePerNode;
+    /**
+     * 可以重试的逗号分隔的异常全路径类名
+     */
+    protected String failoverWhenThrowable;
+    /**
+     * 重试异常判断接口插件
+     */
+    @ValidatePlugin(extensible = ExceptionPredication.class, name = "EXCEPTION_PREDICATION")
+    protected String failoverPredication;
+    /**
+     * 异常重试目标节点选择器
+     */
+    @ValidatePlugin(extensible = FailoverSelector.class, name = "FAILOVER_SELECTOR", defaultValue = DEFAULT_FAILOVER_SELECTOR)
+    protected String failoverSelector;
     /**
      * The Validation. 是否jsr303验证
      */
@@ -130,6 +150,38 @@ public class MethodConfig extends AbstractConfig {
 
     public void setRetries(Integer retries) {
         this.retries = retries;
+    }
+
+    public Boolean getRetryOnlyOncePerNode() {
+        return retryOnlyOncePerNode;
+    }
+
+    public void setRetryOnlyOncePerNode(Boolean retryOnlyOncePerNode) {
+        this.retryOnlyOncePerNode = retryOnlyOncePerNode;
+    }
+
+    public String getFailoverWhenThrowable() {
+        return failoverWhenThrowable;
+    }
+
+    public void setFailoverWhenThrowable(String failoverWhenThrowable) {
+        this.failoverWhenThrowable = failoverWhenThrowable;
+    }
+
+    public String getFailoverPredication() {
+        return failoverPredication;
+    }
+
+    public void setFailoverPredication(String failoverPredication) {
+        this.failoverPredication = failoverPredication;
+    }
+
+    public String getFailoverSelector() {
+        return failoverSelector;
+    }
+
+    public void setFailoverSelector(String failoverSelector) {
+        this.failoverSelector = failoverSelector;
     }
 
     public Integer getConcurrency() {
@@ -247,6 +299,10 @@ public class MethodConfig extends AbstractConfig {
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRIES_OPTION.getName()), retries);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRY_ONLY_ONCE_PER_NODE_OPTION.getName()), retryOnlyOncePerNode);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_WHEN_THROWABLE_OPTION.getName()), failoverWhenThrowable);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_PREDICATION_OPTION.getName()), failoverPredication);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_SELECTOR_OPTION.getName()), failoverSelector);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.TIMEOUT_OPTION.getName()), timeout);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.VALIDATION_OPTION.getName()), validation);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CONCURRENCY_OPTION.getName()), concurrency);
@@ -258,7 +314,7 @@ public class MethodConfig extends AbstractConfig {
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_EXPIRE_TIME_OPTION.getName()), cacheExpireTime);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_CAPACITY_OPTION.getName()), cacheCapacity);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
-        addElement2Map(params, METHOD_KEY_FUNC.apply(name, CACHE_KEY_EXPRESSION), cacheKeyExpression);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_KEY_EXPRESSION), cacheKeyExpression);
 
         if (null != parameters) {
             parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY_FUNC.apply(name, k), v));

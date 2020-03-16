@@ -26,10 +26,7 @@ import io.joyrpc.Result;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.annotation.Service;
 import io.joyrpc.cluster.candidate.Candidature;
-import io.joyrpc.cluster.distribution.ExceptionPredication;
-import io.joyrpc.cluster.distribution.LoadBalance;
-import io.joyrpc.cluster.distribution.Route;
-import io.joyrpc.cluster.distribution.Router;
+import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.config.validator.ValidatePlugin;
@@ -137,9 +134,13 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     @ValidatePlugin(extensible = Candidature.class, name = "CANDIDATURE", defaultValue = DEFAULT_CANDIDATURE)
     protected String candidature;
     /**
-     * The Retries. 失败后重试次数
+     * 失败最大重试次数
      */
     protected Integer retries;
+    /**
+     * 每个节点只调用一次
+     */
+    protected Boolean retryOnlyOncePerNode;
     /**
      * 可以重试的逗号分隔的异常全路径类名
      */
@@ -149,6 +150,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      */
     @ValidatePlugin(extensible = ExceptionPredication.class, name = "EXCEPTION_PREDICATION")
     protected String failoverPredication;
+    /**
+     * 异常重试目标节点选择器
+     */
+    @ValidatePlugin(extensible = FailoverSelector.class, name = "FAILOVER_SELECTOR", defaultValue = DEFAULT_FAILOVER_SELECTOR)
+    protected String failoverSelector;
     /**
      * channel创建模式
      * shared:共享(默认),unshared:独享
@@ -215,8 +221,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.minSize = config.minSize;
         this.candidature = config.candidature;
         this.retries = config.retries;
+        this.retryOnlyOncePerNode = config.retryOnlyOncePerNode;
         this.failoverWhenThrowable = config.failoverWhenThrowable;
         this.failoverPredication = config.failoverPredication;
+        this.failoverSelector = config.failoverSelector;
         this.channelFactory = config.channelFactory;
         this.router = config.router;
         this.warmupWeight = config.warmupWeight;
@@ -468,6 +476,38 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.retries = retries;
     }
 
+    public Boolean getRetryOnlyOncePerNode() {
+        return retryOnlyOncePerNode;
+    }
+
+    public void setRetryOnlyOncePerNode(Boolean retryOnlyOncePerNode) {
+        this.retryOnlyOncePerNode = retryOnlyOncePerNode;
+    }
+
+    public String getFailoverWhenThrowable() {
+        return failoverWhenThrowable;
+    }
+
+    public void setFailoverWhenThrowable(String failoverWhenThrowable) {
+        this.failoverWhenThrowable = failoverWhenThrowable;
+    }
+
+    public String getFailoverPredication() {
+        return failoverPredication;
+    }
+
+    public void setFailoverPredication(String failoverPredication) {
+        this.failoverPredication = failoverPredication;
+    }
+
+    public String getFailoverSelector() {
+        return failoverSelector;
+    }
+
+    public void setFailoverSelector(String failoverSelector) {
+        this.failoverSelector = failoverSelector;
+    }
+
     public String getLoadbalance() {
         return loadbalance;
     }
@@ -548,14 +588,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.candidature = candidature;
     }
 
-    public String getFailoverWhenThrowable() {
-        return failoverWhenThrowable;
-    }
-
-    public void setFailoverWhenThrowable(String failoverWhenThrowable) {
-        this.failoverWhenThrowable = failoverWhenThrowable;
-    }
-
     public String getChannelFactory() {
         return channelFactory;
     }
@@ -619,22 +651,24 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         addElement2Map(params, Constants.GENERIC_OPTION, generic);
         addElement2Map(params, Constants.ROUTE_OPTION, cluster);
         addElement2Map(params, Constants.RETRIES_OPTION, retries);
+        addElement2Map(params, Constants.RETRY_ONLY_ONCE_PER_NODE_OPTION, retryOnlyOncePerNode);
+        addElement2Map(params, Constants.FAILOVER_WHEN_THROWABLE_OPTION, failoverWhenThrowable);
+        addElement2Map(params, Constants.FAILOVER_PREDICATION_OPTION, failoverPredication);
+        addElement2Map(params, Constants.FAILOVER_SELECTOR_OPTION, failoverSelector);
         addElement2Map(params, Constants.LOADBALANCE_OPTION, loadbalance);
         addElement2Map(params, Constants.IN_JVM_OPTION, injvm);
         addElement2Map(params, Constants.STICKY_OPTION, sticky);
         addElement2Map(params, Constants.CHECK_OPTION, check);
         addElement2Map(params, Constants.SERIALIZATION_OPTION, serialization);
         addElement2Map(params, Constants.ROUTER_OPTION, router);
-        addElement2Map(params, INIT_SIZE_OPTION, initSize);
-        addElement2Map(params, MIN_SIZE_OPTION, minSize);
+        addElement2Map(params, Constants.INIT_SIZE_OPTION, initSize);
+        addElement2Map(params, Constants.MIN_SIZE_OPTION, minSize);
         addElement2Map(params, Constants.CANDIDATURE_OPTION, candidature);
         addElement2Map(params, Constants.ROLE_OPTION, Constants.SIDE_CONSUMER);
         addElement2Map(params, Constants.TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
-        addElement2Map(params, Constants.FAILOVER_WHEN_THROWABLE_OPTION, failoverWhenThrowable);
-        addElement2Map(params, Constants.FAILOVER_PREDICATION_OPTION, failoverPredication);
         addElement2Map(params, Constants.CHANNEL_FACTORY_OPTION, channelFactory);
-        addElement2Map(params, WARMUP_ORIGIN_WEIGHT_OPTION, warmupWeight);
-        addElement2Map(params, WARMUP_DURATION_OPTION, warmupDuration);
+        addElement2Map(params, Constants.WARMUP_ORIGIN_WEIGHT_OPTION, warmupWeight);
+        addElement2Map(params, Constants.WARMUP_DURATION_OPTION, warmupDuration);
         return params;
     }
 

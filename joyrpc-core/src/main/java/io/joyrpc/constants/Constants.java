@@ -500,10 +500,16 @@ public class Constants {
      * 每个节点只重试一次
      */
     public static final URLOption<Boolean> RETRY_ONLY_ONCE_PER_NODE_OPTION = new URLOption<>("retryOnlyOncePerNode", false);
+
+    /**
+     * 默认重试目标节点选择器
+     */
+    public static final String DEFAULT_FAILOVER_SELECTOR = "simple";
+
     /**
      * 重试目标节点选择器
      */
-    public static final URLOption<String> FAILOVER_SELECTOR_OPTION = new URLOption<>("failoverSelector", "simple");
+    public static final URLOption<String> FAILOVER_SELECTOR_OPTION = new URLOption<>("failoverSelector", DEFAULT_FAILOVER_SELECTOR);
     /**
      * 默认负载均衡算法
      */

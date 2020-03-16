@@ -14,7 +14,7 @@
          http://joyrpc.io/schema/joyrpc/joyrpc.xsd">
   </beans>
   ```
-  >说明：上面是完整的schema描述，下面示例中采用  **`<beans/>`** 标签 代表此schema。
+  >说明：上面是完整的schema描述，下面示例中采用  **`<joyrpc/>`** 标签 代表此schema。
   
 #### 注册中心配置 
 

@@ -4,7 +4,7 @@
 
 具体是由Consumer调用的时候直接指定Provider地址进行远程调用。
 
->说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 ### Spring xml配置
 

@@ -2,7 +2,7 @@
 ==
 在Consumer发送请求和Provider返回响应的时候，都可以开启调用压缩。
 目前支持多种算法：lz4(默认)、snappy、lzma、zlib
->说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 ### consumer设置
 

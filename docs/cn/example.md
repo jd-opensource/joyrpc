@@ -10,7 +10,7 @@
 #### [超时时间](./example/timeout.md)
 #### [隐式传参](./example/implicit.md)
 #### [参数校验](./example/paramCheck.md)
-#### [Token调用](./example/token.md)
+#### [安全认证](./example/3a.md)
 #### [调用压缩](./example/compress.md)
 #### [方法限制](./example/methodLimit.md)
 #### [代理类配置](./example/proxy.md)

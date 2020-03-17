@@ -272,11 +272,11 @@
 
   标签：`<joyrpc:consumerGroup>` 
 
-|标签|属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :----: | :---- | :----: |
-|consumerGroup|dstParam|int|否| |目标参数（机房/分组等）索引，从0开始计数|
-|consumerGroup|aliasAdaptive|Boolean|否|false|是否自动适配alias，设为true当没有alias时自动引入|
-|consumerGroup|groupRouter|String|否| |自定义分组路由规则实现类|
+属性|类型|必填|默认值|描述|
+| :----: | :----: | :----: | :---- | :----: |
+|dstParam|int|否| |目标参数（机房/分组等）索引，从0开始计数|
+|aliasAdaptive|Boolean|否|false|是否自动适配alias，设为true当没有alias时自动引入|
+|groupRouter|String|否| |自定义分组路由规则实现类|
 
   >一级元素，对应io.joyrpc.config.ConsumerGroupConfig
    设置一个可以包含多个alias的客户端，调用哪个alias可以切换。

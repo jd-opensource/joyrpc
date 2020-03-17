@@ -16,7 +16,7 @@
 #### [代理类配置](./example/proxy.md)
 #### [延迟启动](./example/delayBoot.md)
 #### [粘滞连接](./example/stickyConn.md)
-#### [并发控制](./example/concurrent.md)
+#### [并发控制](./example/concurrency.md)
 #### [异步调用](./example/asyncInvoke.md)
 #### [数据包大小设置](./example/payload.md)
 #### [预热接口](./example/warmup.md)

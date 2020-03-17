@@ -1,7 +1,7 @@
 并发控制
 ==
 Provider和Consumer都支持方法级别的并发控制
-通过concurrents属性进行配置，方法级的配置可覆盖接口级的配置，接口级没配置则走默认。
+通过concurrency属性进行配置，方法级的配置可覆盖接口级的配置，接口级没配置则走默认。
 >说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 配置-1关闭并发过滤器，等于0表示开启过滤但是不限制
@@ -41,7 +41,7 @@ Provider和Consumer都支持方法级别的并发控制
   <beans>
   
     <!-- 接口下每个方法控制在50并发，即最大50个业务线程在调用-->
-    <joyrpc:consumer concurrents="50"> 
+    <joyrpc:consumer concurrency="50"> 
     
         <!-- 控制在10并发，最大10个业务线程在调用-->
         <joyrpc:method name="getHashSet" concurrency="10" /> 

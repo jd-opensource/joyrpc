@@ -189,6 +189,8 @@
   - 升级hazelcast为3.12.4版本
 
   - 升级commons-compress为1.19，解决安全漏洞
+  
+  - 升级hibernate-validator为6.0.18.Final
 
 ### Bugfixes
 

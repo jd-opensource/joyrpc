@@ -44,7 +44,7 @@
         <slf4j.version>1.7.25</slf4j.version>
         <log4j.version>1.2.17</log4j.version>
         <validation-api.version>2.0.1.Final</validation-api.version>
-        <hibernate-validator.version>6.0.13.Final</hibernate-validator.version>
+        <hibernate-validator.version>6.0.18.Final</hibernate-validator.version>
         <javax.el.version>3.0.1-b11</javax.el.version>
         <jmh.version>1.20</jmh.version>
         <guava.version>28.0-jre</guava.version>

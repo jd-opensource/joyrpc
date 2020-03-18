@@ -48,11 +48,11 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
     /**
      * 最大重试次数
      */
-    protected FailoverPolicy retryPolicy;
+    protected FailoverPolicy<T, R> retryPolicy;
     /**
      * 重试函数
      */
-    protected Function<T, FailoverPolicy> retryFunction = (request) -> retryPolicy;
+    protected Function<T, FailoverPolicy<T, R>> retryFunction = (request) -> retryPolicy;
 
     /**
      * 构建过载异常
@@ -78,14 +78,14 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
 
 
     @Override
-    public void setRetryFunction(final Function<T, FailoverPolicy> retryFunction) {
+    public void setRetryFunction(final Function<T, FailoverPolicy<T, R>> retryFunction) {
         this.retryFunction = retryFunction;
     }
 
     @Override
     public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
         //获取重试策略
-        FailoverPolicy policy = retryFunction.apply(request);
+        FailoverPolicy<T, R> policy = retryFunction.apply(request);
         //判断是否需要重试
         boolean retry = policy != null && policy.getMaxRetry() > 0;
         if (!retry) {
@@ -114,7 +114,7 @@ public class FailoverRoute<T, R> extends AbstractRoute<T, R> implements RouteFai
                          final Node last,
                          final Candidate candidate,
                          final int retry,
-                         final FailoverPolicy policy,
+                         final FailoverPolicy<T, R> policy,
                          final List<Node> origins,
                          final CompletableFuture<R> future) {
         //负载均衡选择节点

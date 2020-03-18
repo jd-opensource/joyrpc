@@ -184,7 +184,7 @@
 
 - Dependency
 
-  - 升级netty为4.1.43.Final版本
+  - 升级netty为4.1.48.Final版本
 
   - 升级hazelcast为3.12.4版本
 

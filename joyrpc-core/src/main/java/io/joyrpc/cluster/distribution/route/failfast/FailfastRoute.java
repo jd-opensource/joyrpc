@@ -39,7 +39,7 @@ public class FailfastRoute<T, R> extends AbstractRoute<T, R> {
     @Override
     public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
         Node node = loadBalance.select(candidate, request);
-        return function.apply(node, null, request);
+        return operation.apply(node, null, request);
     }
 
 }

@@ -27,6 +27,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.util.TriFunction;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 /**
  * 抽象的Route实现
@@ -43,7 +44,11 @@ public abstract class AbstractRoute<T, R> implements Route<T, R> {
     /**
      * 路由操作
      */
-    protected TriFunction<Node, Node, T, CompletableFuture<R>> function;
+    protected TriFunction<Node, Node, T, CompletableFuture<R>> operation;
+    /**
+     * 判断结果是否成功
+     */
+    protected Predicate<R> judge;
     /**
      * URL
      */
@@ -55,8 +60,13 @@ public abstract class AbstractRoute<T, R> implements Route<T, R> {
     }
 
     @Override
-    public void setFunction(TriFunction<Node, Node, T, CompletableFuture<R>> function) {
-        this.function = function;
+    public void setOperation(TriFunction<Node, Node, T, CompletableFuture<R>> operation) {
+        this.operation = operation;
+    }
+
+    @Override
+    public void setJudge(Predicate<R> judge) {
+        this.judge = judge;
     }
 
     @Override

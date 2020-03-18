@@ -379,12 +379,13 @@ public class Refer extends AbstractInvoker {
      * @param loadBalance
      * @return
      */
-    protected Route buildRoute(final URL url, final LoadBalance loadBalance) {
+    protected Route<RequestMessage<Invocation>, Result> buildRoute(final URL url, final LoadBalance loadBalance) {
         Route<RequestMessage<Invocation>, Result> route = ROUTE.get(url.getString(ROUTE_OPTION));
         if (route != null) {
             route.setUrl(url);
             route.setLoadBalance(loadBalance);
-            route.setFunction(this::invokeRemote);
+            route.setOperation(this::invokeRemote);
+            route.setJudge(Result::isException);
             if (route instanceof RouteFailover) {
                 ((RouteFailover<RequestMessage<Invocation>, Result>) route).setRetryFunction(this::getFailoverPolicy);
             }

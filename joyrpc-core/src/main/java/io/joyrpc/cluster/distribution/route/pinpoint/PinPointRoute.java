@@ -64,7 +64,7 @@ public class PinPointRoute<T, R> extends AbstractRoute<T, R> {
         if (null == target) {
             throw new NoAliveProviderException(String.format("not found node %s in candidate", pinpoint), CONSUMER_NO_ALIVE_PROVIDER);
         }
-        return function.apply(target, null, request);
+        return operation.apply(target, null, request);
     }
 
 }

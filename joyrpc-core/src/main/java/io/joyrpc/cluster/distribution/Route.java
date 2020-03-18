@@ -28,6 +28,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.util.TriFunction;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 /**
  * 路由分发
@@ -49,6 +50,11 @@ public interface Route<T, R> extends Prototype {
     String PIN_POINT = "pinpoint";
 
     /**
+     * 广播模式
+     */
+    String BROADCAST = "broadcast";
+
+    /**
      * 快速失败插件顺序
      */
     int ORDER_FAILFAST = 100;
@@ -61,6 +67,11 @@ public interface Route<T, R> extends Prototype {
      * 定点调用插件顺序
      */
     int ORDER_PINPOINT = 120;
+
+    /**
+     * 广播模式插件顺序
+     */
+    int ORDER_BROADCAST = 130;
 
     /**
      * 调用，不能修改候选者节点列表
@@ -88,9 +99,16 @@ public interface Route<T, R> extends Prototype {
     /**
      * 设置调用方法
      *
-     * @param function 调用方法
+     * @param operation 调用方法
      */
-    void setFunction(TriFunction<Node, Node, T, CompletableFuture<R>> function);
+    void setOperation(TriFunction<Node, Node, T, CompletableFuture<R>> operation);
+
+    /**
+     * 设置结果断言，判断结果是否失败
+     *
+     * @param judge 断言，判断结果是否失败
+     */
+    void setJudge(Predicate<R> judge);
 
     /**
      * 初始化

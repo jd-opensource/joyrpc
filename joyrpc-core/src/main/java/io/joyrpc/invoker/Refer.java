@@ -23,13 +23,17 @@ package io.joyrpc.invoker;
 import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
+import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.ClusterAware;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
-import io.joyrpc.cluster.distribution.*;
+import io.joyrpc.cluster.distribution.LoadBalance;
+import io.joyrpc.cluster.distribution.MethodOption;
+import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.HeadKey;
@@ -56,6 +60,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -64,7 +69,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
-import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
+import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
 import static io.joyrpc.invoker.InvokerManager.NAME;
 
@@ -78,7 +84,7 @@ public class Refer extends AbstractInvoker {
     /**
      * 消费配置
      */
-    protected ConsumerConfig config;
+    protected ConsumerConfig<?> config;
     /**
      * 注册中心
      */
@@ -92,6 +98,10 @@ public class Refer extends AbstractInvoker {
      */
     protected Cluster cluster;
     /**
+     * 负载均衡
+     */
+    protected LoadBalance loadBalance;
+    /**
      * 接口透传参数
      */
     protected Map<String, String> interfaceImplicits;
@@ -100,9 +110,9 @@ public class Refer extends AbstractInvoker {
      */
     protected ConfigHandler configHandler;
     /**
-     * 集群分发策略
+     * 路由器
      */
-    protected Distribution<RequestMessage<Invocation>, Result> distribution;
+    protected Router<RequestMessage<Invocation>> router;
     /**
      * 过滤链
      */
@@ -175,7 +185,7 @@ public class Refer extends AbstractInvoker {
      */
     protected Refer(final String name,
                     final URL url,
-                    final ConsumerConfig config,
+                    final ConsumerConfig<?> config,
                     final Registry registry,
                     final URL registerUrl,
                     final Configure configure,
@@ -197,6 +207,7 @@ public class Refer extends AbstractInvoker {
         //保留全局的配置变更处理器
         this.configHandler = configHandler;
         this.cluster = cluster;
+        this.loadBalance = loadBalance;
         this.container = container;
         this.closing = closing;
         this.system = url.getBoolean(Constants.SYSTEM_OPTION);
@@ -212,15 +223,18 @@ public class Refer extends AbstractInvoker {
 
         //接口级别的隐藏参数，保留以"."开头
         this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
-        this.options = new MethodOption(interfaceClass, interfaceName, url);
+        //路由器
+        this.router = configure(ROUTER.get(url.getString(Constants.ROUTER_OPTION)));
+        //方法选项
+        this.options = new MethodOption(interfaceClass, interfaceName, url, this::configure);
+
         this.cluster.addHandler(config);
-        this.distribution = buildDistribution(buildRouter(url, interfaceClass), buildRoute(url, loadBalance));
         //处理链
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::distribute);
         //加载符合条件的透传插件，例如在MESH环境加载MeshTransmit
         this.transmits = TRANSMIT.extensions();
-        this.injections = NODE_REQUEST_INJECTION.extensions(o -> o.test());
+        this.injections = NODE_REQUEST_INJECTION.extensions(NodeReqInjection::test);
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
         this.publisher = publisher;
         this.publisher.addHandler(localHandler);
@@ -231,31 +245,6 @@ public class Refer extends AbstractInvoker {
             cluster.setCheck(false);
             logger.info("Bind to local provider " + exporterName);
         }
-    }
-
-    /**
-     * 获取请求的重试策略
-     *
-     * @param request
-     * @return
-     */
-    protected FailoverPolicy getFailoverPolicy(final RequestMessage<Invocation> request) {
-        return request.getFailoverPolicy();
-    }
-
-    /**
-     * 构建分发对象
-     *
-     * @param router
-     * @param route
-     * @return
-     */
-    protected Distribution<RequestMessage<Invocation>, Result> buildDistribution(final Router<RequestMessage<Invocation>> router,
-                                                                                 final Route<RequestMessage<Invocation>, Result> route) {
-        return new Distribution<>(cluster, router, route,
-                request -> CompletableFuture.completedFuture(new Result(request.getContext(),
-                        new NoAliveProviderException(String.format("No alive provider found. class=%s alias=%s", interfaceName, alias),
-                                CONSUMER_NO_ALIVE_PROVIDER))));
     }
 
     /**
@@ -357,12 +346,12 @@ public class Refer extends AbstractInvoker {
     }
 
     /**
-     * 构建路由器
+     * 配置路由器
      *
-     * @return
+     * @param router 路由器
+     * @return 路由器
      */
-    protected Router<RequestMessage<Invocation>> buildRouter(final URL url, final Class interfaceClass) {
-        Router<RequestMessage<Invocation>> router = ROUTER.get(url.getString(Constants.ROUTER_OPTION));
+    protected Router<RequestMessage<Invocation>> configure(final Router<RequestMessage<Invocation>> router) {
         if (router != null) {
             router.setUrl(url);
             router.setClass(interfaceClass);
@@ -373,22 +362,17 @@ public class Refer extends AbstractInvoker {
     }
 
     /**
-     * 构建路由对象
+     * 配置分发策略
      *
-     * @param url
-     * @param loadBalance
-     * @return
+     * @param route 分发策略
+     * @return 分发策略
      */
-    protected Route<RequestMessage<Invocation>, Result> buildRoute(final URL url, final LoadBalance loadBalance) {
-        Route<RequestMessage<Invocation>, Result> route = ROUTE.get(url.getString(ROUTE_OPTION));
+    protected Route configure(final Route route) {
         if (route != null) {
             route.setUrl(url);
             route.setLoadBalance(loadBalance);
             route.setOperation(this::invokeRemote);
             route.setJudge(Result::isException);
-            if (route instanceof RouteFailover) {
-                ((RouteFailover<RequestMessage<Invocation>, Result>) route).setRetryFunction(this::getFailoverPolicy);
-            }
             route.setup();
         }
         return route;
@@ -402,7 +386,7 @@ public class Refer extends AbstractInvoker {
         invocation.setObject(config.getStub());
 
         MethodOption.Option option = options.getOption(invocation.getMethodName());
-        request.setFailoverPolicy(option.getFailoverPolicy());
+        request.setOption(option);
         //避免分组重试重复调用
         if (request.getCreateTime() <= 0) {
             request.setCreateTime(SystemClock.now());
@@ -427,26 +411,56 @@ public class Refer extends AbstractInvoker {
     /**
      * 分发数据
      *
-     * @param request
-     * @return
+     * @param request 请求
+     * @return 结果
      */
     protected CompletableFuture<Result> distribute(final RequestMessage<Invocation> request) {
-        //本地调用
-        if (inJvm && localProvider != null) {
-            RequestContext srcCtx = RequestContext.getContext();
-            RequestContext targetCtx = new RequestContext();
-            try {
-                //透传处理
-                transmits.forEach(o -> o.injectLocal(srcCtx, targetCtx));
-                RequestContext.restore(targetCtx);
-                request.setContext(targetCtx);
-                return localProvider.invoke(request);
-            } finally {
-                request.setContext(srcCtx);
-                RequestContext.restore(srcCtx);
+        if (inJvm) {
+            //本地调用
+            CompletableFuture<Result> result = distribute2Local(request, localProvider);
+            if (result != null) {
+                return result;
             }
         }
-        return distribution.distribute(request);
+        //集群节点
+        List<Node> nodes = cluster.getNodes();
+        if (!nodes.isEmpty() && router != null) {
+            //路由选择
+            nodes = router.route(new Candidate(cluster, null, nodes, nodes.size()), request);
+        }
+        if (nodes == null || nodes.isEmpty()) {
+            //节点为空
+            throw new NoAliveProviderException(
+                    String.format("No alive provider found. class=%s alias=%s", interfaceName, alias),
+                    CONSUMER_NO_ALIVE_PROVIDER);
+        }
+        Route route = request.getOption().getRoute();
+        return route.invoke(request, new Candidate(cluster, null, nodes, nodes.size()));
+    }
+
+    /**
+     * 本地分发
+     *
+     * @param request 请求
+     * @param local   本地服务
+     * @return 结果
+     */
+    protected CompletableFuture<Result> distribute2Local(final RequestMessage<Invocation> request, final Invoker local) {
+        if (local == null) {
+            return null;
+        }
+        RequestContext srcCtx = RequestContext.getContext();
+        RequestContext targetCtx = new RequestContext();
+        try {
+            //透传处理
+            transmits.forEach(o -> o.injectLocal(srcCtx, targetCtx));
+            RequestContext.restore(targetCtx);
+            request.setContext(targetCtx);
+            return local.invoke(request);
+        } finally {
+            request.setContext(srcCtx);
+            RequestContext.restore(srcCtx);
+        }
     }
 
     @Override
@@ -605,5 +619,4 @@ public class Refer extends AbstractInvoker {
     public Registry getRegistry() {
         return registry;
     }
-
 }

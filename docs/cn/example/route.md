@@ -1,21 +1,23 @@
-集群分发策略
+分发策略
 ==
 
 >说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 ## 配置
-消费者调用时，可以设置集群分发策略，配置如下：
+消费者调用时，可以设置集群分发策略,该策略可以配置在接口上也可以配置在方法上，配置如下：
 
   ````xml
     <beans>
     
-        <joyrpc:consumer cluster="failfast" />
+        <joyrpc:consumer cluster="failfast" >
+            <joyrpc:method name="echo" cluster="failover"/>
+        </joyrpc:consumer>
     
     </beans>
   ````
-### 集群分发策略
+### 分发策略
 
-目前支持如下几种集群策略：
+分发策略可以配置在接口上也可以配置在方法上，目前支持如下几种集群策略：
 
   |名称|配置|说明|
   | :----: | :----: | :---- |

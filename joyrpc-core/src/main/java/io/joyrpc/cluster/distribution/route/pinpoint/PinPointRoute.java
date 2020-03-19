@@ -20,6 +20,7 @@ package io.joyrpc.cluster.distribution.route.pinpoint;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.Route;
@@ -29,6 +30,8 @@ import io.joyrpc.exception.NoAliveProviderException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -42,10 +45,10 @@ import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
  * 定点调用
  */
 @Extension(value = PIN_POINT, order = Route.ORDER_PINPOINT)
-public class PinPointRoute<T, R> extends AbstractRoute<T, R> {
+public class PinPointRoute extends AbstractRoute {
 
     @Override
-    public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
+    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
         String pinpoint = RequestContext.getContext().getAttachment(HIDDEN_KEY_PINPOINT);
         if (pinpoint == null || pinpoint.isEmpty()) {
             throw new RpcException(".pinpoint is not configured in request context.", COMMON_VALUE_ILLEGAL);

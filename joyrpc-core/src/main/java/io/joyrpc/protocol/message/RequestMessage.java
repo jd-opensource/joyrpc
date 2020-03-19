@@ -20,7 +20,7 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.cluster.distribution.FailoverPolicy;
+import io.joyrpc.cluster.distribution.MethodOption;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.permission.Authentication;
@@ -57,9 +57,9 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      */
     protected transient long timeout;
     /**
-     * 重试策略
+     * 方法选项
      */
-    protected transient FailoverPolicy failoverPolicy;
+    protected transient MethodOption.Option option;
     /**
      * 请求上下文
      */
@@ -227,12 +227,12 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.receiveTime = receiveTime;
     }
 
-    public FailoverPolicy getFailoverPolicy() {
-        return failoverPolicy;
+    public MethodOption.Option getOption() {
+        return option;
     }
 
-    public void setFailoverPolicy(FailoverPolicy failoverPolicy) {
-        this.failoverPolicy = failoverPolicy;
+    public void setOption(MethodOption.Option option) {
+        this.option = option;
     }
 
     public RequestContext getContext() {

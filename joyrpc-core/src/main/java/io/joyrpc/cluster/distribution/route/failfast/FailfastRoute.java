@@ -20,11 +20,14 @@ package io.joyrpc.cluster.distribution.route.failfast;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -34,10 +37,10 @@ import static io.joyrpc.cluster.distribution.Route.FAIL_FAST;
  * 快速失败
  */
 @Extension(value = FAIL_FAST, order = Route.ORDER_FAILFAST)
-public class FailfastRoute<T, R> extends AbstractRoute<T, R> {
+public class FailfastRoute extends AbstractRoute {
 
     @Override
-    public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
+    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
         Node node = loadBalance.select(candidate, request);
         return operation.apply(node, null, request);
     }

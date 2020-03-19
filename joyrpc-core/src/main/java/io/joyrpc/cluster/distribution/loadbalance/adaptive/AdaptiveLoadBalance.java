@@ -47,11 +47,9 @@ import static io.joyrpc.util.StringUtils.split;
 
 /**
  * 自适应负载均衡
- *
- * @param <T>
  */
 @Extension(value = "adaptive")
-public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, DashboardAware {
+public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, DashboardAware {
 
     public static final Function<TPSnapshot, Integer> TP30_FUNCTION = TPSnapshot::getTp30;
     public static final Function<TPSnapshot, Integer> TP50_FUNCTION = TPSnapshot::getTp50;
@@ -137,7 +135,7 @@ public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, Das
      * @param request
      * @return
      */
-    protected AdaptiveConfig build(final T request) {
+    protected AdaptiveConfig build(final RequestMessage<Invocation> request) {
         //从自适应负载均衡配置器获取配置
         AdaptiveConfig config = AdaptiveConfiguration.ADAPTIVE.get(className);
         return config == null ? this.config : config;
@@ -414,7 +412,7 @@ public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, Das
     }
 
     @Override
-    public Node select(final Candidate candidate, final T request) {
+    public Node select(final Candidate candidate, final RequestMessage<Invocation> request) {
         //获取LB的服务列表
         List<Node> candidates = candidate.getNodes();
         if (candidates == null || candidates.isEmpty()) {
@@ -464,15 +462,8 @@ public class AdaptiveLoadBalance<T> implements LoadBalance<T>, InvokerAware, Das
      * @param request
      * @return
      */
-    protected Function<Dashboard, TPWindow> apply(final T request) {
-        if (request instanceof RequestMessage) {
-            Object payload = ((RequestMessage) request).getPayLoad();
-            if (payload != null && payload instanceof Invocation) {
-                String method = ((Invocation) payload).getMethodName();
-                return o -> o instanceof Dashboard ? o.getMethod(method) : o.getMetric();
-            }
-        }
-        return o -> o.getMetric();
+    protected Function<Dashboard, TPWindow> apply(final RequestMessage<Invocation> request) {
+        return o -> o.getMethod(request.getPayLoad().getMethodName());
     }
 
     /**

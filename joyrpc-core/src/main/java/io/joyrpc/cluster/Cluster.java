@@ -107,7 +107,7 @@ public class Cluster {
     /**
      * 仪表盘提供者
      */
-    protected DashboardFactory<? extends Dashboard> dashboardFactory;
+    protected DashboardFactory dashboardFactory;
     /**
      * 集群指标通知器
      */
@@ -187,7 +187,7 @@ public class Cluster {
 
     public Cluster(final String name, final URL url, final Registar registar, final Candidature candidature,
                    final EndpointFactory factory, final Function<URL, Message> authentication,
-                   final DashboardFactory<Dashboard> dashboardFactory,
+                   final DashboardFactory dashboardFactory,
                    final Iterable<? extends MetricHandler> metricHandlers,
                    final Publisher<NodeEvent> clusterPublisher) {
         Objects.requireNonNull(url, "url can not be null.");

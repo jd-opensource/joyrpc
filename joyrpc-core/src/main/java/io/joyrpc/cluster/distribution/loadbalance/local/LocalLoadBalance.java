@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.local;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,14 +27,14 @@ import io.joyrpc.util.network.Ipv4;
 /**
  * 本地优先加权随机负载均衡
  */
-public class LocalLoadBalance<T> extends DecoratorLoadBalance<T> {
+public class LocalLoadBalance extends DecoratorLoadBalance {
 
     /**
      * 构造函数
      *
-     * @param delegate
+     * @param delegate 代理
      */
-    public LocalLoadBalance(final LoadBalance<T> delegate) {
+    public LocalLoadBalance(final LoadBalance delegate) {
         super(delegate, o -> Ipv4.isLocalIp(o.getUrl().getHost()));
     }
 

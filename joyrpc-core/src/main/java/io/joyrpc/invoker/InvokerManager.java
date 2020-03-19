@@ -476,7 +476,7 @@ public class InvokerManager {
                         case DISCONNECT:
                             Object payload = event.getPayload();
                             //删除Transport上的回调
-                            Client client = payload != null && payload instanceof Client ? (Client) payload : event.getNode().getClient();
+                            Client client = payload instanceof Client ? (Client) payload : event.getNode().getClient();
                             //删除Callback
                             List<CallbackInvoker> callbacks = callbackManager.getConsumer().removeCallback(client);
                             if (!Shutdown.isShutdown() && cluster.isOpened()) {
@@ -509,9 +509,9 @@ public class InvokerManager {
     /**
      * 构建路由器
      *
-     * @param config
-     * @param url
-     * @return
+     * @param config 配置
+     * @param url    url
+     * @return 负载均衡
      */
     protected <T> LoadBalance buildLoadbalance(final ConsumerConfig<T> config, final URL url) {
         //负载均衡

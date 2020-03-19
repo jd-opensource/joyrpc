@@ -20,21 +20,24 @@ package io.joyrpc.cluster.distribution;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.Prototype;
 import io.joyrpc.extension.URL;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.TriFunction;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
 /**
- * 路由分发
+ * 分发策略
  */
 @Extensible("route")
-public interface Route<T, R> extends Prototype {
+public interface Route extends Prototype {
     /**
      * 快速失败算法
      */
@@ -53,6 +56,11 @@ public interface Route<T, R> extends Prototype {
      * 广播模式
      */
     String BROADCAST = "broadcast";
+
+    /**
+     * 并行模式
+     */
+    String FORKING = "forking";
 
     /**
      * 快速失败插件顺序
@@ -74,13 +82,18 @@ public interface Route<T, R> extends Prototype {
     int ORDER_BROADCAST = 130;
 
     /**
+     * 并行调用模式插件顺序
+     */
+    int ORDER_FORKING = 140;
+
+    /**
      * 调用，不能修改候选者节点列表
      *
      * @param request   请求
      * @param candidate 候选者
-     * @return
+     * @return 结果
      */
-    CompletableFuture<R> invoke(T request, Candidate candidate);
+    CompletableFuture<Result> invoke(RequestMessage<Invocation> request, Candidate candidate);
 
     /**
      * 设置URL
@@ -94,24 +107,24 @@ public interface Route<T, R> extends Prototype {
      *
      * @param loadBalance 负责均衡
      */
-    void setLoadBalance(LoadBalance<T> loadBalance);
+    void setLoadBalance(LoadBalance loadBalance);
 
     /**
      * 设置调用方法
      *
      * @param operation 调用方法
      */
-    void setOperation(TriFunction<Node, Node, T, CompletableFuture<R>> operation);
+    void setOperation(TriFunction<Node, Node, RequestMessage<Invocation>, CompletableFuture<Result>> operation);
 
     /**
      * 设置结果断言，判断结果是否失败
      *
      * @param judge 断言，判断结果是否失败
      */
-    void setJudge(Predicate<R> judge);
+    void setJudge(Predicate<Result> judge);
 
     /**
-     * 初始化
+     * 设置
      */
     default void setup() {
 

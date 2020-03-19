@@ -39,16 +39,6 @@ public class Candidate implements Region {
      * 构造函数
      *
      * @param cluster
-     * @param size
-     */
-    public Candidate(final Cluster cluster, final int size) {
-        this(cluster, null, null, size);
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param cluster
      * @param region
      * @param nodes
      * @param size

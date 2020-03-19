@@ -156,6 +156,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     @ValidatePlugin(extensible = FailoverSelector.class, name = "FAILOVER_SELECTOR", defaultValue = DEFAULT_FAILOVER_SELECTOR)
     protected String failoverSelector;
     /**
+     * 并行分发数量，在采用并行分发策略有效
+     */
+    protected Integer forks;
+    /**
      * channel创建模式
      * shared:共享(默认),unshared:独享
      */
@@ -225,6 +229,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.failoverWhenThrowable = config.failoverWhenThrowable;
         this.failoverPredication = config.failoverPredication;
         this.failoverSelector = config.failoverSelector;
+        this.forks = config.forks;
         this.channelFactory = config.channelFactory;
         this.router = config.router;
         this.warmupWeight = config.warmupWeight;
@@ -508,6 +513,14 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.failoverSelector = failoverSelector;
     }
 
+    public Integer getForks() {
+        return forks;
+    }
+
+    public void setForks(Integer forks) {
+        this.forks = forks;
+    }
+
     public String getLoadbalance() {
         return loadbalance;
     }
@@ -655,6 +668,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         addElement2Map(params, Constants.FAILOVER_WHEN_THROWABLE_OPTION, failoverWhenThrowable);
         addElement2Map(params, Constants.FAILOVER_PREDICATION_OPTION, failoverPredication);
         addElement2Map(params, Constants.FAILOVER_SELECTOR_OPTION, failoverSelector);
+        addElement2Map(params, Constants.FORKS_OPTION, forks);
         addElement2Map(params, Constants.LOADBALANCE_OPTION, loadbalance);
         addElement2Map(params, Constants.IN_JVM_OPTION, injvm);
         addElement2Map(params, Constants.STICKY_OPTION, sticky);

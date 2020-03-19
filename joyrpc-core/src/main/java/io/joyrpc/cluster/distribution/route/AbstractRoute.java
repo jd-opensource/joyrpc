@@ -20,10 +20,13 @@ package io.joyrpc.cluster.distribution.route;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.extension.URL;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.TriFunction;
 
 import java.util.concurrent.CompletableFuture;
@@ -31,41 +34,38 @@ import java.util.function.Predicate;
 
 /**
  * 抽象的Route实现
- *
- * @param <T>
- * @param <R>
  */
-public abstract class AbstractRoute<T, R> implements Route<T, R> {
+public abstract class AbstractRoute implements Route {
 
     /**
      * 负载均衡
      */
-    protected LoadBalance<T> loadBalance;
+    protected LoadBalance loadBalance;
     /**
      * 路由操作
      */
-    protected TriFunction<Node, Node, T, CompletableFuture<R>> operation;
+    protected TriFunction<Node, Node, RequestMessage<Invocation>, CompletableFuture<Result>> operation;
     /**
      * 判断结果是否成功
      */
-    protected Predicate<R> judge;
+    protected Predicate<Result> judge;
     /**
      * URL
      */
     protected URL url;
 
     @Override
-    public void setLoadBalance(LoadBalance<T> loadBalance) {
+    public void setLoadBalance(LoadBalance loadBalance) {
         this.loadBalance = loadBalance;
     }
 
     @Override
-    public void setOperation(TriFunction<Node, Node, T, CompletableFuture<R>> operation) {
+    public void setOperation(TriFunction<Node, Node, RequestMessage<Invocation>, CompletableFuture<Result>> operation) {
         this.operation = operation;
     }
 
     @Override
-    public void setJudge(Predicate<R> judge) {
+    public void setJudge(Predicate<Result> judge) {
         this.judge = judge;
     }
 

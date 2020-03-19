@@ -20,34 +20,36 @@ package io.joyrpc.cluster.distribution.route.forking;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.joyrpc.cluster.distribution.Route.BROADCAST;
+import static io.joyrpc.cluster.distribution.Route.FORKING;
 
 /**
  * 并行调用
  */
-@Extension(value = BROADCAST, order = Route.ORDER_BROADCAST)
-public class ForkingRoute<T, R> extends AbstractRoute<T, R> {
+@Extension(value = FORKING, order = Route.ORDER_FORKING)
+public class ForkingRoute extends AbstractRoute {
 
     @Override
-    public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
-        CompletableFuture<R> result = new CompletableFuture<>();
+    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
+        CompletableFuture<Result> result = new CompletableFuture<>();
         List<Node> nodes = candidate.getNodes();
         //并行调用的数量
-        int forks = url.getInteger(Constants.FORKS_OPTION);
+        int forks = request.getOption().getForks();
         forks = forks <= 0 || forks > nodes.size() ? nodes.size() : forks;
-        CompletableFuture<R>[] futures = new CompletableFuture[forks];
+        CompletableFuture<Result>[] futures = new CompletableFuture[forks];
         int total = 0;
         if (forks == nodes.size()) {
             //全部调用
@@ -95,5 +97,4 @@ public class ForkingRoute<T, R> extends AbstractRoute<T, R> {
         }
         return result;
     }
-
 }

@@ -20,11 +20,14 @@ package io.joyrpc.cluster.distribution.route.broadcast;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -35,21 +38,21 @@ import static io.joyrpc.cluster.distribution.Route.BROADCAST;
  * 广播模式，遍历每个可用节点进行调用，如果有一个失败则返回失败，否则返回最后一个节点的调用结果
  */
 @Extension(value = BROADCAST, order = Route.ORDER_BROADCAST)
-public class BroadcastRoute<T, R> extends AbstractRoute<T, R> {
+public class BroadcastRoute extends AbstractRoute {
 
     @Override
-    public CompletableFuture<R> invoke(final T request, final Candidate candidate) {
+    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
         List<Node> nodes = candidate.getNodes();
         int size = nodes.size();
-        CompletableFuture<R>[] futures = new CompletableFuture[size];
+        CompletableFuture<Result>[] futures = new CompletableFuture[size];
         int i = 0;
         for (Node node : nodes) {
             futures[i] = operation.apply(node, null, request);
         }
         return CompletableFuture.allOf(futures).thenApply(v -> {
-            R result = null;
+            Result result = null;
             //遍历结果
-            for (CompletableFuture<R> future : futures) {
+            for (CompletableFuture<Result> future : futures) {
                 result = future.join();
                 //结果是异常
                 if (judge.test(result)) {

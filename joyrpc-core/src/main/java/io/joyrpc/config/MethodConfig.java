@@ -24,6 +24,7 @@ import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.distribution.ExceptionPredication;
 import io.joyrpc.cluster.distribution.FailoverSelector;
+import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 
@@ -50,6 +51,11 @@ public class MethodConfig extends AbstractConfig {
      */
     protected Integer timeout;
     /**
+     * 分发策略，允许在方法上设置
+     */
+    @ValidatePlugin(extensible = Route.class, name = "ROUTE", defaultValue = DEFAULT_ROUTE)
+    protected String cluster;
+    /**
      * The Retries. 失败后重试次数
      */
     protected Integer retries;
@@ -71,6 +77,10 @@ public class MethodConfig extends AbstractConfig {
      */
     @ValidatePlugin(extensible = FailoverSelector.class, name = "FAILOVER_SELECTOR", defaultValue = DEFAULT_FAILOVER_SELECTOR)
     protected String failoverSelector;
+    /**
+     * 并行分发数量，在采用并行分发策略有效
+     */
+    protected Integer forks;
     /**
      * The Validation. 是否jsr303验证
      */
@@ -144,6 +154,14 @@ public class MethodConfig extends AbstractConfig {
         this.timeout = timeout;
     }
 
+    public String getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(String cluster) {
+        this.cluster = cluster;
+    }
+
     public Integer getRetries() {
         return retries;
     }
@@ -182,6 +200,14 @@ public class MethodConfig extends AbstractConfig {
 
     public void setFailoverSelector(String failoverSelector) {
         this.failoverSelector = failoverSelector;
+    }
+
+    public Integer getForks() {
+        return forks;
+    }
+
+    public void setForks(Integer forks) {
+        this.forks = forks;
     }
 
     public Integer getConcurrency() {
@@ -298,11 +324,13 @@ public class MethodConfig extends AbstractConfig {
     @Override
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.ROUTE_OPTION.getName()), cluster);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRIES_OPTION.getName()), retries);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRY_ONLY_ONCE_PER_NODE_OPTION.getName()), retryOnlyOncePerNode);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_WHEN_THROWABLE_OPTION.getName()), failoverWhenThrowable);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_PREDICATION_OPTION.getName()), failoverPredication);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_SELECTOR_OPTION.getName()), failoverSelector);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FORKS_OPTION.getName()), forks);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.TIMEOUT_OPTION.getName()), timeout);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.VALIDATION_OPTION.getName()), validation);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CONCURRENCY_OPTION.getName()), concurrency);

@@ -1,4 +1,4 @@
-package io.joyrpc.invoker;
+package io.joyrpc.cluster.distribution;
 
 /*-
  * #%L
@@ -21,11 +21,7 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Result;
-import io.joyrpc.cluster.distribution.ExceptionPolicy;
-import io.joyrpc.cluster.distribution.ExceptionPredication;
-import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
-import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
@@ -43,10 +39,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 import static io.joyrpc.GenericService.GENERIC;
-import static io.joyrpc.Plugin.EXCEPTION_PREDICATION;
-import static io.joyrpc.Plugin.FAILOVER_SELECTOR;
+import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_FAILOVER_CLASS;
 import static io.joyrpc.util.ClassUtils.forName;
@@ -66,7 +62,6 @@ public class MethodOption {
      * 内置的异常类资源配置文件路径
      */
     protected static final String RETRY_RESOURCE_PATH = "META-INF/retry/";
-
     /**
      * 接口名称
      */
@@ -88,9 +83,17 @@ public class MethodOption {
      */
     protected String failoverPredication;
     /**
+     * 默认的分发策略
+     */
+    protected Route route;
+    /**
      * 接口级别超时时间
      */
     protected int timeout;
+    /**
+     * 接口级别并行度
+     */
+    protected int forks;
     /**
      * 重试异常
      */
@@ -100,7 +103,6 @@ public class MethodOption {
      */
     protected NameKeyOption<Option> options;
 
-
     /**
      * 构造函数
      *
@@ -109,6 +111,19 @@ public class MethodOption {
      * @param url            URL
      */
     public MethodOption(final Class<?> interfaceClass, final String interfaceName, final URL url) {
+        this(interfaceClass, interfaceName, url, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param interfaceClass 接口类
+     * @param interfaceName  接口名称
+     * @param url            URL
+     * @param configure      路由配置器
+     */
+    public MethodOption(final Class<?> interfaceClass, final String interfaceName, final URL url,
+                        final Consumer<Route> configure) {
         this.interfaceName = interfaceName;
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList(url);
         this.maxRetry = url.getInteger(RETRIES_OPTION);
@@ -116,18 +131,38 @@ public class MethodOption {
         this.retryOnlyOncePerNode = url.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION);
         this.failoverSelector = url.getString(FAILOVER_SELECTOR_OPTION);
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
+        this.forks = url.getInteger(FORKS_OPTION);
+        if (configure != null) {
+            this.route = ROUTE.get(url.getString(ROUTE_OPTION));
+            configure.accept(route);
+        }
         //方法级别的隐藏参数，保留以"."开头
         boolean generic = GENERIC.test(interfaceClass);
         this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null,
-                o -> new Option(
-                        url.startsWith(getKey(o, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1)),
-                        url.getInteger(getKey(o, TIMEOUT_OPTION), timeout),
-                        new DefaultFailoverPolicy<>(
-                                url.getInteger(getKey(o, RETRIES_OPTION), maxRetry),
-                                url.getBoolean(getKey(o, RETRY_ONLY_ONCE_PER_NODE_OPTION), retryOnlyOncePerNode),
-                                new MyTimeoutPolicy(),
-                                new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
-                                FAILOVER_SELECTOR.get(url.getString(getKey(o, FAILOVER_SELECTOR_OPTION), failoverSelector))))
+                o -> {
+                    //方法分发策略
+                    Route methodRoute = null;
+                    if (configure != null) {
+                        methodRoute = ROUTE.get(url.getString(getKey(o, ROUTE_OPTION)));
+                        if (methodRoute != null) {
+                            configure.accept(methodRoute);
+                        } else {
+                            methodRoute = route;
+                        }
+
+                    }
+                    return new Option(
+                            url.startsWith(getKey(o, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1)),
+                            url.getInteger(getKey(o, TIMEOUT_OPTION), timeout),
+                            url.getInteger(getKey(o, FORKS_OPTION), forks),
+                            methodRoute,
+                            new DefaultFailoverPolicy(
+                                    url.getInteger(getKey(o, RETRIES_OPTION), maxRetry),
+                                    url.getBoolean(getKey(o, RETRY_ONLY_ONCE_PER_NODE_OPTION), retryOnlyOncePerNode),
+                                    new MyTimeoutPolicy(),
+                                    new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
+                                    FAILOVER_SELECTOR.get(url.getString(getKey(o, FAILOVER_SELECTOR_OPTION), failoverSelector))));
+                }
         );
     }
 
@@ -235,21 +270,33 @@ public class MethodOption {
          */
         protected int timeout;
         /**
+         * 并行度
+         */
+        protected int forks;
+        /**
          * 重试策略
          */
-        protected FailoverPolicy<RequestMessage<Invocation>, Result> failoverPolicy;
+        protected FailoverPolicy failoverPolicy;
+        /**
+         * 分发策略
+         */
+        protected Route route;
+
 
         /**
          * 构造函数
          *
          * @param implicits      隐式传参
          * @param timeout        超时时间
+         * @param forks          并行度
+         * @param route          分发策略
          * @param failoverPolicy 重试策略
          */
-        public Option(Map<String, ?> implicits, int timeout,
-                      FailoverPolicy<RequestMessage<Invocation>, Result> failoverPolicy) {
+        public Option(Map<String, ?> implicits, int timeout, int forks, Route route, FailoverPolicy failoverPolicy) {
             this.implicits = implicits;
             this.timeout = timeout;
+            this.forks = forks;
+            this.route = route;
             this.failoverPolicy = failoverPolicy;
         }
 
@@ -261,15 +308,23 @@ public class MethodOption {
             return timeout;
         }
 
-        public FailoverPolicy<RequestMessage<Invocation>, Result> getFailoverPolicy() {
+        public int getForks() {
+            return forks;
+        }
+
+        public FailoverPolicy getFailoverPolicy() {
             return failoverPolicy;
+        }
+
+        public Route getRoute() {
+            return route;
         }
     }
 
     /**
      * 异常策略
      */
-    public static class MyExceptionPolicy implements ExceptionPolicy<Result> {
+    protected static class MyExceptionPolicy implements ExceptionPolicy {
         /**
          * 异常黑白名单
          */
@@ -306,7 +361,7 @@ public class MethodOption {
     /**
      * 超时策略
      */
-    public static class MyTimeoutPolicy implements TimeoutPolicy<RequestMessage<Invocation>> {
+    protected static class MyTimeoutPolicy implements TimeoutPolicy {
 
         @Override
         public boolean test(final RequestMessage<Invocation> request) {

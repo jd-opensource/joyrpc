@@ -39,6 +39,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static io.joyrpc.GenericService.GENERIC;
@@ -95,6 +96,10 @@ public class MethodOption {
      */
     protected int forks;
     /**
+     * 接口级别并发数配置
+     */
+    protected int concurrency;
+    /**
      * 重试异常
      */
     protected BlackWhiteList<Class<? extends Throwable>> failoverBlackWhiteList;
@@ -132,6 +137,7 @@ public class MethodOption {
         this.failoverSelector = url.getString(FAILOVER_SELECTOR_OPTION);
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
         this.forks = url.getInteger(FORKS_OPTION);
+        this.concurrency = url.getInteger(CONCURRENCY_OPTION);
         if (configure != null) {
             this.route = ROUTE.get(url.getString(ROUTE_OPTION));
             configure.accept(route);
@@ -156,12 +162,14 @@ public class MethodOption {
                             url.getPositive(getKey(o, TIMEOUT_OPTION), timeout),
                             url.getInteger(getKey(o, FORKS_OPTION), forks),
                             methodRoute,
+                            new Concurrency(url.getInteger(getKey(o, CONCURRENCY_OPTION), concurrency)),
                             new DefaultFailoverPolicy(
                                     url.getInteger(getKey(o, RETRIES_OPTION), maxRetry),
                                     url.getBoolean(getKey(o, RETRY_ONLY_ONCE_PER_NODE_OPTION), retryOnlyOncePerNode),
                                     new MyTimeoutPolicy(),
                                     new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
-                                    FAILOVER_SELECTOR.get(url.getString(getKey(o, FAILOVER_SELECTOR_OPTION), failoverSelector))));
+                                    FAILOVER_SELECTOR.get(url.getString(getKey(o, FAILOVER_SELECTOR_OPTION), failoverSelector))))
+                            ;
                 }
         );
     }
@@ -274,14 +282,17 @@ public class MethodOption {
          */
         protected int forks;
         /**
-         * 重试策略
-         */
-        protected FailoverPolicy failoverPolicy;
-        /**
          * 分发策略
          */
         protected Route route;
-
+        /**
+         * 并发数配置
+         */
+        protected Concurrency concurrency;
+        /**
+         * 重试策略
+         */
+        protected FailoverPolicy failoverPolicy;
 
         /**
          * 构造函数
@@ -290,13 +301,15 @@ public class MethodOption {
          * @param timeout        超时时间
          * @param forks          并行度
          * @param route          分发策略
+         * @param concurrency    并发数配置
          * @param failoverPolicy 重试策略
          */
-        public Option(Map<String, ?> implicits, int timeout, int forks, Route route, FailoverPolicy failoverPolicy) {
+        public Option(Map<String, ?> implicits, int timeout, int forks, Route route, final Concurrency concurrency, FailoverPolicy failoverPolicy) {
             this.implicits = implicits;
             this.timeout = timeout;
             this.forks = forks;
             this.route = route;
+            this.concurrency = concurrency;
             this.failoverPolicy = failoverPolicy;
         }
 
@@ -312,13 +325,18 @@ public class MethodOption {
             return forks;
         }
 
+        public Route getRoute() {
+            return route;
+        }
+
+        public Concurrency getConcurrency() {
+            return concurrency;
+        }
+
         public FailoverPolicy getFailoverPolicy() {
             return failoverPolicy;
         }
 
-        public Route getRoute() {
-            return route;
-        }
     }
 
     /**
@@ -372,6 +390,85 @@ public class MethodOption {
         public void reset(final RequestMessage<Invocation> request) {
             request.getHeader().setTimeout((int) (request.getTimeout() + request.getCreateTime() - SystemClock.now()));
         }
+    }
+
+    /**
+     * 并发数指标
+     */
+    public static class Concurrency {
+
+        /**
+         * 最大并发数
+         */
+        protected int max;
+
+        /**
+         * 活动并发
+         */
+        protected AtomicLong actives = new AtomicLong();
+
+        public Concurrency(int max) {
+            this.max = max;
+        }
+
+        public int getMax() {
+            return max;
+        }
+
+        /**
+         * 当前并发数
+         *
+         * @return
+         */
+        public long getActives() {
+            return actives.get();
+        }
+
+        /**
+         * 增加
+         */
+        public void add() {
+            actives.incrementAndGet();
+        }
+
+        /**
+         * 减少并发数
+         */
+        public void decrement() {
+            actives.decrementAndGet();
+        }
+
+        /**
+         * 唤醒
+         */
+        public void wakeup() {
+            synchronized (this) {
+                // 调用结束 通知等待的人
+                notifyAll();
+            }
+        }
+
+        /**
+         * 等到
+         *
+         * @param time
+         * @return
+         */
+        public boolean await(final long time) {
+            if (time <= 0) {
+                return true;
+            }
+            synchronized (this) {
+                try {
+                    // 等待执行
+                    wait(time);
+                    return true;
+                } catch (InterruptedException e) {
+                    return false;
+                }
+            }
+        }
+
     }
 
 }

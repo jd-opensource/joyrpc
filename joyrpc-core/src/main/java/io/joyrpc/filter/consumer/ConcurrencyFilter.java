@@ -9,9 +9,9 @@ package io.joyrpc.filter.consumer;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ package io.joyrpc.filter.consumer;
  */
 
 import io.joyrpc.Result;
+import io.joyrpc.cluster.distribution.MethodOption.Concurrency;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.extension.Extension;
@@ -37,27 +38,28 @@ import io.joyrpc.util.SystemClock;
 public class ConcurrencyFilter extends AbstractConcurrencyFilter implements ConsumerFilter {
 
     @Override
-    protected void onInvokeException(final Concurrency metric) {
-        metric.decrement();
-        metric.wakeup();
+    protected void onInvokeException(final Concurrency concurrency) {
+        concurrency.decrement();
+        concurrency.wakeup();
     }
 
     @Override
-    protected void onInvokeComplete(final Concurrency metric) {
-        metric.decrement();
-        metric.wakeup();
+    protected void onInvokeComplete(final Concurrency concurrency) {
+        concurrency.decrement();
+        concurrency.wakeup();
     }
 
     @Override
-    protected Result onExceed(final RequestMessage<Invocation> request, final int concurrency, final int timeout,
-                              final Concurrency metric) {
+    protected Result onExceed(final RequestMessage<Invocation> request, final Concurrency concurrency) {
         long start = SystemClock.now();
         Invocation invocation = request.getPayLoad();
         long active;
+        int timeout = request.getHeader().getTimeout();
         long remain = timeout;
         long elapsed;
-        while ((active = metric.getActives()) >= concurrency) {
-            metric.await(remain);
+        long max = concurrency.getMax();
+        while ((active = concurrency.getActives()) >= max) {
+            concurrency.await(remain);
             elapsed = SystemClock.now() - start;
             remain = timeout - elapsed;
             if (remain <= 0) {
@@ -66,7 +68,7 @@ public class ConcurrencyFilter extends AbstractConcurrencyFilter implements Cons
                         + ", timeout: " + timeout + ". concurrent invokes: " + active
                         + ". max concurrency: " + concurrency + ". You can change it by interface or method concurrency",
                         ExceptionCode.FILTER_CONCURRENT_CONSUMER_TIMEOUT, 0, false));
-            }else {
+            } else {
                 request.getHeader().setTimeout((int) remain);
             }
         }

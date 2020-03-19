@@ -572,6 +572,7 @@ public class Constants {
     public static final URLOption<Boolean> LIMITER_OPTION = new URLOption<>("limiter", false);
     public static final URLOption<String> METHOD_EXCLUDE_OPTION = new URLOption<>("exclude", "");
     public static final URLOption<String> CONTEXT_PATH_OPTION = new URLOption<>("contextpath", "/");
+    public static final URLOption<Integer> FORKS_OPTION = new URLOption<>("forks", 2);
 
     public static final String JAVA_VERSION_KEY = "javaVersion";
 

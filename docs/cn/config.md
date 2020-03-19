@@ -142,7 +142,7 @@
 |cacheNullable|Boolean|否|false|结果缓存值是否可空|
 |cacheCapacity|int|否|10000|结果缓存容量大小|
 |generic|Boolean|否|false|是否泛化调用|
-|cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast 方式|
+|cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast和forking 方式|
 |retries|int|否|0（0表示失败后不重试）|失败后重试次数（需要和cluster=failover结合使用，单实例设置retries无效）|
 |retryOnlyOncePerNode|Boolean|否| |每个节点只调用一次 |
 |failoverWhenThrowable|String|否| | 可以重试的异常全路径类名，多个用逗号分隔 |

@@ -127,7 +127,7 @@ public class MethodOption {
         this.interfaceName = interfaceName;
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList(url);
         this.maxRetry = url.getInteger(RETRIES_OPTION);
-        this.timeout = url.getInteger(TIMEOUT_OPTION);
+        this.timeout = url.getPositiveInt(TIMEOUT_OPTION);
         this.retryOnlyOncePerNode = url.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION);
         this.failoverSelector = url.getString(FAILOVER_SELECTOR_OPTION);
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
@@ -153,7 +153,7 @@ public class MethodOption {
                     }
                     return new Option(
                             url.startsWith(getKey(o, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1)),
-                            url.getInteger(getKey(o, TIMEOUT_OPTION), timeout),
+                            url.getPositive(getKey(o, TIMEOUT_OPTION), timeout),
                             url.getInteger(getKey(o, FORKS_OPTION), forks),
                             methodRoute,
                             new DefaultFailoverPolicy(

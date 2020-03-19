@@ -28,7 +28,6 @@ import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.GenericMethodOption;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,37 +35,22 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
-import static io.joyrpc.constants.Constants.TIMEOUT_OPTION;
-
 /**
- * @description: 服务端用，打印慢日志<br>
+ * 超时过滤器
  */
 @Extension(value = "timeout", order = ProviderFilter.TIMEOUT_ORDER)
 public class TimeoutFilter extends AbstractProviderFilter {
 
-    /**
-     * slf4j Logger for this class
-     */
     private final static Logger logger = LoggerFactory.getLogger(TimeoutFilter.class);
-
-    protected GenericMethodOption<Integer> timeouts;
-
-    @Override
-    public void setup() {
-        //初始化的时候计算所有的方法超时配置,超时时间大于0
-        final int defTimeout = url.getPositiveInt(TIMEOUT_OPTION);
-        timeouts = new GenericMethodOption<>(clazz, className,
-                methodName -> url.getPositiveInt(
-                        getOption(methodName, TIMEOUT_OPTION.getName(), defTimeout)));
-    }
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
+        //根据请求头的实际来进行超声判断
+        long timeout = request.getHeader().getTimeout();
         long start = SystemClock.now();
         return invoker.invoke(request).whenComplete((res, err) -> {
             Invocation invocation = request.getPayLoad();
-            Integer timeout = timeouts.get(invocation.getMethodName());
-            if (timeout != null) {
+            if (timeout > 0) {
                 long elapsed = SystemClock.now() - start;
                 if (elapsed > timeout) {
                     if (logger.isWarnEnabled()) {

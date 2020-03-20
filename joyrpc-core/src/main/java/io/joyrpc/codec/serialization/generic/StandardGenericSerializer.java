@@ -23,7 +23,7 @@ package io.joyrpc.codec.serialization.generic;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.ClassUtils;
 
 import java.lang.reflect.*;
@@ -80,7 +80,7 @@ public class StandardGenericSerializer implements GenericSerializer {
     }
 
     @Override
-    public Object[] deserialize(final Invocation invocation) throws CodecException {
+    public Object[] deserialize(final Call invocation) throws CodecException {
         Object[] genericArgs = invocation.getArgs();
         Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? new Object[0] : (Object[]) genericArgs[2];
         String[] argTypes = genericArgs == null || genericArgs.length < 3 ? null : (String[]) genericArgs[1];

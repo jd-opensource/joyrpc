@@ -25,7 +25,7 @@ import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.codec.serialization.Json;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.ClassUtils;
 
 import java.io.ByteArrayInputStream;
@@ -51,7 +51,7 @@ public class JsonGenericSerializer implements GenericSerializer {
     }
 
     @Override
-    public Object[] deserialize(final Invocation invocation) throws CodecException {
+    public Object[] deserialize(final Call invocation) throws CodecException {
         Parameter[] parameters = invocation.getMethod().getParameters();
         Object[] genericArgs = invocation.getArgs();
         if (parameters.length == 0) {

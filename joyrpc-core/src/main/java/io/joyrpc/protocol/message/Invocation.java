@@ -30,7 +30,6 @@ import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.StringUtils;
 
-import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -46,7 +45,7 @@ import static io.joyrpc.util.ClassUtils.*;
 /**
  * 调用对象
  */
-public class Invocation implements Serializable {
+public class Invocation implements Call {
 
     public static final String CLAZZ_NAME = "clazzName";
 
@@ -187,6 +186,7 @@ public class Invocation implements Serializable {
         setArgsType(argTypes);
     }
 
+    @Override
     public String[] getArgsType() {
         return argsType;
     }
@@ -212,6 +212,7 @@ public class Invocation implements Serializable {
         }
     }
 
+    @Override
     public Object[] getArgs() {
         return args;
     }
@@ -220,6 +221,7 @@ public class Invocation implements Serializable {
         this.args = args;
     }
 
+    @Override
     public Class[] getArgClasses() {
         if (argClasses == null) {
             //TODO 要以argsType优先，因为方法上的参数类型可能为接口
@@ -236,6 +238,7 @@ public class Invocation implements Serializable {
         return argClasses;
     }
 
+    @Override
     public String getClassName() {
         return className;
     }
@@ -244,6 +247,7 @@ public class Invocation implements Serializable {
         this.className = className;
     }
 
+    @Override
     public String getMethodName() {
         return methodName;
     }
@@ -252,6 +256,7 @@ public class Invocation implements Serializable {
         this.methodName = methodName;
     }
 
+    @Override
     public String getAlias() {
         return alias;
     }
@@ -260,6 +265,7 @@ public class Invocation implements Serializable {
         this.alias = alias;
     }
 
+    @Override
     public Method getMethod() {
         return method;
     }
@@ -268,6 +274,7 @@ public class Invocation implements Serializable {
         this.method = method;
     }
 
+    @Override
     public Class getClazz() {
         return clazz;
     }
@@ -276,6 +283,7 @@ public class Invocation implements Serializable {
         this.clazz = clazz;
     }
 
+    @Override
     public Object getObject() {
         return object;
     }
@@ -360,32 +368,17 @@ public class Invocation implements Serializable {
         return key == null || attachments == null ? null : attachments.remove(key);
     }
 
-    /**
-     * 获取扩展属性
-     *
-     * @return
-     */
+    @Override
     public Map<String, Object> getAttachments() {
         return attachments;
     }
 
-    /**
-     * 获取扩展属性
-     *
-     * @param key
-     * @return
-     */
+    @Override
     public <T> T getAttachment(final String key) {
         return attachments == null ? null : (T) attachments.get(key);
     }
 
-    /**
-     * 获取扩展属性
-     *
-     * @param key
-     * @param defaultValue 默认值
-     * @return
-     */
+    @Override
     public <T> T getAttachment(final String key, final T defaultValue) {
         if (attachments == null) {
             return defaultValue;
@@ -399,11 +392,7 @@ public class Invocation implements Serializable {
         return new MapParametric(attachments);
     }
 
-    /**
-     * 判断是否是泛型
-     *
-     * @return
-     */
+    @Override
     public boolean isGeneric() {
         if (generic == null) {
             generic = GENERIC.test(clazz)

@@ -5,7 +5,7 @@ import io.joyrpc.exception.CacheException;
 import io.joyrpc.expression.Expression;
 import io.joyrpc.expression.ExpressionProvider;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +73,7 @@ public abstract class AbstractExpressionCacheKeyGenerator implements CacheKeyGen
     }
 
     @Override
-    public Object generate(final Invocation invocation) throws CacheException {
+    public Object generate(final Call invocation) throws CacheException {
         Object[] args = invocation.getArgs();
         if (expression == null) {
             //无参

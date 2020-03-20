@@ -24,7 +24,7 @@ import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.Call;
 
 import static io.joyrpc.Plugin.JSON;
 
@@ -35,7 +35,7 @@ import static io.joyrpc.Plugin.JSON;
 public class JSONCacheKeyGenerator implements CacheKeyGenerator {
 
     @Override
-    public Object generate(final Invocation invocation) throws CacheException {
+    public Object generate(final Call invocation) throws CacheException {
         Object[] args = invocation.getArgs();
         if (args == null || args.length == 0) {
             return "";

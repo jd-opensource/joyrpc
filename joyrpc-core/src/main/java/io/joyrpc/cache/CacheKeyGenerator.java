@@ -24,7 +24,7 @@ import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.Prototype;
-import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.Call;
 
 /**
  * 缓存键生成器
@@ -38,7 +38,7 @@ public interface CacheKeyGenerator {
      * @return 键
      * @throws CacheException 缓存异常
      */
-    Object generate(Invocation invocation) throws CacheException;
+    Object generate(Call invocation) throws CacheException;
 
     /**
      * 基于表达式的键生成器

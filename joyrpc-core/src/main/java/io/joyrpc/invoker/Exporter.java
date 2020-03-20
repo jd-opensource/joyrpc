@@ -26,7 +26,6 @@ import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
-import io.joyrpc.cluster.distribution.MethodOption;
 import io.joyrpc.config.ConfigAware;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.Warmup;

@@ -22,7 +22,7 @@ package io.joyrpc.invoker.failover;
 
 import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
-import io.joyrpc.cluster.distribution.MethodOption;
+import io.joyrpc.invoker.MethodOption;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;

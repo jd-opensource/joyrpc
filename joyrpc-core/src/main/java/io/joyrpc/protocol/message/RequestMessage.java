@@ -20,9 +20,10 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.cluster.distribution.MethodOption;
+import io.joyrpc.invoker.MethodOption;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
+import io.joyrpc.invoker.MethodOption.Option;
 import io.joyrpc.permission.Authentication;
 import io.joyrpc.permission.Authorization;
 import io.joyrpc.permission.Identification;
@@ -59,7 +60,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 方法选项
      */
-    protected transient MethodOption.Option option;
+    protected transient Option option;
     /**
      * 请求上下文
      */
@@ -228,11 +229,11 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.receiveTime = receiveTime;
     }
 
-    public MethodOption.Option getOption() {
+    public Option getOption() {
         return option;
     }
 
-    public void setOption(MethodOption.Option option) {
+    public void setOption(Option option) {
         this.option = option;
     }
 

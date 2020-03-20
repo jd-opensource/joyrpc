@@ -31,7 +31,6 @@ import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.LoadBalance;
-import io.joyrpc.cluster.distribution.MethodOption;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.config.ConsumerConfig;

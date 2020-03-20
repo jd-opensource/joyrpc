@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution;
+package io.joyrpc.invoker;
 
 /*-
  * #%L
@@ -26,6 +26,7 @@ import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
+import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;

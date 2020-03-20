@@ -31,6 +31,7 @@ import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.permission.BlackWhiteList;
@@ -214,12 +215,13 @@ public class InnerInterfaceOption implements InterfaceOption {
         this.interfaceName = interfaceName;
         this.url = url;
         this.implicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
-        this.failoverBlackWhiteList = buildFailoverBlackWhiteList();
-        this.maxRetry = url.getInteger(RETRIES_OPTION);
         this.timeout = url.getPositiveInt(TIMEOUT_OPTION);
+        this.maxRetry = url.getInteger(RETRIES_OPTION);
         this.retryOnlyOncePerNode = url.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION);
         this.failoverSelector = url.getString(FAILOVER_SELECTOR_OPTION);
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
+        //需要放在failoverPredication后面，里面加载配置文件的时候需要判断failoverPredication
+        this.failoverBlackWhiteList = buildFailoverBlackWhiteList();
         this.forks = url.getInteger(FORKS_OPTION);
         this.concurrency = url.getInteger(CONCURRENCY_OPTION);
         this.token = url.getString(HIDDEN_KEY_TOKEN);
@@ -426,12 +428,29 @@ public class InnerInterfaceOption implements InterfaceOption {
         Set<String> names = new HashSet<>();
         ClassLoader loader = ClassUtils.getCurrentClassLoader();
         String line;
+        String name;
+        ExtensionMeta<ExceptionPredication, String> meta;
+        ExtensionMeta<ExceptionPredication, String> max = null;
         try {
             Enumeration<java.net.URL> urls = loader.getResources(RETRY_RESOURCE_PATH + interfaceName);
             while ((urls.hasMoreElements())) {
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(urls.nextElement().openStream(), StandardCharsets.UTF_8))) {
                     while ((line = reader.readLine()) != null) {
-                        names.add(line);
+                        //异常判断扩展插件
+                        if (line.startsWith("[") && line.endsWith("]")) {
+                            //没有人工设置异常判断插件
+                            if (failoverPredication == null || failoverPredication.isEmpty()) {
+                                name = line.substring(1, line.length() - 1);
+                                //获取优先级最高的异常判断插件
+                                meta = EXCEPTION_PREDICATION.meta(name);
+                                if (meta != null && (max == null || max.getOrder() > meta.getOrder())) {
+                                    max = meta;
+                                }
+                            }
+                        } else {
+                            //异常类
+                            names.add(line);
+                        }
                     }
                 } catch (IOException e) {
                     throw new InitializationException(e.getMessage(), CONSUMER_FAILOVER_CLASS);
@@ -439,6 +458,9 @@ public class InnerInterfaceOption implements InterfaceOption {
             }
         } catch (IOException e) {
             throw new InitializationException(e.getMessage(), CONSUMER_FAILOVER_CLASS);
+        }
+        if (max != null) {
+            failoverPredication = max.getExtension().getName();
         }
         return names;
 

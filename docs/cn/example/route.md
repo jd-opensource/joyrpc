@@ -36,8 +36,8 @@
   | :----: | :----: | :---- |
   | retries |  | 最大重试次数 |
   | retryOnlyOncePerNode |  | 每个节点是否只调用一次 |
-  | failoverWhenThrowable |  | 可以重试的异常全路径类名，多个异常类名用逗号分隔 |
-  | failoverPredication |  | 自定义异常重试判断扩展点名称 |
+  | failoverWhenThrowable |  | 可以重试的异常全路径类名，多个异常类名用逗号分隔<br/> 服务提供方也可以内置，在"META-INF/retry/接口名称"文件中配置异常全路径名|
+  | failoverPredication |  | 自定义异常重试判断扩展点名称<br/> 服务提供方也可以内置，在"META-INF/retry/接口名称"文件中配置异常判断插件名称，配置格式为"\[插件名称\]" |
   | failoverSelector | simple | 异常重试目标节点选择器 |
   
 ### 重试超时控制

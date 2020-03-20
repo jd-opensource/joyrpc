@@ -169,6 +169,10 @@ public class MethodOption {
      */
     protected BeanDescriptor beanDescriptor;
     /**
+     * 令牌
+     */
+    protected String token;
+    /**
      * 方法透传参数
      */
     protected NameKeyOption<Option> options;
@@ -209,6 +213,7 @@ public class MethodOption {
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
         this.forks = url.getInteger(FORKS_OPTION);
         this.concurrency = url.getInteger(CONCURRENCY_OPTION);
+        this.token = url.getString(HIDDEN_KEY_TOKEN);
         //缓存配置
         this.cacheEnable = url.getBoolean(CACHE_OPTION);
         this.cacheNullable = url.getBoolean(CACHE_NULLABLE_OPTION);
@@ -256,7 +261,8 @@ public class MethodOption {
                                     FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
                             getCachePolicy(parametric),
                             methodBlackWhiteList,
-                            getValidator(parametric));
+                            getValidator(parametric),
+                            parametric.getString(HIDDEN_KEY_TOKEN, token));
                 }
         );
     }
@@ -465,6 +471,10 @@ public class MethodOption {
          * 方法参数验证器
          */
         protected Validator validator;
+        /**
+         * 令牌
+         */
+        protected String token;
 
         /**
          * 构造函数
@@ -478,13 +488,15 @@ public class MethodOption {
          * @param cachePolicy          缓存策略
          * @param methodBlackWhiteList 方法黑白名单
          * @param validator            方法参数验证器
+         * @param token                令牌
          */
         public Option(Map<String, ?> implicits, int timeout, int forks, Route route,
                       final Concurrency concurrency,
                       final FailoverPolicy failoverPolicy,
                       final CachePolicy cachePolicy,
                       final BlackWhiteList<String> methodBlackWhiteList,
-                      final Validator validator) {
+                      final Validator validator,
+                      final String token) {
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.forks = forks;
@@ -494,6 +506,7 @@ public class MethodOption {
             this.cachePolicy = cachePolicy;
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.validator = validator;
+            this.token = token;
         }
 
         /**
@@ -535,6 +548,10 @@ public class MethodOption {
 
         public Validator getValidator() {
             return validator;
+        }
+
+        public String getToken() {
+            return token;
         }
     }
 

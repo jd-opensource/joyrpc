@@ -99,23 +99,6 @@ public interface Call extends Serializable {
     Map<String, Object> getAttachments();
 
     /**
-     * 获取扩展属性
-     *
-     * @param key 键
-     * @return 扩展属性
-     */
-    <T> T getAttachment(String key);
-
-    /**
-     * 获取扩展属性
-     *
-     * @param key          键
-     * @param defaultValue 默认值
-     * @return 扩展属性
-     */
-    <T> T getAttachment(String key, T defaultValue);
-
-    /**
      * 判断是否是泛型
      *
      * @return 泛型标识

@@ -373,12 +373,23 @@ public class Invocation implements Call {
         return attachments;
     }
 
-    @Override
+    /**
+     * 获取扩展属性
+     *
+     * @param key 键
+     * @return 扩展属性
+     */
     public <T> T getAttachment(final String key) {
         return attachments == null ? null : (T) attachments.get(key);
     }
 
-    @Override
+    /**
+     * 获取扩展属性
+     *
+     * @param key          键
+     * @param defaultValue 默认值
+     * @return 扩展属性
+     */
     public <T> T getAttachment(final String key, final T defaultValue) {
         if (attachments == null) {
             return defaultValue;

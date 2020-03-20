@@ -39,6 +39,7 @@ import io.joyrpc.codec.crypto.Encryptor;
 import io.joyrpc.codec.crypto.Signature;
 import io.joyrpc.codec.digester.Digester;
 import io.joyrpc.codec.serialization.*;
+import io.joyrpc.config.InterfaceOptionFactory;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.Configurator;
@@ -169,6 +170,11 @@ public interface Plugin {
      * 表达式插件
      */
     ExtensionPoint<ExpressionProvider, String> EXPRESSION_PROVIDER = new ExtensionPointLazy<>(ExpressionProvider.class);
+
+    /**
+     * 接口选项工厂类
+     */
+    ExtensionPoint<InterfaceOptionFactory, String> INTERFACE_OPTION_FACTORY = new ExtensionPointLazy<>(InterfaceOptionFactory.class);
 
     /**
      * 编解码插件选择器

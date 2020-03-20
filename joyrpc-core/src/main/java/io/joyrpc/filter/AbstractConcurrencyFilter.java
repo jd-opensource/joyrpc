@@ -22,7 +22,7 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.invoker.MethodOption.Concurrency;
+import io.joyrpc.config.InterfaceOption.Concurrency;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;

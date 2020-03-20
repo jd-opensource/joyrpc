@@ -23,7 +23,7 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cache.Cache;
-import io.joyrpc.invoker.MethodOption.CachePolicy;
+import io.joyrpc.config.InterfaceOption.CachePolicy;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.Converts;

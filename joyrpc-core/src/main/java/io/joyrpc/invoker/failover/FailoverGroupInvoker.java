@@ -22,8 +22,9 @@ package io.joyrpc.invoker.failover;
 
 import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
-import io.joyrpc.invoker.MethodOption;
 import io.joyrpc.config.ConsumerConfig;
+import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;
@@ -36,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import static io.joyrpc.Plugin.INTERFACE_OPTION_FACTORY;
 import static io.joyrpc.cluster.distribution.Route.FAIL_FAST;
 
 /**
@@ -59,14 +61,14 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     /**
      * 方法透传参数
      */
-    protected MethodOption options;
+    protected InterfaceOption options;
 
     @Override
     public void setup() {
         super.setup();
         //不支持动态别名
         aliasAdaptive = false;
-        options = new MethodOption(clazz, className, url);
+        options = INTERFACE_OPTION_FACTORY.get().create(clazz, className, url);
     }
 
     @Override
@@ -90,7 +92,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        MethodOption.Option option = options.getOption(invocation.getMethodName());
+        MethodOption option = options.getOption(invocation.getMethodName());
         request.setOption(option);
         request.getHeader().setTimeout(option.getTimeout());
         CompletableFuture<Result> future = new CompletableFuture<>();

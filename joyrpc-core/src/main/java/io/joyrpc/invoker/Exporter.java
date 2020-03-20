@@ -27,6 +27,8 @@ import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.config.ConfigAware;
+import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.Warmup;
 import io.joyrpc.constants.Constants;
@@ -132,7 +134,7 @@ public class Exporter extends AbstractInvoker {
     /**
      * 方法选项
      */
-    protected MethodOption options;
+    protected InterfaceOption options;
 
     /**
      * 构造函数
@@ -182,7 +184,7 @@ public class Exporter extends AbstractInvoker {
         this.warmup = config.getWarmup();
         this.port = url.getPort();
         this.compress = url.getString(Constants.COMPRESS_OPTION.getName());
-        this.options = new MethodOption(interfaceClass, interfaceName, url);
+        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url);
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
         this.identification = IDENTIFICATION.get(url.getString(Constants.IDENTIFICATION_OPTION));
@@ -296,7 +298,7 @@ public class Exporter extends AbstractInvoker {
     @Override
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        MethodOption.Option option = options.getOption(invocation.getMethodName());
+        MethodOption option = options.getOption(invocation.getMethodName());
         //注入身份认证信息和鉴权
         request.setAuthentication(authentication);
         request.setIdentification(identification);

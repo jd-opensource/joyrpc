@@ -1,9 +1,9 @@
 package io.joyrpc.permission.token;
 
 import io.joyrpc.InvokerAware;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
-import io.joyrpc.invoker.MethodOption.Option;
 import io.joyrpc.permission.Authorization;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -33,7 +33,7 @@ public class TokenAuthorization implements Authorization, InvokerAware {
     public boolean authenticate(final RequestMessage<Invocation> request) {
         //方法鉴权
         Invocation invocation = request.getPayLoad();
-        Option option = request.getOption();
+        MethodOption option = request.getOption();
         String token = option.getToken();
         return token == null || token.isEmpty() || token.equals(invocation.getAttachment(HIDDEN_KEY_TOKEN));
     }

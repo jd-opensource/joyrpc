@@ -1,4 +1,4 @@
-package io.joyrpc.invoker;
+package io.joyrpc.config.inner;
 
 /*-
  * #%L
@@ -28,6 +28,7 @@ import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.URL;
@@ -52,7 +53,6 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static io.joyrpc.GenericService.GENERIC;
@@ -64,9 +64,9 @@ import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
 
 /**
- * 参数选项
+ * 内部的接口选项
  */
-public class MethodOption {
+public class InnerInterfaceOption implements InterfaceOption {
 
     /**
      * 扫描Provider提供的META-INF/retry/xxx.xxx.xxx.xx文件的异常配置
@@ -175,7 +175,7 @@ public class MethodOption {
     /**
      * 方法透传参数
      */
-    protected NameKeyOption<Option> options;
+    protected NameKeyOption<InnerMethodOption> options;
     /**
      * 分发策略配置
      */
@@ -188,7 +188,7 @@ public class MethodOption {
      * @param interfaceName  接口名称
      * @param url            URL
      */
-    public MethodOption(final Class<?> interfaceClass, final String interfaceName, final URL url) {
+    public InnerInterfaceOption(final Class<?> interfaceClass, final String interfaceName, final URL url) {
         this(interfaceClass, interfaceName, url, null);
     }
 
@@ -200,8 +200,8 @@ public class MethodOption {
      * @param url            URL
      * @param configure      路由配置器
      */
-    public MethodOption(final Class<?> interfaceClass, final String interfaceName, final URL url,
-                        final Consumer<Route> configure) {
+    public InnerInterfaceOption(final Class<?> interfaceClass, final String interfaceName, final URL url,
+                                final Consumer<Route> configure) {
         this.interfaceClass = interfaceClass;
         this.interfaceName = interfaceName;
         this.implicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
@@ -247,7 +247,7 @@ public class MethodOption {
                 method -> {
                     String prefix = URL_METHOD_PREX + method + ".";
                     WrapperParametric parametric = new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
-                    return new Option(
+                    return new InnerMethodOption(
                             getImplicits(url, method),
                             parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                             parametric.getInteger(FORKS_OPTION.getName(), forks),
@@ -399,7 +399,7 @@ public class MethodOption {
      * @param methodName 方法名称
      * @return 方法选项
      */
-    public Option getOption(final String methodName) {
+    public InnerMethodOption getOption(final String methodName) {
         return options.get(methodName);
     }
 
@@ -434,7 +434,7 @@ public class MethodOption {
     /**
      * 方法选项
      */
-    public static class Option {
+    protected static class InnerMethodOption implements MethodOption {
         /**
          * 方法级别隐式传参，合并了接口的隐藏参数，只读
          */
@@ -490,13 +490,13 @@ public class MethodOption {
          * @param validator            方法参数验证器
          * @param token                令牌
          */
-        public Option(Map<String, ?> implicits, int timeout, int forks, Route route,
-                      final Concurrency concurrency,
-                      final FailoverPolicy failoverPolicy,
-                      final CachePolicy cachePolicy,
-                      final BlackWhiteList<String> methodBlackWhiteList,
-                      final Validator validator,
-                      final String token) {
+        public InnerMethodOption(Map<String, ?> implicits, int timeout, int forks, Route route,
+                                 final Concurrency concurrency,
+                                 final FailoverPolicy failoverPolicy,
+                                 final CachePolicy cachePolicy,
+                                 final BlackWhiteList<String> methodBlackWhiteList,
+                                 final Validator validator,
+                                 final String token) {
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.forks = forks;
@@ -509,47 +509,52 @@ public class MethodOption {
             this.token = token;
         }
 
-        /**
-         * 方法级别隐式传参，合并了接口的隐藏参数
-         *
-         * @return 合并了接口的方法级隐式传参数
-         */
+        @Override
         public Map<String, ?> getImplicits() {
             return implicits;
         }
 
+        @Override
         public int getTimeout() {
             return timeout;
         }
 
+        @Override
         public int getForks() {
             return forks;
         }
 
+        @Override
         public Route getRoute() {
             return route;
         }
 
+        @Override
         public Concurrency getConcurrency() {
             return concurrency;
         }
 
+        @Override
         public FailoverPolicy getFailoverPolicy() {
             return failoverPolicy;
         }
 
+        @Override
         public CachePolicy getCachePolicy() {
             return cachePolicy;
         }
 
+        @Override
         public BlackWhiteList<String> getMethodBlackWhiteList() {
             return methodBlackWhiteList;
         }
 
+        @Override
         public Validator getValidator() {
             return validator;
         }
 
+        @Override
         public String getToken() {
             return token;
         }
@@ -605,112 +610,6 @@ public class MethodOption {
         @Override
         public void reset(final RequestMessage<Invocation> request) {
             request.getHeader().setTimeout((int) (request.getTimeout() + request.getCreateTime() - SystemClock.now()));
-        }
-    }
-
-    /**
-     * 并发数指标
-     */
-    public static class Concurrency {
-
-        /**
-         * 最大并发数
-         */
-        protected int max;
-
-        /**
-         * 活动并发
-         */
-        protected AtomicLong actives = new AtomicLong();
-
-        public Concurrency(int max) {
-            this.max = max;
-        }
-
-        public int getMax() {
-            return max;
-        }
-
-        /**
-         * 当前并发数
-         *
-         * @return
-         */
-        public long getActives() {
-            return actives.get();
-        }
-
-        /**
-         * 增加
-         */
-        public void add() {
-            actives.incrementAndGet();
-        }
-
-        /**
-         * 减少并发数
-         */
-        public void decrement() {
-            actives.decrementAndGet();
-        }
-
-        /**
-         * 唤醒
-         */
-        public void wakeup() {
-            synchronized (this) {
-                // 调用结束 通知等待的人
-                notifyAll();
-            }
-        }
-
-        /**
-         * 等到
-         *
-         * @param time
-         * @return
-         */
-        public boolean await(final long time) {
-            if (time <= 0) {
-                return true;
-            }
-            synchronized (this) {
-                try {
-                    // 等待执行
-                    wait(time);
-                    return true;
-                } catch (InterruptedException e) {
-                    return false;
-                }
-            }
-        }
-
-    }
-
-    /**
-     * 缓存策略
-     */
-    public static class CachePolicy {
-        /**
-         * 缓存接口
-         */
-        protected final Cache<Object, Object> cache;
-        /**
-         * 缓存键生成器
-         */
-        protected final CacheKeyGenerator generator;
-
-        public CachePolicy(Cache<Object, Object> cache, CacheKeyGenerator generator) {
-            this.cache = cache;
-            this.generator = generator;
-        }
-
-        public Cache<Object, Object> getCache() {
-            return cache;
-        }
-
-        public CacheKeyGenerator getGenerator() {
-            return generator;
         }
     }
 

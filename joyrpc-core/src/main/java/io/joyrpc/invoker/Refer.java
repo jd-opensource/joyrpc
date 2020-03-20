@@ -34,6 +34,8 @@ import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.config.ConsumerConfig;
+import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.RequestContext;
@@ -129,7 +131,7 @@ public class Refer extends AbstractInvoker {
     /**
      * 方法选项
      */
-    protected MethodOption options;
+    protected InterfaceOption options;
     /**
      * 透传插件
      */
@@ -216,7 +218,7 @@ public class Refer extends AbstractInvoker {
         //路由器
         this.router = configure(ROUTER.get(url.getString(Constants.ROUTER_OPTION)));
         //方法选项
-        this.options = new MethodOption(interfaceClass, interfaceName, url, this::configure);
+        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure);
 
         this.cluster.addHandler(config);
         //处理链
@@ -375,7 +377,7 @@ public class Refer extends AbstractInvoker {
         invocation.setAlias(alias);
         invocation.setObject(config.getStub());
 
-        MethodOption.Option option = options.getOption(invocation.getMethodName());
+        MethodOption option = options.getOption(invocation.getMethodName());
         request.setOption(option);
         //避免分组重试重复调用
         if (request.getCreateTime() <= 0) {

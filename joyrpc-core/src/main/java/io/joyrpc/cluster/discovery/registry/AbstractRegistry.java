@@ -98,6 +98,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected long taskRetryInterval;
     /**
+     * 备份时间间隔
+     */
+    protected long backupInterval;
+    /**
      * 注册
      */
     protected final Map<String, Registion> registers = new ConcurrentHashMap<>(30);
@@ -147,6 +151,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         this.backup = backup;
         this.maxConnectRetryTimes = url.getInteger("maxConnectRetryTimes", -1);
         this.taskRetryInterval = url.getLong("taskRetryInterval", 500L);
+        this.backupInterval = url.getPositive("backupInterval", 10000L);
         this.registryId = ID_GENERATOR.get();
     }
 
@@ -594,6 +599,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * 备份恢复的数据
          */
         protected BackupDatum datum;
+        /**
+         * 上次备份时间
+         */
+        protected long lastBackup;
 
         /**
          * 构造函数
@@ -891,11 +900,13 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 return 1000L;
             } else {
                 long waitTime = execute();
-                if (waitTime > 0) {
-                    if (registry.backup != null && dirty.compareAndSet(true, false)) {
-                        //备份数据
-                        backup();
-                    }
+                if (waitTime > 0
+                        && registry.backup != null
+                        && (SystemClock.now() - lastBackup) > registry.backupInterval
+                        && dirty.compareAndSet(true, false)) {
+                    //备份数据，通过时间间隔避免网关等大集群频繁备份操作
+                    lastBackup = SystemClock.now();
+                    backup();
                 }
                 return waitTime;
             }

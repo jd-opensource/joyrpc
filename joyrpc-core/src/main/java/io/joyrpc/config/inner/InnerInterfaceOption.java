@@ -85,6 +85,10 @@ public class InnerInterfaceOption implements InterfaceOption {
      */
     protected String interfaceName;
     /**
+     * url
+     */
+    protected URL url;
+    /**
      * 接口的隐藏参数
      */
     protected Map<String, String> implicits;
@@ -204,8 +208,9 @@ public class InnerInterfaceOption implements InterfaceOption {
                                 final Consumer<Route> configure) {
         this.interfaceClass = interfaceClass;
         this.interfaceName = interfaceName;
+        this.url = url;
         this.implicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
-        this.failoverBlackWhiteList = buildFailoverBlackWhiteList(url);
+        this.failoverBlackWhiteList = buildFailoverBlackWhiteList();
         this.maxRetry = url.getInteger(RETRIES_OPTION);
         this.timeout = url.getPositiveInt(TIMEOUT_OPTION);
         this.retryOnlyOncePerNode = url.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION);
@@ -243,38 +248,43 @@ public class InnerInterfaceOption implements InterfaceOption {
             }
         }
 
-        this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null,
-                method -> {
-                    String prefix = URL_METHOD_PREX + method + ".";
-                    WrapperParametric parametric = new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
-                    return new InnerMethodOption(
-                            getImplicits(url, method),
-                            parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
-                            parametric.getInteger(FORKS_OPTION.getName(), forks),
-                            getRoute(parametric),
-                            new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
-                            new DefaultFailoverPolicy(
-                                    parametric.getInteger(RETRIES_OPTION.getName(), maxRetry),
-                                    parametric.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION.getName(), retryOnlyOncePerNode),
-                                    new MyTimeoutPolicy(),
-                                    new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
-                                    FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
-                            getCachePolicy(parametric),
-                            methodBlackWhiteList,
-                            getValidator(parametric),
-                            parametric.getString(HIDDEN_KEY_TOKEN, token));
-                }
-        );
+        this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null, this::create);
+    }
+
+    /**
+     * 构建方法选项
+     *
+     * @param method 方法
+     * @return 方法选项
+     */
+    protected InnerMethodOption create(final String method) {
+        String prefix = URL_METHOD_PREX + method + ".";
+        WrapperParametric parametric = new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
+        return new InnerMethodOption(
+                getImplicits(method),
+                parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
+                parametric.getInteger(FORKS_OPTION.getName(), forks),
+                getRoute(parametric),
+                new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
+                new DefaultFailoverPolicy(
+                        parametric.getInteger(RETRIES_OPTION.getName(), maxRetry),
+                        parametric.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION.getName(), retryOnlyOncePerNode),
+                        new MyTimeoutPolicy(),
+                        new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
+                        FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
+                getCachePolicy(parametric),
+                methodBlackWhiteList,
+                getValidator(parametric),
+                parametric.getString(HIDDEN_KEY_TOKEN, token));
     }
 
     /**
      * 获取方法隐藏参数，合并了接口的隐藏参数
      *
-     * @param url    参数
      * @param method 方法
      * @return 方法隐藏参数
      */
-    protected Map<String, String> getImplicits(final URL url, final String method) {
+    protected Map<String, String> getImplicits(final String method) {
         Map<String, String> result = url.startsWith(METHOD_KEY_FUNC.apply(method, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1));
         if (result.isEmpty()) {
             return implicits;
@@ -365,10 +375,9 @@ public class InnerInterfaceOption implements InterfaceOption {
     /**
      * 构建异常重试类
      *
-     * @param url url
      * @return 异常黑白名单
      */
-    protected BlackWhiteList<Class<? extends Throwable>> buildFailoverBlackWhiteList(final URL url) {
+    protected BlackWhiteList<Class<? extends Throwable>> buildFailoverBlackWhiteList() {
         //内置的异常类名
         Set<String> names = new HashSet<>(INNER_EXCEPTIONS.computeIfAbsent(interfaceName, this::getInnerExceptions));
         //当前URL配置的异常

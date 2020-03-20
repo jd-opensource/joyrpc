@@ -41,6 +41,8 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 import io.joyrpc.util.SystemClock;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -67,6 +69,8 @@ import static io.joyrpc.util.StringUtils.split;
  * 内部的接口选项
  */
 public class InnerInterfaceOption implements InterfaceOption {
+
+    private static final Logger logger = LoggerFactory.getLogger(InnerInterfaceOption.class);
 
     /**
      * 扫描Provider提供的META-INF/retry/xxx.xxx.xxx.xx文件的异常配置
@@ -392,11 +396,11 @@ public class InnerInterfaceOption implements InterfaceOption {
             try {
                 c = forName(name);
                 if (!Throwable.class.isAssignableFrom(c)) {
-                    throw new InitializationException(String.format("Class is not extends throwable, %s", name), CONSUMER_FAILOVER_CLASS);
+                    logger.error("Failover exception class is not implement Throwable. " + name);
                 }
                 failoverClass.add((Class<? extends Throwable>) c);
             } catch (ClassNotFoundException e) {
-                throw new InitializationException(e.getMessage(), CONSUMER_FAILOVER_CLASS);
+                logger.error("Failover exception class is not found. " + name);
             }
         }
         return new ExceptionBlackWhiteList(failoverClass, null, false);

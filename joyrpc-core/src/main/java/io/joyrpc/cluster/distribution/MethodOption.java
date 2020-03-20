@@ -28,7 +28,7 @@ import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
 import io.joyrpc.exception.InitializationException;
-import io.joyrpc.extension.Parametric;
+import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.permission.BlackWhiteList;
@@ -40,9 +40,14 @@ import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 import io.joyrpc.util.SystemClock;
 
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.metadata.BeanDescriptor;
+import javax.validation.metadata.MethodDescriptor;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -71,9 +76,17 @@ public class MethodOption {
      */
     protected static final String RETRY_RESOURCE_PATH = "META-INF/retry/";
     /**
+     * 接口类型
+     */
+    protected Class<?> interfaceClass;
+    /**
      * 接口名称
      */
     protected String interfaceName;
+    /**
+     * 接口的隐藏参数
+     */
+    protected Map<String, String> implicits;
     /**
      * 接口级别最大重试次数
      */
@@ -143,6 +156,18 @@ public class MethodOption {
      */
     protected BlackWhiteList<String> methodBlackWhiteList;
     /**
+     * 是否要进行方法参数验证
+     */
+    protected boolean validation;
+    /**
+     * 验证器
+     */
+    protected Validator validator;
+    /**
+     * 对象类描述符
+     */
+    protected BeanDescriptor beanDescriptor;
+    /**
      * 方法透传参数
      */
     protected NameKeyOption<Option> options;
@@ -172,7 +197,9 @@ public class MethodOption {
      */
     public MethodOption(final Class<?> interfaceClass, final String interfaceName, final URL url,
                         final Consumer<Route> configure) {
+        this.interfaceClass = interfaceClass;
         this.interfaceName = interfaceName;
+        this.implicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList(url);
         this.maxRetry = url.getInteger(RETRIES_OPTION);
         this.timeout = url.getPositiveInt(TIMEOUT_OPTION);
@@ -201,14 +228,21 @@ public class MethodOption {
 
         //方法级别的隐藏参数，保留以"."开头
         boolean generic = GENERIC.test(interfaceClass);
+        //默认是否认证
+        this.validation = url.getBoolean(VALIDATION_OPTION);
+        if (!generic) {
+            this.validator = Validation.buildDefaultValidatorFactory().getValidator();
+            if (validator != null) {
+                this.beanDescriptor = validator.getConstraintsForClass(interfaceClass);
+            }
+        }
 
         this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null,
                 method -> {
                     String prefix = URL_METHOD_PREX + method + ".";
-                    Parametric parametric = new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
-                    Map<String, String> implicits = url.startsWith(METHOD_KEY_FUNC.apply(method, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1));
+                    WrapperParametric parametric = new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
                     return new Option(
-                            implicits,
+                            getImplicits(url, method),
                             parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                             parametric.getInteger(FORKS_OPTION.getName(), forks),
                             getRoute(parametric),
@@ -219,10 +253,51 @@ public class MethodOption {
                                     new MyTimeoutPolicy(),
                                     new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
                                     FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
-                            getCachePolicy(method, parametric),
-                            methodBlackWhiteList);
+                            getCachePolicy(parametric),
+                            methodBlackWhiteList,
+                            getValidator(parametric));
                 }
         );
+    }
+
+    /**
+     * 获取方法隐藏参数，合并了接口的隐藏参数
+     *
+     * @param url    参数
+     * @param method 方法
+     * @return 方法隐藏参数
+     */
+    protected Map<String, String> getImplicits(final URL url, final String method) {
+        Map<String, String> result = url.startsWith(METHOD_KEY_FUNC.apply(method, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1));
+        if (result.isEmpty()) {
+            return implicits;
+        } else if (implicits.isEmpty()) {
+            return result;
+        } else {
+            implicits.forEach(result::putIfAbsent);
+            return result;
+        }
+    }
+
+    /**
+     * 获取方法参数验证器
+     *
+     * @param parametric 参数
+     * @return 参数验证器
+     */
+    protected Validator getValidator(final WrapperParametric parametric) {
+        //过滤掉了不验证的方法或泛型接口
+        if (validator == null || !parametric.getBoolean(VALIDATION_OPTION.getName(), validation)) {
+            return null;
+        }
+        try {
+            Method method = ClassUtils.getPublicMethod(interfaceClass, parametric.getName());
+            //判断该方法上是有有验证注解
+            MethodDescriptor descriptor = beanDescriptor.getConstraintsForMethod(method.getName(), method.getParameterTypes());
+            return descriptor != null && descriptor.hasConstrainedParameters() ? validator : null;
+        } catch (NoSuchMethodException | MethodOverloadException e) {
+            return null;
+        }
     }
 
     /**
@@ -231,7 +306,7 @@ public class MethodOption {
      * @param parametric 参数
      * @return 分发策略
      */
-    protected Route getRoute(final Parametric parametric) {
+    protected Route getRoute(final WrapperParametric parametric) {
         //方法分发策略
         Route methodRoute = null;
         if (configure != null) {
@@ -249,11 +324,10 @@ public class MethodOption {
     /**
      * 构造缓存策略
      *
-     * @param name       名称
      * @param parametric 参数
      * @return 缓存策略
      */
-    protected CachePolicy getCachePolicy(final String name, final Parametric parametric) {
+    protected CachePolicy getCachePolicy(final WrapperParametric parametric) {
         CachePolicy cachePolicy = null;
         //判断是否开启了缓存
         boolean enable = cacheFactory == null ? false : parametric.getBoolean(CACHE_OPTION.getName(), cacheEnable);
@@ -274,7 +348,7 @@ public class MethodOption {
                         capacity(parametric.getInteger(CACHE_CAPACITY_OPTION.getName(), cacheCapacity)).
                         expireAfterWrite(parametric.getInteger(CACHE_EXPIRE_TIME_OPTION.getName(), cacheExpireTime)).
                         build();
-                Cache<Object, Object> cache = cacheFactory.build(name, cacheConfig);
+                Cache<Object, Object> cache = cacheFactory.build(parametric.getName(), cacheConfig);
                 cachePolicy = new CachePolicy(cache, generator);
             }
         }
@@ -355,7 +429,7 @@ public class MethodOption {
      */
     public static class Option {
         /**
-         * 隐式传参
+         * 方法级别隐式传参，合并了接口的隐藏参数
          */
         protected Map<String, ?> implicits;
         /**
@@ -386,6 +460,10 @@ public class MethodOption {
          * 方法的黑白名单
          */
         protected BlackWhiteList<String> methodBlackWhiteList;
+        /**
+         * 方法参数验证器
+         */
+        protected Validator validator;
 
         /**
          * 构造函数
@@ -398,12 +476,14 @@ public class MethodOption {
          * @param failoverPolicy       重试策略
          * @param cachePolicy          缓存策略
          * @param methodBlackWhiteList 方法黑白名单
+         * @param validator            方法参数验证器
          */
         public Option(Map<String, ?> implicits, int timeout, int forks, Route route,
                       final Concurrency concurrency,
                       final FailoverPolicy failoverPolicy,
                       final CachePolicy cachePolicy,
-                      final BlackWhiteList<String> methodBlackWhiteList) {
+                      final BlackWhiteList<String> methodBlackWhiteList,
+                      final Validator validator) {
             this.implicits = implicits;
             this.timeout = timeout;
             this.forks = forks;
@@ -412,8 +492,14 @@ public class MethodOption {
             this.failoverPolicy = failoverPolicy;
             this.cachePolicy = cachePolicy;
             this.methodBlackWhiteList = methodBlackWhiteList;
+            this.validator = validator;
         }
 
+        /**
+         * 方法级别隐式传参，合并了接口的隐藏参数
+         *
+         * @return 合并了接口的方法级隐式传参数
+         */
         public Map<String, ?> getImplicits() {
             return implicits;
         }
@@ -444,6 +530,10 @@ public class MethodOption {
 
         public BlackWhiteList<String> getMethodBlackWhiteList() {
             return methodBlackWhiteList;
+        }
+
+        public Validator getValidator() {
+            return validator;
         }
     }
 

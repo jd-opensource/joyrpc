@@ -37,6 +37,10 @@ public class WrapperParametric implements Parametric {
         this.predicate = predicate;
     }
 
+    public String getName() {
+        return name;
+    }
+
     @Override
     public <T> T getObject(final String key) {
         return source.getObject(getKey(key));

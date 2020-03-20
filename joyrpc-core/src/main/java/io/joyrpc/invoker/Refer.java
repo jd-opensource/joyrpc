@@ -61,7 +61,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
@@ -70,7 +69,6 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
-import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
 import static io.joyrpc.invoker.InvokerManager.NAME;
 
@@ -101,10 +99,6 @@ public class Refer extends AbstractInvoker {
      * 负载均衡
      */
     protected LoadBalance loadBalance;
-    /**
-     * 接口透传参数
-     */
-    protected Map<String, String> interfaceImplicits;
     /**
      * 配置变更处理器
      */
@@ -220,9 +214,6 @@ public class Refer extends AbstractInvoker {
 
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
         this.exporterName = NAME.apply(interfaceName, alias);
-
-        //接口级别的隐藏参数，保留以"."开头
-        this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
         //路由器
         this.router = configure(ROUTER.get(url.getString(Constants.ROUTER_OPTION)));
         //方法选项
@@ -397,9 +388,7 @@ public class Refer extends AbstractInvoker {
         }
         //设置实际的类名，而不是泛化类
         invocation.setClassName(interfaceName);
-        //接口透传参数
-        invocation.addAttachments(interfaceImplicits);
-        //方法透传参数
+        //方法透传参数，整合了接口级别的参数
         invocation.addAttachments(option.getImplicits());
         //透传处理
         transmits.forEach(o -> o.inject(request));

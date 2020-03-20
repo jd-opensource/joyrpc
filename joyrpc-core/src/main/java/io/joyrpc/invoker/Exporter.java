@@ -26,6 +26,7 @@ import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
+import io.joyrpc.cluster.distribution.MethodOption;
 import io.joyrpc.config.ConfigAware;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.Warmup;
@@ -47,19 +48,16 @@ import io.joyrpc.transport.Server;
 import io.joyrpc.transport.transport.ServerTransport;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.MethodOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
-import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
 /**
@@ -101,14 +99,6 @@ public class Exporter extends AbstractInvoker {
      */
     protected Object ref;
     /**
-     * 接口透传参数
-     */
-    protected Map<String, String> interfaceImplicits;
-    /**
-     * 方法传参数
-     */
-    protected MethodOption<String, Map<String, String>> methodImplicits;
-    /**
      * 调用链
      */
     protected Invoker chain;
@@ -140,6 +130,10 @@ public class Exporter extends AbstractInvoker {
      * 事件通知器
      */
     protected Publisher<ExporterEvent> publisher;
+    /**
+     * 方法选项
+     */
+    protected MethodOption options;
 
     /**
      * 构造函数
@@ -189,11 +183,7 @@ public class Exporter extends AbstractInvoker {
         this.warmup = config.getWarmup();
         this.port = url.getPort();
         this.compress = url.getString(Constants.COMPRESS_OPTION.getName());
-        //接口透传参数
-        this.interfaceImplicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
-        //方法透传参数
-        this.methodImplicits = new MethodOption.NameKeyOption<>(interfaceClass, m -> url.startsWith(
-                Constants.METHOD_KEY_FUNC.apply(m.getName(), String.valueOf(HIDE_KEY_PREFIX)), true));
+        this.options = new MethodOption(interfaceClass, interfaceName, url);
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
         this.identification = IDENTIFICATION.get(url.getString(Constants.IDENTIFICATION_OPTION));
@@ -306,18 +296,21 @@ public class Exporter extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
+        Invocation invocation = request.getPayLoad();
+        MethodOption.Option option = options.getOption(invocation.getMethodName());
         //注入身份认证信息和鉴权
         request.setAuthentication(authentication);
         request.setIdentification(identification);
         request.setAuthorization(authorization);
-        Invocation invocation = request.getPayLoad();
+        request.setOption(option);
         //设置调用的对象，便于Validate
         invocation.setObject(ref);
         //设置透传标识
         RequestContext context = request.getContext();
         context.setAsync(isReturnFuture(invocation.getClazz(), invocation.getMethod()));
         context.setProvider(true);
-        context.setAttachments(interfaceImplicits).setAttachments(methodImplicits.get(invocation.getMethod()));
+        //方法透传参数，整合了接口级别的参数
+        context.setAttachments(option.getImplicits());
 
         //执行调用链
         return chain.invoke(request);

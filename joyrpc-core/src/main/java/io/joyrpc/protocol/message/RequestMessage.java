@@ -81,7 +81,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 用于生成应答消息，便于传递请求的上下文
      */
-    protected transient Supplier<ResponseMessage> responseSupplier;
+    protected transient Supplier<ResponseMessage<ResponsePayload>> responseSupplier;
     /**
      * 判断是否已经认证过
      */
@@ -109,7 +109,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造函数
      *
-     * @param header
+     * @param header 头
      */
     public RequestMessage(MessageHeader header) {
         super(header);
@@ -118,8 +118,8 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造函数
      *
-     * @param header
-     * @param payload
+     * @param header  头
+     * @param payload 消息体
      */
     public RequestMessage(MessageHeader header, T payload) {
         super(header);
@@ -130,8 +130,8 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造
      *
-     * @param invocation
-     * @return
+     * @param invocation 调用信息
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final Invocation invocation) {
         RequestMessage<Invocation> request = new RequestMessage<>(new MessageHeader(MsgType.BizReq.getType()), invocation);
@@ -142,22 +142,23 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造
      *
-     * @param invocation
-     * @param channel
-     * @return
+     * @param invocation 请求消息
+     * @param channel    通道
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final Invocation invocation, final Channel channel) {
         return build(new MessageHeader(MsgType.BizReq.getType()), invocation, channel.getLocalAddress(), channel.getRemoteAddress());
     }
 
     /**
-     * 构造
+     * 构造请求消息
      *
-     * @param header
-     * @param invocation
-     * @param channel
-     * @param http
-     * @return
+     * @param header      头
+     * @param invocation  调用信息
+     * @param channel     通道
+     * @param http        参数
+     * @param receiveTime 接收时间
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final MessageHeader header, final Invocation invocation,
                                                    final Channel channel, final Parametric http, final long receiveTime) {
@@ -172,20 +173,20 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
                 remoteAddress = InetSocketAddress.createUnresolved(remoteIp, channel.getRemoteAddress().getPort());
             }
         }
-        RequestMessage requestMessage = build(header, invocation, channel.getLocalAddress(), remoteAddress);
-        requestMessage.setReceiveTime(receiveTime);
+        RequestMessage<Invocation> result = build(header, invocation, channel.getLocalAddress(), remoteAddress);
+        result.setReceiveTime(receiveTime);
         //隐式传参
-        return requestMessage;
+        return result;
     }
 
     /**
      * 构造
      *
-     * @param header
-     * @param invocation
-     * @param localAddress
-     * @param remoteAddress
-     * @return
+     * @param header        头
+     * @param invocation    调用信息
+     * @param localAddress  本地地址
+     * @param remoteAddress 远程地址
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final MessageHeader header, final Invocation invocation,
                                                    final InetSocketAddress localAddress,
@@ -307,18 +308,18 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.authorization = authorization;
     }
 
-    public Supplier<ResponseMessage> getResponseSupplier() {
+    public Supplier<ResponseMessage<ResponsePayload>> getResponseSupplier() {
         return responseSupplier;
     }
 
-    public void setResponseSupplier(Supplier<ResponseMessage> responseSupplier) {
+    public void setResponseSupplier(Supplier<ResponseMessage<ResponsePayload>> responseSupplier) {
         this.responseSupplier = responseSupplier;
     }
 
     /**
      * 当前请求是否超时
      *
-     * @return
+     * @return 超时标识
      */
     public boolean isTimeout() {
         return SystemClock.now() - createTime > (timeout > 0 ? timeout : header.timeout);
@@ -327,8 +328,8 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 当前请求是否超时
      *
-     * @param startTime
-     * @return
+     * @param startTime 开始时间
+     * @return 超时标识
      */
     public boolean isTimeout(final Supplier<Long> startTime) {
         return SystemClock.now() - startTime.get() > (timeout > 0 ? timeout : header.timeout);

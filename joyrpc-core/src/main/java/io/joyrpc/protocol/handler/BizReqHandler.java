@@ -136,11 +136,11 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 调用完成
      *
-     * @param result
-     * @param throwable
-     * @param request
-     * @param exporter
-     * @param channel
+     * @param result    结果
+     * @param throwable 异常
+     * @param request   请求
+     * @param exporter  服务
+     * @param channel   通道
      */
     protected void onComplete(final Result result,
                               final Throwable throwable,
@@ -158,7 +158,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         //构造响应Msg
         MessageHeader header = request.getHeader();
         Session session = request.getSession();
-        Supplier<ResponseMessage> supplier = request.getResponseSupplier();
+        Supplier<ResponseMessage<ResponsePayload>> supplier = request.getResponseSupplier();
         ResponseMessage<ResponsePayload> response = supplier != null ? supplier.get() :
                 new ResponseMessage<>(header.response(MsgType.BizResp.getType(),
                         session == null ? Compression.NONE : session.getCompressionType()));
@@ -177,8 +177,8 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 补充信息
      *
-     * @param request
-     * @param channel
+     * @param request 请求
+     * @param channel 通道
      * @throws ClassNotFoundException
      * @throws NoSuchMethodException
      * @throws MethodOverloadException
@@ -216,9 +216,9 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 检查接口ID，兼容老版本
      *
-     * @param invocation
-     * @param className
-     * @throws ClassNotFoundException
+     * @param invocation 调用信息
+     * @param className  类
+     * @throws ClassNotFoundException 类没有找到
      */
     protected void checkInterfaceId(final Invocation invocation, String className) throws ClassNotFoundException {
         if (Character.isDigit(className.charAt(0))) {
@@ -239,10 +239,10 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 获取错误信息
      *
-     * @param request
-     * @param channel
-     * @param cause
-     * @return
+     * @param request 请求
+     * @param channel 通道
+     * @param cause   异常
+     * @return 异常
      */
     protected String error(final Invocation request, final Channel channel, final String cause) {
         return error(request, channel, cause, ExceptionCode.PROVIDER_TASK_FAIL);
@@ -251,11 +251,11 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 获取错误信息
      *
-     * @param request
-     * @param channel
-     * @param cause
-     * @param code
-     * @return
+     * @param request 请求
+     * @param channel 通道
+     * @param cause   异常信息
+     * @param code    异常代码
+     * @return 异常
      */
     protected String error(final Invocation request, final Channel channel, final String cause, final String code) {
         return String.format(ExceptionCode.format(code == null ? ExceptionCode.PROVIDER_TASK_FAIL : code)
@@ -269,17 +269,16 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     }
 
     /**
-     * @param channel
-     * @param ex
-     * @param request
+     * @param channel  通道
+     * @param ex       异常
+     * @param request  请求
      * @param exporter 发送异常信息
      */
-    protected void sendException(final Channel channel, final Throwable ex, final RequestMessage request, final Exporter exporter) {
+    protected void sendException(final Channel channel, final Throwable ex,
+                                 final RequestMessage<Invocation> request, final Exporter exporter) {
         //构建异常应答消息，不压缩
-        ResponseMessage response = new ResponseMessage(
-                request.getHeader().response(
-                        MsgType.BizResp.getType(), Compression.NONE),
-                new ResponsePayload(ex));
+        ResponseMessage<ResponsePayload> response = new ResponseMessage<>(request.getHeader().response(
+                MsgType.BizResp.getType(), Compression.NONE), new ResponsePayload(ex));
         //注入异常信息
         inject(request, response, exporter);
         channel.send(response, sendFailed);
@@ -288,11 +287,12 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 注入应答
      *
-     * @param request
-     * @param response
-     * @param exporter
+     * @param request  请求
+     * @param response 应答
+     * @param exporter 服务
      */
-    protected void inject(final RequestMessage request, final ResponseMessage<ResponsePayload> response, final Exporter exporter) {
+    protected void inject(final RequestMessage<Invocation> request, final ResponseMessage<ResponsePayload> response,
+                          final Exporter exporter) {
         for (RespInjection injection : injections) {
             injection.inject(request, response, exporter);
         }

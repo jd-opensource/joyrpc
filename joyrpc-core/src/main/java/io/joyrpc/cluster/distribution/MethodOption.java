@@ -21,10 +21,16 @@ package io.joyrpc.cluster.distribution;
  */
 
 import io.joyrpc.Result;
+import io.joyrpc.cache.Cache;
+import io.joyrpc.cache.CacheConfig;
+import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cache.CacheKeyGenerator;
+import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.extension.URLOption;
+import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
@@ -100,6 +106,34 @@ public class MethodOption {
      */
     protected int concurrency;
     /**
+     * 是否启用缓存
+     */
+    protected boolean cacheEnable;
+    /**
+     * 是否缓存空值
+     */
+    protected boolean cacheNullable;
+    /**
+     * 缓存容量
+     */
+    protected int cacheCapacity;
+    /**
+     * 缓存过期时间
+     */
+    protected int cacheExpireTime;
+    /**
+     * 缓存键生成器
+     */
+    protected String cacheKeyGenerator;
+    /**
+     * 缓存提供者
+     */
+    protected String cacheProvider;
+    /**
+     * 缓存工厂类
+     */
+    protected CacheFactory cacheFactory;
+    /**
      * 重试异常
      */
     protected BlackWhiteList<Class<? extends Throwable>> failoverBlackWhiteList;
@@ -107,6 +141,10 @@ public class MethodOption {
      * 方法透传参数
      */
     protected NameKeyOption<Option> options;
+    /**
+     * 分发策略配置
+     */
+    protected Consumer<Route> configure;
 
     /**
      * 构造函数
@@ -138,62 +176,99 @@ public class MethodOption {
         this.failoverPredication = url.getString(FAILOVER_PREDICATION_OPTION);
         this.forks = url.getInteger(FORKS_OPTION);
         this.concurrency = url.getInteger(CONCURRENCY_OPTION);
+        //缓存配置
+        this.cacheEnable = url.getBoolean(CACHE_OPTION);
+        this.cacheNullable = url.getBoolean(CACHE_NULLABLE_OPTION);
+        this.cacheCapacity = url.getInteger(CACHE_CAPACITY_OPTION);
+        this.cacheExpireTime = url.getInteger(CACHE_EXPIRE_TIME_OPTION);
+        this.cacheKeyGenerator = url.getString(CACHE_KEY_GENERATOR_OPTION);
+        this.cacheProvider = url.getString(CACHE_PROVIDER_OPTION);
+        this.cacheFactory = CACHE.get(cacheProvider);
+        this.configure = configure;
         if (configure != null) {
             this.route = ROUTE.get(url.getString(ROUTE_OPTION));
             configure.accept(route);
         }
+
         //方法级别的隐藏参数，保留以"."开头
         boolean generic = GENERIC.test(interfaceClass);
-        this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null,
-                o -> {
-                    //方法分发策略
-                    Route methodRoute = null;
-                    if (configure != null) {
-                        methodRoute = ROUTE.get(url.getString(getKey(o, ROUTE_OPTION)));
-                        if (methodRoute != null) {
-                            configure.accept(methodRoute);
-                        } else {
-                            methodRoute = route;
-                        }
 
-                    }
+        this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null,
+                method -> {
+                    String prefix = URL_METHOD_PREX + method + ".";
+                    Parametric parametric = new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix));
+                    Map<String, String> implicits = url.startsWith(METHOD_KEY_FUNC.apply(method, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1));
                     return new Option(
-                            url.startsWith(getKey(o, String.valueOf(HIDE_KEY_PREFIX)), (k, v) -> v.substring(k.length() - 1)),
-                            url.getPositive(getKey(o, TIMEOUT_OPTION), timeout),
-                            url.getInteger(getKey(o, FORKS_OPTION), forks),
-                            methodRoute,
-                            new Concurrency(url.getInteger(getKey(o, CONCURRENCY_OPTION), concurrency)),
+                            implicits,
+                            parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
+                            parametric.getInteger(FORKS_OPTION.getName(), forks),
+                            getRoute(parametric),
+                            new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
                             new DefaultFailoverPolicy(
-                                    url.getInteger(getKey(o, RETRIES_OPTION), maxRetry),
-                                    url.getBoolean(getKey(o, RETRY_ONLY_ONCE_PER_NODE_OPTION), retryOnlyOncePerNode),
+                                    parametric.getInteger(RETRIES_OPTION.getName(), maxRetry),
+                                    parametric.getBoolean(RETRY_ONLY_ONCE_PER_NODE_OPTION.getName(), retryOnlyOncePerNode),
                                     new MyTimeoutPolicy(),
                                     new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
-                                    FAILOVER_SELECTOR.get(url.getString(getKey(o, FAILOVER_SELECTOR_OPTION), failoverSelector))))
-                            ;
+                                    FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
+                            getCachePolicy(method, parametric));
                 }
         );
     }
 
     /**
-     * 获取参数名称
+     * 获取分发策略
      *
-     * @param methodName 方法名称
-     * @param option     选项
-     * @return 参数名称
+     * @param parametric 参数
+     * @return 分发策略
      */
-    protected String getKey(final String methodName, final URLOption<?> option) {
-        return METHOD_KEY_FUNC.apply(methodName, option.getName());
+    protected Route getRoute(final Parametric parametric) {
+        //方法分发策略
+        Route methodRoute = null;
+        if (configure != null) {
+            methodRoute = ROUTE.get(parametric.getString(ROUTE_OPTION.getName()));
+            if (methodRoute != null) {
+                configure.accept(methodRoute);
+            } else {
+                methodRoute = route;
+            }
+
+        }
+        return methodRoute;
     }
 
     /**
-     * 获取参数名称
+     * 构造缓存策略
      *
-     * @param methodName 方法名称
-     * @param name       参数
-     * @return 参数名称
+     * @param name       名称
+     * @param parametric 参数
+     * @return 缓存策略
      */
-    protected String getKey(final String methodName, final String name) {
-        return METHOD_KEY_FUNC.apply(methodName, name);
+    protected CachePolicy getCachePolicy(final String name, final Parametric parametric) {
+        CachePolicy cachePolicy = null;
+        //判断是否开启了缓存
+        boolean enable = cacheFactory == null ? false : parametric.getBoolean(CACHE_OPTION.getName(), cacheEnable);
+        if (enable) {
+            //获取缓存键生成器
+            CacheKeyGenerator generator = CACHE_KEY_GENERATOR.get(parametric.getString(CACHE_KEY_GENERATOR_OPTION.getName(), cacheKeyGenerator));
+            if (generator != null) {
+                //看看是否是表达式
+                if (generator instanceof ExpressionGenerator) {
+                    ExpressionGenerator gen = (ExpressionGenerator) generator;
+                    gen.setParametric(parametric);
+                    gen.setup();
+                }
+                //判断是否缓存空值
+                //创建缓存
+                CacheConfig<Object, Object> cacheConfig = CacheConfig.builder().
+                        nullable(parametric.getBoolean(CACHE_NULLABLE_OPTION.getName(), cacheNullable)).
+                        capacity(parametric.getInteger(CACHE_CAPACITY_OPTION.getName(), cacheCapacity)).
+                        expireAfterWrite(parametric.getInteger(CACHE_EXPIRE_TIME_OPTION.getName(), cacheExpireTime)).
+                        build();
+                Cache<Object, Object> cache = cacheFactory.build(name, cacheConfig);
+                cachePolicy = new CachePolicy(cache, generator);
+            }
+        }
+        return cachePolicy;
     }
 
     /**
@@ -293,6 +368,10 @@ public class MethodOption {
          * 重试策略
          */
         protected FailoverPolicy failoverPolicy;
+        /**
+         * 缓存策略
+         */
+        protected CachePolicy cachePolicy;
 
         /**
          * 构造函数
@@ -303,14 +382,17 @@ public class MethodOption {
          * @param route          分发策略
          * @param concurrency    并发数配置
          * @param failoverPolicy 重试策略
+         * @param cachePolicy    缓存策略
          */
-        public Option(Map<String, ?> implicits, int timeout, int forks, Route route, final Concurrency concurrency, FailoverPolicy failoverPolicy) {
+        public Option(Map<String, ?> implicits, int timeout, int forks, Route route, final Concurrency concurrency,
+                      final FailoverPolicy failoverPolicy, final CachePolicy cachePolicy) {
             this.implicits = implicits;
             this.timeout = timeout;
             this.forks = forks;
             this.route = route;
             this.concurrency = concurrency;
             this.failoverPolicy = failoverPolicy;
+            this.cachePolicy = cachePolicy;
         }
 
         public Map<String, ?> getImplicits() {
@@ -337,6 +419,9 @@ public class MethodOption {
             return failoverPolicy;
         }
 
+        public CachePolicy getCachePolicy() {
+            return cachePolicy;
+        }
     }
 
     /**
@@ -469,6 +554,33 @@ public class MethodOption {
             }
         }
 
+    }
+
+    /**
+     * 缓存策略
+     */
+    public static class CachePolicy {
+        /**
+         * 缓存接口
+         */
+        protected final Cache<Object, Object> cache;
+        /**
+         * 缓存键生成器
+         */
+        protected final CacheKeyGenerator generator;
+
+        public CachePolicy(Cache<Object, Object> cache, CacheKeyGenerator generator) {
+            this.cache = cache;
+            this.generator = generator;
+        }
+
+        public Cache<Object, Object> getCache() {
+            return cache;
+        }
+
+        public CacheKeyGenerator getGenerator() {
+            return generator;
+        }
     }
 
 }

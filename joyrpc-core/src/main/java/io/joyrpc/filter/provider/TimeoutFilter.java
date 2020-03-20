@@ -32,7 +32,6 @@ import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -56,7 +55,6 @@ public class TimeoutFilter extends AbstractProviderFilter {
                     if (logger.isWarnEnabled()) {
                         logger.warn(ExceptionCode.format(ExceptionCode.FILTER_PROVIDER_TIMEOUT) + "Provider invoke method [" + invocation.getClassName() + "."
                                 + invocation.getMethodName() + "] timeout. "
-                                + "The arguments is: " + Arrays.toString(invocation.getArgs())
                                 + ", timeout is " + timeout + " ms, invoke elapsed " + elapsed + " ms.");
                     }
                 }

@@ -33,6 +33,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
+import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.ClassUtils;
@@ -138,6 +139,10 @@ public class MethodOption {
      */
     protected BlackWhiteList<Class<? extends Throwable>> failoverBlackWhiteList;
     /**
+     * 方法黑白名单
+     */
+    protected BlackWhiteList<String> methodBlackWhiteList;
+    /**
      * 方法透传参数
      */
     protected NameKeyOption<Option> options;
@@ -189,6 +194,10 @@ public class MethodOption {
             this.route = ROUTE.get(url.getString(ROUTE_OPTION));
             configure.accept(route);
         }
+        String include = url.getString(METHOD_INCLUDE_OPTION.getName());
+        String exclude = url.getString(METHOD_EXCLUDE_OPTION.getName());
+        this.methodBlackWhiteList = (include == null || include.isEmpty()) && (exclude == null || exclude.isEmpty()) ? null :
+                new StringBlackWhiteList(include, exclude);
 
         //方法级别的隐藏参数，保留以"."开头
         boolean generic = GENERIC.test(interfaceClass);
@@ -210,7 +219,8 @@ public class MethodOption {
                                     new MyTimeoutPolicy(),
                                     new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
                                     FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
-                            getCachePolicy(method, parametric));
+                            getCachePolicy(method, parametric),
+                            methodBlackWhiteList);
                 }
         );
     }
@@ -372,20 +382,28 @@ public class MethodOption {
          * 缓存策略
          */
         protected CachePolicy cachePolicy;
+        /**
+         * 方法的黑白名单
+         */
+        protected BlackWhiteList<String> methodBlackWhiteList;
 
         /**
          * 构造函数
          *
-         * @param implicits      隐式传参
-         * @param timeout        超时时间
-         * @param forks          并行度
-         * @param route          分发策略
-         * @param concurrency    并发数配置
-         * @param failoverPolicy 重试策略
-         * @param cachePolicy    缓存策略
+         * @param implicits            隐式传参
+         * @param timeout              超时时间
+         * @param forks                并行度
+         * @param route                分发策略
+         * @param concurrency          并发数配置
+         * @param failoverPolicy       重试策略
+         * @param cachePolicy          缓存策略
+         * @param methodBlackWhiteList 方法黑白名单
          */
-        public Option(Map<String, ?> implicits, int timeout, int forks, Route route, final Concurrency concurrency,
-                      final FailoverPolicy failoverPolicy, final CachePolicy cachePolicy) {
+        public Option(Map<String, ?> implicits, int timeout, int forks, Route route,
+                      final Concurrency concurrency,
+                      final FailoverPolicy failoverPolicy,
+                      final CachePolicy cachePolicy,
+                      final BlackWhiteList<String> methodBlackWhiteList) {
             this.implicits = implicits;
             this.timeout = timeout;
             this.forks = forks;
@@ -393,6 +411,7 @@ public class MethodOption {
             this.concurrency = concurrency;
             this.failoverPolicy = failoverPolicy;
             this.cachePolicy = cachePolicy;
+            this.methodBlackWhiteList = methodBlackWhiteList;
         }
 
         public Map<String, ?> getImplicits() {
@@ -421,6 +440,10 @@ public class MethodOption {
 
         public CachePolicy getCachePolicy() {
             return cachePolicy;
+        }
+
+        public BlackWhiteList<String> getMethodBlackWhiteList() {
+            return methodBlackWhiteList;
         }
     }
 

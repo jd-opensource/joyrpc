@@ -30,43 +30,27 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.permission.BlackWhiteList;
-import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.concurrent.CompletableFuture;
 
 /**
- * @description: 方法调用黑白名单<br>
+ * 方法调用黑白名单<br>
  * 检查服务端接口发布了哪些方法，放在此处是为了generic解析后再判断<br>
  */
 @Extension(value = "methodBlackWhiteList", order = ProviderFilter.METHOD_BLACK_WHITE_LIST_ORDER)
 public class MethodBlackWhiteListFilter extends AbstractProviderFilter {
-    /**
-     * 方法黑白名单
-     */
-    protected BlackWhiteList<String> blackWhiteList;
-
-    @Override
-    public void setup() {
-        String include = url.getString(Constants.METHOD_INCLUDE_OPTION);
-        String exclude = url.getString(Constants.METHOD_EXCLUDE_OPTION);
-        blackWhiteList = (include == null || include.isEmpty()) && (exclude == null || exclude.isEmpty()) ? null :
-                new StringBlackWhiteList(include, exclude);
-    }
-
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-
         Invocation invocation = request.getPayLoad();
-        String methodName = invocation.getMethodName();
-
+        BlackWhiteList<String> blackWhiteList = request.getOption().getMethodBlackWhiteList();
         //校验方法黑白名单
-        if (blackWhiteList != null && !blackWhiteList.isValid(methodName)) {
+        if (blackWhiteList != null && !blackWhiteList.isValid(invocation.getMethodName())) {
             return CompletableFuture.completedFuture(new Result(request.getContext(),
                     new AuthorizationException(
                             String.format("invocation %s is not passed through method blackWhiteList of %s. ",
-                                    methodName, invocation.getClassName()), null)));
+                                    invocation.getMethodName(), invocation.getClassName()), null)));
         } else {
             // 调用
             return invoker.invoke(request);

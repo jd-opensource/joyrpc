@@ -429,7 +429,7 @@ public class MethodOption {
      */
     public static class Option {
         /**
-         * 方法级别隐式传参，合并了接口的隐藏参数
+         * 方法级别隐式传参，合并了接口的隐藏参数，只读
          */
         protected Map<String, ?> implicits;
         /**
@@ -484,7 +484,7 @@ public class MethodOption {
                       final CachePolicy cachePolicy,
                       final BlackWhiteList<String> methodBlackWhiteList,
                       final Validator validator) {
-            this.implicits = implicits;
+            this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.forks = forks;
             this.route = route;

@@ -63,11 +63,12 @@ public class ConcurrencyFilter extends AbstractConcurrencyFilter implements Cons
             elapsed = SystemClock.now() - start;
             remain = timeout - elapsed;
             if (remain <= 0) {
-                return new Result(request.getContext(), new OverloadException("Waiting concurrent timeout in client-side when invoke"
-                        + invocation.getClassName() + "." + invocation.getMethodName() + ", elapsed: " + elapsed
-                        + ", timeout: " + timeout + ". concurrent invokes: " + active
-                        + ". max concurrency: " + concurrency + ". You can change it by interface or method concurrency",
-                        ExceptionCode.FILTER_CONCURRENT_CONSUMER_TIMEOUT, 0, false));
+                return new Result(request.getContext(),
+                        new OverloadException("Waiting concurrent timeout in client-side when invoke"
+                                + invocation.getClassName() + "." + invocation.getMethodName() + ", elapsed: " + elapsed
+                                + ", timeout: " + timeout + ". concurrent invokes: " + active
+                                + ". max concurrency: " + max + ". You can change it by interface or method concurrency",
+                                ExceptionCode.FILTER_CONCURRENT_CONSUMER_TIMEOUT, 0, false));
             } else {
                 request.getHeader().setTimeout((int) remain);
             }

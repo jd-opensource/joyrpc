@@ -40,8 +40,6 @@ import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
 
 /**
  * IP黑白名单
- *
- * @date: 2019/6/21
  */
 @Extension(value = "auth", order = PERMISSION_ORDER)
 public class IPPermissionConfigHandler implements ConfigEventHandler {
@@ -80,11 +78,11 @@ public class IPPermissionConfigHandler implements ConfigEventHandler {
     }
 
     /**
-     * 解析黑白名单
+     * 解析分组的黑白名单
      *
-     * @param interfaceId
-     * @param text
-     * @return
+     * @param interfaceId 接口ID
+     * @param text        文本
+     * @return 分组的黑白名单
      */
     protected Map<String, Lan> parse(final String interfaceId, final String text) {
         if (text == null || text.isEmpty() || "*".equals(text)) {

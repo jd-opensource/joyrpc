@@ -29,6 +29,8 @@ import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.context.ConfigEvent;
+import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.ExtensionMeta;
@@ -57,11 +59,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_FAILOVER_CLASS;
+import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
@@ -182,6 +186,14 @@ public class InnerInterfaceOption implements InterfaceOption {
      */
     protected String token;
     /**
+     * 接口IP限制
+     */
+    protected volatile IPPermission ipPermission;
+    /**
+     * 接口IP限制监听器
+     */
+    protected Consumer<ConfigEvent<String, IPPermission>> iPPermissionListener;
+    /**
      * 方法透传参数
      */
     protected NameKeyOption<InnerMethodOption> options;
@@ -254,7 +266,35 @@ public class InnerInterfaceOption implements InterfaceOption {
             }
         }
 
+        this.iPPermissionListener = this::onIPPermissionEvent;
+        IP_PERMISSION.addListener(iPPermissionListener);
+        this.ipPermission = IP_PERMISSION.get(interfaceName);
+
         this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null, this::create);
+    }
+
+    /**
+     * IP限制更新事件
+     *
+     * @param event 事件
+     */
+    protected void onIPPermissionEvent(final ConfigEvent<String, IPPermission> event) {
+        //本接口的配置
+        if (interfaceName.equals(event.getKey())) {
+            switch (event.getType()) {
+                case ADD:
+                case UPDATE:
+                    ipPermission = event.getValue();
+                    break;
+                case REMOVE:
+                    ipPermission = null;
+            }
+        }
+    }
+
+    @Override
+    public void close() {
+        IP_PERMISSION.removeListener(iPPermissionListener);
     }
 
     /**
@@ -281,7 +321,8 @@ public class InnerInterfaceOption implements InterfaceOption {
                 getCachePolicy(parametric),
                 methodBlackWhiteList,
                 getValidator(parametric),
-                parametric.getString(HIDDEN_KEY_TOKEN, token));
+                parametric.getString(HIDDEN_KEY_TOKEN, token),
+                () -> ipPermission);
     }
 
     /**
@@ -510,6 +551,10 @@ public class InnerInterfaceOption implements InterfaceOption {
          * 令牌
          */
         protected String token;
+        /**
+         * IP限制
+         */
+        protected Supplier<IPPermission> iPPermission;
 
         /**
          * 构造函数
@@ -524,6 +569,7 @@ public class InnerInterfaceOption implements InterfaceOption {
          * @param methodBlackWhiteList 方法黑白名单
          * @param validator            方法参数验证器
          * @param token                令牌
+         * @param iPPermission         IP限制
          */
         public InnerMethodOption(Map<String, ?> implicits, int timeout, int forks, Route route,
                                  final Concurrency concurrency,
@@ -531,7 +577,8 @@ public class InnerInterfaceOption implements InterfaceOption {
                                  final CachePolicy cachePolicy,
                                  final BlackWhiteList<String> methodBlackWhiteList,
                                  final Validator validator,
-                                 final String token) {
+                                 final String token,
+                                 final Supplier<IPPermission> iPPermission) {
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.forks = forks;
@@ -542,6 +589,7 @@ public class InnerInterfaceOption implements InterfaceOption {
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.validator = validator;
             this.token = token;
+            this.iPPermission = iPPermission;
         }
 
         @Override
@@ -592,6 +640,11 @@ public class InnerInterfaceOption implements InterfaceOption {
         @Override
         public String getToken() {
             return token;
+        }
+
+        @Override
+        public IPPermission getIPPermission() {
+            return iPPermission.get();
         }
     }
 

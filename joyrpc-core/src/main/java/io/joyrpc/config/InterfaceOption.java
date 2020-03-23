@@ -24,6 +24,7 @@ import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.permission.BlackWhiteList;
 
 import javax.validation.Validator;
@@ -125,6 +126,13 @@ public interface InterfaceOption {
          * @return 令牌
          */
         String getToken();
+
+        /**
+         * 获取IP限制
+         *
+         * @return IP限制
+         */
+        IPPermission getIPPermission();
 
     }
 

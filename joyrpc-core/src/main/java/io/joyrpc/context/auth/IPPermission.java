@@ -9,9 +9,9 @@ package io.joyrpc.context.auth;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -77,8 +77,8 @@ public class IPPermission {
         if (!enabled) {
             return true;
         }
-        Lan whiteLan = whites.getOrDefault(alias, defWhite);
-        Lan blackLan = blacks.getOrDefault(alias, defBlack);
+        Lan whiteLan = whites == null ? null : whites.getOrDefault(alias, defWhite);
+        Lan blackLan = blacks == null ? null : blacks.getOrDefault(alias, defBlack);
         if (whiteLan == null && blackLan == null) {
             return true;
         }

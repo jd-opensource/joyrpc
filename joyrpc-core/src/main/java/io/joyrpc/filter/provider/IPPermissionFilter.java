@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,7 @@ package io.joyrpc.filter.provider;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.auth.IPPermissionConfiguration;
+import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.filter.AbstractProviderFilter;
@@ -47,7 +47,8 @@ public class IPPermissionFilter extends AbstractProviderFilter {
         InetSocketAddress remoteAddress = request.getRemoteAddress();
         InetSocketAddress localAddress = request.getLocalAddress();
         String remoteIp = Ipv4.toIp(remoteAddress);
-        if (!IPPermissionConfiguration.IP_PERMISSION.permit(invocation.getClassName(), invocation.getAlias(), remoteIp)) {
+        IPPermission permission = request.getOption().getIPPermission();
+        if (permission != null && !permission.permit(invocation.getAlias(), remoteIp)) {
             String errorMsg = String.format(
                     "[%s]Error occurs while processing request %s/%s/%s from channel %s->%s, caused by: Fail to pass the ip blackWhiteList",
                     ExceptionCode.PROVIDER_AUTH_FAIL,

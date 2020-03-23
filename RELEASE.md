@@ -97,6 +97,8 @@
   - 升级Hazelcast为3.12.5版本
   
   - 升级Protostuff为1.6.2版本，支持Object[]元素为null。
+  
+  - 升级fastjson为1.2.67版本
 
 ### Bugfixes
 

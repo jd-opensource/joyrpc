@@ -12,7 +12,7 @@
     <artifactId>joyrpc-serialization-fastjson</artifactId>
 
     <properties>
-        <fastjson.version>1.2.61</fastjson.version>
+        <fastjson.version>1.2.67</fastjson.version>
     </properties>
 
     <dependencies>

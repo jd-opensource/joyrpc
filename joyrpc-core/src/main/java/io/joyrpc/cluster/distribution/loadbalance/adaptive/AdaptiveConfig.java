@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,8 +25,6 @@ import io.joyrpc.cluster.Node;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
-
-import static io.joyrpc.constants.Constants.DEFAULT_DECUBATION;
 
 /**
  * 自适应配置
@@ -46,7 +44,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
     /**
      * 足够的最佳候选人列表
      */
-    protected int enoughGoods;
+    protected Integer enoughGoods;
     /**
      * 并发评分
      */
@@ -66,7 +64,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
     /**
      * 恢复期，默认10秒
      */
-    protected long decubation = DEFAULT_DECUBATION;
+    protected Long decubation;
     /**
      * 排除的机房
      */
@@ -98,12 +96,12 @@ public class AdaptiveConfig implements Serializable, Cloneable {
      */
     public AdaptiveConfig(final String arbiter,
                           final String election,
-                          final int enoughGoods,
+                          final Integer enoughGoods,
                           final RankScore<Long> concurrencyScore,
                           final RankScore<Long> qpsScore,
                           final RankScore<Integer> tpScore,
                           final RankScore<Double> availabilityScore,
-                          final long decubation,
+                          final Long decubation,
                           final Set<String> exclusionRooms,
                           final Map<String, Integer> ratios) {
         this.arbiter = arbiter;
@@ -113,7 +111,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
         this.qpsScore = qpsScore;
         this.tpScore = tpScore;
         this.availabilityScore = availabilityScore;
-        this.decubation = decubation <= 0 ? DEFAULT_DECUBATION : decubation;
+        this.decubation = decubation;
         this.exclusionRooms = exclusionRooms;
         this.ratios = ratios;
     }
@@ -146,11 +144,11 @@ public class AdaptiveConfig implements Serializable, Cloneable {
         this.election = election;
     }
 
-    public int getEnoughGoods() {
+    public Integer getEnoughGoods() {
         return enoughGoods;
     }
 
-    public void setEnoughGoods(int enoughGoods) {
+    public void setEnoughGoods(Integer enoughGoods) {
         this.enoughGoods = enoughGoods;
     }
 
@@ -186,11 +184,11 @@ public class AdaptiveConfig implements Serializable, Cloneable {
         this.availabilityScore = availabilityScore;
     }
 
-    public long getDecubation() {
+    public Long getDecubation() {
         return decubation;
     }
 
-    public void setDecubation(long decubation) {
+    public void setDecubation(Long decubation) {
         this.decubation = decubation;
     }
 

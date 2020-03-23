@@ -518,7 +518,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
             this.arbiter = ARBITER.getOrDefault(config.getArbiter());
             //根据评分结果进行选择的插件
             this.selector = ELECTION.getOrDefault(config.getElection());
-            this.enoughGoods = config.getEnoughGoods();
+            this.enoughGoods = config.getEnoughGoods() == null ? 0 : config.getEnoughGoods();
         }
 
         /**

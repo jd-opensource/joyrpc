@@ -1358,11 +1358,11 @@ public class Node implements Shard {
         /**
          * 面板
          */
-        protected Dashboard dashboard;
+        protected final Dashboard dashboard;
         /**
-         * 上次快照时间
+         * 窗口时间
          */
-        protected long lastSnapshotTime;
+        protected final long windowTime;
         /**
          * 下次快照时间
          */
@@ -1377,9 +1377,10 @@ public class Node implements Shard {
         public DashboardTask(final Node node, final Client client) {
             super(node, client);
             this.dashboard = node.dashboard;
+            this.windowTime = dashboard.getMetric().getWindowTime();
             //把集群指标过期分布到1秒钟以内，避免同时进行快照
-            this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
-            this.time = lastSnapshotTime + dashboard.getMetric().getWindowTime();
+            long lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
+            this.time = lastSnapshotTime + windowTime;
             dashboard.setLastSnapshotTime(lastSnapshotTime);
         }
 
@@ -1395,7 +1396,7 @@ public class Node implements Shard {
                 case CONNECTED:
                 case WEAK:
                     dashboard.snapshot();
-                    time = SystemClock.now() + dashboard.getMetric().getWindowTime();
+                    time = SystemClock.now() + windowTime;
                     timer().add(this);
             }
         }

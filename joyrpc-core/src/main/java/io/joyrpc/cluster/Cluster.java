@@ -1323,7 +1323,7 @@ public class Cluster {
     }
 
     /**
-     * 面板控制器任务
+     * 面板任务
      */
     protected static class DashboardTask implements Timer.TimeTask {
         /**
@@ -1339,9 +1339,9 @@ public class Cluster {
          */
         protected final long version;
         /**
-         * 上次控制器时间
+         * 时间窗口
          */
-        protected long lastSnapshotTime;
+        protected final long windowTime;
         /**
          * 下次控制器时间
          */
@@ -1363,8 +1363,9 @@ public class Cluster {
             this.dashboard = cluster.dashboard;
             this.version = version;
             //把集群指标过期分布到1秒钟以内，避免同时进行控制器
-            this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
-            this.time = lastSnapshotTime + dashboard.getMetric().getWindowTime();
+            long lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
+            this.windowTime = dashboard.getMetric().getWindowTime();
+            this.time = lastSnapshotTime + windowTime;
             this.dashboard.setLastSnapshotTime(lastSnapshotTime);
             this.name = this.getClass().getSimpleName() + " " + cluster.name;
         }
@@ -1383,7 +1384,7 @@ public class Cluster {
         public void run() {
             if (cluster.versions.get() == version && cluster.isOpened()) {
                 dashboard.snapshot();
-                time = SystemClock.now() + dashboard.getMetric().getWindowTime();
+                time = SystemClock.now() + windowTime;
                 timer().add(this);
             }
         }

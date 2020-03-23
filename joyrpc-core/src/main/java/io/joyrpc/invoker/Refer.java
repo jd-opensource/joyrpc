@@ -475,6 +475,7 @@ public class Refer extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Void> doClose() {
+        options.close();
         publisher.removeHandler(localHandler);
         //注销节点事件
         cluster.removeHandler(config);

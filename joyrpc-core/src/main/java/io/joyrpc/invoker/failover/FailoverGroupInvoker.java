@@ -90,6 +90,14 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     }
 
     @Override
+    public CompletableFuture<Void> close(final boolean gracefully) {
+        if (options != null) {
+            options.close();
+        }
+        return super.close(gracefully);
+    }
+
+    @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
         MethodOption option = options.getOption(invocation.getMethodName());

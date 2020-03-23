@@ -267,6 +267,8 @@ public class Exporter extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Void> doClose() {
+        //关闭一下接口选项，释放额外的资源
+        options.close();
         publisher.offer(new ExporterEvent(EventType.CLOSE, name, this));
         CompletableFuture<Void> future1 = deregister().whenComplete((v, t) -> logger.info("Success deregister provider config " + name));
         CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe provider config " + name));

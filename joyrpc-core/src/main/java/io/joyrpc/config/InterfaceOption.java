@@ -43,6 +43,13 @@ public interface InterfaceOption {
      */
     MethodOption getOption(String methodName);
 
+    /**
+     * 关闭，释放资源，例如移除监听器
+     */
+    default void close() {
+
+    }
+
 
     /**
      * 方法选项

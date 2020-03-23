@@ -43,22 +43,22 @@ public class IPPermissionFilter extends AbstractProviderFilter {
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        Invocation invocation = request.getPayLoad();
-        InetSocketAddress remoteAddress = request.getRemoteAddress();
-        InetSocketAddress localAddress = request.getLocalAddress();
-        String remoteIp = Ipv4.toIp(remoteAddress);
         IPPermission permission = request.getOption().getIPPermission();
-        if (permission != null && !permission.permit(invocation.getAlias(), remoteIp)) {
-            String errorMsg = String.format(
-                    "[%s]Error occurs while processing request %s/%s/%s from channel %s->%s, caused by: Fail to pass the ip blackWhiteList",
-                    ExceptionCode.PROVIDER_AUTH_FAIL,
-                    invocation.getClassName(), invocation.getMethodName(), invocation.getAlias(),
-                    remoteIp, Ipv4.toAddress(localAddress));
+        if (permission != null) {
+            Invocation invocation = request.getPayLoad();
+            InetSocketAddress remoteAddress = request.getRemoteAddress();
+            String remoteIp = Ipv4.toIp(remoteAddress);
+            if (!permission.permit(invocation.getAlias(), remoteIp)) {
+                String errorMsg = String.format(
+                        "[%s]Error occurs while processing request %s/%s/%s from channel %s->%s, caused by: Fail to pass the ip blackWhiteList",
+                        ExceptionCode.PROVIDER_AUTH_FAIL,
+                        invocation.getClassName(), invocation.getMethodName(), invocation.getAlias(),
+                        remoteIp, Ipv4.toAddress(request.getLocalAddress()));
 
-            return CompletableFuture.completedFuture(new Result(request.getContext(), new RpcException(errorMsg)));
-        } else {
-            return invoker.invoke(request);
+                return CompletableFuture.completedFuture(new Result(request.getContext(), new RpcException(errorMsg)));
+            }
         }
+        return invoker.invoke(request);
     }
 
     @Override

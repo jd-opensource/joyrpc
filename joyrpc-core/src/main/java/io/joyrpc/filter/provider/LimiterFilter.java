@@ -25,7 +25,7 @@ import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.RateLimiter;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.limiter.LimiterConfiguration;
+import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.context.limiter.LimiterConfiguration.Option;
 import io.joyrpc.exception.RateLimiterException;
 import io.joyrpc.extension.Extension;
@@ -37,8 +37,6 @@ import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.concurrent.CompletableFuture;
 
-import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
-
 /**
  * 限流
  */
@@ -49,7 +47,7 @@ public class LimiterFilter extends AbstractProviderFilter {
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
         //获取接口的限流器
-        LimiterConfiguration.ClassLimiter classLimiters = LIMITERS.get(invocation.getClassName());
+        ClassLimiter classLimiters = request.getOption().getLimiter();
         if (classLimiters != null) {
             //获取应用信息，已经从会话里面恢复为HIDDEN_KEY_APPID
             String appId = invocation.getAttachment(Constants.HIDDEN_KEY_APPID, "");

@@ -45,6 +45,9 @@ public class BootServer {
 
     public static void main(String[] args) throws InterruptedException {
         System.setProperty("spring.profiles.active", "server");
+        //Map<String, Lan> blacks = new HashMap<>();
+        //blacks.put("*", new Lan("127.0.0.1"));
+        //IPPermissionConfiguration.IP_PERMISSION.update(DemoService.class.getName(), new IPPermission(true, null, blacks));
         ConfigurableApplicationContext ctx = SpringApplication.run(BootServer.class, args);
         Thread.currentThread().join();
     }

@@ -25,6 +25,7 @@ import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.context.auth.IPPermission;
+import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.permission.BlackWhiteList;
 
 import javax.validation.Validator;
@@ -133,6 +134,13 @@ public interface InterfaceOption {
          * @return IP限制
          */
         IPPermission getIPPermission();
+
+        /**
+         * 获取限流配置
+         *
+         * @return 限流配置
+         */
+        ClassLimiter getLimiter();
 
     }
 

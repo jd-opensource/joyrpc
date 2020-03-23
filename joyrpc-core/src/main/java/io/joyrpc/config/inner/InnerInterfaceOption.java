@@ -29,8 +29,10 @@ import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.context.AbstractInterfaceConfiguration;
 import io.joyrpc.context.ConfigEvent;
 import io.joyrpc.context.auth.IPPermission;
+import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.ExtensionMeta;
@@ -66,6 +68,7 @@ import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_FAILOVER_CLASS;
 import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
+import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
@@ -188,11 +191,11 @@ public class InnerInterfaceOption implements InterfaceOption {
     /**
      * 接口IP限制
      */
-    protected volatile IPPermission ipPermission;
+    protected IntfConfiguration<String, IPPermission> ipPermission;
     /**
-     * 接口IP限制监听器
+     * 限流配置
      */
-    protected Consumer<ConfigEvent<String, IPPermission>> iPPermissionListener;
+    protected IntfConfiguration<String, ClassLimiter> limiter;
     /**
      * 方法透传参数
      */
@@ -266,35 +269,17 @@ public class InnerInterfaceOption implements InterfaceOption {
             }
         }
 
-        this.iPPermissionListener = this::onIPPermissionEvent;
-        IP_PERMISSION.addListener(iPPermissionListener);
-        this.ipPermission = IP_PERMISSION.get(interfaceName);
+        this.ipPermission = new IntfConfiguration<>(IP_PERMISSION, interfaceName);
+        this.limiter = new IntfConfiguration<>(LIMITERS, interfaceName);
 
         this.options = new NameKeyOption<>(generic ? null : interfaceClass, generic ? interfaceName : null, this::create);
     }
 
-    /**
-     * IP限制更新事件
-     *
-     * @param event 事件
-     */
-    protected void onIPPermissionEvent(final ConfigEvent<String, IPPermission> event) {
-        //本接口的配置
-        if (interfaceName.equals(event.getKey())) {
-            switch (event.getType()) {
-                case ADD:
-                case UPDATE:
-                    ipPermission = event.getValue();
-                    break;
-                case REMOVE:
-                    ipPermission = null;
-            }
-        }
-    }
 
     @Override
     public void close() {
-        IP_PERMISSION.removeListener(iPPermissionListener);
+        ipPermission.close();
+        limiter.close();
     }
 
     /**
@@ -322,7 +307,8 @@ public class InnerInterfaceOption implements InterfaceOption {
                 methodBlackWhiteList,
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
-                () -> ipPermission);
+                ipPermission,
+                limiter);
     }
 
     /**
@@ -555,6 +541,10 @@ public class InnerInterfaceOption implements InterfaceOption {
          * IP限制
          */
         protected Supplier<IPPermission> iPPermission;
+        /**
+         * 限流
+         */
+        protected Supplier<ClassLimiter> limiter;
 
         /**
          * 构造函数
@@ -570,6 +560,7 @@ public class InnerInterfaceOption implements InterfaceOption {
          * @param validator            方法参数验证器
          * @param token                令牌
          * @param iPPermission         IP限制
+         * @param limiter              限流
          */
         public InnerMethodOption(Map<String, ?> implicits, int timeout, int forks, Route route,
                                  final Concurrency concurrency,
@@ -578,7 +569,8 @@ public class InnerInterfaceOption implements InterfaceOption {
                                  final BlackWhiteList<String> methodBlackWhiteList,
                                  final Validator validator,
                                  final String token,
-                                 final Supplier<IPPermission> iPPermission) {
+                                 final Supplier<IPPermission> iPPermission,
+                                 final Supplier<ClassLimiter> limiter) {
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.forks = forks;
@@ -590,6 +582,7 @@ public class InnerInterfaceOption implements InterfaceOption {
             this.validator = validator;
             this.token = token;
             this.iPPermission = iPPermission;
+            this.limiter = limiter;
         }
 
         @Override
@@ -646,6 +639,11 @@ public class InnerInterfaceOption implements InterfaceOption {
         public IPPermission getIPPermission() {
             return iPPermission.get();
         }
+
+        @Override
+        public ClassLimiter getLimiter() {
+            return limiter.get();
+        }
     }
 
     /**
@@ -698,6 +696,59 @@ public class InnerInterfaceOption implements InterfaceOption {
         @Override
         public void reset(final RequestMessage<Invocation> request) {
             request.getHeader().setTimeout((int) (request.getTimeout() + request.getCreateTime() - SystemClock.now()));
+        }
+    }
+
+    /**
+     * 接口的配置
+     *
+     * @param <K>
+     * @param <V>
+     */
+    protected static class IntfConfiguration<K, V> implements Consumer<ConfigEvent<K, V>>, Supplier<V> {
+
+        /**
+         * 接口配置
+         */
+        protected final AbstractInterfaceConfiguration<K, V> configuration;
+        /**
+         * 键
+         */
+        protected final K key;
+        /**
+         * 当前接口配置
+         */
+        protected volatile V config;
+
+        public IntfConfiguration(final AbstractInterfaceConfiguration<K, V> configuration, final K key) {
+            this.configuration = configuration;
+            this.key = key;
+            configuration.addListener(this);
+            this.config = configuration.get(key);
+        }
+
+        @Override
+        public void accept(final ConfigEvent<K, V> event) {
+            //本接口的配置
+            if (Objects.equals(key, event.getKey())) {
+                switch (event.getType()) {
+                    case ADD:
+                    case UPDATE:
+                        config = event.getValue();
+                        break;
+                    case REMOVE:
+                        config = null;
+                }
+            }
+        }
+
+        @Override
+        public V get() {
+            return config;
+        }
+
+        public void close() {
+            configuration.removeListener(this);
         }
     }
 

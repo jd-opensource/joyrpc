@@ -134,6 +134,13 @@ public interface InterfaceOption {
         AdaptivePolicy getAdaptivePolicy();
 
         /**
+         * 返回方法的Mock数据
+         *
+         * @return 方法的Mock数据
+         */
+        Map<String, Object> getMock();
+
+        /**
          * 设置是否开启自动计算方法指标阈值
          *
          * @param autoScore 自动计算方法指标阈值标识

@@ -57,6 +57,7 @@ import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_FAILOVER_CLASS;
 import static io.joyrpc.context.adaptive.AdaptiveConfiguration.ADAPTIVE;
+import static io.joyrpc.context.mock.MockConfiguration.MOCK;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
@@ -121,6 +122,11 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
      * 自适应负载均衡动态配置
      */
     protected IntfConfiguration<String, AdaptiveConfig> dynamicConfig;
+    /**
+     * MOCK数据
+     */
+    protected IntfConfiguration<String, Map<String, Map<String, Object>>> mocks;
+
     /**
      * 裁决者
      */
@@ -192,10 +198,18 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                         });
                     }));
         }
+        this.mocks = new IntfConfiguration<>(MOCK, interfaceName, config -> {
+            Map<String, Map<String, Object>> configs = mocks.get();
+            options.forEach((method, mo) -> {
+                InnerConsumerMethodOption cmo = ((InnerConsumerMethodOption) mo);
+                cmo.mock = configs == null ? null : configs.get(method);
+            });
+        });
     }
 
     @Override
     protected void doClose() {
+        mocks.close();
         if (dynamicConfig != null) {
             dynamicConfig.close();
         }
@@ -346,6 +360,10 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          * 是否自动计算方法指标阈值
          */
         protected volatile boolean autoScore;
+        /**
+         * Mock数据
+         */
+        protected volatile Map<String, Object> mock;
 
         public InnerConsumerMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator, final String token,
@@ -377,6 +395,11 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         @Override
         public AdaptivePolicy getAdaptivePolicy() {
             return adaptiveConfig.getPolicy();
+        }
+
+        @Override
+        public Map<String, Object> getMock() {
+            return mock;
         }
 
         @Override

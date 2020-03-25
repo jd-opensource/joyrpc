@@ -84,6 +84,8 @@
   
   - 处理链需要的方法参数都合并到了MethodOption，在exporter和refer里面提前绑定好了，并设置到request里面。加快性能
 
+  - 优化自适应负载均衡性能
+
 - 工具类
     
   - ClassUtils的getPublicMethods返回公共的方法，包括静态方法，支持Java8接口上的静态方法调用，调整获取getter和setter方法，必须有对应的字段  

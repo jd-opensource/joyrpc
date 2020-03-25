@@ -68,7 +68,7 @@ public class JEventBus implements EventBus {
         /**
          * 构造函数
          *
-         * @param name 名称
+         * @param name  名称
          * @param group 分组
          */
         public JPublisher(final String name, final PublisherGroup<E> group) {
@@ -234,11 +234,11 @@ public class JEventBus implements EventBus {
          */
         protected void publish() {
             try {
-                Message message = queue.poll(5000, TimeUnit.MILLISECONDS);
+                Message<E> message = queue.poll(5000, TimeUnit.MILLISECONDS);
                 if (message != null) {
                     message.publish();
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
         }
 

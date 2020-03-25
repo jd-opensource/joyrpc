@@ -49,6 +49,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -548,7 +549,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
         @Override
         public long getTime() {
-            return SystemClock.now() + 10000L;
+            //各个接口的评分分布在10秒钟之内
+            return SystemClock.now() + 10000L + ThreadLocalRandom.current().nextLong(10000L);
         }
 
         @Override

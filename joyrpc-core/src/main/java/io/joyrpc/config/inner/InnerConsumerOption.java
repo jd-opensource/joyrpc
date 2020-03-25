@@ -187,6 +187,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                             if (cmo.autoScore) {
                                 //过滤掉没有调用过的方法
                                 cmo.adaptiveConfig.setScore(scorer.apply(method, config));
+                                cmo.autoScore = false;
                             }
                         });
                     }));

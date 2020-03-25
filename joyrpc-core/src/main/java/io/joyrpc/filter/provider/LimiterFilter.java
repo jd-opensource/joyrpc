@@ -23,6 +23,7 @@ package io.joyrpc.filter.provider;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.RateLimiter;
+import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
@@ -46,8 +47,9 @@ public class LimiterFilter extends AbstractProviderFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
+        ProviderMethodOption methodOption = (ProviderMethodOption) request.getOption();
         //获取接口的限流器
-        ClassLimiter classLimiters = request.getOption().getLimiter();
+        ClassLimiter classLimiters = methodOption.getLimiter();
         if (classLimiters != null) {
             //获取应用信息，已经从会话里面恢复为HIDDEN_KEY_APPID
             String appId = invocation.getAttachment(Constants.HIDDEN_KEY_APPID, "");

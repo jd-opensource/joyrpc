@@ -21,11 +21,13 @@ package io.joyrpc.config.inner;
  */
 
 import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOptionFactory;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -36,11 +38,13 @@ public class InnerInterfaceOptionFactory implements InterfaceOptionFactory {
 
     @Override
     public InterfaceOption create(final Class<?> interfaceClass, final String interfaceName, final URL url) {
-        return new InnerInterfaceOption(interfaceClass, interfaceName, url);
+        return new InnerProviderOption(interfaceClass, interfaceName, url);
     }
 
     @Override
-    public InterfaceOption create(final Class<?> interfaceClass, final String interfaceName, final URL url, final Consumer<Route> configure) {
-        return new InnerInterfaceOption(interfaceClass, interfaceName, url, configure);
+    public InterfaceOption create(final Class<?> interfaceClass, final String interfaceName, final URL url,
+                                  final Consumer<Route> configure,
+                                  final BiFunction<String, AdaptiveConfig, AdaptiveConfig> scorer) {
+        return new InnerConsumerOption(interfaceClass, interfaceName, url, configure, scorer);
     }
 }

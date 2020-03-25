@@ -21,9 +21,11 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
@@ -33,7 +35,7 @@ import java.util.function.Consumer;
 public interface InterfaceOptionFactory {
 
     /**
-     * 构造
+     * 为服务提供者构造接口选项
      *
      * @param interfaceClass 接口类
      * @param interfaceName  接口名
@@ -43,13 +45,16 @@ public interface InterfaceOptionFactory {
     InterfaceOption create(Class<?> interfaceClass, String interfaceName, URL url);
 
     /**
-     * 构造
+     * 为消费者构造接口选项
      *
      * @param interfaceClass 接口类
      * @param interfaceName  接口名
      * @param url            url
      * @param configure      分发策略配置器
+     * @param scorer         方法自适应指标计算
      * @return 接口选项
      */
-    InterfaceOption create(Class<?> interfaceClass, String interfaceName, URL url, Consumer<Route> configure);
+    InterfaceOption create(Class<?> interfaceClass, String interfaceName, URL url,
+                           Consumer<Route> configure,
+                           BiFunction<String, AdaptiveConfig, AdaptiveConfig> scorer);
 }

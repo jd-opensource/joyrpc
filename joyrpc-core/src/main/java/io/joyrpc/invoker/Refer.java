@@ -33,9 +33,10 @@ import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.Router;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveScorer;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOption.MethodOption;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.RequestContext;
@@ -218,7 +219,8 @@ public class Refer extends AbstractInvoker {
         //路由器
         this.router = configure(ROUTER.get(url.getString(Constants.ROUTER_OPTION)));
         //方法选项
-        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure);
+        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure,
+                loadBalance instanceof AdaptiveScorer ? (method, cfg) -> ((AdaptiveScorer) loadBalance).score(cluster, method, cfg) : null);
 
         this.cluster.addHandler(config);
         //处理链
@@ -377,7 +379,8 @@ public class Refer extends AbstractInvoker {
         invocation.setAlias(alias);
         invocation.setObject(config.getStub());
 
-        MethodOption option = options.getOption(invocation.getMethodName());
+        ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(invocation.getMethodName());
+        option.setAutoScore(true);
         request.setOption(option);
         //避免分组重试重复调用
         if (request.getCreateTime() <= 0) {
@@ -424,7 +427,7 @@ public class Refer extends AbstractInvoker {
                     String.format("No alive provider found. class=%s alias=%s", interfaceName, alias),
                     CONSUMER_NO_ALIVE_PROVIDER);
         }
-        Route route = request.getOption().getRoute();
+        Route route = ((ConsumerMethodOption) request.getOption()).getRoute();
         return route.invoke(request, new Candidate(cluster, null, nodes, nodes.size()));
     }
 

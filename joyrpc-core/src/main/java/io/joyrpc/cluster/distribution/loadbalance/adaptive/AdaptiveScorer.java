@@ -20,35 +20,21 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive;
  * #L%
  */
 
-import io.joyrpc.extension.Type;
-
-import java.util.List;
+import io.joyrpc.cluster.Cluster;
 
 /**
- * 综合得分计算
+ * 根据集群指标，自动计算方法调用指标阈值
  */
-public interface Arbiter extends Type<String> {
-
-    int OVERALL_ORDER = 100;
-    int WEIGHT_ORDER = OVERALL_ORDER - 1;
+public interface AdaptiveScorer {
 
     /**
-     * 计算综合得分
+     * 自动计算方法调用指标阈值
      *
-     * @param node   服务
-     * @param ranks  裁判的打分
-     * @param policy 策略
-     * @return
+     * @param cluster 集群
+     * @param method  方法
+     * @param config  配置
+     * @return 方法调用指标阈值
      */
-    Rank score(NodeMetric node, List<JudgeRank> ranks, AdaptivePolicy policy);
-
-    /**
-     * 是否支持抽样，不需要对所有节点进行打分
-     *
-     * @return
-     */
-    default boolean sampling() {
-        return false;
-    }
+    AdaptiveConfig score(Cluster cluster, String method, AdaptiveConfig config);
 
 }

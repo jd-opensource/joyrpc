@@ -24,6 +24,7 @@ import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.permission.BlackWhiteList;
@@ -49,9 +50,7 @@ public interface InterfaceOption {
      * 关闭，释放资源，例如移除监听器
      */
     default void close() {
-
     }
-
 
     /**
      * 方法选项
@@ -73,20 +72,6 @@ public interface InterfaceOption {
         int getTimeout();
 
         /**
-         * 获取并行度
-         *
-         * @return 并行度
-         */
-        int getForks();
-
-        /**
-         * 获取分发策略
-         *
-         * @return 分发策略
-         */
-        Route getRoute();
-
-        /**
          * 并发配置
          *
          * @return 并发配置
@@ -94,25 +79,11 @@ public interface InterfaceOption {
         Concurrency getConcurrency();
 
         /**
-         * 故障切换策略
-         *
-         * @return 故障切换策略
-         */
-        FailoverPolicy getFailoverPolicy();
-
-        /**
          * 缓存策略
          *
          * @return 缓存策略
          */
         CachePolicy getCachePolicy();
-
-        /**
-         * 方法黑白名单
-         *
-         * @return 方法黑白名单
-         */
-        BlackWhiteList<String> getMethodBlackWhiteList();
 
         /**
          * 参数验证
@@ -127,6 +98,61 @@ public interface InterfaceOption {
          * @return 令牌
          */
         String getToken();
+
+    }
+
+    /**
+     * 消费者方法选项
+     */
+    interface ConsumerMethodOption extends MethodOption {
+        /**
+         * 获取并行度
+         *
+         * @return 并行度
+         */
+        int getForks();
+
+        /**
+         * 获取分发策略
+         *
+         * @return 分发策略
+         */
+        Route getRoute();
+
+        /**
+         * 故障切换策略
+         *
+         * @return 故障切换策略
+         */
+        FailoverPolicy getFailoverPolicy();
+
+        /**
+         * 获取自适应负载均衡配置
+         *
+         * @return 自适应负载均衡配置
+         */
+        AdaptivePolicy getAdaptivePolicy();
+
+        /**
+         * 设置是否开启自动计算方法指标阈值
+         *
+         * @param autoScore 自动计算方法指标阈值标识
+         */
+        void setAutoScore(boolean autoScore);
+
+    }
+
+    /**
+     * 服务提供者方法选项
+     */
+    interface ProviderMethodOption extends MethodOption {
+
+        /**
+         * 方法黑白名单
+         *
+         * @return 方法黑白名单
+         */
+        BlackWhiteList<String> getMethodBlackWhiteList();
 
         /**
          * 获取IP限制

@@ -25,6 +25,7 @@ import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -46,8 +47,9 @@ public class ForkingRoute extends AbstractRoute {
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
         CompletableFuture<Result> result = new CompletableFuture<>();
         List<Node> nodes = candidate.getNodes();
+        ConsumerMethodOption option = (ConsumerMethodOption) request.getOption();
         //并行调用的数量
-        int forks = request.getOption().getForks();
+        int forks = option.getForks();
         forks = forks <= 0 || forks > nodes.size() ? nodes.size() : forks;
         CompletableFuture<Result>[] futures = new CompletableFuture[forks];
         int total = 0;

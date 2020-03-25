@@ -22,6 +22,7 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.exception.RpcException;
@@ -43,7 +44,8 @@ public class IPPermissionFilter extends AbstractProviderFilter {
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        IPPermission permission = request.getOption().getIPPermission();
+        ProviderMethodOption option = (ProviderMethodOption) request.getOption();
+        IPPermission permission = option.getIPPermission();
         if (permission != null) {
             Invocation invocation = request.getPayLoad();
             InetSocketAddress remoteAddress = request.getRemoteAddress();

@@ -24,7 +24,7 @@ import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOption.MethodOption;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;
@@ -100,7 +100,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        MethodOption option = options.getOption(invocation.getMethodName());
+        ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(invocation.getMethodName());
         request.setOption(option);
         request.getHeader().setTimeout(option.getTimeout());
         CompletableFuture<Result> future = new CompletableFuture<>();

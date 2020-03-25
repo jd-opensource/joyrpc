@@ -49,41 +49,15 @@ public class NodeRank extends NodeMetric {
     /**
      * 构造函数
      *
-     * @param node
-     * @param cluster
-     */
-    public NodeRank(Node node, Cluster cluster) {
-        super(node, cluster);
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param node
-     * @param cluster
-     * @param function
-     * @param nodeFunction
+     * @param node         节点
+     * @param cluster      集群
+     * @param function     窗口函数
+     * @param nodeFunction 节点指标函数
      */
     public NodeRank(Node node, Cluster cluster,
                     Function<Dashboard, TPWindow> function,
                     Function<TPSnapshot, Integer> nodeFunction) {
         super(node, cluster, function, nodeFunction);
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param node
-     * @param cluster
-     * @param nodeMetric
-     * @param clusterMetric
-     * @param nodeFunction
-     */
-    public NodeRank(Node node, Cluster cluster,
-                    TPWindow nodeMetric,
-                    TPWindow clusterMetric,
-                    Function<TPSnapshot, Integer> nodeFunction) {
-        super(node, cluster, nodeMetric, clusterMetric, nodeFunction);
     }
 
     public List<JudgeRank> getRanks() {
@@ -97,50 +71,36 @@ public class NodeRank extends NodeMetric {
     /**
      * 裁判打分
      *
-     * @param judges
-     * @param context
+     * @param policy 策略
      * @return
      */
-    public NodeRank score(final Iterable<Judge> judges, final AdaptiveConfig context) {
-        if (judges != null) {
-            Rank rank;
-            int ratio;
-            String name;
-            boolean noMetric = noMetric();
-            for (Judge judge : judges) {
-                name = judge.type();
-                //获取当前裁判的系数
-                ratio = context.getRatio(name, judge.ratio());
-                if (ratio <= 0 || noMetric && judge instanceof MetricAware) {
-                    //无权投票或者需要指标但是没有指标，不进行判断，默认是Good
-                    ranks.add(new JudgeRank(name, Rank.Good, 0));
-                } else {
-                    //有投票权，进行评分
-                    rank = judge.score(this, context);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(String.format("ServerRank score judge:%s ratio:%d rank:%s", judge.type(), judge.ratio(), rank.getName()));
-                    }
-                    ranks.add(new JudgeRank(name, rank, ratio));
-                    if (rank == Rank.Disabled) {
-                        //一票否决，加快速度
-                        //logger.info(String.format("ServerRank score judge:%s ratio:%d rank:%s", judge.type(), judge.ratio(), rank.getName()));
-                        break;
-                    }
+    public NodeRank score(final AdaptivePolicy policy) {
+        Rank rank;
+        int ratio;
+        String name;
+        boolean noMetric = noMetric();
+        for (Judge judge : policy.getJudges()) {
+            name = judge.type();
+            //获取当前裁判的系数
+            ratio = policy.getRatio(name, judge.ratio());
+            if (ratio <= 0 || noMetric && judge instanceof MetricAware) {
+                //无权投票或者需要指标但是没有指标，不进行判断，默认是Good
+                ranks.add(new JudgeRank(name, Rank.Good, 0));
+            } else {
+                //有投票权，进行评分
+                rank = judge.score(this, policy);
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("ServerRank score judge:%s ratio:%d rank:%s", judge.type(), judge.ratio(), rank.getName()));
+                }
+                ranks.add(new JudgeRank(name, rank, ratio));
+                if (rank == Rank.Disabled) {
+                    //一票否决，加快速度
+                    //logger.info(String.format("ServerRank score judge:%s ratio:%d rank:%s", judge.type(), judge.ratio(), rank.getName()));
+                    break;
                 }
             }
         }
-        return this;
-    }
-
-    /**
-     * 计算综合得分
-     *
-     * @param arbiter
-     * @param context
-     * @return
-     */
-    public NodeRank score(final Arbiter arbiter, final AdaptiveConfig context) {
-        rank = arbiter.score(this, ranks, context);
+        policy.getArbiter().score(this, ranks, policy);
         return this;
     }
 }

@@ -23,6 +23,7 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.AuthorizationException;
 import io.joyrpc.extension.Extension;
@@ -44,7 +45,8 @@ public class MethodBlackWhiteListFilter extends AbstractProviderFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        BlackWhiteList<String> blackWhiteList = request.getOption().getMethodBlackWhiteList();
+        ProviderMethodOption option = (ProviderMethodOption) request.getOption();
+        BlackWhiteList<String> blackWhiteList = option.getMethodBlackWhiteList();
         //校验方法黑白名单
         if (blackWhiteList != null && !blackWhiteList.isValid(invocation.getMethodName())) {
             return CompletableFuture.completedFuture(new Result(request.getContext(),

@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.judge;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.judge;
 
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.Region;
-import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.NodeMetric;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Rank;
 
@@ -36,7 +36,7 @@ public class ZoneAwareJudge extends AbstractJudge {
     }
 
     @Override
-    public Rank score(final NodeMetric metric, final AdaptiveConfig config) {
+    public Rank score(final NodeMetric metric, final AdaptivePolicy policy) {
         Node node = metric.getNode();
         Region region = metric.getCluster().getRegion();
         MatchType area = match(region == null ? null : region.getRegion(), node.getRegion());

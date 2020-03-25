@@ -33,11 +33,11 @@ import static io.joyrpc.constants.Constants.DEFAULT_DECUBATION;
 public class OverallArbiter implements Arbiter, Ordered {
 
     @Override
-    public Rank score(final NodeMetric node, final List<JudgeRank> ranks, final AdaptiveConfig config) {
+    public Rank score(final NodeMetric node, final List<JudgeRank> ranks, final AdaptivePolicy policy) {
         //计算综合得分
         Rank rank = compute(ranks);
         //调整权重
-        weight(node, rank, config);
+        weight(node, rank, policy);
         return rank;
     }
 
@@ -47,7 +47,7 @@ public class OverallArbiter implements Arbiter, Ordered {
      * @param node
      * @param rank
      */
-    protected void weight(final NodeMetric node, final Rank rank, final AdaptiveConfig config) {
+    protected void weight(final NodeMetric node, final Rank rank, final AdaptivePolicy policy) {
         switch (rank) {
             case Good:
                 break;
@@ -59,13 +59,13 @@ public class OverallArbiter implements Arbiter, Ordered {
             case Poor:
                 node.setWeight(1);
                 //继续虚弱，内部处理并发频繁修改
-                node.weak(config.getDecubation() == null || config.getDecubation() <= 0 ? DEFAULT_DECUBATION : config.getDecubation());
+                node.weak(policy.getDecubation() == null || policy.getDecubation() <= 0 ? DEFAULT_DECUBATION : policy.getDecubation());
                 break;
             case Disabled:
                 node.setWeight(0);
                 if (!node.isBroken()) {
                     //虚弱，内部处理并发频繁修改
-                    node.weak(config.getDecubation() == null || config.getDecubation() <= 0 ? DEFAULT_DECUBATION : config.getDecubation());
+                    node.weak(policy.getDecubation() == null || policy.getDecubation() <= 0 ? DEFAULT_DECUBATION : policy.getDecubation());
                 }
         }
     }

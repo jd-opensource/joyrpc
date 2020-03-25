@@ -29,6 +29,7 @@ import io.joyrpc.cluster.distribution.FailoverSelector;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.cluster.distribution.route.failover.simple.SimpleFailoverSelector;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
@@ -75,7 +76,8 @@ public class FailoverRoute extends AbstractRoute {
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
         //获取重试策略
-        FailoverPolicy policy = request.getOption().getFailoverPolicy();
+        ConsumerMethodOption option = (ConsumerMethodOption) request.getOption();
+        FailoverPolicy policy = option.getFailoverPolicy();
         //判断是否需要重试
         boolean retry = policy != null && policy.getMaxRetry() > 0;
         if (!retry) {

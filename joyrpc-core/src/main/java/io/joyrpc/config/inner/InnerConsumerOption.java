@@ -448,7 +448,6 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         }
     }
 
-
     /**
      * 方法自适应配置
      */

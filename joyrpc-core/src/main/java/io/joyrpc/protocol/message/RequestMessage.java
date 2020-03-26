@@ -98,6 +98,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * 权限认证
      */
     protected transient Authorization authorization;
+    /**
+     * 重试次数
+     */
+    protected transient int retryTimes;
 
     /**
      * 构造函数
@@ -314,6 +318,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setResponseSupplier(Supplier<ResponseMessage<ResponsePayload>> responseSupplier) {
         this.responseSupplier = responseSupplier;
+    }
+
+    public int getRetryTimes() {
+        return retryTimes;
+    }
+
+    public void setRetryTimes(int retryTimes) {
+        this.retryTimes = retryTimes;
     }
 
     /**

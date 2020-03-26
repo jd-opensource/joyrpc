@@ -30,7 +30,6 @@ import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.cluster.distribution.route.AbstractRoute;
 import io.joyrpc.cluster.distribution.route.failover.simple.SimpleFailoverSelector;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;
@@ -43,7 +42,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.cluster.distribution.Route.FAIL_OVER;
 import static io.joyrpc.cluster.distribution.Route.ORDER_FAILOVER;
-import static io.joyrpc.constants.Constants.INTERNAL_KEY_RETRY_TIMES;
 
 /**
  * 异常重试
@@ -113,7 +111,7 @@ public class FailoverRoute extends AbstractRoute {
         final Node node = loadBalance.select(candidate, request);
         if (retry > 0) {
             //便于向服务端注入重试次数
-            RequestContext.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES, retry);
+            request.setRetryTimes(retry);
         }
         //调用，如果节点不存在，则抛出Failover异常。
         CompletableFuture<Result> result = node != null ? operation.apply(node, last, request) :

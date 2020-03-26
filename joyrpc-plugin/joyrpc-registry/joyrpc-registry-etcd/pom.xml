@@ -10,7 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>joyrpc-registry-etcd</artifactId>
-
+    <packaging>jar</packaging>
     <properties>
         <jetcd-core.version>0.3.0</jetcd-core.version>
     </properties>

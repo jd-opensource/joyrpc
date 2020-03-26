@@ -179,9 +179,9 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
      *
      * @param request 请求
      * @param channel 通道
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws MethodOverloadException
+     * @throws ClassNotFoundException  类没有找到异常
+     * @throws NoSuchMethodException   方法没有找到异常
+     * @throws MethodOverloadException 方法重载异常
      */
     protected void restore(final RequestMessage<Invocation> request, final Channel channel)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
@@ -205,7 +205,8 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         }
         //处理调用方法
         if (invocation.getMethod() == null) {
-            invocation.setMethod(getPublicMethod(invocation.getClassName(), invocation.getMethodName()));
+            //TODO 耗CPU
+            invocation.setMethod(getPublicMethod(invocation.getClazz(), invocation.getMethodName()));
         }
         request.setLocalAddress(channel.getLocalAddress());
         request.setRemoteAddress(channel.getRemoteAddress());

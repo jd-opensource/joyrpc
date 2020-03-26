@@ -128,7 +128,7 @@ public abstract class AbstractInvoker implements Invoker {
     /**
      * 关闭异常
      *
-     * @return
+     * @return 异常
      */
     protected abstract Throwable shutdownException();
 
@@ -138,37 +138,38 @@ public abstract class AbstractInvoker implements Invoker {
             //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
             return CompletableFuture.completedFuture(new Result(request.getContext(), shutdownException()));
         }
+        //执行调用链，减少计数器
+        CompletableFuture<Result> future;
         //在关闭判断之前增加计数器，确保安全
         requests.incrementAndGet();
-        //执行调用链，减少计数器
         try {
-            return doInvoke(request).whenComplete((r, t) -> {
-                if (requests.decrementAndGet() == 0 && flyingFuture != null) {
-                    //通知请求已经完成
-                    flyingFuture.complete(null);
-                }
-            });
+            future = doInvoke(request);
         } catch (Throwable e) {
             //如果抛出了异常
-            requests.decrementAndGet();
-            return Futures.completeExceptionally(
-                    new RpcException("Error occurs while invoking, caused by " + e.getMessage(), e));
+            future = Futures.completeExceptionally(new RpcException("Error occurs while invoking, caused by " + e.getMessage(), e));
         }
+        future.whenComplete((result, throwable) -> {
+            if (requests.decrementAndGet() == 0 && flyingFuture != null) {
+                //通知请求已经完成
+                flyingFuture.complete(null);
+            }
+        });
+        return future;
 
     }
 
     /**
      * 执行调用
      *
-     * @param request
-     * @return
+     * @param request 请求
+     * @return CompletableFuture
      */
     protected abstract CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request);
 
     /**
      * 异步打开
      *
-     * @return
+     * @return CompletableFuture
      */
     public CompletableFuture<Void> open() {
         if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
@@ -242,14 +243,14 @@ public abstract class AbstractInvoker implements Invoker {
     /**
      * 打开
      *
-     * @return
+     * @return CompletableFuture
      */
     protected abstract CompletableFuture<Void> doOpen();
 
     /**
      * 关闭
      *
-     * @return
+     * @return CompletableFuture
      */
     protected abstract CompletableFuture<Void> doClose();
 

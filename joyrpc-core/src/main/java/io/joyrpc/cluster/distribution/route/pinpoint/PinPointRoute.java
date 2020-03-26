@@ -32,6 +32,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.util.Futures;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -51,7 +52,7 @@ public class PinPointRoute extends AbstractRoute {
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
         String pinpoint = RequestContext.getContext().getAttachment(HIDDEN_KEY_PINPOINT);
         if (pinpoint == null || pinpoint.isEmpty()) {
-            throw new RpcException(".pinpoint is not configured in request context.", COMMON_VALUE_ILLEGAL);
+            return Futures.completeExceptionally(new RpcException(".pinpoint is not configured in request context.", COMMON_VALUE_ILLEGAL));
         }
         URL targetUrl = URL.valueOf(pinpoint, url.getProtocol());
         Node target = null;
@@ -65,7 +66,7 @@ public class PinPointRoute extends AbstractRoute {
             }
         }
         if (null == target) {
-            throw new NoAliveProviderException(String.format("not found node %s in candidate", pinpoint), CONSUMER_NO_ALIVE_PROVIDER);
+            return Futures.completeExceptionally(new NoAliveProviderException(String.format("not found node %s in candidate", pinpoint), CONSUMER_NO_ALIVE_PROVIDER));
         }
         return operation.apply(target, null, request);
     }

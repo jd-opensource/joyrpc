@@ -1,7 +1,6 @@
 package io.joyrpc.context.injection.retry;
 
 import io.joyrpc.cluster.Node;
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Invocation;
@@ -21,8 +20,8 @@ public class RetryInjection implements NodeReqInjection {
 
     @Override
     public void inject(RequestMessage<Invocation> request, Node node) {
-        Integer retryTimes = RequestContext.getContext().getAttachment(INTERNAL_KEY_RETRY_TIMES);
-        if (retryTimes != null) {
+        int retryTimes = request.getRetryTimes();
+        if (retryTimes > 0) {
             request.getContext().setAttachment(INTERNAL_KEY_RETRY_TIMES, retryTimes);
         }
     }

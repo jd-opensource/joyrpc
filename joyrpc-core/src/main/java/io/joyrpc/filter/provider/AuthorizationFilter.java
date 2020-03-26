@@ -37,7 +37,6 @@ import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.authentication.AuthenticationRequest;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 
 import java.util.Map;
@@ -60,7 +59,7 @@ public class AuthorizationFilter extends AbstractProviderFilter {
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Function<Session, Integer> authenticated = request.getAuthenticated();
         Invocation invocation = request.getPayLoad();
-        DefaultSession session = (DefaultSession) request.getSession();
+        RpcSession session = (RpcSession) request.getSession();
         //判断会话是否支持认证
         int sessionAuth = authenticated != null ? authenticated.apply(session) : AUTH_SESSION_NONE;
         if (sessionAuth == AUTH_SESSION_NONE) {

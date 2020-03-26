@@ -26,7 +26,6 @@ import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.StringUtils;
 
@@ -421,29 +420,6 @@ public class Invocation implements Call {
      */
     public Object invoke(final Object target) throws InvocationTargetException, IllegalAccessException {
         return method.invoke(target, args);
-    }
-
-    /**
-     * 从会话恢复信心
-     *
-     * @param session
-     */
-    public void apply(final DefaultSession session) {
-        if (session == null) {
-            return;
-        }
-        //类名，如果不存在则从会话里面获取
-        if (className == null || className.isEmpty()) {
-            className = session.getInterfaceName();
-        }
-        if (alias == null || alias.isEmpty()) {
-            alias = session.getAlias();
-        }
-        if (getAttachment(HIDDEN_KEY_APPID) == null && getAttachment(HIDDEN_KEY_APPNAME) == null) {
-            addAttachment(HIDDEN_KEY_APPID, session.getRemoteAppId());
-            addAttachment(HIDDEN_KEY_APPNAME, session.getRemoteAppName());
-            addAttachment(HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
-        }
     }
 
     /**

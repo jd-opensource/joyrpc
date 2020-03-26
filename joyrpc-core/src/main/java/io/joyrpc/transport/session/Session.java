@@ -286,25 +286,25 @@ public interface Session {
     /**
      * 添加扩展属性
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 老的值
      */
     String put(final String key, final String value);
 
     /**
      * 不存在的时候添加扩展属性
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 老的值
      */
     String putIfAbsent(final String key, final String value);
 
     /**
      * 添加扩展属性
      *
-     * @param attrs
+     * @param attrs 属性
      */
     void putAll(final Map<String, String> attrs);
 
@@ -312,8 +312,69 @@ public interface Session {
      * 删除扩展属性
      *
      * @param key
-     * @return
+     * @return 值
      */
     String remove(final String key);
+
+    /**
+     * RPC会话
+     */
+    interface RpcSession extends Session {
+        /**
+         * 返回接口名称
+         *
+         * @return 接口名称
+         */
+        String getInterfaceName();
+
+        /**
+         * 返回分组
+         *
+         * @return 分组
+         */
+        String getAlias();
+
+        /**
+         * 返回远端java版本
+         *
+         * @return 远端java版本
+         */
+        String getRemoteJavaVersion();
+
+        /**
+         * 返回远端构建版本
+         *
+         * @return 远端构建版本
+         */
+        Short getRemoteBuildVersion();
+
+        /**
+         * 返回远端应用ID
+         *
+         * @return 远端应用ID
+         */
+        String getRemoteAppId();
+
+        /**
+         * 获取远端应用名称
+         *
+         * @return 远端应用名称
+         */
+        String getRemoteAppName();
+
+        /**
+         * 获取远端应用实例
+         *
+         * @return 远端应用实例
+         */
+        String getRemoteAppIns();
+
+        /**
+         * 获取远端应用分组
+         *
+         * @return 远端应用分组
+         */
+        String getRemoteAppGroup();
+    }
 
 }

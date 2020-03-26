@@ -23,6 +23,7 @@ package io.joyrpc.transport.session;
 import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.transport.session.Session.RpcSession;
 import io.joyrpc.util.Maps;
 
 import java.util.List;
@@ -34,7 +35,7 @@ import static io.joyrpc.constants.Constants.*;
 /**
  * @date: 2019/5/15
  */
-public class DefaultSession implements Session {
+public class DefaultSession implements RpcSession {
 
     /**
      * session id
@@ -255,6 +256,7 @@ public class DefaultSession implements Session {
         this.checksums = checksums;
     }
 
+    @Override
     public String getInterfaceName() {
         if (interfaceName == null) {
             interfaceName = attrs.get(CONFIG_KEY_INTERFACE);
@@ -262,6 +264,7 @@ public class DefaultSession implements Session {
         return interfaceName;
     }
 
+    @Override
     public String getAlias() {
         if (alias == null) {
             alias = attrs.get(ALIAS_OPTION.getName());
@@ -269,6 +272,7 @@ public class DefaultSession implements Session {
         return alias;
     }
 
+    @Override
     public String getRemoteJavaVersion() {
         if (remoteJavaVersion == null) {
             remoteJavaVersion = Maps.get(attrs, JAVA_VERSION_KEY, KEY_JAVA_VERSION);
@@ -276,19 +280,21 @@ public class DefaultSession implements Session {
         return remoteJavaVersion;
     }
 
+    @Override
     public Short getRemoteBuildVersion() {
         if (remoteBuildVersion == null) {
             String version = attrs.get(BUILD_VERSION_KEY);
             if (version != null) {
                 try {
                     remoteBuildVersion = Short.parseShort(version);
-                } catch (NumberFormatException e) {
+                } catch (NumberFormatException ignored) {
                 }
             }
         }
         return remoteBuildVersion;
     }
 
+    @Override
     public String getRemoteAppId() {
         if (remoteAppId == null) {
             remoteAppId = Maps.get(attrs, APPLICATION_ID, KEY_APPID);
@@ -296,6 +302,7 @@ public class DefaultSession implements Session {
         return remoteAppId;
     }
 
+    @Override
     public String getRemoteAppName() {
         if (remoteAppName == null) {
             remoteAppName = Maps.get(attrs, APPLICATION_NAME, KEY_APPNAME);
@@ -303,6 +310,7 @@ public class DefaultSession implements Session {
         return remoteAppName;
     }
 
+    @Override
     public String getRemoteAppIns() {
         if (remoteAppIns == null) {
             remoteAppIns = Maps.get(attrs, APPLICATION_INSTANCE, KEY_APPINSID);
@@ -310,6 +318,7 @@ public class DefaultSession implements Session {
         return remoteAppIns;
     }
 
+    @Override
     public String getRemoteAppGroup() {
         if (remoteAppGroup == null) {
             remoteAppGroup = Maps.get(attrs, APPLICATION_GROUP, KEY_APPGROUP);

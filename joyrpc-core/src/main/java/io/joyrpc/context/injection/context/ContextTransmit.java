@@ -25,7 +25,7 @@ import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.session.DefaultSession;
+import io.joyrpc.transport.session.Session.RpcSession;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -44,7 +44,7 @@ public class ContextTransmit implements Transmit {
 
     @Override
     public void inject(final RequestMessage<Invocation> request) {
-        RequestContext.InnerContext context = new InnerContext(request.getContext());
+        InnerContext context = new InnerContext(request.getContext());
         Invocation invocation = request.getPayLoad();
         //复制所有配置参数到invocation
         invocation.addAttachments(context.getRequests());
@@ -64,9 +64,13 @@ public class ContextTransmit implements Transmit {
     }
 
     @Override
-    public void restoreOnReceive(final RequestMessage<Invocation> request, final DefaultSession session) {
-        RequestContext.InnerContext context = new InnerContext(request.getContext());
-        Map<String, Object> attachments = request.getPayLoad().getAttachments();
+    public void restoreOnReceive(final RequestMessage<Invocation> request, final RpcSession session) {
+        RequestContext context = request.getContext();
+        context.setLocalAddress(request.getLocalAddress());
+        context.setRemoteAddress(request.getRemoteAddress());
+
+        Invocation invocation = request.getPayLoad();
+        Map<String, Object> attachments = invocation.getAttachments();
         //获取待写入数据条数
         int attachmentSize = attachments != null && !attachments.isEmpty() ? attachments.size() : 0;
         int sessionSize = session != null && (session.getRemoteAppId() != null || session.getRemoteAppName() != null) ? 3 : 0;
@@ -74,10 +78,12 @@ public class ContextTransmit implements Transmit {
         if (size == 0) {
             return;
         }
+
+        InnerContext ctx = new InnerContext(context);
         Map<String, Object> callers = new HashMap<>(size);
         //写入透传的数据
         if (attachmentSize > 0) {
-            context.setTraces((Map<String, Object>) attachments.remove(INTERNAL_KEY_TRACE));
+            ctx.setTraces((Map<String, Object>) attachments.remove(INTERNAL_KEY_TRACE));
             //复制内部属性，转换成隐藏属性
             attachments.forEach((k, v) -> callers.put(INTERNAL_KEY.test(k) ? INTERNAL_TO_HIDDEN.apply(k) : k, v));
         }
@@ -88,7 +94,7 @@ public class ContextTransmit implements Transmit {
             put(callers, HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
         }
         if (!callers.isEmpty()) {
-            context.setCallers(callers);
+            ctx.setCallers(callers);
         }
     }
 

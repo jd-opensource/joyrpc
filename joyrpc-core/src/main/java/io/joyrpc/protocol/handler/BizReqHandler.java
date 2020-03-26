@@ -35,8 +35,8 @@ import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.transport.session.Session.RpcSession;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
@@ -50,6 +50,7 @@ import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_TASK_SESSION_EXPIRED;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
+import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**
  * @date: 2019/3/14
@@ -185,14 +186,20 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
      */
     protected void restore(final RequestMessage<Invocation> request, final Channel channel)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        DefaultSession session = (DefaultSession) request.getSession();
+        RpcSession session = (RpcSession) request.getSession();
+        //从会话恢复接口和别名
         Invocation invocation = request.getPayLoad();
-        transmits.forEach(o -> o.restoreOnReceive(request, session));
-        invocation.apply(session);
-
+        if (session != null) {
+            if (isEmpty(invocation.getClassName())) {
+                invocation.setClassName(session.getInterfaceName());
+            }
+            if (isEmpty(invocation.getAlias())) {
+                invocation.setAlias(session.getAlias());
+            }
+        }
         //类名，如果不存在则从会话里面获取
         String className = invocation.getClassName();
-        if (className == null || className.isEmpty()) {
+        if (isEmpty(className)) {
             //session 为空，类名也为空，可能是session超时并被清理
             throw new SessionException(error(invocation, channel, " session has been cleared, may be the session has expired",
                     PROVIDER_TASK_SESSION_EXPIRED));
@@ -210,8 +217,8 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         }
         request.setLocalAddress(channel.getLocalAddress());
         request.setRemoteAddress(channel.getRemoteAddress());
-        request.getContext().setLocalAddress(channel.getLocalAddress());
-        request.getContext().setRemoteAddress(channel.getRemoteAddress());
+        //恢复上下文
+        transmits.forEach(o -> o.restoreOnReceive(request, session));
     }
 
     /**

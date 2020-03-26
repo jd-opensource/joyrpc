@@ -24,7 +24,7 @@ import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.session.DefaultSession;
+import io.joyrpc.transport.session.Session.RpcSession;
 
 /**
  * 上下文透传接口，包括注入和恢复
@@ -38,7 +38,7 @@ public interface Transmit extends ReqInjection {
      * @param request 请求
      * @param session 会话
      */
-    void restoreOnReceive(RequestMessage<Invocation> request, DefaultSession session);
+    void restoreOnReceive(RequestMessage<Invocation> request, RpcSession session);
 
     /**
      * 服务消费者异步调用完成后，在线程切换的时候进行恢复

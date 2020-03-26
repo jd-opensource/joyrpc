@@ -34,8 +34,8 @@ import io.joyrpc.protocol.message.authentication.AuthenticationRequest;
 import io.joyrpc.protocol.message.authentication.AuthenticationResponse;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.transport.session.Session.RpcSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,7 +63,7 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         RequestMessage request = (RequestMessage) message;
         Channel channel = context.getChannel();
 
-        DefaultSession session = (DefaultSession) request.getSession();
+        RpcSession session = (RpcSession) request.getSession();
         if (session == null) {
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
                     new AuthenticationResponse(NOT_PASS, "Session is not exists.")), sendFailed);

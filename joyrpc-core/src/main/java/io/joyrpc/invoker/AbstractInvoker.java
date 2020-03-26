@@ -146,7 +146,11 @@ public abstract class AbstractInvoker implements Invoker {
             future = doInvoke(request);
         } catch (Throwable e) {
             //如果抛出了异常
-            future = Futures.completeExceptionally(new RpcException("Error occurs while invoking, caused by " + e.getMessage(), e));
+            if (e instanceof RpcException) {
+                future = Futures.completeExceptionally(e);
+            } else {
+                future = Futures.completeExceptionally(new RpcException("Error occurs while invoking, caused by " + e.getMessage(), e));
+            }
         }
         future.whenComplete((result, throwable) -> {
             if (requests.decrementAndGet() == 0 && flyingFuture != null) {

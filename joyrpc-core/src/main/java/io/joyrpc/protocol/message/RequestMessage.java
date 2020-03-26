@@ -29,6 +29,7 @@ import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.SystemClock;
 
 import java.net.InetSocketAddress;
@@ -74,6 +75,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * The Remote address.
      */
     protected transient InetSocketAddress remoteAddress;
+    /**
+     * 通道
+     */
+    protected transient ChannelTransport transport;
     /**
      * 调用的线程
      */
@@ -270,6 +275,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setRemoteAddress(InetSocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
+    }
+
+    public ChannelTransport getTransport() {
+        return transport;
+    }
+
+    public void setTransport(ChannelTransport transport) {
+        this.transport = transport;
     }
 
     public long getTimeout() {

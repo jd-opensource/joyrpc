@@ -34,6 +34,7 @@ import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
+import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.util.ClassUtils;
@@ -225,6 +226,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 getCachePolicy(parametric),
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
+                getCallback(parametric.getName()),
                 parametric.getInteger(FORKS_OPTION.getName(), forks),
                 getRoute(parametric),
                 new DefaultFailoverPolicy(
@@ -367,11 +369,12 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         protected volatile Map<String, Object> mock;
 
         public InnerConsumerMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
-                                         final CachePolicy cachePolicy, final Validator validator, final String token,
+                                         final CachePolicy cachePolicy, final Validator validator,
+                                         final String token, final CallbackMethod callback,
                                          final int forks, final Route route, final FailoverPolicy failoverPolicy,
                                          final AdaptiveConfig urlConfig,
                                          final List<Judge> judges) {
-            super(implicits, timeout, concurrency, cachePolicy, validator, token);
+            super(implicits, timeout, concurrency, cachePolicy, validator, token, callback);
             this.forks = forks;
             this.route = route;
             this.failoverPolicy = failoverPolicy;

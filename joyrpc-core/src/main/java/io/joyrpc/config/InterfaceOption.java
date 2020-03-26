@@ -27,6 +27,7 @@ import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
+import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 
 import javax.validation.Validator;
@@ -45,6 +46,13 @@ public interface InterfaceOption {
      * @return 选项
      */
     MethodOption getOption(String methodName);
+
+    /**
+     * 是否有回调函数
+     *
+     * @return 回调函数标识
+     */
+    boolean isCallback();
 
     /**
      * 关闭，释放资源，例如移除监听器
@@ -98,6 +106,13 @@ public interface InterfaceOption {
          * @return 令牌
          */
         String getToken();
+
+        /**
+         * 获取回调方法信息
+         *
+         * @return 回调方法
+         */
+        CallbackMethod getCallback();
 
     }
 
@@ -203,7 +218,7 @@ public interface InterfaceOption {
         /**
          * 当前并发数
          *
-         * @return
+         * @return 并发数
          */
         public long getActives() {
             return actives.get();
@@ -236,8 +251,8 @@ public interface InterfaceOption {
         /**
          * 等到
          *
-         * @param time
-         * @return
+         * @param time 时间
+         * @return 成功标识
          */
         public boolean await(final long time) {
             if (time <= 0) {

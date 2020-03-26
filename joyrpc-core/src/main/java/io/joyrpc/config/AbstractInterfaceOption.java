@@ -20,17 +20,21 @@ package io.joyrpc.config;
  * #L%
  */
 
+import io.joyrpc.Callback;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
+import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.AbstractInterfaceConfiguration;
 import io.joyrpc.context.ConfigEvent;
+import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
+import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.ClassUtils;
@@ -42,6 +46,7 @@ import javax.validation.Validator;
 import javax.validation.metadata.BeanDescriptor;
 import javax.validation.metadata.MethodDescriptor;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
@@ -136,6 +141,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * 是否是泛型调用
      */
     protected boolean generic;
+    /**
+     * 是否有回调方法
+     */
+    protected boolean callback;
     /**
      * 是否关闭了
      */
@@ -243,6 +252,41 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     }
 
     /**
+     * 获取回调方法
+     *
+     * @param methodName 方法名称
+     * @return 回调方法对象
+     */
+    protected CallbackMethod getCallback(final String methodName) {
+        if (generic) {
+            return null;
+        }
+        Parameter result = null;
+        int index = 0;
+        try {
+            Method method = ClassUtils.getPublicMethod(interfaceClass, methodName);
+            Parameter[] parameters = method.getParameters();
+            for (int i = 0; i < parameters.length; i++) {
+                if (Callback.class.isAssignableFrom((parameters[i].getType()))) {
+                    if (result != null) {
+                        throw new InitializationException("Illegal callback parameter at methodName " + methodName
+                                + ",just allow one callback parameter", ExceptionCode.COMMON_CALL_BACK_ERROR);
+                    }
+                    result = parameters[i];
+                    index = i;
+                }
+            }
+            if (result == null) {
+                return null;
+            }
+            callback = true;
+            return new CallbackMethod(method, index, result);
+        } catch (NoSuchMethodException | MethodOverloadException e) {
+            return null;
+        }
+    }
+
+    /**
      * 获取方法参数验证器
      *
      * @param parametric 参数
@@ -307,6 +351,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         return options.get(methodName);
     }
 
+    @Override
+    public boolean isCallback() {
+        return callback;
+    }
+
     /**
      * 方法选项
      */
@@ -335,6 +384,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 令牌
          */
         protected String token;
+        /**
+         * 回调方法
+         */
+        protected CallbackMethod callback;
 
         /**
          * 构造函数
@@ -345,18 +398,21 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * @param cachePolicy 缓存策略
          * @param validator   方法参数验证器
          * @param token       令牌
+         * @param callback    回调方法
          */
-        public InnerMethodOption(Map<String, ?> implicits, int timeout,
+        public InnerMethodOption(final Map<String, ?> implicits, int timeout,
                                  final Concurrency concurrency,
                                  final CachePolicy cachePolicy,
                                  final Validator validator,
-                                 final String token) {
+                                 final String token,
+                                 final CallbackMethod callback) {
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.concurrency = concurrency;
             this.cachePolicy = cachePolicy;
             this.validator = validator;
             this.token = token;
+            this.callback = callback;
         }
 
         @Override
@@ -389,6 +445,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             return token;
         }
 
+        @Override
+        public CallbackMethod getCallback() {
+            return callback;
+        }
     }
 
     /**

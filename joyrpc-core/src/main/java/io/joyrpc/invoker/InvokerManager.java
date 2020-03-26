@@ -46,7 +46,6 @@ import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.handler.DefaultProtocolAdapter;
 import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.thread.ThreadPool;
-import io.joyrpc.transport.Client;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.ShareServer;
 import io.joyrpc.transport.channel.Channel;
@@ -467,30 +466,10 @@ public class InvokerManager {
             final Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
             final Cluster cluster = new Cluster(clusterName, url, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
             //判断是否有回调，如果注册成功，说明有回调方法，需要往Cluster注册事件，监听节点断开事件
-            CallbackContainer container = null;
-            boolean callback = callbackManager.register(config.getProxyClass());
-            if (callback) {
-                container = callbackManager.getConsumer();
-                cluster.addHandler(event -> {
-                    switch (event.getType()) {
-                        case DISCONNECT:
-                            Object payload = event.getPayload();
-                            //删除Transport上的回调
-                            Client client = payload instanceof Client ? (Client) payload : event.getNode().getClient();
-                            //删除Callback
-                            List<CallbackInvoker> callbacks = callbackManager.getConsumer().removeCallback(client);
-                            if (!Shutdown.isShutdown() && cluster.isOpened()) {
-                                //没有关机和集群没有销毁则重新callback
-                                callbacks.forEach(invoker -> invoker.getCallback().recallback());
-                            }
-
-                    }
-                });
-            }
-            serializationRegister(config.getProxyClass(), callbackManager);
+            serializationRegister(config.getProxyClass());
             //refer的名称和key保持一致，便于删除
             return new Refer(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler,
-                    cluster, loadBalance, container, this.publisher,
+                    cluster, loadBalance, callbackManager.getConsumer(), this.publisher,
                     InvokerManager::getFirstExporter,
                     (v, t) -> refers.remove(v.getName()));
         });
@@ -532,10 +511,9 @@ public class InvokerManager {
     /**
      * 注册序列化
      *
-     * @param clazz
-     * @param callbackManager
+     * @param clazz 类
      */
-    protected void serializationRegister(final Class clazz, final CallbackManager callbackManager) {
+    protected void serializationRegister(final Class<?> clazz) {
 
         List<Registration> registrations = new LinkedList<>();
         Iterable<Serialization> itr = SERIALIZATION.extensions();
@@ -588,9 +566,9 @@ public class InvokerManager {
         }
         return exports.computeIfAbsent(name, o -> new ConcurrentHashMap<>()).computeIfAbsent(url.getPort(),
                 o -> {
-                    callbackManager.register(config.getProxyClass());
-                    serializationRegister(config.getProxyClass(), callbackManager);
-                    return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler, getServer(url), publisher,
+                    serializationRegister(config.getProxyClass());
+                    return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl,
+                            configHandler, getServer(url), callbackManager.getProducer(), publisher,
                             c -> {
                                 Map<Integer, Exporter> map = exports.get(c.getName());
                                 if (map != null) {

@@ -25,6 +25,7 @@ import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
+import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
 
@@ -94,6 +95,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 getCachePolicy(parametric),
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
+                getCallback(parametric.getName()),
                 methodBlackWhiteList,
                 ipPermissions,
                 limiters);
@@ -117,11 +119,12 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         protected Supplier<ClassLimiter> limiter;
 
         public InnerProviderMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
-                                         final CachePolicy cachePolicy, final Validator validator, final String token,
+                                         final CachePolicy cachePolicy, final Validator validator,
+                                         final String token, final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter) {
-            super(implicits, timeout, concurrency, cachePolicy, validator, token);
+            super(implicits, timeout, concurrency, cachePolicy, validator, token, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;

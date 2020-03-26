@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -49,7 +49,7 @@ public class CallbackReqHandler implements MessageHandler {
     @Override
     public void handle(final ChannelContext context, final Message message) throws HandlerException {
         // handle the callback Request
-        RequestMessage request = (RequestMessage) message;
+        RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
         String callbackInsId = (String) request.getHeader().getAttribute(HeadKey.callbackInsId);
         Invoker invoker = InvokerManager.getConsumerCallback().getInvoker(callbackInsId);
         if (invoker == null) {
@@ -89,12 +89,12 @@ public class CallbackReqHandler implements MessageHandler {
     /**
      * 发送应答消息
      *
-     * @param channel
-     * @param header
-     * @param payload
+     * @param channel 通道
+     * @param header  头部
+     * @param payload 包体
      */
     protected void sendResponse(final Channel channel, final Header header, final Object payload) {
-        ResponseMessage response = new ResponseMessage((MessageHeader) header.clone(), MsgType.CallbackResp.getType());
+        ResponseMessage<Object> response = new ResponseMessage<>((MessageHeader) header.clone(), MsgType.CallbackResp.getType());
         //write the callback response to the serverside
         response.setPayLoad(payload);
 

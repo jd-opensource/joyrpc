@@ -34,6 +34,7 @@ import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.cluster.distribution.Route;
 import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveScorer;
+import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
@@ -57,6 +58,7 @@ import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -221,6 +223,22 @@ public class Refer extends AbstractInvoker {
         //方法选项
         this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure,
                 loadBalance instanceof AdaptiveScorer ? (method, cfg) -> ((AdaptiveScorer) loadBalance).score(cluster, method, cfg) : null);
+        //有回调函数
+        if (options.isCallback()) {
+            cluster.addHandler(event -> {
+                if (event.getType() == NodeEvent.EventType.DISCONNECT) {
+                    Object payload = event.getPayload();
+                    //删除Transport上的回调
+                    Client client = payload instanceof Client ? (Client) payload : event.getNode().getClient();
+                    //删除Callback
+                    List<CallbackInvoker> callbacks = container.removeCallback(client);
+                    if (!Shutdown.isShutdown() && cluster.isOpened()) {
+                        //没有关机和集群没有销毁则重新callback
+                        callbacks.forEach(invoker -> invoker.getCallback().recallback());
+                    }
+                }
+            });
+        }
 
         this.cluster.addHandler(config);
         //处理链
@@ -247,7 +265,7 @@ public class Refer extends AbstractInvoker {
      * @param node    当前节点
      * @param last    前一个节点
      * @param request 请求
-     * @return
+     * @return CompletableFuture
      */
     protected CompletableFuture<Result> invokeRemote(final Node node, final Node last, final RequestMessage<Invocation> request) {
         Client client = node.getClient();
@@ -269,7 +287,7 @@ public class Refer extends AbstractInvoker {
             injection.inject(request, node);
         }
         //绑定回调，调用异常会删除注册的callback，避免造成垃圾数据
-        if (container != null) {
+        if (request.getOption().getCallback() != null) {
             container.addCallback(request, client);
         }
         //异步发起调用
@@ -296,12 +314,13 @@ public class Refer extends AbstractInvoker {
     /**
      * 出了异常
      *
-     * @param request
-     * @param result
-     * @param client
+     * @param request 请求
+     * @param result  结果
+     * @param client  客户端
      */
     protected void onException(final RequestMessage<Invocation> request, final Result result, final Client client) {
-        if (container != null) {
+        CallbackMethod callback = request.getOption().getCallback();
+        if (callback != null) {
             //失败注销callback
             MessageHeader header = request.getHeader();
             container.removeCallback((String) header.getAttribute(HeadKey.callbackInsId));
@@ -318,7 +337,7 @@ public class Refer extends AbstractInvoker {
      * @param request  请求
      * @param response 应答
      * @param protocol 协议
-     * @return
+     * @return 结果
      */
     protected Result buildResult(final RequestMessage<Invocation> request, final Message response,
                                  final ClientProtocol protocol) {

@@ -92,6 +92,10 @@ public class Exporter extends AbstractInvoker {
      */
     protected Server server;
     /**
+     * 回调容器
+     */
+    protected CallbackContainer container;
+    /**
      * 端口
      */
     protected int port;
@@ -148,6 +152,7 @@ public class Exporter extends AbstractInvoker {
      * @param subscribeUrl  订阅配置的URL
      * @param configHandler 配置监听器
      * @param server        服务
+     * @param container     回调容器
      * @param publisher     事件总线
      * @param closing       关闭消费者
      */
@@ -160,6 +165,7 @@ public class Exporter extends AbstractInvoker {
                        final URL subscribeUrl,
                        final ConfigHandler configHandler,
                        final Server server,
+                       final CallbackContainer container,
                        final Publisher<ExporterEvent> publisher,
                        final Consumer<Exporter> closing) {
         this.name = name;
@@ -171,6 +177,7 @@ public class Exporter extends AbstractInvoker {
         this.subscribeUrl = subscribeUrl;
         this.configHandler = configHandler;
         this.server = server;
+        this.container = container;
         this.closing = closing;
 
         //别名
@@ -314,6 +321,10 @@ public class Exporter extends AbstractInvoker {
         context.setProvider(true);
         //方法透传参数，整合了接口级别的参数
         context.setAttachments(option.getImplicits());
+        //处理回调
+        if (option.getCallback() != null) {
+            container.addCallback(request, request.getTransport());
+        }
 
         //执行调用链
         return chain.invoke(request);

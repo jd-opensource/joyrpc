@@ -37,7 +37,6 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.Session.RpcSession;
-import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,8 +113,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                 }
             }
 
-            ChannelTransport transport = channel.getAttribute(Channel.CHANNEL_TRANSPORT);
-            InvokerManager.getProducerCallback().addCallback(request, transport);
             //执行调用，包括过滤器链
             CompletableFuture<Result> future = exporter.invoke(request);
 
@@ -217,6 +214,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         }
         request.setLocalAddress(channel.getLocalAddress());
         request.setRemoteAddress(channel.getRemoteAddress());
+        request.setTransport(channel.getAttribute(Channel.CHANNEL_TRANSPORT));
         //恢复上下文
         transmits.forEach(o -> o.restoreOnReceive(request, session));
     }

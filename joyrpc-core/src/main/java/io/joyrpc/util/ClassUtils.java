@@ -881,8 +881,7 @@ public class ClassUtils {
      * @return 判断返回值是否是CompletableFuture
      */
     public static boolean isReturnFuture(final Class<?> clazz, final Method method) {
-        //TODO 进行泛型判断
-        return CompletableFuture.class.isAssignableFrom(method.getReturnType());
+        return CompletableFuture.class == method.getReturnType();
     }
 
     protected static String canonicalNameToJvmName(String name) {

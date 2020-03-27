@@ -28,6 +28,7 @@ import io.joyrpc.util.Maps;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.constants.Constants.*;
@@ -112,19 +113,19 @@ public class DefaultSession implements RpcSession {
     /**
      * 远端应用ID
      */
-    protected String remoteAppId;
+    protected Optional<String> remoteAppId;
     /**
      * 远端应用名称
      */
-    protected String remoteAppName;
+    protected Optional<String> remoteAppName;
     /**
      * 远端应用实例
      */
-    protected String remoteAppIns;
+    protected Optional<String> remoteAppIns;
     /**
      * 远端应用分组
      */
-    protected String remoteAppGroup;
+    protected Optional<String> remoteAppGroup;
 
     /**
      * 会话属性集
@@ -297,33 +298,33 @@ public class DefaultSession implements RpcSession {
     @Override
     public String getRemoteAppId() {
         if (remoteAppId == null) {
-            remoteAppId = Maps.get(attrs, APPLICATION_ID, KEY_APPID);
+            remoteAppId = Optional.ofNullable(Maps.get(attrs, APPLICATION_ID, KEY_APPID));
         }
-        return remoteAppId;
+        return remoteAppId.orElse(null);
     }
 
     @Override
     public String getRemoteAppName() {
         if (remoteAppName == null) {
-            remoteAppName = Maps.get(attrs, APPLICATION_NAME, KEY_APPNAME);
+            remoteAppName = Optional.ofNullable(Maps.get(attrs, APPLICATION_NAME, KEY_APPNAME));
         }
-        return remoteAppName;
+        return remoteAppName.orElse(null);
     }
 
     @Override
     public String getRemoteAppIns() {
         if (remoteAppIns == null) {
-            remoteAppIns = Maps.get(attrs, APPLICATION_INSTANCE, KEY_APPINSID);
+            remoteAppIns = Optional.ofNullable(Maps.get(attrs, APPLICATION_INSTANCE, KEY_APPINSID));
         }
-        return remoteAppIns;
+        return remoteAppIns.orElse(null);
     }
 
     @Override
     public String getRemoteAppGroup() {
         if (remoteAppGroup == null) {
-            remoteAppGroup = Maps.get(attrs, APPLICATION_GROUP, KEY_APPGROUP);
+            remoteAppGroup = Optional.ofNullable(Maps.get(attrs, APPLICATION_GROUP, KEY_APPGROUP));
         }
-        return remoteAppGroup;
+        return remoteAppGroup.orElse(null);
     }
 
     @Override

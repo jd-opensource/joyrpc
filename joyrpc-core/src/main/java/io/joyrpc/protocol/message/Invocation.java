@@ -117,9 +117,9 @@ public class Invocation implements Call {
     /**
      * 构造函数
      *
-     * @param className
-     * @param alias
-     * @param methodName
+     * @param className  接口名称
+     * @param alias      别名
+     * @param methodName 方法名称
      */
     public Invocation(String className, String alias, String methodName) {
         this(className, alias, methodName, null);
@@ -128,10 +128,10 @@ public class Invocation implements Call {
     /**
      * 构造函数
      *
-     * @param className
-     * @param alias
-     * @param methodName
-     * @param argClasses
+     * @param className  接口名称
+     * @param alias      别名
+     * @param methodName 方法名称
+     * @param argClasses 参数类型
      */
     public Invocation(String className, String alias, String methodName, Class[] argClasses) {
         this.className = className;
@@ -146,42 +146,57 @@ public class Invocation implements Call {
     /**
      * 构造函数
      *
-     * @param iface
-     * @param method
-     * @param args
+     * @param iface  接口
+     * @param method 方法
+     * @param args   参数
      */
     public Invocation(final Class iface, final Method method, final Object[] args) {
-        this(iface, null, method, args, method.getParameterTypes());
+        this(iface, null, method, args, method.getParameterTypes(), null);
     }
 
     /**
      * 构造函数
      *
-     * @param iface
-     * @param alias
-     * @param method
-     * @param args
+     * @param iface  接口
+     * @param alias  别名
+     * @param method 方法
+     * @param args   参数
      */
     public Invocation(final Class iface, final String alias, final Method method, final Object[] args) {
-        this(iface, alias, method, args, method.getParameterTypes());
+        this(iface, alias, method, args, method.getParameterTypes(), null);
     }
 
     /**
      * 构造函数
      *
-     * @param iface
-     * @param alias
-     * @param method
-     * @param args
-     * @param argTypes
+     * @param iface    接口
+     * @param alias    别名
+     * @param method   方法
+     * @param args     参数
+     * @param argTypes 类型
      */
     public Invocation(final Class iface, final String alias, final Method method, final Object[] args, final Class[] argTypes) {
+        this(iface, alias, method, args, argTypes, null);
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param iface    接口
+     * @param alias    别名
+     * @param method   方法
+     * @param args     参数
+     * @param argTypes 类型
+     * @param generic  泛化
+     */
+    public Invocation(final Class iface, final String alias, final Method method, final Object[] args, final Class[] argTypes, final Boolean generic) {
         this.clazz = iface;
         this.className = iface.getName();
         this.alias = alias;
         this.method = method;
         this.methodName = method.getName();
         this.args = args == null ? new Object[0] : args;
+        this.generic = generic;
         setArgsType(argTypes);
     }
 

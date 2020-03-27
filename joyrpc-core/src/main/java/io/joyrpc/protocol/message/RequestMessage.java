@@ -107,6 +107,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * 重试次数
      */
     protected transient int retryTimes;
+    /**
+     * 实际的方法名称，对泛化进行处理
+     */
+    protected transient String methodName;
 
     /**
      * 构造函数
@@ -339,6 +343,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setRetryTimes(int retryTimes) {
         this.retryTimes = retryTimes;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
     }
 
     /**

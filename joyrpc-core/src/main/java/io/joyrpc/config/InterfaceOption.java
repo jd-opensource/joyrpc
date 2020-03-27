@@ -114,6 +114,13 @@ public interface InterfaceOption {
          */
         CallbackMethod getCallback();
 
+        /**
+         * 是否异步调用
+         *
+         * @return 异步调用标识
+         */
+        boolean isAsync();
+
     }
 
     /**

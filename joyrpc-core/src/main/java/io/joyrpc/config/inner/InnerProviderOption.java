@@ -30,12 +30,14 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
 
 import javax.validation.Validator;
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.function.Supplier;
 
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
 import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
+import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
 /**
  * 服务提供者接口选项
@@ -88,6 +90,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
+        Method method = getMethod(parametric.getName());
         return new InnerProviderMethodOption(
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
@@ -95,7 +98,8 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 getCachePolicy(parametric),
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
-                getCallback(parametric.getName()),
+                method != null && isReturnFuture(interfaceClass, method),
+                getCallback(method),
                 methodBlackWhiteList,
                 ipPermissions,
                 limiters);
@@ -120,11 +124,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
 
         public InnerProviderMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final CallbackMethod callback,
+                                         final String token, final boolean async, final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter) {
-            super(implicits, timeout, concurrency, cachePolicy, validator, token, callback);
+            super(implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;
@@ -135,12 +139,10 @@ public class InnerProviderOption extends AbstractInterfaceOption {
             return implicits;
         }
 
-
         @Override
         public BlackWhiteList<String> getMethodBlackWhiteList() {
             return methodBlackWhiteList;
         }
-
 
         @Override
         public IPPermission getIPPermission() {
@@ -151,7 +153,6 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         public ClassLimiter getLimiter() {
             return limiter.get();
         }
-
     }
 
 }

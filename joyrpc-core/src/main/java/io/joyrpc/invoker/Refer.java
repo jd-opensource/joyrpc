@@ -398,7 +398,8 @@ public class Refer extends AbstractInvoker {
         invocation.setAlias(alias);
         invocation.setObject(config.getStub());
 
-        ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(invocation.getMethodName());
+        //实际的方法名称，泛型调用进行了处理
+        ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(request.getMethodName());
         option.setAutoScore(true);
         request.setOption(option);
         //避免分组重试重复调用

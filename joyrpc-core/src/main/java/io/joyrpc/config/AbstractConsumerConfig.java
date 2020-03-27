@@ -926,7 +926,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             //上下文的异步必须设置成completeFuture
             context.setAsync(isReturnFuture);
             //构造请求消息
-            RequestMessage<Invocation> request = RequestMessage.build(new Invocation(iface, method, param));
+            Invocation invocation = new Invocation(iface, null, method, param, method.getParameterTypes(), generic);
+            RequestMessage<Invocation> request = RequestMessage.build(invocation);
             //分组Failover调用，需要在这里设置创建时间和超时时间，不能再Refer里面。否则会重置。
             request.setCreateTime(SystemClock.now());
             //超时时间为0，Refer会自动修正，便于分组重试
@@ -935,6 +936,16 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             request.setThread(Thread.currentThread());
             //当前线程上下文
             request.setContext(context);
+            //实际的方法名称
+            if (generic) {
+                request.setMethodName(param[0] == null ? null : param[0].toString());
+                if (request.getMethodName() == null || request.getMethodName().isEmpty()) {
+                    //泛化调用没有传递方法名称
+                    throw new IllegalArgumentException(String.format("the method argument of GenericService.%s can not be empty.", method.getName()));
+                }
+            } else {
+                request.setMethodName(method.getName());
+            }
             Object response = doInvoke(invoker, request, isAsync);
             if (isAsync) {
                 if (isReturnFuture) {

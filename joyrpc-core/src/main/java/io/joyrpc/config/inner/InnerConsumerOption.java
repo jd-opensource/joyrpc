@@ -47,6 +47,7 @@ import javax.validation.Validator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -61,6 +62,7 @@ import static io.joyrpc.constants.ExceptionCode.CONSUMER_FAILOVER_CLASS;
 import static io.joyrpc.context.adaptive.AdaptiveConfiguration.ADAPTIVE;
 import static io.joyrpc.context.mock.MockConfiguration.MOCK;
 import static io.joyrpc.util.ClassUtils.forName;
+import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
 import static io.joyrpc.util.Timer.timer;
@@ -219,6 +221,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
+        Method method = getMethod(parametric.getName());
         return new InnerConsumerMethodOption(
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
@@ -226,7 +229,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 getCachePolicy(parametric),
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
-                getCallback(parametric.getName()),
+                method != null && isReturnFuture(interfaceClass, method),
+                getCallback(method),
                 parametric.getInteger(FORKS_OPTION.getName(), forks),
                 getRoute(parametric),
                 new DefaultFailoverPolicy(
@@ -370,11 +374,11 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
         public InnerConsumerMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final CallbackMethod callback,
+                                         final String token, final boolean async, final CallbackMethod callback,
                                          final int forks, final Route route, final FailoverPolicy failoverPolicy,
                                          final AdaptiveConfig urlConfig,
                                          final List<Judge> judges) {
-            super(implicits, timeout, concurrency, cachePolicy, validator, token, callback);
+            super(implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
             this.forks = forks;
             this.route = route;
             this.failoverPolicy = failoverPolicy;

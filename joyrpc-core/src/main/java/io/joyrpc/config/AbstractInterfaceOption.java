@@ -257,33 +257,45 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param methodName 方法名称
      * @return 回调方法对象
      */
-    protected CallbackMethod getCallback(final String methodName) {
+    protected Method getMethod(final String methodName) {
         if (generic) {
+            return null;
+        }
+        try {
+            return ClassUtils.getPublicMethod(interfaceClass, methodName);
+        } catch (NoSuchMethodException | MethodOverloadException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 获取回调方法
+     *
+     * @param method 方法
+     * @return 回调方法对象
+     */
+    protected CallbackMethod getCallback(final Method method) {
+        if (method == null) {
             return null;
         }
         Parameter result = null;
         int index = 0;
-        try {
-            Method method = ClassUtils.getPublicMethod(interfaceClass, methodName);
-            Parameter[] parameters = method.getParameters();
-            for (int i = 0; i < parameters.length; i++) {
-                if (Callback.class.isAssignableFrom((parameters[i].getType()))) {
-                    if (result != null) {
-                        throw new InitializationException("Illegal callback parameter at methodName " + methodName
-                                + ",just allow one callback parameter", ExceptionCode.COMMON_CALL_BACK_ERROR);
-                    }
-                    result = parameters[i];
-                    index = i;
+        Parameter[] parameters = method.getParameters();
+        for (int i = 0; i < parameters.length; i++) {
+            if (Callback.class.isAssignableFrom((parameters[i].getType()))) {
+                if (result != null) {
+                    throw new InitializationException("Illegal callback parameter at methodName " + method.getName()
+                            + ",just allow one callback parameter", ExceptionCode.COMMON_CALL_BACK_ERROR);
                 }
+                result = parameters[i];
+                index = i;
             }
-            if (result == null) {
-                return null;
-            }
-            callback = true;
-            return new CallbackMethod(method, index, result);
-        } catch (NoSuchMethodException | MethodOverloadException e) {
+        }
+        if (result == null) {
             return null;
         }
+        callback = true;
+        return new CallbackMethod(method, index, result);
     }
 
     /**
@@ -384,6 +396,12 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 令牌
          */
         protected String token;
+
+        /**
+         * 是否异步调用
+         */
+        protected boolean async;
+
         /**
          * 回调方法
          */
@@ -398,6 +416,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * @param cachePolicy 缓存策略
          * @param validator   方法参数验证器
          * @param token       令牌
+         * @param async       判断方法是否是异步调用
          * @param callback    回调方法
          */
         public InnerMethodOption(final Map<String, ?> implicits, int timeout,
@@ -405,6 +424,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final CachePolicy cachePolicy,
                                  final Validator validator,
                                  final String token,
+                                 final boolean async,
                                  final CallbackMethod callback) {
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
@@ -412,6 +432,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.cachePolicy = cachePolicy;
             this.validator = validator;
             this.token = token;
+            this.async = async;
             this.callback = callback;
         }
 
@@ -443,6 +464,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public String getToken() {
             return token;
+        }
+
+        @Override
+        public boolean isAsync() {
+            return async;
         }
 
         @Override

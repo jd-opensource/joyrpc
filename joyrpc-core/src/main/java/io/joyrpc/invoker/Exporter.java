@@ -59,7 +59,6 @@ import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
-import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
 /**
  * @date: 15/1/2019
@@ -307,17 +306,19 @@ public class Exporter extends AbstractInvoker {
     @Override
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
+        //设置调用的对象，便于Validate
+        invocation.setObject(ref);
+
         MethodOption option = options.getOption(invocation.getMethodName());
         //注入身份认证信息和鉴权
         request.setAuthentication(authentication);
         request.setIdentification(identification);
         request.setAuthorization(authorization);
         request.setOption(option);
-        //设置调用的对象，便于Validate
-        invocation.setObject(ref);
+
         //设置透传标识
         RequestContext context = request.getContext();
-        context.setAsync(isReturnFuture(invocation.getClazz(), invocation.getMethod()));
+        context.setAsync(option.isAsync());
         context.setProvider(true);
         //方法透传参数，整合了接口级别的参数
         context.setAttachments(option.getImplicits());

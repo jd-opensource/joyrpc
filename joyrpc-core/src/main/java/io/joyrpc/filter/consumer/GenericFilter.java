@@ -9,9 +9,9 @@ package io.joyrpc.filter.consumer;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,13 +43,10 @@ public class GenericFilter extends AbstractConsumerFilter {
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
 
         Invocation invocation = request.getPayLoad();
-
         // generic 调用 consumer不处理，服务端做转换
         if (invocation.isGeneric()) {
-            Object[] args = invocation.getArgs();
-            String name = args[0].toString();
             //真实的方法名
-            invocation.setMethodName(name);
+            invocation.setMethodName(request.getMethodName());
             //设置泛化标示
             invocation.addAttachment(Constants.GENERIC_OPTION.getName(), true);
         }

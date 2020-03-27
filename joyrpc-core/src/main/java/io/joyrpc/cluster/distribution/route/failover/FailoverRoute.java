@@ -108,53 +108,58 @@ public class FailoverRoute extends AbstractRoute {
                          final List<Node> origins,
                          final CompletableFuture<Result> future) {
         //负载均衡选择节点
-        final Node node = loadBalance.select(candidate, request);
-        if (retry > 0) {
-            //便于向服务端注入重试次数
-            request.setRetryTimes(retry);
-        }
-        //调用，如果节点不存在，则抛出Failover异常。
-        CompletableFuture<Result> result = node != null ? operation.apply(node, last, request) :
-                Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
-        result.whenComplete((r, t) -> {
-            ExceptionPolicy exceptionPolicy = policy.getExceptionPolicy();
-            t = t == null && exceptionPolicy != null ? exceptionPolicy.getThrowable(r) : t;
-            if (t == null) {
-                future.complete(r);
-            } else {
-                TimeoutPolicy timeoutPolicy = policy.getTimeoutPolicy();
-                if (timeoutPolicy != null && timeoutPolicy.test(request)) {
-                    //请求超时了
-                    future.completeExceptionally(t);
-                } else if ((!(t instanceof LafException) || !((LafException) t).isRetry())
-                        && (exceptionPolicy == null || !exceptionPolicy.test(t))) {
-                    //不需要重试的异常
-                    future.completeExceptionally(t);
-                } else if (retry >= policy.getMaxRetry()) {
-                    //超过重试次数
-                    future.completeExceptionally(createOverloadException(policy.getMaxRetry()));
+        try {
+            final Node node = loadBalance.select(candidate, request);
+            if (retry > 0) {
+                //便于向服务端注入重试次数
+                request.setRetryTimes(retry);
+            }
+            //调用，如果节点不存在，则抛出Failover异常。
+            CompletableFuture<Result> result = node != null ? operation.apply(node, last, request) :
+                    Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
+            result.whenComplete((r, t) -> {
+                ExceptionPolicy exceptionPolicy = policy.getExceptionPolicy();
+                t = t == null && exceptionPolicy != null ? exceptionPolicy.getThrowable(r) : t;
+                if (t == null) {
+                    future.complete(r);
                 } else {
-                    //删除失败的节点进行重试
-                    List<Node> shards = candidate.getNodes();
-                    int size = shards.size();
-                    if (size == 1 && policy.isOnlyOncePerNode()) {
-                        //每个节点只重试一次
-                        Futures.completeExceptionally(future, createEmptyException(retry, origins.size(), false));
+                    TimeoutPolicy timeoutPolicy = policy.getTimeoutPolicy();
+                    if (timeoutPolicy != null && timeoutPolicy.test(request)) {
+                        //请求超时了
+                        future.completeExceptionally(t);
+                    } else if ((!(t instanceof LafException) || !((LafException) t).isRetry())
+                            && (exceptionPolicy == null || !exceptionPolicy.test(t))) {
+                        //不需要重试的异常
+                        future.completeExceptionally(t);
+                    } else if (retry >= policy.getMaxRetry()) {
+                        //超过重试次数
+                        future.completeExceptionally(createOverloadException(policy.getMaxRetry()));
                     } else {
-                        FailoverSelector selector = policy.getRetrySelector();
-                        if (selector == null) {
-                            selector = SimpleFailoverSelector.INSTANCE;
+                        //删除失败的节点进行重试
+                        List<Node> shards = candidate.getNodes();
+                        int size = shards.size();
+                        if (size == 1 && policy.isOnlyOncePerNode()) {
+                            //每个节点只重试一次
+                            Futures.completeExceptionally(future, createEmptyException(retry, origins.size(), false));
+                        } else {
+                            FailoverSelector selector = policy.getRetrySelector();
+                            if (selector == null) {
+                                selector = SimpleFailoverSelector.INSTANCE;
+                            }
+                            if (timeoutPolicy != null) {
+                                //设置新的超时时间
+                                timeoutPolicy.reset(request);
+                            }
+                            retry(request, node, selector.select(candidate, node, retry, null, origins),
+                                    retry + 1, policy, origins, future);
                         }
-                        if (timeoutPolicy != null) {
-                            //设置新的超时时间
-                            timeoutPolicy.reset(request);
-                        }
-                        retry(request, node, selector.select(candidate, node, retry, null, origins),
-                                retry + 1, policy, origins, future);
                     }
                 }
-            }
-        });
+            });
+        } catch (Throwable e) {
+            //系统运行时异常不重试了
+            future.completeExceptionally(e);
+        }
     }
 
 }

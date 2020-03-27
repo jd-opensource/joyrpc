@@ -76,7 +76,12 @@ public class ClassUtils {
     /**
      * 类的元数据
      */
-    protected final static Map<Class<?>, ClassMeta> classMetas = new ConcurrentHashMap<>();
+    protected final static Map<Class<?>, ClassMeta> classMetas = new ConcurrentHashMap<>(5000);
+
+    /**
+     * 类的元数据
+     */
+    protected final static Map<String, ClassMeta> nameMetas = new ConcurrentHashMap<>(5000);
 
     static {
         //这些类型不能用类加载器加载
@@ -195,6 +200,31 @@ public class ClassUtils {
             return null;
         }
         return getPublicMethod(forName(className), methodName);
+    }
+
+    /**
+     * 获取公共方法，过滤掉了Object类型的方法
+     *
+     * @param className  类
+     * @param methodName 方法名
+     * @return Method对象
+     * @throws ClassNotFoundException  类找不到
+     * @throws NoSuchMethodException   如果找不到匹配的方法
+     * @throws MethodOverloadException 有方法重载异常
+     */
+    public static Pair<Class<?>, Method> getClassMethod(final String className, final String methodName) throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
+        if (className == null || methodName == null) {
+            return null;
+        }
+        ClassMeta meta = nameMetas.get(className);
+        if (meta == null) {
+            Class<?> clazz = forName(className);
+            meta = getClassMeta(clazz);
+            if (meta != null) {
+                nameMetas.putIfAbsent(className, meta);
+            }
+        }
+        return meta == null ? null : new Pair<>(meta.getType(), meta.getMethod(methodName));
     }
 
     /**
@@ -1157,6 +1187,10 @@ public class ClassUtils {
                 return new ReflectAccessor(field, getter, setter);
 
             });
+        }
+
+        public Class<?> getType() {
+            return type;
         }
 
         /**

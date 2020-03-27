@@ -37,18 +37,19 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.Session.RpcSession;
+import io.joyrpc.util.Pair;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.RESPONSE_INJECTION;
 import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_TASK_SESSION_EXPIRED;
-import static io.joyrpc.util.ClassUtils.forName;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
+import static io.joyrpc.util.ClassUtils.getClassMethod;
 import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**
@@ -194,7 +195,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                 invocation.setAlias(session.getAlias());
             }
         }
-        //类名，如果不存在则从会话里面获取
         String className = invocation.getClassName();
         if (isEmpty(className)) {
             //session 为空，类名也为空，可能是session超时并被清理
@@ -203,15 +203,10 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         }
         //检查接口ID，兼容老版本
         checkInterfaceId(invocation, className);
-        //处理调用类
-        if (invocation.getClazz() == null) {
-            invocation.setClazz(forName(invocation.getClassName()));
-        }
-        //处理调用方法
-        if (invocation.getMethod() == null) {
-            //TODO 耗CPU
-            invocation.setMethod(getPublicMethod(invocation.getClazz(), invocation.getMethodName()));
-        }
+        //类名，如果不存在则从会话里面获取
+        Pair<Class<?>, Method> pair = getClassMethod(invocation.getClassName(), invocation.getMethodName());
+        invocation.setClazz(pair.getKey());
+        invocation.setMethod(pair.getValue());
         request.setLocalAddress(channel.getLocalAddress());
         request.setRemoteAddress(channel.getRemoteAddress());
         request.setTransport(channel.getAttribute(Channel.CHANNEL_TRANSPORT));

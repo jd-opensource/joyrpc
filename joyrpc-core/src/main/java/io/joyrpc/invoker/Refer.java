@@ -58,6 +58,7 @@ import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
@@ -271,44 +272,49 @@ public class Refer extends AbstractInvoker {
         Client client = node.getClient();
         if (client == null) {
             //选择完后，节点可能被其它线程断开连接了
-            throw new TransportException("Error occurs while sending message. caused by client is null.", true);
+            return Futures.completeExceptionally(new TransportException("Error occurs while sending message. caused by client is null.", true));
         }
-        Session session = client.session();
-        //header 使用协商结果
-        MessageHeader header = request.getHeader();
-        header.copy(session);
-        //条件透传注入
-        for (NodeReqInjection injection : injections) {
-            if (last != null) {
-                //取消上一个节点注入的参数
-                injection.reject(request, last);
+        //捕获内部异常，可能在重试线程里面调用，用户线程异常捕获不了异常
+        try {
+            Session session = client.session();
+            //header 使用协商结果
+            MessageHeader header = request.getHeader();
+            header.copy(session);
+            //条件透传注入
+            for (NodeReqInjection injection : injections) {
+                if (last != null) {
+                    //取消上一个节点注入的参数
+                    injection.reject(request, last);
+                }
+                //注入当前节点参数
+                injection.inject(request, node);
             }
-            //注入当前节点参数
-            injection.inject(request, node);
-        }
-        //绑定回调，调用异常会删除注册的callback，避免造成垃圾数据
-        if (request.getOption().getCallback() != null) {
-            container.addCallback(request, client);
-        }
-        //异步发起调用
-        CompletableFuture<Message> msgFuture = client.async(request, header.getTimeout());
+            //绑定回调，调用异常会删除注册的callback，避免造成垃圾数据
+            if (request.getOption().getCallback() != null) {
+                container.addCallback(request, client);
+            }
+            //异步发起调用
+            CompletableFuture<Message> msgFuture = client.async(request, header.getTimeout());
 
-        //返回future
-        return msgFuture.handle((msg, err) -> {
-            Result result;
-            //线程恢复统一改在consumerInvokerHandler里面
-            if (err != null) {
-                result = new Result(request.getContext(), err, msg);
-            } else {
-                result = buildResult(request, msg, client.getProtocol());
-            }
-            if (result.isException()) {
-                //异常处理
-                onException(request, result, client);
-            }
+            //返回future
+            return msgFuture.handle((msg, err) -> {
+                Result result;
+                //线程恢复统一改在consumerInvokerHandler里面
+                if (err != null) {
+                    result = new Result(request.getContext(), err, msg);
+                } else {
+                    result = buildResult(request, msg, client.getProtocol());
+                }
+                if (result.isException()) {
+                    //异常处理
+                    onException(request, result, client);
+                }
 
-            return result;
-        });
+                return result;
+            });
+        } catch (Throwable e) {
+            return Futures.completeExceptionally(e);
+        }
     }
 
     /**

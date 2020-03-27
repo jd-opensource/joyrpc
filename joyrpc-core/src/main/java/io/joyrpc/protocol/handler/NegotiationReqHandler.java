@@ -21,9 +21,10 @@ package io.joyrpc.protocol.handler;
  */
 
 import io.joyrpc.constants.Version;
-import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Converts;
+import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ProviderSession;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
@@ -31,8 +32,6 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.AbstractNegotiation;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.session.DefaultSession;
-import io.joyrpc.transport.session.Session;
 
 import java.util.Map;
 
@@ -78,7 +77,7 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
     protected void session(final ChannelContext context, final int sessionId, final AbstractNegotiation negotiation) {
         Map<String, String> attributes = negotiation.getAttributes();
         long timeout = Converts.getLong(attributes.remove(SESSION_TIMEOUT_OPTION.getName()), SESSION_TIMEOUT_OPTION.getValue());
-        Session session = new DefaultSession(sessionId, timeout);
+        ProviderSession session = new ProviderSession(sessionId, timeout);
         session.setSerialization(SERIALIZATION.get(negotiation.getSerialization()));
         session.setCompression(COMPRESSION.get(negotiation.getCompression()));
         session.setChecksum(CHECKSUM.get(negotiation.getChecksum()));
@@ -86,6 +85,9 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
         session.setCompressions(negotiation.getCompressions());
         session.setChecksums(negotiation.getChecksums());
         session.putAll(attributes);
+        //提前绑定Exporter
+        session.setExporter(InvokerManager.getExporter(session.getInterfaceName(), session.getAlias(),
+                context.getChannel().getLocalAddress().getPort()));
         context.getChannel().addSession(sessionId, session);
     }
 

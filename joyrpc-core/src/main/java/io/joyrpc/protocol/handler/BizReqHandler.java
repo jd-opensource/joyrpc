@@ -29,6 +29,7 @@ import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.*;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ProviderSession;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
@@ -100,20 +101,8 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         try {
             //从会话恢复
             restore(request, channel);
-            //根据请求参数获取输出的服务，依赖于会话恢复的信息
-            //TODO exporter可以绑定到会话上加快性能
-            exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
-            if (exporter == null) {
-                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
-                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
-            }
-            //对应服务端协议，设置认证信息
-            if (exporter.getAuthentication() != null) {
-                ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
-                if (protocol != null) {
-                    request.setAuthenticated(protocol::authenticate);
-                }
-            }
+            //依赖于恢复的信息
+            exporter = getExporter(request, channel);
 
             //执行调用，包括过滤器链
             CompletableFuture<Result> future = exporter.invoke(request);
@@ -125,12 +114,41 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             sendException(channel, new RpcException(error(invocation, channel, e.getMessage())), request, null);
         } catch (LafException e) {
             sendException(channel, e, request, exporter);
-        } catch (Exception e) {
+        } catch (Throwable e) {
             sendException(channel, new RpcException(error(invocation, channel, e.getMessage()), e), request, exporter);
         } finally {
             //清理上下文
             RequestContext.remove();
         }
+    }
+
+    /**
+     * 获取暴露的服务
+     *
+     * @param request 请求
+     * @param channel 通道
+     * @return 暴露的服务
+     */
+    protected Exporter getExporter(final RequestMessage<Invocation> request, final Channel channel) {
+        Session session = request.getSession();
+        Invocation invocation = request.getPayLoad();
+        //直接使用会话上的Exporter，加快性能
+        Exporter exporter = session instanceof ProviderSession ? ((ProviderSession) session).getExporter() : null;
+        if (exporter == null) {
+            exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
+            if (exporter == null) {
+                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
+                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
+            }
+        }
+        //对应服务端协议，设置认证信息
+        if (exporter.getAuthentication() != null) {
+            ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
+            if (protocol != null) {
+                request.setAuthenticated(protocol::authenticate);
+            }
+        }
+        return exporter;
     }
 
     /**

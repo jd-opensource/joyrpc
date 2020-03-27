@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.*;
 
@@ -420,8 +419,8 @@ public class Invocation implements Call {
     @Override
     public boolean isGeneric() {
         if (generic == null) {
-            generic = GENERIC.test(clazz)
-                    || Boolean.TRUE.equals(getAttachment(Constants.GENERIC_OPTION.getName()));
+            Object attachment = attachments == null ? null : attachments.get(GENERIC_OPTION.getName());
+            generic = attachment == null ? Boolean.FALSE : Boolean.TRUE.equals(attachment);
         }
         return generic;
     }

@@ -71,9 +71,12 @@ public class ContextTransmit implements Transmit {
 
         Invocation invocation = request.getPayLoad();
         Map<String, Object> attachments = invocation.getAttachments();
+        String remoteAppId = session == null ? null : session.getRemoteAppId();
+        String remoteAppName = session == null ? null : session.getRemoteAppName();
+        String remoteAppIns = session == null ? null : session.getRemoteAppIns();
         //获取待写入数据条数
         int attachmentSize = attachments != null && !attachments.isEmpty() ? attachments.size() : 0;
-        int sessionSize = session != null && (session.getRemoteAppId() != null || session.getRemoteAppName() != null) ? 3 : 0;
+        int sessionSize = remoteAppId != null || remoteAppName != null ? 3 : 0;
         int size = attachmentSize + sessionSize;
         if (size == 0) {
             return;
@@ -89,9 +92,9 @@ public class ContextTransmit implements Transmit {
         }
         //优先使用会话里面值，防止透传
         if (sessionSize > 0) {
-            put(callers, HIDDEN_KEY_APPID, session.getRemoteAppId());
-            put(callers, HIDDEN_KEY_APPNAME, session.getRemoteAppName());
-            put(callers, HIDDEN_KEY_APPINSID, session.getRemoteAppIns());
+            put(callers, HIDDEN_KEY_APPID, remoteAppId);
+            put(callers, HIDDEN_KEY_APPNAME, remoteAppName);
+            put(callers, HIDDEN_KEY_APPINSID, remoteAppIns);
         }
         if (!callers.isEmpty()) {
             ctx.setCallers(callers);

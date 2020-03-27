@@ -757,17 +757,6 @@ public class RequestContext {
         }
 
         /**
-         * 设置扩展属性
-         *
-         * @param key       键
-         * @param value     新值
-         * @param predicate 判断key合法性
-         */
-        public void setAttachment(final String key, final Object value, final Predicate<String> predicate) {
-            context.setAttachment(key, value, predicate);
-        }
-
-        /**
          * 创建新的上下文
          *
          * @return 新上下文

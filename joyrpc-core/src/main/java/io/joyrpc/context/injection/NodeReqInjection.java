@@ -49,8 +49,8 @@ public interface NodeReqInjection {
     /**
      * 注销
      *
-     * @param request
-     * @param node
+     * @param request 请求
+     * @param node    前一个节点
      */
     default void reject(final RequestMessage<Invocation> request, final Node node) {
 

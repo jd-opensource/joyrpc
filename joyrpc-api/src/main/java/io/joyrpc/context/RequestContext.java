@@ -63,6 +63,8 @@ public class RequestContext {
 
     public static final Predicate<String> NONE_INTERNAL_KEY = (o) -> o == null || o.charAt(0) != INTERNAL_KEY_PREFIX;
 
+    public static final Predicate<String> ALL = (o) -> true;
+
     public static final Predicate<String> INTERNAL_KEY = NONE_INTERNAL_KEY.negate();
 
     public static final Predicate<String> NONE_HIDDEN_KEY = (o) -> o == null || o.charAt(0) != HIDE_KEY_PREFIX;
@@ -755,9 +757,20 @@ public class RequestContext {
         }
 
         /**
+         * 设置扩展属性
+         *
+         * @param key       键
+         * @param value     新值
+         * @param predicate 判断key合法性
+         */
+        public void setAttachment(final String key, final Object value, final Predicate<String> predicate) {
+            context.setAttachment(key, value, predicate);
+        }
+
+        /**
          * 创建新的上下文
          *
-         * @return
+         * @return 新上下文
          */
         public RequestContext create() {
             RequestContext result = new RequestContext();

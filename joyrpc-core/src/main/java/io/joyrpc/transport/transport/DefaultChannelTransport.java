@@ -27,6 +27,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.FutureManager;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,36 +113,39 @@ public class DefaultChannelTransport implements ChannelTransport {
     public CompletableFuture<Message> async(final Message message, final int timeoutMillis) {
         CompletableFuture<Message> future;
         if (message == null) {
-            future = new CompletableFuture<>();
-            future.completeExceptionally(new NullPointerException("message can not be null."));
+            future = Futures.completeExceptionally(new NullPointerException("message can not be null."));
         } else if (!channel.isActive()) {
-            future = new CompletableFuture<>();
-            future.completeExceptionally(new ChannelSendException(String.format("Failed sending message, caused by channel is not active. at %s",
+            future = Futures.completeExceptionally(new ChannelSendException(String.format("Failed sending message, caused by channel is not active. at %s",
                     Channel.toString(channel))));
         } else {
-            int timeout = timeoutMillis <= 0 ? Constants.SEND_TIMEOUT_OPTION.get() : timeoutMillis;
-            FutureManager<Integer, Message> futureManager = channel.getFutureManager();
-            //设置id
-            message.setMsgId(futureManager.generateId());
-            message.setSessionId(transportId);
-            message.setSession(session);
-            //创建 future
-            future = futureManager.create(message.getMsgId(), timeout, session, requests);
-            requests.incrementAndGet();
-            channel.send(message, r -> {
-                if (!r.isSuccess()) {
-                    Throwable throwable = r.getThrowable() == null
-                            ? new ChannelSendException("unknown exception.")
-                            : new ChannelSendException(r.getThrowable());
-                    CompletableFuture<Message> cf = futureManager.remove(message.getMsgId());
-                    if (cf != null) {
-                        cf.completeExceptionally(throwable);
-                        logger.error("Failed sending message. caused by " + throwable.getMessage(), throwable);
+            try {
+                int timeout = timeoutMillis <= 0 ? Constants.SEND_TIMEOUT_OPTION.get() : timeoutMillis;
+                FutureManager<Integer, Message> futureManager = channel.getFutureManager();
+                //设置id
+                message.setMsgId(futureManager.generateId());
+                message.setSessionId(transportId);
+                message.setSession(session);
+                //创建 future
+                future = futureManager.create(message.getMsgId(), timeout, session, requests);
+                requests.incrementAndGet();
+                channel.send(message, r -> {
+                    if (!r.isSuccess()) {
+                        Throwable throwable = r.getThrowable() == null
+                                ? new ChannelSendException("unknown exception.")
+                                : new ChannelSendException(r.getThrowable());
+                        CompletableFuture<Message> cf = futureManager.remove(message.getMsgId());
+                        if (cf != null) {
+                            cf.completeExceptionally(throwable);
+                            logger.error("Failed sending message. caused by " + throwable.getMessage(), throwable);
+                        }
+                    } else {
+                        lastRequestTime = SystemClock.now();
                     }
-                } else {
-                    lastRequestTime = SystemClock.now();
-                }
-            });
+                });
+            } catch (Throwable e) {
+                //捕获异常
+                future = Futures.completeExceptionally(e);
+            }
         }
         return future;
     }

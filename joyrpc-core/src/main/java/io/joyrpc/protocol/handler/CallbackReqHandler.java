@@ -22,7 +22,6 @@ package io.joyrpc.protocol.handler;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.exception.RpcException;
@@ -39,6 +38,8 @@ import org.slf4j.LoggerFactory;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
+
 /**
  * @date: 2019/3/14
  */
@@ -50,7 +51,7 @@ public class CallbackReqHandler implements MessageHandler {
     public void handle(final ChannelContext context, final Message message) throws HandlerException {
         // handle the callback Request
         RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
-        String callbackInsId = (String) request.getHeader().getAttribute(HeadKey.callbackInsId);
+        String callbackInsId = (String) request.getHeader().getAttribute(HEAD_CALLBACK_INSID);
         Invoker invoker = InvokerManager.getConsumerCallback().getInvoker(callbackInsId);
         if (invoker == null) {
             logger.warn("Can't find callback invoker, invoker id: {}", callbackInsId);

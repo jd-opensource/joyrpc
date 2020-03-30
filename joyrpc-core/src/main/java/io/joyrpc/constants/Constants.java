@@ -892,4 +892,37 @@ public class Constants {
     public static final URLOption<String> SS5_PASSWORD = new URLOption<>("ss5.password", (String) null);
 
     public static final URLOption<String> REST_ROOT = new URLOption<>("restRoot", "/");
+
+    /**
+     * 请求超时时间
+     */
+    public static final Head HEAD_TIMEOUT = new Head((byte) 1, Integer.class);
+    /**
+     * 回调函数对应的实例id
+     */
+    public static final Head HEAD_CALLBACK_INSID = new Head((byte) 5, String.class);
+    /**
+     * 客户端的版本
+     */
+    public static final Head HEAD_VERSION = new Head((byte) 7, Short.class);
+    /**
+     * 请求的语言（针对跨语言 1c++ 2lua）
+     */
+    public static final Head HEAD_SRC_LANGUAGE = new Head((byte) 8, Byte.class);
+    /**
+     * 返回结果（针对跨语言 0成功 1失败）
+     */
+    public static final Head HEAD_RESPONSE_CODE = new Head((byte) 9, Byte.class);
+    /**
+     * 检查消费者调用的提供者是否正常
+     */
+    public static final Head HEAD_CHECK_PROVIDER = new Head((byte) 10, String.class);
+    /**
+     * 兼容老版本的安全认证，检查是否认证成功（1成功，则反之）
+     */
+    public static final Head HEAD_CHECK_AUTH = new Head((byte) 11, String.class);
+    /**
+     * 兼容老版本的网关请求
+     */
+    public static final Head HEAD_GENERIC = new Head((byte) 12, Byte.class);
 }

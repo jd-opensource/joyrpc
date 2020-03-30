@@ -39,7 +39,6 @@ import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.Transmit;
@@ -329,7 +328,7 @@ public class Refer extends AbstractInvoker {
         if (callback != null) {
             //失败注销callback
             MessageHeader header = request.getHeader();
-            container.removeCallback((String) header.getAttribute(HeadKey.callbackInsId));
+            container.removeCallback((String) header.getAttribute(Constants.HEAD_CALLBACK_INSID));
         }
         //处理异常
         if (exceptionHandlers != null) {

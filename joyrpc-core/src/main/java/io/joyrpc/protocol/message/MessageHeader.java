@@ -9,9 +9,9 @@ package io.joyrpc.protocol.message;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,7 @@ package io.joyrpc.protocol.message;
  */
 
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.HeadKey;
+import io.joyrpc.constants.Head;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.StringUtils;
@@ -229,7 +229,7 @@ public class MessageHeader implements Header {
     /**
      * 复制属性
      *
-     * @param session
+     * @param session 会话
      */
     public void copy(final Session session) {
         serialization = session.getSerializationType();
@@ -256,11 +256,10 @@ public class MessageHeader implements Header {
     /**
      * 添加扩展属性
      *
-     * @param key
-     * @param value
+     * @param key   键
+     * @param value 值
      */
-    //TODO 取消HeadKey
-    public void addAttribute(final HeadKey key, final Object value) {
+    public void addAttribute(final Head key, final Object value) {
         if (!key.getType().isInstance(value)) { // 检查类型
             throw new IllegalArgumentException("type mismatch of key:" + key.getKey() + ", expect:"
                     + key.getType().getName() + ", actual:" + value.getClass().getName());
@@ -271,8 +270,8 @@ public class MessageHeader implements Header {
     /**
      * 添加扩展属性
      *
-     * @param key
-     * @param value
+     * @param key   键
+     * @param value 值
      */
     public void addAttribute(final Byte key, final Object value) {
         if (key == null || value == null) {
@@ -284,10 +283,10 @@ public class MessageHeader implements Header {
     /**
      * 删除扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 原值
      */
-    public Object removeAttribute(final HeadKey key) {
+    public Object removeAttribute(final Head key) {
         if (attributes == null || key == null) {
             return null;
         }
@@ -297,8 +296,8 @@ public class MessageHeader implements Header {
     /**
      * 删除扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 原值
      */
     public Object removeAttribute(final Byte key) {
         if (attributes == null || key == null) {
@@ -310,10 +309,10 @@ public class MessageHeader implements Header {
     /**
      * 获取扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 值
      */
-    public Object getAttribute(final HeadKey key) {
+    public Object getAttribute(final Head key) {
         if (attributes == null || key == null) {
             return null;
         }
@@ -323,8 +322,8 @@ public class MessageHeader implements Header {
     /**
      * 获取扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 值
      */
     public Object getAttribute(final Byte key) {
         if (attributes == null || key == null) {
@@ -336,8 +335,8 @@ public class MessageHeader implements Header {
     /**
      * 获取扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 值
      */
     public Byte getAttribute(final Byte key, final Byte def) {
         if (attributes == null || key == null) {
@@ -356,8 +355,8 @@ public class MessageHeader implements Header {
     /**
      * 获取扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 值
      */
     public Short getAttribute(final Byte key, final Short def) {
         if (attributes == null || key == null) {
@@ -376,8 +375,8 @@ public class MessageHeader implements Header {
     /**
      * 获取扩展属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 值
      */
     public Integer getAttribute(final Byte key, final Integer def) {
         if (attributes == null || key == null) {

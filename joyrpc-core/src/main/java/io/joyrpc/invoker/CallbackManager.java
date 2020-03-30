@@ -25,7 +25,6 @@ import io.joyrpc.Plugin;
 import io.joyrpc.Result;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.MapParametric;
@@ -52,6 +51,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.PROXY;
+import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
 
 /**
  * 回调管理器
@@ -236,7 +236,7 @@ public class CallbackManager implements Closeable {
             //注入回调ID，便于外部感知，再需要的时候进行删除
             callback.setCallbackId(callbackId);
             //header设置callbackId
-            request.getHeader().addAttribute(HeadKey.callbackInsId, callbackId);
+            request.getHeader().addAttribute(HEAD_CALLBACK_INSID, callbackId);
             //callback参数置空
             args[meta.index] = null;
             add(callbackId, transport, (c, t) -> new ConsumerCallbackInvoker(callback, t));
@@ -256,7 +256,7 @@ public class CallbackManager implements Closeable {
             }
             Invocation invocation = request.getPayLoad();
             MessageHeader header = request.getHeader();
-            String callbackId = header.getAttribute(HeadKey.callbackInsId).toString();
+            String callbackId = (String) header.getAttribute(HEAD_CALLBACK_INSID);
             if (callbackId == null || callbackId.isEmpty()) {
                 throw new RuntimeException(" Server side handle RequestMessage callbackId can not be null! ");
             }
@@ -404,7 +404,7 @@ public class CallbackManager implements Closeable {
             rh.setProtocolType(header.getProtocolType());
             rh.setSerialization(header.getSerialization());
             rh.setMsgType(MsgType.CallbackReq.getType());
-            rh.addAttribute(HeadKey.callbackInsId, id);
+            rh.addAttribute(HEAD_CALLBACK_INSID, id);
 
             //为了兼容，目前只支持同步调用
             ResponseMessage<ResponsePayload> message = (ResponseMessage) transport.sync(request, 3000);

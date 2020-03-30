@@ -22,7 +22,6 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.HeadKey;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
@@ -37,6 +36,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.getCodeBase;
 import static io.joyrpc.util.ClassUtils.isJavaClass;
 
@@ -72,9 +72,9 @@ public class ExceptionFilter extends AbstractProviderFilter {
 
         // 跨语言 特殊处理。
         MessageHeader header = request.getHeader();
-        if (header.removeAttribute(HeadKey.srcLanguage) != null) {
+        if (header.removeAttribute(HEAD_SRC_LANGUAGE) != null) {
             // 标记结果为错误
-            header.addAttribute(HeadKey.responseCode, (byte) 1);
+            header.addAttribute(HEAD_RESPONSE_CODE, (byte) 1);
             // 转为字符串
             String json = JSON.get().toJSONString(result.getException());
             return new Result(request.getContext(), json);
@@ -87,7 +87,7 @@ public class ExceptionFilter extends AbstractProviderFilter {
         } else if (invocation.isGeneric()) {
             // 泛化调用调用
             return new Result(request.getContext(), new RpcException(StringUtils.toString(exception)));
-        } else if (header.getAttribute(HeadKey.generic.getKey(), (byte) 0) > 0) {
+        } else if (header.getAttribute(HEAD_GENERIC.getKey(), (byte) 0) > 0) {
             // 兼容老版本的网关调用
             return new Result(request.getContext(), new RpcException(StringUtils.toString(exception)));
         } else if (!(exception instanceof RuntimeException) && (exception instanceof Exception)) {

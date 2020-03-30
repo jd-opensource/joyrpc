@@ -9,9 +9,9 @@ package io.joyrpc.protocol;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,8 +33,10 @@ import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.transport.buffer.ChannelBuffer;
-import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.codec.*;
+import io.joyrpc.transport.codec.Codec;
+import io.joyrpc.transport.codec.DecodeContext;
+import io.joyrpc.transport.codec.EncodeContext;
+import io.joyrpc.transport.codec.LengthFieldFrameCodec;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
@@ -45,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -64,36 +67,19 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
 
     /**
      * 构造函数
-     */
-    public AbstractCodec() {
-
-    }
-
-    /**
-     * 构造函数
      *
-     * @param protocol
+     * @param protocol 协议
      */
     public AbstractCodec(Protocol protocol) {
         this.protocol = protocol;
     }
 
     /**
-     * 获取协议
-     *
-     * @param context
-     * @return
-     */
-    protected Protocol getProtocol(final CodecContext context) {
-        return protocol == null ? context.getChannel().getAttribute(Channel.PROTOCOL) : protocol;
-    }
-
-    /**
      * 转换消息体
      *
-     * @param target
-     * @param converter
-     * @return
+     * @param target    源对象
+     * @param converter 转换器
+     * @return 目标对象
      */
     protected <T> T convert(final T target, final MessageConverter converter) {
         Function<Object, Object> function = converter == null ? null : converter.message();
@@ -103,9 +89,9 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 转换消息头
      *
-     * @param header
-     * @param converter
-     * @return
+     * @param header    头部
+     * @param converter 转换器
+     * @return 头部
      */
     protected Header convert(final Header header, final MessageConverter converter) {
         if (converter == null) {
@@ -139,9 +125,9 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 转换异常
      *
-     * @param msg
-     * @param e
-     * @return
+     * @param msg 异常消息
+     * @param e   异常
+     * @return 编码异常
      */
     protected CodecException toCodecException(final String msg, final Exception e) {
         if (e instanceof CodecException) {
@@ -172,22 +158,28 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         } else if (!(message instanceof Message)) {
             throw new ProtocolException("Not support this type of Object.");
         }
-        Protocol protocol = getProtocol(context);
         Message target = (Message) message;
         Header header = null;
         try {
             //进行转换
-            MessageConverter converter = protocol == null ? null : protocol.outMessage();
+            MessageConverter converter = protocol.outMessage();
             //转换消息头
             header = convert(target.getHeader(), converter);
             target = convert(target, converter);
+            byte[] magicCodes = protocol.getMagicCode();
+            buffer.ensureWritable(magicCodes == null ? 0 : magicCodes.length + 4 + estimateHeaderSize());
             //编码魔法位
-            encodeMagicCode(context, buffer, header, protocol);
-            //预留数据包长度
             int start = buffer.writerIndex();
-            buffer.writeInt(0);
+            if (magicCodes != null && magicCodes.length > 0) {
+                buffer.setBytes(start, magicCodes, 0, magicCodes.length);
+                start += magicCodes.length;
+            }
+            //预留数据包长度
+            buffer.setInt(start, 0);
+            //定位到数据包长度后面
+            buffer.writerIndex(start + 4);
             //编码数据头
-            int compress = encodeHeader(context, buffer, header);
+            int compress = encodeHeader(buffer, header);
             //编码数据包
             if (target.getPayLoad() != null) {
                 //编码消息体
@@ -207,27 +199,39 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     }
 
     /**
+     * 最小的头部大小
+     *
+     * @return 最小的头部大小
+     */
+    protected int estimateHeaderSize() {
+        return 18;
+    }
+
+    /**
      * 编码消息头，返回压缩位置，便于自适应压缩算法修改压缩标识
      *
-     * @param header
-     * @param buffer
+     * @param buffer 缓冲区
+     * @param header 头部
      * @return 压缩位置
      */
-    protected int encodeHeader(final EncodeContext context, final ChannelBuffer buffer, final Header header) throws Exception {
+    protected int encodeHeader(final ChannelBuffer buffer, final Header header) {
         //头部2个字节是消息头的大小，因为有扩展属性，是变长
         int start = buffer.writerIndex();
-        buffer.writeShort(0);
-        buffer.writeByte(header.getMsgType());
-        buffer.writeInt(header.getMsgId());
-        buffer.writeInt(header.getSessionId());
-        buffer.writeByte(header.getSerialization());
+        buffer.setShort(start, 0);
+        buffer.setByte(start + 2, header.getMsgType());
+        buffer.setInt(start + 3, header.getMsgId());
+        buffer.setInt(start + 7, header.getSessionId());
+        buffer.setByte(start + 11, header.getSerialization());
         //压缩位置
-        int result = buffer.writerIndex();
-        buffer.writeByte(Compression.NONE);
+        int result = start + 12;
+        buffer.setByte(start + 12, Compression.NONE);
         //编码增加的头，包括超时时间和会话ID
-        buffer.writeInt(header.getTimeout());
+        buffer.setInt(start + 13, header.getTimeout());
+        //定位到后面
+        buffer.writerIndex(start + 17);
         //编码扩展属性
-        encodeAttributes(buffer, ((MessageHeader) header).getAttributes());
+        MessageHeader messageHeader = (MessageHeader) header;
+        encodeAttributes(buffer, messageHeader.getAttributes());
         int headLength = buffer.writerIndex() - start;
         header.setHeaderLength((short) headLength);
         // 替换head长度的两位
@@ -238,13 +242,13 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 编码头部扩展信息
      *
-     * @param buffer
-     * @param attributes
-     * @return
+     * @param buffer     缓冲区
+     * @param attributes 属性
      */
     protected void encodeAttributes(final ChannelBuffer buffer, final Map<Byte, Object> attributes) {
         int size = attributes == null ? 0 : attributes.size();
-        buffer.writeByte(size);
+        int pos = buffer.writerIndex();
+        buffer.setByte(pos++, size);
         if (size > 0) {
             byte key;
             Object val;
@@ -252,45 +256,42 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
                 key = attr.getKey();
                 val = attr.getValue();
                 if (val != null) {
-                    buffer.writeByte(key);
                     if (val instanceof Integer) {
-                        buffer.writeByte((byte) 1);
-                        buffer.writeInt((Integer) val);
+                        buffer.ensureWritable(6);
+                        buffer.setByte(pos++, key);
+                        buffer.setByte(pos++, (byte) 1);
+                        buffer.setInt(pos, (Integer) val);
+                        pos += 4;
                     } else if (val instanceof String) {
-                        buffer.writeByte((byte) 2);
-                        buffer.writeString((String) val, null, false, true);
+                        byte[] bytes = ((String) val).getBytes(StandardCharsets.UTF_8);
+                        int length = bytes.length;
+                        buffer.ensureWritable(4 + length);
+                        buffer.setByte(pos++, key);
+                        buffer.setByte(pos++, (byte) 2);
+                        buffer.setShort(pos, length);
+                        pos += 2;
+                        if (length > 0) {
+                            buffer.setBytes(pos, bytes, 0, length);
+                            pos += bytes.length;
+                        }
                     } else if (val instanceof Byte) {
-                        buffer.writeByte((byte) 3);
-                        buffer.writeByte((Byte) val);
+                        buffer.ensureWritable(3);
+                        buffer.setByte(pos++, key);
+                        buffer.setByte(pos++, (byte) 3);
+                        buffer.setByte(pos++, (Byte) val);
                     } else if (val instanceof Short) {
-                        buffer.writeByte((byte) 4);
-                        buffer.writeShort((Short) val);
+                        buffer.ensureWritable(4);
+                        buffer.setByte(pos++, key);
+                        buffer.setByte(pos++, (byte) 4);
+                        buffer.setShort(pos, (Short) val);
+                        pos += 2;
                     } else {
                         throw new CodecException("Value of attrs in message header must be byte/short/int/string", ExceptionCode.CODEC_HEADER_FORMAT_EXCEPTION);
                     }
                 }
             }
         }
-    }
-
-
-    /**
-     * 写入魔术字节
-     *
-     * @param context
-     * @param buffer
-     * @param header
-     * @param protocol
-     * @throws Exception
-     */
-    protected void encodeMagicCode(final EncodeContext context, final ChannelBuffer buffer,
-                                   final Header header, final Protocol protocol) throws Exception {
-        if (protocol != null) {
-            byte[] bytes = protocol.getMagicCode();
-            if (bytes != null && bytes.length > 0) {
-                buffer.writeBytes(bytes);
-            }
-        }
+        buffer.writerIndex(pos);
     }
 
     /**
@@ -334,8 +335,8 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 编码阶段根据协议和序列化对消息体进行调整
      *
-     * @param message
-     * @param serialization
+     * @param message       消息
+     * @param serialization 序列化
      */
     protected void adjustEncode(final Message message, final Serialization serialization) {
 
@@ -344,9 +345,10 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 序列化
      *
-     * @param serialization
-     * @param os
-     * @param message
+     * @param serialization 序列化
+     * @param os            输出流
+     * @param message       消息
+     * @param context       上下文
      */
     protected void serialize(final Serialization serialization, final OutputStream os, final Message message, final EncodeContext context) {
         serialization.getSerializer().serialize(os, message.getPayLoad());
@@ -357,10 +359,9 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         if (buffer.readableBytes() < 1) {
             return null;
         }
-        Protocol protocol = getProtocol(context);
         Header header = null;
         try {
-            header = decodeHeader(context, buffer);
+            header = decodeHeader(buffer);
             if (header == null) {
                 return null;
             }
@@ -375,7 +376,7 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
                 }
             }
             //进行转换
-            MessageConverter converter = protocol == null ? null : protocol.inMessage();
+            MessageConverter converter = protocol.inMessage();
             header = convert(header, converter);
             return convert(decodeMessage(context, buffer, header), converter);
         } catch (CodecException e) {
@@ -391,10 +392,9 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 解码消息头
      *
-     * @param buffer
-     * @return
+     * @return 缓冲区
      */
-    protected Header decodeHeader(final DecodeContext context, final ChannelBuffer buffer) throws Exception {
+    protected Header decodeHeader(final ChannelBuffer buffer) {
         // 读取总长度
         int length = buffer.readInt();
         // 读取头长度
@@ -417,10 +417,10 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 解码消息
      *
-     * @param context
-     * @param buffer
-     * @param header
-     * @return
+     * @param context 上下文
+     * @param buffer  缓冲区
+     * @param header  头部
+     * @return 包体
      */
     protected Object decodeMessage(final DecodeContext context, final ChannelBuffer buffer, final Header header) throws Exception {
         MsgType msgType = MsgType.valueOf((byte) header.getMsgType());
@@ -463,10 +463,11 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 反序列化
      *
-     * @param serialization
-     * @param is
-     * @param type
-     * @param context
+     * @param serialization 序列化
+     * @param is            输入流
+     * @param type          类型
+     * @param header        头
+     * @param context       上下文
      */
     protected Object deserialize(final Serialization serialization, final InputStream is, final Type type, final MessageHeader header, final DecodeContext context) {
         return serialization.getSerializer().deserialize(is, type);
@@ -475,8 +476,8 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 解码后根据协议和序列化进行消息调整
      *
-     * @param message
-     * @param serialization
+     * @param message       消息
+     * @param serialization 序列化
      */
     protected void adjustDecode(final Message message, final Serialization serialization) {
 
@@ -485,8 +486,8 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 获取消息体的类型
      *
-     * @param type
-     * @return
+     * @param type 类型
+     * @return 包体类
      */
     protected Class getPayloadClass(final MsgType type) {
         return type.getPayloadClz();
@@ -495,8 +496,8 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
     /**
      * 解码扩展属性
      *
-     * @param buffer
-     * @return
+     * @param buffer 缓冲区
+     * @return 扩展属性
      */
     protected Map<Byte, Object> decodeAttributes(final ChannelBuffer buffer) {
         byte size = buffer.readByte();

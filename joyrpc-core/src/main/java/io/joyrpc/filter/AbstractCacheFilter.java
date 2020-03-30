@@ -47,6 +47,9 @@ public class AbstractCacheFilter extends AbstractFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         final CachePolicy policy = request.getOption().getCachePolicy();
+        if (policy == null) {
+            return invoker.invoke(request);
+        }
         final Cache<Object, Object> cache = policy.getCache();
         final Object key = getKey(policy, request.getPayLoad());
         if (key == null) {

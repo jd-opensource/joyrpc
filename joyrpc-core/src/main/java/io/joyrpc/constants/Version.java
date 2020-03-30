@@ -35,7 +35,7 @@ public class Version {
     /**
      * 当前Build版本，每次发布修改
      */
-    public static final String BUILD_VERSION_TIME = "2.0.5_202002071507";
+    public static final String BUILD_VERSION_TIME = "2.0.5_202003301653";
 
     /**
      * 当前协议版本

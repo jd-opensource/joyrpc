@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -84,8 +84,11 @@ public class ExceptionFilter extends AbstractProviderFilter {
         } else if (exception instanceof LafException) {
             // 是本身的异常，直接抛出
             return result;
-        } else if (invocation.isGeneric() || header.getAttribute(HeadKey.generic.getKey(), (byte) 0) > 0) {
+        } else if (invocation.isGeneric()) {
             // 泛化调用调用
+            return new Result(request.getContext(), new RpcException(StringUtils.toString(exception)));
+        } else if (header.getAttribute(HeadKey.generic.getKey(), (byte) 0) > 0) {
+            // 兼容老版本的网关调用
             return new Result(request.getContext(), new RpcException(StringUtils.toString(exception)));
         } else if (!(exception instanceof RuntimeException) && (exception instanceof Exception)) {
             // 如果是checked异常，直接抛出

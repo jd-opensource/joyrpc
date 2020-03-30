@@ -31,6 +31,11 @@ import io.joyrpc.protocol.message.Call;
  */
 @Extensible(value = "cacheKeyGenerator")
 public interface CacheKeyGenerator {
+
+    int SPEL_ORDER = 100;
+
+    int JEXL_ORDER = SPEL_ORDER + 10;
+
     /**
      * 产生缓存的Key
      *

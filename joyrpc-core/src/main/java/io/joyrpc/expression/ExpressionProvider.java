@@ -30,6 +30,8 @@ public interface ExpressionProvider {
 
     int SPEL_ORDER = 100;
 
+    int JEXL_ORDER = SPEL_ORDER + 10;
+
     /**
      * 构建表达式
      *

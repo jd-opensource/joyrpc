@@ -11,10 +11,12 @@ import org.apache.commons.jexl3.MapContext;
 
 import java.util.Map;
 
+import static io.joyrpc.expression.ExpressionProvider.JEXL_ORDER;
+
 /**
  * JEXL3表达式引擎提供者
  */
-@Extension("jexl")
+@Extension(value = "jexl", order = JEXL_ORDER)
 @ConditionalOnClass("org.apache.commons.jexl3.JexlBuilder")
 public class JexlProvider implements ExpressionProvider {
 

@@ -24,11 +24,13 @@ import io.joyrpc.cache.AbstractExpressionCacheKeyGenerator;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 
+import static io.joyrpc.cache.CacheKeyGenerator.SPEL_ORDER;
+
 
 /**
  * Spel表达式缓存键生成器
  */
-@Extension("spel")
+@Extension(value = "spel", order = SPEL_ORDER)
 @ConditionalOnClass({"org.springframework.expression.Expression"})
 public class SpelCacheKeyGenerator extends AbstractExpressionCacheKeyGenerator {
 

@@ -29,8 +29,6 @@ import io.joyrpc.transport.session.Session.RpcSession;
 
 import java.util.Objects;
 
-import static io.joyrpc.protocol.AbstractCodec.Empty.NULL;
-
 /**
  * joy编解码器
  *
@@ -53,32 +51,6 @@ public class JoyCodec extends AbstractCodec {
             RpcSession session = (RpcSession) message.getSession();
             if (session != null && Objects.equals(invocation.getAlias(), session.getAlias())) {
                 invocation.setAlias(null);
-            }
-            if (!serialization.allowArrayNullElement()) {
-                //把null参数转换成枚举
-                Object[] args = invocation.getArgs();
-                for (int i = 0; i < args.length; i++) {
-                    if (args[i] == null) {
-                        args[i] = NULL;
-                    }
-                }
-            }
-        }
-    }
-
-    @Override
-    protected void adjustDecode(final Message message, final Serialization serialization) {
-        if (!serialization.allowArrayNullElement()) {
-            Object payLoad = message.getPayLoad();
-            if (payLoad instanceof Invocation) {
-                Invocation invocation = (Invocation) payLoad;
-                //把null参数还原回来
-                Object[] args = invocation.getArgs();
-                for (int i = 0; i < args.length; i++) {
-                    if (args[i] == NULL) {
-                        args[i] = null;
-                    }
-                }
             }
         }
     }

@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.protostuff;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,6 +28,8 @@ import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtostuffOutput;
 import io.protostuff.ProtostuffReader;
 import io.protostuff.ProtostuffWriter;
+import io.protostuff.runtime.DefaultIdStrategy;
+import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
 
 import java.io.IOException;
@@ -61,17 +63,15 @@ public class ProtostuffSerialization implements Serialization {
         return ProtostuffSerializer.INSTANCE;
     }
 
-    @Override
-    public boolean allowArrayNullElement() {
-        return false;
-    }
-
     /**
      * Protostuff序列化和反序列化实现
      */
     protected static class ProtostuffSerializer extends AbstractSerializer {
 
         protected static final ProtostuffSerializer INSTANCE = new ProtostuffSerializer();
+
+        protected static final DefaultIdStrategy STRATEGY = new DefaultIdStrategy(IdStrategy.DEFAULT_FLAGS |
+                IdStrategy.ALLOW_NULL_ARRAY_ELEMENT);
 
         static {
             RuntimeSchema.register(Duration.class, DurationSchema.INSTANCE);
@@ -103,12 +103,12 @@ public class ProtostuffSerialization implements Serialization {
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) throws IOException {
             LinkedBuffer buffer = local.get();
-            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass()), buffer, new ProtostuffOutput(buffer, os), os);
+            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), buffer, new ProtostuffOutput(buffer, os), os);
         }
 
         @Override
         protected ObjectReader createReader(final InputStream is, final Class clazz) throws IOException {
-            return new ProtostuffReader(RuntimeSchema.getSchema(clazz), local.get(), is);
+            return new ProtostuffReader(RuntimeSchema.getSchema(clazz, STRATEGY), local.get(), is);
         }
     }
 

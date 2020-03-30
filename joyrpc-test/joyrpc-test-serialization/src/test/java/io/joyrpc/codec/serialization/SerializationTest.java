@@ -24,6 +24,7 @@ package io.joyrpc.codec.serialization;
 import io.joyrpc.cluster.discovery.backup.BackupDatum;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.model.*;
+import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcType;
@@ -160,9 +161,19 @@ public class SerializationTest {
     }
 
     @Test
+    public void testArrayObject() {
+        ArrayObject wrap = new ArrayObject();
+        wrap.strArray = new String[]{"hello", null, "world"};
+        wrap.fooArray = new Foo[]{null, new Foo("0", 0), null};
+        wrap.objArray = new Object[]{new Foo("hello", 0), new Foo("world", 1), null};
+        serializeAndDeserialize("protostuff", wrap);
+        serializeAndDeserialize("protobuf", wrap);
+    }
+
+    @Test
     public void testLinkedHashMap() {
         MapObj obj = new MapObj();
-        LinkedHashSet<String> set=new LinkedHashSet<>();
+        LinkedHashSet<String> set = new LinkedHashSet<>();
         set.add("1");
         set.add("2");
         obj.setSet(set);

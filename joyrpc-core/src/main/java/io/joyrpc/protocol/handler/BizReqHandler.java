@@ -29,7 +29,6 @@ import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.*;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
-import io.joyrpc.invoker.ProviderSession;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
@@ -38,6 +37,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.Session.RpcSession;
+import io.joyrpc.transport.session.Session.ServerSession;
 import io.joyrpc.util.Pair;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
@@ -133,7 +133,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         Session session = request.getSession();
         Invocation invocation = request.getPayLoad();
         //直接使用会话上的Exporter，加快性能
-        Exporter exporter = session instanceof ProviderSession ? ((ProviderSession) session).getExporter() : null;
+        Exporter exporter = session instanceof ServerSession ? (Exporter) ((ServerSession) session).getProvider() : null;
         if (exporter == null) {
             exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
             if (exporter == null) {

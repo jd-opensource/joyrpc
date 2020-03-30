@@ -20,6 +20,7 @@ package io.joyrpc.transport.session;
  * #L%
  */
 
+import io.joyrpc.Invoker;
 import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
@@ -376,5 +377,20 @@ public interface Session {
          */
         String getRemoteAppGroup();
     }
+
+    /**
+     * 服务端会话
+     */
+    interface ServerSession extends RpcSession {
+
+        /**
+         * 获取服务提供者
+         *
+         * @return 服务提供者
+         */
+        Invoker getProvider();
+
+    }
+
 
 }

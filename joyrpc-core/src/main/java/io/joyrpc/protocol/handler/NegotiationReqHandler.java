@@ -20,11 +20,12 @@ package io.joyrpc.protocol.handler;
  * #L%
  */
 
+import io.joyrpc.Invoker;
 import io.joyrpc.constants.Version;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Converts;
+import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
-import io.joyrpc.invoker.ProviderSession;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
@@ -32,6 +33,8 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.AbstractNegotiation;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.session.DefaultSession;
+import io.joyrpc.transport.session.Session;
 
 import java.util.Map;
 
@@ -86,13 +89,32 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
         session.setChecksums(negotiation.getChecksums());
         session.putAll(attributes);
         //提前绑定Exporter
-        session.setExporter(InvokerManager.getExporter(session.getInterfaceName(), session.getAlias(),
-                context.getChannel().getLocalAddress().getPort()));
+        session.exporter = InvokerManager.getExporter(session.getInterfaceName(), session.getAlias(),
+                context.getChannel().getLocalAddress().getPort());
         context.getChannel().addSession(sessionId, session);
     }
 
     @Override
     public Integer type() {
         return (int) MsgType.NegotiationReq.getType();
+    }
+
+    /**
+     * 服务端会话
+     */
+    protected static class ProviderSession extends DefaultSession implements Session.ServerSession {
+        /**
+         * 服务端输出
+         */
+        protected Exporter exporter;
+
+        public ProviderSession(int sessionId, long timeout) {
+            super(sessionId, timeout);
+        }
+
+        @Override
+        public Invoker getProvider() {
+            return exporter;
+        }
     }
 }

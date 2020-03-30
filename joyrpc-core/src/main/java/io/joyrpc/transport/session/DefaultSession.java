@@ -97,35 +97,35 @@ public class DefaultSession implements RpcSession {
     /**
      * 接口名称
      */
-    protected String interfaceName;
+    protected volatile String interfaceName;
     /**
      * 别名
      */
-    protected String alias;
+    protected volatile String alias;
     /**
      * 远端Java版本
      */
-    protected String remoteJavaVersion;
+    protected volatile String remoteJavaVersion;
     /**
      * 远端版本
      */
-    protected Short remoteBuildVersion;
+    protected volatile Optional<Short> remoteBuildVersion;
     /**
      * 远端应用ID
      */
-    protected Optional<String> remoteAppId;
+    protected volatile Optional<String> remoteAppId;
     /**
      * 远端应用名称
      */
-    protected Optional<String> remoteAppName;
+    protected volatile Optional<String> remoteAppName;
     /**
      * 远端应用实例
      */
-    protected Optional<String> remoteAppIns;
+    protected volatile Optional<String> remoteAppIns;
     /**
      * 远端应用分组
      */
-    protected Optional<String> remoteAppGroup;
+    protected volatile Optional<String> remoteAppGroup;
 
     /**
      * 会话属性集
@@ -287,12 +287,15 @@ public class DefaultSession implements RpcSession {
             String version = attrs.get(BUILD_VERSION_KEY);
             if (version != null) {
                 try {
-                    remoteBuildVersion = Short.parseShort(version);
-                } catch (NumberFormatException ignored) {
+                    remoteBuildVersion = Optional.of(Short.parseShort(version));
+                } catch (NumberFormatException e) {
+                    remoteBuildVersion = Optional.empty();
                 }
+            } else {
+                remoteBuildVersion = Optional.empty();
             }
         }
-        return remoteBuildVersion;
+        return remoteBuildVersion.orElse(null);
     }
 
     @Override

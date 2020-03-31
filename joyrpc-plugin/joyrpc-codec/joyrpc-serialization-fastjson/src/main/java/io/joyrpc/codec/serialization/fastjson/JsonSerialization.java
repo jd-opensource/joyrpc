@@ -49,7 +49,7 @@ import java.util.function.Function;
 import static com.alibaba.fastjson.JSON.DEFAULT_GENERATE_FEATURE;
 
 /**
- * JSON序列化
+ * JSON序列化，不推荐在调用请求序列化场景使用
  */
 @Extension(value = "json", provider = "fastjson", order = Serialization.ORDER_FASTJSON)
 @ConditionalOnClass("com.alibaba.fastjson.JSON")

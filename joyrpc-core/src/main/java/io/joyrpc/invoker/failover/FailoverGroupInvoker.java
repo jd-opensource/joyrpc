@@ -68,7 +68,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
         super.setup();
         //不支持动态别名
         aliasAdaptive = false;
-        options = INTERFACE_OPTION_FACTORY.get().create(clazz, className, url);
+        options = INTERFACE_OPTION_FACTORY.get().create(clazz, className, url, null, null);
     }
 
     @Override
@@ -101,7 +101,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
         ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(invocation.getMethodName());
-        request.setOption(option);
+        request.setTimeout(option.getTimeout());
         request.getHeader().setTimeout(option.getTimeout());
         CompletableFuture<Result> future = new CompletableFuture<>();
         retry(request, 0, option.getFailoverPolicy(), future);

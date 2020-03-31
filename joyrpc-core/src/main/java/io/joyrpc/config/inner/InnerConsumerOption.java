@@ -165,11 +165,15 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         //需要放在failoverPredication后面，里面加载配置文件的时候需要判断failoverPredication
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList();
         this.forks = url.getInteger(FORKS_OPTION);
-        this.route = ROUTE.get(url.getString(ROUTE_OPTION));
-        configure.accept(route);
-        this.urlConfig = new AdaptiveConfig(url);
-        this.judges = new LinkedList<>();
-        JUDGE.extensions().forEach(judges::add);
+        if (configure != null) {
+            this.route = ROUTE.get(url.getString(ROUTE_OPTION));
+            configure.accept(route);
+        }
+        if (scorer != null) {
+            this.urlConfig = new AdaptiveConfig(url);
+            this.judges = new LinkedList<>();
+            JUDGE.extensions().forEach(judges::add);
+        }
     }
 
     @Override
@@ -382,7 +386,9 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
             this.forks = forks;
             this.route = route;
             this.failoverPolicy = failoverPolicy;
-            this.adaptiveConfig = new MethodAdaptiveConfig(urlConfig, judges);
+            if (urlConfig != null) {
+                this.adaptiveConfig = new MethodAdaptiveConfig(urlConfig, judges);
+            }
         }
 
         @Override

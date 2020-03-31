@@ -107,6 +107,8 @@
   - 升级fastjson为1.2.67版本
   
   - 升级bytebuddy为1.10.9版本
+  
+  - 升级javassist为3.27.0-GA版本
 
 ### Bugfixes
 

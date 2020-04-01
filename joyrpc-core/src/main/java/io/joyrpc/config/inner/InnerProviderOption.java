@@ -145,11 +145,12 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 append("package ").append(interfaceClass.getPackage().getName()).append(";\n").
                 append("public class ").append(simpleName).append(" implements ").append(MethodCaller.class.getCanonicalName()).append("{\n").
                 append("\t").append("protected ").append(interfaceClass.getCanonicalName()).append(" ref").append(";\n").
-                append("\t").append("public ").append(simpleName).append("(").append(interfaceClass.getSimpleName()).append(" ref").append(')').append("{\n").
+                append("\t").append("public ").append(simpleName).append("(").append(interfaceClass.getCanonicalName()).append(" ref").append(')').append("{\n").
                 append("\t\t").append("this.ref=ref;").append("\n").
                 append("\t}\n").
-                append("\t").append("public Object invoke(Object[] args)").append("{\n").
-                append("\t\t").append(!isVoid ? "return " : "").
+                append("\t").append("public Object invoke(Object[] args) throws java.lang.reflect.InvocationTargetException").append("{\n").
+                append("\t\ttry{\n").
+                append("\t\t\t").append(!isVoid ? "return " : "").
                 append(Modifier.isStatic(method.getModifiers()) ? interfaceClass.getCanonicalName() : "ref").append('.').
                 append(method.getName()).append("(");
         //参数
@@ -161,9 +162,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
             builder.append(index > 0 ? "," : "").append("(").append(inbox(type).getCanonicalName()).append(")").append("args[").append(index++).append("]");
         }
         builder.append(");").append("\n").
-                append(isVoid ? "\t\treturn null;\n" : "").
-                append("\t}\n").
-                append("}");
+                append(isVoid ? "\t\t\treturn null;\n" : "").
+                append("\t\t}catch(Throwable e){\n").
+                append("\t\t\tthrow new java.lang.reflect.InvocationTargetException(e);\n").
+                append("\t\t}\n").
+                append("\t}\n").append("}");
         try {
             Class<?> clazz = ClassUtils.forName(fullName, (n) -> {
                 try {

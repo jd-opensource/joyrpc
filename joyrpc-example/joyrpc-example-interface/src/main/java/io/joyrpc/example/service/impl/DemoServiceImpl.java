@@ -43,6 +43,11 @@ public class DemoServiceImpl implements DemoService {
         return count;
     }
 
+    @Override
+    public <T> T generic(T value) {
+        return value;
+    }
+
     @GET
     @Path(value = "/hello/{name}")
     @Override

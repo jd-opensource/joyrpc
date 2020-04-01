@@ -20,6 +20,8 @@ package io.joyrpc.proxy;
  * #L%
  */
 
+import java.lang.reflect.InvocationTargetException;
+
 /**
  * 方法调用
  */
@@ -30,6 +32,7 @@ public interface MethodCaller {
      *
      * @param args 参数数组
      * @return 返回值
+     * @throws InvocationTargetException 异常
      */
-    Object invoke(Object[] args);
+    Object invoke(Object[] args) throws InvocationTargetException;
 }

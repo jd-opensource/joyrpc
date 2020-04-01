@@ -38,11 +38,12 @@ public class BootClient {
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
-                System.out.println(consumer.sayHello(String.valueOf(counter.incrementAndGet())));
+                String hello = consumer.generic(String.valueOf(counter.incrementAndGet()));
+                System.out.println(hello);
                 Thread.sleep(100L);
             } catch (InterruptedException e) {
                 break;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 try {
                     Thread.sleep(1000L);
                 } catch (InterruptedException ex) {

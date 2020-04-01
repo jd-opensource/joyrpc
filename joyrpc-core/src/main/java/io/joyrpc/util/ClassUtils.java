@@ -472,6 +472,30 @@ public class ClassUtils {
     }
 
     /**
+     * 根据类名加载Class，不存在返回空
+     *
+     * @param className 类名
+     * @param function  函数
+     * @return Class
+     */
+    public static Class<?> forName(final String className, final Function<String, Class<?>> function) {
+        if (className == null) {
+            return null;
+        }
+        Class<?> result = forNames.get(className);
+        if (result == null) {
+            result = function == null ? null : function.apply(className);
+            if (result != null) {
+                Class<?> old = forNames.putIfAbsent(className, result);
+                if (old != null) {
+                    result = old;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * 获取类元数据
      *
      * @param clazz 类

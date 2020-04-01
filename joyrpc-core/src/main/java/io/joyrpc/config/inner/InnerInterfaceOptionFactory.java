@@ -37,8 +37,8 @@ import java.util.function.Consumer;
 public class InnerInterfaceOptionFactory implements InterfaceOptionFactory {
 
     @Override
-    public InterfaceOption create(final Class<?> interfaceClass, final String interfaceName, final URL url) {
-        return new InnerProviderOption(interfaceClass, interfaceName, url);
+    public InterfaceOption create(final Class<?> interfaceClass, final String interfaceName, final URL url, final Object ref) {
+        return new InnerProviderOption(interfaceClass, interfaceName, url, ref);
     }
 
     @Override

@@ -573,6 +573,7 @@ public class Constants {
     public static final URLOption<String> METHOD_EXCLUDE_OPTION = new URLOption<>("exclude", "");
     public static final URLOption<String> CONTEXT_PATH_OPTION = new URLOption<>("contextpath", "/");
     public static final URLOption<Integer> FORKS_OPTION = new URLOption<>("forks", 2);
+    public static final URLOption<Boolean> METHOD_PRECOMPILATION = new URLOption<>("precompilation", Boolean.TRUE);
 
     public static final String JAVA_VERSION_KEY = "javaVersion";
 

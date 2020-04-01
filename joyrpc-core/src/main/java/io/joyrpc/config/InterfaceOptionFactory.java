@@ -40,9 +40,10 @@ public interface InterfaceOptionFactory {
      * @param interfaceClass 接口类
      * @param interfaceName  接口名
      * @param url            url
+     * @param ref            引用对象
      * @return 接口选项
      */
-    InterfaceOption create(Class<?> interfaceClass, String interfaceName, URL url);
+    InterfaceOption create(Class<?> interfaceClass, String interfaceName, URL url, Object ref);
 
     /**
      * 为消费者构造接口选项

@@ -28,21 +28,29 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
+import io.joyrpc.proxy.MethodCaller;
+import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.JCompiler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.validation.Validator;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.util.Map;
 import java.util.function.Supplier;
 
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
 import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
+import static io.joyrpc.util.ClassUtils.inbox;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
 /**
  * 服务提供者接口选项
  */
 public class InnerProviderOption extends AbstractInterfaceOption {
+
+    private static final Logger logger = LoggerFactory.getLogger(InnerProviderOption.class);
 
     /**
      * 方法黑白名单
@@ -56,6 +64,14 @@ public class InnerProviderOption extends AbstractInterfaceOption {
      * 限流配置
      */
     protected IntfConfiguration<String, ClassLimiter> limiters;
+    /**
+     * 引用
+     */
+    protected Object ref;
+    /**
+     * 预编译
+     */
+    protected boolean precompilation;
 
     /**
      * 构造函数
@@ -63,9 +79,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
      * @param interfaceClass 接口类
      * @param interfaceName  接口名称
      * @param url            URL
+     * @param ref            引用对象
      */
-    public InnerProviderOption(final Class<?> interfaceClass, final String interfaceName, final URL url) {
+    public InnerProviderOption(final Class<?> interfaceClass, final String interfaceName, final URL url, final Object ref) {
         super(interfaceClass, interfaceName, url);
+        this.ref = ref;
         setup();
         buildOptions();
     }
@@ -77,6 +95,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         String exclude = url.getString(METHOD_EXCLUDE_OPTION.getName());
         this.methodBlackWhiteList = (include == null || include.isEmpty()) && (exclude == null || exclude.isEmpty()) ? null :
                 new StringBlackWhiteList(include, exclude);
+        this.precompilation = url.getBoolean(METHOD_PRECOMPILATION);
         this.ipPermissions = new IntfConfiguration<>(IP_PERMISSION, interfaceName);
         this.limiters = new IntfConfiguration<>(LIMITERS, interfaceName);
     }
@@ -102,7 +121,62 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 getCallback(method),
                 methodBlackWhiteList,
                 ipPermissions,
-                limiters);
+                limiters,
+                precompilation ? compile(method) : null);
+    }
+
+    /**
+     * 动态编译方法
+     *
+     * @param method 方法
+     * @return 动态编译
+     */
+    protected MethodCaller compile(final Method method) {
+        if (method == null) {
+            return null;
+        }
+        String name = method.getName();
+        name = Character.toUpperCase(name.charAt(0)) + name.substring(1) + "Caller";
+        String simpleName = interfaceClass.getSimpleName() + "$" + name;
+        String fullName = interfaceClass.getName() + "$" + name;
+        boolean isVoid = method.getReturnType() == void.class;
+        StringBuilder builder = new StringBuilder(300).
+                append("package ").append(interfaceClass.getPackage().getName()).append(";\n").
+                append("public class ").append(simpleName).append(" implements ").append(MethodCaller.class.getCanonicalName()).append("{\n").
+                append("\t").append("protected ").append(interfaceClass.getCanonicalName()).append(" ref").append(";\n").
+                append("\t").append("public ").append(simpleName).append("(").append(interfaceClass.getSimpleName()).append(" ref").append(')').append("{\n").
+                append("\t\t").append("this.ref=ref;").append("\n").
+                append("\t}\n").
+                append("\t").append("public Object invoke(Object[] args)").append("{\n").
+                append("\t\t").append(!isVoid ? "return " : "").
+                append(Modifier.isStatic(method.getModifiers()) ? interfaceClass.getCanonicalName() : "ref").append('.').
+                append(method.getName()).append("(");
+        //参数
+        int index = 0;
+        Class<?> type;
+        for (Parameter parameter : method.getParameters()) {
+            //强制类型转换
+            type = parameter.getType();
+            builder.append(index > 0 ? "," : "").append("(").append(inbox(type).getCanonicalName()).append(")").append("args[").append(index++).append("]");
+        }
+        builder.append(");").append("\n").
+                append(isVoid ? "\t\treturn null;\n" : "").
+                append("\t}\n").
+                append("}");
+        try {
+            Class<?> clazz = ClassUtils.forName(fullName, (n) -> {
+                try {
+                    return JCompiler.compile(n, builder);
+                } catch (Throwable e) {
+                    logger.error(e.getMessage() + " java:\n" + builder.toString());
+                    return null;
+                }
+            });
+            Constructor[] constructors = clazz.getConstructors();
+            return (MethodCaller) constructors[0].newInstance(ref);
+        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+            return null;
+        }
     }
 
     /**
@@ -121,17 +195,23 @@ public class InnerProviderOption extends AbstractInterfaceOption {
          * 限流
          */
         protected Supplier<ClassLimiter> limiter;
+        /**
+         * 动态生成的方法调用
+         */
+        protected MethodCaller caller;
 
         public InnerProviderMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,
                                          final Supplier<IPPermission> iPPermission,
-                                         final Supplier<ClassLimiter> limiter) {
+                                         final Supplier<ClassLimiter> limiter,
+                                         final MethodCaller caller) {
             super(implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;
+            this.caller = caller;
         }
 
         @Override
@@ -152,6 +232,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         @Override
         public ClassLimiter getLimiter() {
             return limiter.get();
+        }
+
+        @Override
+        public MethodCaller getCaller() {
+            return caller;
         }
     }
 

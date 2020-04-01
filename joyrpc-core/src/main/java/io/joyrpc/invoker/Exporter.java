@@ -44,6 +44,7 @@ import io.joyrpc.permission.Authorization;
 import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.transport.ServerTransport;
@@ -190,7 +191,7 @@ public class Exporter extends AbstractInvoker {
         this.warmup = config.getWarmup();
         this.port = url.getPort();
         this.compress = url.getString(Constants.COMPRESS_OPTION.getName());
-        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url);
+        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, ref);
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
         this.identification = IDENTIFICATION.get(url.getString(Constants.IDENTIFICATION_OPTION));
@@ -346,14 +347,14 @@ public class Exporter extends AbstractInvoker {
         RequestContext context = request.getContext();
         RequestContext.restore(context);
         try {
+            MethodCaller caller = ((InterfaceOption.ProviderMethodOption) request.getOption()).getCaller();
             // 反射 真正调用业务代码
-            resultFuture = CompletableFuture.completedFuture(new Result(context, invocation.invoke(ref)));
-        } catch (IllegalArgumentException e) { // 非法参数，可能是实现类和接口类不对应
+            Object value = caller != null ? caller.invoke(invocation.getArgs()) : invocation.invoke(ref);
+            resultFuture = CompletableFuture.completedFuture(new Result(context, value));
+        } catch (IllegalArgumentException | IllegalAccessException e) { // 非法参数，可能是实现类和接口类不对应
             resultFuture = CompletableFuture.completedFuture(new Result(context, e));
         } catch (InvocationTargetException e) { // 业务代码抛出异常
             resultFuture = CompletableFuture.completedFuture(new Result(context, e.getCause()));
-        } catch (IllegalAccessException e) {
-            resultFuture = CompletableFuture.completedFuture(new Result(context, e));
         } finally {
             RequestContext.remove();
         }

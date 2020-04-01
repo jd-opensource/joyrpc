@@ -29,6 +29,7 @@ import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
+import io.joyrpc.proxy.MethodCaller;
 
 import javax.validation.Validator;
 import java.util.Map;
@@ -196,6 +197,13 @@ public interface InterfaceOption {
          * @return 限流配置
          */
         ClassLimiter getLimiter();
+
+        /**
+         * 获取动态方法
+         *
+         * @return 动态方法
+         */
+        MethodCaller getCaller();
 
     }
 

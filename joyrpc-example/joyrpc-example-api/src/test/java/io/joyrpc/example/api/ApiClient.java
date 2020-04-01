@@ -47,7 +47,7 @@ public class ApiClient {
             logger.info("Get msg: {} ", echo);
 
             System.in.read();
-        } catch (Exception e) {
+        } catch (Throwable e) {
             logger.error(e.getMessage(), e);
         }
     }

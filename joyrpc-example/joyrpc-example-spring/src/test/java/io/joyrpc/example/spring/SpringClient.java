@@ -29,7 +29,7 @@ import org.springframework.context.support.ClassPathXmlApplicationContext;
  */
 public class SpringClient {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws Throwable {
         ClassPathXmlApplicationContext appContext = new ClassPathXmlApplicationContext("classpath:spring/joyrpc-consumer.xml");
         DemoService consumer = (DemoService) appContext.getBean("demoService");
 

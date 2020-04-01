@@ -173,6 +173,9 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                     return null;
                 }
             });
+            if (clazz == null) {
+                return null;
+            }
             Constructor[] constructors = clazz.getConstructors();
             return (MethodCaller) constructors[0].newInstance(ref);
         } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {

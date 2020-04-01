@@ -32,6 +32,7 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.proxy.MethodCaller;
 
 import javax.validation.Validator;
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -65,6 +66,13 @@ public interface InterfaceOption {
      * 方法选项
      */
     interface MethodOption {
+
+        /**
+         * 获取方法
+         *
+         * @return 方法
+         */
+        Method getMethod();
 
         /**
          * 方法级别隐式传参，合并了接口的隐藏参数

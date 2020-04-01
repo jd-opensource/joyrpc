@@ -373,6 +373,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      */
     protected static abstract class InnerMethodOption implements MethodOption {
         /**
+         * 方法
+         */
+        protected Method method;
+        /**
          * 方法级别隐式传参，合并了接口的隐藏参数，只读
          */
         protected Map<String, ?> implicits;
@@ -410,6 +414,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         /**
          * 构造函数
          *
+         * @param method      方法
          * @param implicits   隐式传参
          * @param timeout     超时时间
          * @param concurrency 并发数配置
@@ -419,13 +424,15 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * @param async       判断方法是否是异步调用
          * @param callback    回调方法
          */
-        public InnerMethodOption(final Map<String, ?> implicits, int timeout,
+        public InnerMethodOption(final Method method,
+                                 final Map<String, ?> implicits, int timeout,
                                  final Concurrency concurrency,
                                  final CachePolicy cachePolicy,
                                  final Validator validator,
                                  final String token,
                                  final boolean async,
                                  final CallbackMethod callback) {
+            this.method = method;
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.concurrency = concurrency;
@@ -434,6 +441,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.token = token;
             this.async = async;
             this.callback = callback;
+        }
+
+        @Override
+        public Method getMethod() {
+            return method;
         }
 
         @Override

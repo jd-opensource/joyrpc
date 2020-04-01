@@ -37,19 +37,16 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.Session.ServerSession;
-import io.joyrpc.util.Pair;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.RESPONSE_INJECTION;
 import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_TASK_SESSION_EXPIRED;
-import static io.joyrpc.util.ClassUtils.getClassMethod;
 import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**
@@ -206,11 +203,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         }
         //检查接口ID，兼容老版本
         checkInterfaceId(invocation, className);
-        //类名，如果不存在则从会话里面获取
-        Pair<Class<?>, Method> pair = getClassMethod(invocation.getClassName(), invocation.getMethodName());
-        invocation.setClazz(pair.getKey());
-        invocation.setMethod(pair.getValue());
-
         //恢复上下文
         transmits.forEach(o -> o.restoreOnReceive(request, session));
 

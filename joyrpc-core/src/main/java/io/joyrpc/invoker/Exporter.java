@@ -307,10 +307,12 @@ public class Exporter extends AbstractInvoker {
     @Override
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
+        MethodOption option = options.getOption(invocation.getMethodName());
+        //类名，如果不存在则从会话里面获取
+        invocation.setClazz(interfaceClass);
+        invocation.setMethod(option.getMethod());
         //设置调用的对象，便于Validate
         invocation.setObject(ref);
-
-        MethodOption option = options.getOption(invocation.getMethodName());
         //注入身份认证信息和鉴权
         request.setAuthentication(authentication);
         request.setIdentification(identification);
@@ -338,7 +340,7 @@ public class Exporter extends AbstractInvoker {
      * @param request
      * @return
      */
-     protected CompletableFuture<Result> invokeMethod(final RequestMessage<Invocation> request) {
+    protected CompletableFuture<Result> invokeMethod(final RequestMessage<Invocation> request) {
 
         Invocation invocation = request.getPayLoad();
 

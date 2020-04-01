@@ -111,6 +111,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     protected InnerMethodOption create(final WrapperParametric parametric) {
         Method method = getMethod(parametric.getName());
         return new InnerProviderMethodOption(
+                method,
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
@@ -200,23 +201,18 @@ public class InnerProviderOption extends AbstractInterfaceOption {
          */
         protected MethodCaller caller;
 
-        public InnerProviderMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
-                                         final CachePolicy cachePolicy, final Validator validator,
+        public InnerProviderMethodOption(final Method method, final Map<String, ?> implicits, final int timeout,
+                                         final Concurrency concurrency, final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter,
                                          final MethodCaller caller) {
-            super(implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
+            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;
             this.caller = caller;
-        }
-
-        @Override
-        public Map<String, ?> getImplicits() {
-            return implicits;
         }
 
         @Override

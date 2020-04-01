@@ -227,6 +227,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
     protected InnerMethodOption create(final WrapperParametric parametric) {
         Method method = getMethod(parametric.getName());
         return new InnerConsumerMethodOption(
+                method,
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
@@ -376,13 +377,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected volatile Map<String, Object> mock;
 
-        public InnerConsumerMethodOption(final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
+        public InnerConsumerMethodOption(final Method method, final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final CallbackMethod callback,
                                          final int forks, final Route route, final FailoverPolicy failoverPolicy,
                                          final AdaptiveConfig urlConfig,
                                          final List<Judge> judges) {
-            super(implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
+            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
             this.forks = forks;
             this.route = route;
             this.failoverPolicy = failoverPolicy;

@@ -28,14 +28,18 @@ import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.message.Message;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.AbstractNegotiation;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
+import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.transport.transport.ChannelTransport;
 
+import java.net.InetSocketAddress;
 import java.util.Map;
 
 import static io.joyrpc.Plugin.*;
@@ -81,6 +85,11 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
         Map<String, String> attributes = negotiation.getAttributes();
         long timeout = Converts.getLong(attributes.remove(SESSION_TIMEOUT_OPTION.getName()), SESSION_TIMEOUT_OPTION.getValue());
         ProviderSession session = new ProviderSession(sessionId, timeout);
+        Channel channel = context.getChannel();
+        session.setProtocol(channel.getAttribute(Channel.PROTOCOL));
+        session.setLocalAddress(channel.getLocalAddress());
+        session.setRemoteAddress(channel.getRemoteAddress());
+        session.setTransport(channel.getAttribute(Channel.CHANNEL_TRANSPORT));
         session.setSerialization(SERIALIZATION.get(negotiation.getSerialization()));
         session.setCompression(COMPRESSION.get(negotiation.getCompression()));
         session.setChecksum(CHECKSUM.get(negotiation.getChecksum()));
@@ -89,9 +98,9 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
         session.setChecksums(negotiation.getChecksums());
         session.putAll(attributes);
         //提前绑定Exporter
-        session.exporter = InvokerManager.getExporter(session.getInterfaceName(), session.getAlias(),
-                context.getChannel().getLocalAddress().getPort());
-        context.getChannel().addSession(sessionId, session);
+        session.setExporter(InvokerManager.getExporter(session.getInterfaceName(), session.getAlias(),
+                session.localAddress.getPort()));
+        channel.addSession(sessionId, session);
     }
 
     @Override
@@ -107,6 +116,22 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
          * 服务端输出
          */
         protected Exporter exporter;
+        /**
+         * 远程地址
+         */
+        protected InetSocketAddress remoteAddress;
+        /**
+         * 本地地址
+         */
+        protected InetSocketAddress localAddress;
+        /**
+         * 通道
+         */
+        protected ChannelTransport transport;
+        /**
+         * 服务端协议
+         */
+        protected ServerProtocol protocol;
 
         public ProviderSession(int sessionId, long timeout) {
             super(sessionId, timeout);
@@ -115,6 +140,50 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
         @Override
         public Invoker getProvider() {
             return exporter;
+        }
+
+        public Exporter getExporter() {
+            return exporter;
+        }
+
+        public void setExporter(Exporter exporter) {
+            this.exporter = exporter;
+        }
+
+        @Override
+        public InetSocketAddress getRemoteAddress() {
+            return remoteAddress;
+        }
+
+        public void setRemoteAddress(InetSocketAddress remoteAddress) {
+            this.remoteAddress = remoteAddress;
+        }
+
+        @Override
+        public InetSocketAddress getLocalAddress() {
+            return localAddress;
+        }
+
+        public void setLocalAddress(InetSocketAddress localAddress) {
+            this.localAddress = localAddress;
+        }
+
+        @Override
+        public ChannelTransport getTransport() {
+            return transport;
+        }
+
+        public void setTransport(ChannelTransport transport) {
+            this.transport = transport;
+        }
+
+        @Override
+        public ServerProtocol getProtocol() {
+            return protocol;
+        }
+
+        public void setProtocol(ServerProtocol protocol) {
+            this.protocol = protocol;
         }
     }
 }

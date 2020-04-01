@@ -24,8 +24,11 @@ import io.joyrpc.Invoker;
 import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.protocol.ServerProtocol;
+import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.SystemClock;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
@@ -389,6 +392,34 @@ public interface Session {
          * @return 服务提供者
          */
         Invoker getProvider();
+
+        /**
+         * 获取远程地址
+         *
+         * @return 远程地址
+         */
+        InetSocketAddress getRemoteAddress();
+
+        /**
+         * 获取本地地址
+         *
+         * @return 本地地址
+         */
+        InetSocketAddress getLocalAddress();
+
+        /**
+         * 获取通道
+         *
+         * @return 通道
+         */
+        ChannelTransport getTransport();
+
+        /**
+         * 服务端协议
+         *
+         * @return 服务端协议
+         */
+        ServerProtocol getProtocol();
 
     }
 

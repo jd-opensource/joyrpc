@@ -36,7 +36,6 @@ import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.session.Session.RpcSession;
 import io.joyrpc.transport.session.Session.ServerSession;
 import io.joyrpc.util.Pair;
 import io.joyrpc.util.network.Ipv4;
@@ -100,9 +99,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         Exporter exporter = null;
         try {
             //从会话恢复
-            restore(request, channel);
-            //依赖于恢复的信息
-            exporter = getExporter(request, channel);
+            exporter = restore(request, channel);
 
             //执行调用，包括过滤器链
             CompletableFuture<Result> future = exporter.invoke(request);
@@ -117,38 +114,9 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         } catch (Throwable e) {
             sendException(channel, new RpcException(error(invocation, channel, e.getMessage()), e), request, exporter);
         } finally {
-            //清理上下文
+            //清理上下文ƒ
             RequestContext.remove();
         }
-    }
-
-    /**
-     * 获取暴露的服务
-     *
-     * @param request 请求
-     * @param channel 通道
-     * @return 暴露的服务
-     */
-    protected Exporter getExporter(final RequestMessage<Invocation> request, final Channel channel) {
-        Session session = request.getSession();
-        Invocation invocation = request.getPayLoad();
-        //直接使用会话上的Exporter，加快性能
-        Exporter exporter = session instanceof ServerSession ? (Exporter) ((ServerSession) session).getProvider() : null;
-        if (exporter == null) {
-            exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
-            if (exporter == null) {
-                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
-                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
-            }
-        }
-        //对应服务端协议，设置认证信息
-        if (exporter.getAuthentication() != null) {
-            ServerProtocol protocol = channel.getAttribute(Channel.PROTOCOL);
-            if (protocol != null) {
-                request.setAuthenticated(protocol::authenticate);
-            }
-        }
-        return exporter;
     }
 
     /**
@@ -197,13 +165,15 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
      *
      * @param request 请求
      * @param channel 通道
+     * @return 服务
      * @throws ClassNotFoundException  类没有找到异常
      * @throws NoSuchMethodException   方法没有找到异常
      * @throws MethodOverloadException 方法重载异常
      */
-    protected void restore(final RequestMessage<Invocation> request, final Channel channel)
+    protected Exporter restore(final RequestMessage<Invocation> request, final Channel channel)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        RpcSession session = (RpcSession) request.getSession();
+        Exporter exporter = null;
+        ServerSession session = (ServerSession) request.getSession();
         //从会话恢复接口和别名
         Invocation invocation = request.getPayLoad();
         if (session != null) {
@@ -213,7 +183,21 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             if (isEmpty(invocation.getAlias())) {
                 invocation.setAlias(session.getAlias());
             }
+            request.setLocalAddress(session.getLocalAddress());
+            request.setRemoteAddress(session.getRemoteAddress());
+            request.setTransport(session.getTransport());
+            exporter = (Exporter) session.getProvider();
         }
+        if (request.getLocalAddress() == null) {
+            request.setLocalAddress(channel.getLocalAddress());
+        }
+        if (request.getRemoteAddress() == null) {
+            request.setRemoteAddress(channel.getRemoteAddress());
+        }
+        if (request.getTransport() == null) {
+            request.setTransport(channel.getAttribute(Channel.CHANNEL_TRANSPORT));
+        }
+
         String className = invocation.getClassName();
         if (isEmpty(className)) {
             //session 为空，类名也为空，可能是session超时并被清理
@@ -226,11 +210,33 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         Pair<Class<?>, Method> pair = getClassMethod(invocation.getClassName(), invocation.getMethodName());
         invocation.setClazz(pair.getKey());
         invocation.setMethod(pair.getValue());
-        request.setLocalAddress(channel.getLocalAddress());
-        request.setRemoteAddress(channel.getRemoteAddress());
-        request.setTransport(channel.getAttribute(Channel.CHANNEL_TRANSPORT));
+
         //恢复上下文
         transmits.forEach(o -> o.restoreOnReceive(request, session));
+
+        //直接使用会话上的Exporter，加快性能
+        if (exporter == null) {
+            exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
+            if (exporter == null) {
+                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
+                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
+            }
+        }
+        //对应服务端协议，设置认证信息
+        if (exporter.getAuthentication() != null) {
+            ServerProtocol protocol = null;
+            if (session != null) {
+                protocol = session.getProtocol();
+            }
+            if (protocol == null) {
+                protocol = channel.getAttribute(Channel.PROTOCOL);
+            }
+            if (protocol != null) {
+                request.setAuthenticated(protocol::authenticate);
+            }
+        }
+
+        return exporter;
     }
 
     /**

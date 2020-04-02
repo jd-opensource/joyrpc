@@ -106,6 +106,10 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
                          final int retry,
                          final FailoverPolicy policy,
                          final CompletableFuture<Result> future) {
+        if (retry > 0) {
+            //便于向服务端注入重试次数
+            request.setRetryTimes(retry);
+        }
         //调用，如果节点不存在，则抛出Failover异常。
         ConsumerConfig<?> config = configs[retry % configs.length];
         CompletableFuture<Result> result = config.getRefer().invoke(request);

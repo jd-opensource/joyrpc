@@ -118,11 +118,11 @@ public class FailoverRouter extends AbstractRouter {
             CompletableFuture<Result> result = node != null ? operation.apply(node, last, request) :
                     Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
             result.whenComplete((r, t) -> {
-                ExceptionPolicy exceptionPolicy = policy.getExceptionPolicy();
                 t = t == null ? r.getException() : t;
                 if (t == null) {
                     future.complete(r);
                 } else {
+                    ExceptionPolicy exceptionPolicy = policy.getExceptionPolicy();
                     TimeoutPolicy timeoutPolicy = policy.getTimeoutPolicy();
                     if (timeoutPolicy != null && timeoutPolicy.test(request)) {
                         //请求超时了

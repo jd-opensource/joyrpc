@@ -24,7 +24,7 @@ import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.distribution.ExceptionPredication;
 import io.joyrpc.cluster.distribution.FailoverSelector;
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 
@@ -53,7 +53,7 @@ public class MethodConfig extends AbstractConfig {
     /**
      * 分发策略，允许在方法上设置
      */
-    @ValidatePlugin(extensible = Route.class, name = "ROUTE", defaultValue = DEFAULT_ROUTE)
+    @ValidatePlugin(extensible = Router.class, name = "ROUTER", defaultValue = DEFAULT_ROUTER)
     protected String cluster;
     /**
      * The Retries. 失败后重试次数
@@ -324,7 +324,7 @@ public class MethodConfig extends AbstractConfig {
     @Override
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
-        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.ROUTE_OPTION.getName()), cluster);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.ROUTER_OPTION.getName()), cluster);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRIES_OPTION.getName()), retries);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRY_ONLY_ONCE_PER_NODE_OPTION.getName()), retryOnlyOncePerNode);
         addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_WHEN_THROWABLE_OPTION.getName()), failoverWhenThrowable);

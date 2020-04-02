@@ -20,16 +20,17 @@ package io.joyrpc.config.inner;
  * #L%
  */
 
-import io.joyrpc.Result;
+import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.distribution.ExceptionPolicy;
 import io.joyrpc.cluster.distribution.ExceptionPredication;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Judge;
 import io.joyrpc.config.AbstractInterfaceOption;
+import io.joyrpc.context.IntfConfiguration;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.URL;
@@ -37,6 +38,8 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
@@ -53,6 +56,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -61,6 +65,7 @@ import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_FAILOVER_CLASS;
 import static io.joyrpc.context.adaptive.AdaptiveConfiguration.ADAPTIVE;
 import static io.joyrpc.context.mock.MockConfiguration.MOCK;
+import static io.joyrpc.context.router.SelectorConfiguration.SELECTOR;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
@@ -85,7 +90,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
     /**
      * 分发策略配置
      */
-    protected Consumer<Route> configure;
+    protected Consumer<Router> configure;
     /**
      * 打分器，用于没有自适应负载均衡的时候根据请求动态计算出来
      */
@@ -107,9 +112,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
      */
     protected String failoverPredication;
     /**
+     * 路由选择器
+     */
+    protected BiPredicate<Shard, RequestMessage<Invocation>> selector;
+    /**
      * 默认的分发策略
      */
-    protected Route route;
+    protected Router router;
     /**
      * 接口级别并行度
      */
@@ -121,16 +130,19 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
     /**
      * 自适应负载均衡静态配置
      */
-    protected AdaptiveConfig urlConfig;
+    protected AdaptiveConfig intfConfig;
     /**
      * 自适应负载均衡动态配置
      */
     protected IntfConfiguration<String, AdaptiveConfig> dynamicConfig;
     /**
+     * 路由选择器配置
+     */
+    protected IntfConfiguration<String, BiPredicate<Shard, RequestMessage<Invocation>>> selectorConfig;
+    /**
      * MOCK数据
      */
-    protected IntfConfiguration<String, Map<String, Map<String, Object>>> mocks;
-
+    protected IntfConfiguration<String, Map<String, Map<String, Object>>> mockConfig;
     /**
      * 裁决者
      */
@@ -146,7 +158,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
      * @param scorer         打分器，用于没有自适应负载均衡的时候根据请求动态计算出来
      */
     public InnerConsumerOption(final Class<?> interfaceClass, final String interfaceName, final URL url,
-                               final Consumer<Route> configure,
+                               final Consumer<Router> configure,
                                final BiFunction<String, AdaptiveConfig, AdaptiveConfig> scorer) {
         super(interfaceClass, interfaceName, url);
         this.configure = configure;
@@ -165,67 +177,70 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         //需要放在failoverPredication后面，里面加载配置文件的时候需要判断failoverPredication
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList();
         this.forks = url.getInteger(FORKS_OPTION);
+        this.mockConfig = new IntfConfiguration<>(MOCK, interfaceName, config -> {
+            if (options != null) {
+                options.forEach((method, mo) -> {
+                    InnerConsumerMethodOption cmo = ((InnerConsumerMethodOption) mo);
+                    cmo.mock = config == null ? null : config.get(method);
+                });
+            }
+        });
+        //路由策略
         if (configure != null) {
-            this.route = ROUTE.get(url.getString(ROUTE_OPTION));
-            configure.accept(route);
+            this.selectorConfig = new IntfConfiguration<>(SELECTOR, interfaceName, v -> this.selector = v);
+            this.router = ROUTER.get(url.getString(ROUTER_OPTION));
+            configure.accept(router);
         }
         if (scorer != null) {
-            this.urlConfig = new AdaptiveConfig(url);
+            this.intfConfig = new AdaptiveConfig(url);
             this.judges = new LinkedList<>();
             JUDGE.extensions().forEach(judges::add);
-        }
-    }
-
-    @Override
-    protected void buildOptions() {
-        super.buildOptions();
-        //依赖于options
-        if (scorer != null) {
             //最后监听自适应负载均衡变化
             this.dynamicConfig = new IntfConfiguration<>(ADAPTIVE, interfaceName,
-                    config -> options.forEach((method, op) -> ((InnerConsumerMethodOption) op).adaptiveConfig.setDynamicConfig(config)));
+                    config -> {
+                        if (options != null) {
+                            options.forEach((method, op) -> ((InnerConsumerMethodOption) op).adaptiveConfig.setDynamicIntfConfig(config));
+                        }
+                    });
             timer().add(new Scorer("scorer-" + interfaceName,
                     () -> {
                         //如果动态和静态配置都已经配置了完整的评分，则不需要再进行动态配置
                         AdaptiveConfig dynamic = dynamicConfig.get();
-                        return !closed.get() && (urlConfig.getAvailabilityScore() == null && (dynamic == null || dynamic.getAvailabilityScore() == null)
-                                || urlConfig.getConcurrencyScore() == null && (dynamic == null || dynamic.getConcurrencyScore() == null)
-                                || urlConfig.getQpsScore() == null && (dynamic == null || dynamic.getQpsScore() == null)
-                                || urlConfig.getTpScore() == null && (dynamic == null || dynamic.getTpScore() == null));
+                        return !closed.get() && (intfConfig.getAvailabilityScore() == null && (dynamic == null || dynamic.getAvailabilityScore() == null)
+                                || intfConfig.getConcurrencyScore() == null && (dynamic == null || dynamic.getConcurrencyScore() == null)
+                                || intfConfig.getQpsScore() == null && (dynamic == null || dynamic.getQpsScore() == null)
+                                || intfConfig.getTpScore() == null && (dynamic == null || dynamic.getTpScore() == null));
                     },
                     () -> {
-                        AdaptiveConfig config = new AdaptiveConfig(urlConfig);
-                        config.merge(dynamicConfig.get());
                         options.forEach((method, mo) -> {
                             InnerConsumerMethodOption cmo = ((InnerConsumerMethodOption) mo);
                             if (cmo.autoScore) {
                                 //过滤掉没有调用过的方法
-                                cmo.adaptiveConfig.setScore(scorer.apply(method, config));
+                                cmo.adaptiveConfig.setScore(scorer.apply(method, cmo.adaptiveConfig.config));
                                 cmo.autoScore = false;
                             }
                         });
                     }));
         }
-        this.mocks = new IntfConfiguration<>(MOCK, interfaceName, config -> {
-            Map<String, Map<String, Object>> configs = mocks.get();
-            options.forEach((method, mo) -> {
-                InnerConsumerMethodOption cmo = ((InnerConsumerMethodOption) mo);
-                cmo.mock = configs == null ? null : configs.get(method);
-            });
-        });
     }
 
     @Override
     protected void doClose() {
-        mocks.close();
+        if (selectorConfig != null) {
+            selectorConfig.close();
+        }
         if (dynamicConfig != null) {
             dynamicConfig.close();
+        }
+        if (mockConfig != null) {
+            mockConfig.close();
         }
     }
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
         Method method = getMethod(parametric.getName());
+        Map<String, Map<String, Object>> methodMocks = mockConfig.get();
         return new InnerConsumerMethodOption(
                 method,
                 getImplicits(parametric.getName()),
@@ -237,6 +252,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 method != null && isReturnFuture(interfaceClass, method),
                 getCallback(method),
                 parametric.getInteger(FORKS_OPTION.getName(), forks),
+                () -> selector,
                 getRoute(parametric),
                 new DefaultFailoverPolicy(
                         parametric.getInteger(RETRIES_OPTION.getName(), maxRetry),
@@ -244,8 +260,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                         new MyTimeoutPolicy(),
                         new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
                         FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
-                urlConfig,
-                judges);
+                scorer == null ? null : new MethodAdaptiveConfig(intfConfig, new AdaptiveConfig(parametric), dynamicConfig.get(), judges),
+                methodMocks == null ? null : methodMocks.get(parametric.getName()));
     }
 
     /**
@@ -254,19 +270,19 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
      * @param parametric 参数
      * @return 分发策略
      */
-    protected Route getRoute(final WrapperParametric parametric) {
+    protected Router getRoute(final WrapperParametric parametric) {
         //方法分发策略
-        Route methodRoute = null;
+        Router methodRouter = null;
         if (configure != null) {
-            methodRoute = ROUTE.get(parametric.getString(ROUTE_OPTION.getName()));
-            if (methodRoute != null) {
-                configure.accept(methodRoute);
+            methodRouter = ROUTER.get(parametric.getString(ROUTER_OPTION.getName()));
+            if (methodRouter != null) {
+                configure.accept(methodRouter);
             } else {
-                methodRoute = route;
+                methodRouter = router;
             }
 
         }
-        return methodRoute;
+        return methodRouter;
     }
 
 
@@ -357,9 +373,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected int forks;
         /**
+         * 节点选择器算法提供者
+         */
+        protected Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector;
+        /**
          * 分发策略
          */
-        protected Route route;
+        protected Router router;
         /**
          * 重试策略
          */
@@ -368,6 +388,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          * 自适应负载均衡配置
          */
         protected MethodAdaptiveConfig adaptiveConfig;
+
         /**
          * 是否自动计算方法指标阈值
          */
@@ -379,17 +400,18 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
         public InnerConsumerMethodOption(final Method method, final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final boolean async, final CallbackMethod callback,
-                                         final int forks, final Route route, final FailoverPolicy failoverPolicy,
-                                         final AdaptiveConfig urlConfig,
-                                         final List<Judge> judges) {
+                                         final String token, final boolean async, final CallbackMethod callback, final int forks,
+                                         final Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector,
+                                         final Router router, final FailoverPolicy failoverPolicy,
+                                         final MethodAdaptiveConfig adaptiveConfig,
+                                         final Map<String, Object> mock) {
             super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
             this.forks = forks;
-            this.route = route;
+            this.selector = selector;
+            this.router = router;
             this.failoverPolicy = failoverPolicy;
-            if (urlConfig != null) {
-                this.adaptiveConfig = new MethodAdaptiveConfig(urlConfig, judges);
-            }
+            this.adaptiveConfig = adaptiveConfig;
+            this.mock = mock;
         }
 
         @Override
@@ -398,8 +420,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         }
 
         @Override
-        public Route getRoute() {
-            return route;
+        public BiPredicate<Shard, RequestMessage<Invocation>> getSelector() {
+            return selector == null ? null : selector.get();
+        }
+
+        @Override
+        public Router getRouter() {
+            return router;
         }
 
         @Override
@@ -451,11 +478,6 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         }
 
         @Override
-        public Throwable getThrowable(final Result result) {
-            return result.getException();
-        }
-
-        @Override
         public boolean test(final Throwable throwable) {
             //暂时不需要增加动态配置支持，这些一般都需要提前测试配置好。
             return failoverBlackWhiteList.isValid(throwable.getClass()) || (exceptionPredication != null && exceptionPredication.test(throwable));
@@ -469,39 +491,53 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         /**
          * 接口静态配置
          */
-        protected final AdaptiveConfig urlConfig;
+        protected final AdaptiveConfig intfConfig;
+        /**
+         * 接口动态配置
+         */
+        protected AdaptiveConfig dynamicIntfConfig;
+        /**
+         * 方法静态配置
+         */
+        protected final AdaptiveConfig methodConfig;
         /**
          * 裁决者
          */
         protected final List<Judge> judges;
         /**
-         * 接口动态配置
-         */
-        protected AdaptiveConfig dynamicConfig;
-        /**
          * 方法动态评分
          */
         protected AdaptiveConfig score;
         /**
-         * 最终配置
+         * 配置合并
+         */
+        protected volatile AdaptiveConfig config;
+        /**
+         * 最终配置，包括自动计算评分的结果
          */
         protected volatile AdaptivePolicy policy;
-
 
         /**
          * 构造函数
          *
-         * @param urlConfig 静态配置
+         * @param intfConfig        接口静态配置
+         * @param methodConfig      方法静态配置
+         * @param dynamicIntfConfig 接口动态配置
+         * @param judges            裁判
          */
-        public MethodAdaptiveConfig(final AdaptiveConfig urlConfig, final List<Judge> judges) {
-            this.urlConfig = urlConfig;
+        public MethodAdaptiveConfig(final AdaptiveConfig intfConfig, final AdaptiveConfig methodConfig,
+                                    final AdaptiveConfig dynamicIntfConfig, final List<Judge> judges) {
+            this.intfConfig = intfConfig;
+            this.methodConfig = methodConfig;
+            this.dynamicIntfConfig = dynamicIntfConfig;
             this.judges = judges;
-            this.policy = new AdaptivePolicy(urlConfig, judges);
+            this.policy = new AdaptivePolicy(intfConfig, judges);
+            update();
         }
 
-        public void setDynamicConfig(AdaptiveConfig dynamicConfig) {
-            if (dynamicConfig != this.dynamicConfig) {
-                this.dynamicConfig = dynamicConfig;
+        public void setDynamicIntfConfig(AdaptiveConfig dynamicIntfConfig) {
+            if (dynamicIntfConfig != this.dynamicIntfConfig) {
+                this.dynamicIntfConfig = dynamicIntfConfig;
                 update();
             }
         }
@@ -521,14 +557,14 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          * 更新
          */
         protected synchronized void update() {
-            if (dynamicConfig == null && score == null) {
-                policy = new AdaptivePolicy(urlConfig, judges);
-            } else {
-                AdaptiveConfig result = new AdaptiveConfig(urlConfig);
-                result.merge(score);
-                result.merge(dynamicConfig);
-                policy = new AdaptivePolicy(result, judges);
-            }
+            AdaptiveConfig result = new AdaptiveConfig(intfConfig);
+            result.merge(dynamicIntfConfig);
+            result.merge(methodConfig);
+            //配置合并
+            config = new AdaptiveConfig(result);
+            //加上自动计算的评分
+            result.merge(score);
+            policy = new AdaptivePolicy(result, judges);
         }
     }
 

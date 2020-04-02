@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.route.pinpoint;
+package io.joyrpc.cluster.distribution.router.pinpoint;
 
 /*-
  * #%L
@@ -23,8 +23,8 @@ package io.joyrpc.cluster.distribution.route.pinpoint;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
-import io.joyrpc.cluster.distribution.Route;
-import io.joyrpc.cluster.distribution.route.AbstractRoute;
+import io.joyrpc.cluster.distribution.Router;
+import io.joyrpc.cluster.distribution.router.AbstractRouter;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.NoAliveProviderException;
 import io.joyrpc.exception.RpcException;
@@ -37,7 +37,7 @@ import io.joyrpc.util.Futures;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-import static io.joyrpc.cluster.distribution.Route.PIN_POINT;
+import static io.joyrpc.cluster.distribution.Router.PIN_POINT;
 import static io.joyrpc.constants.Constants.HIDDEN_KEY_PINPOINT;
 import static io.joyrpc.constants.ExceptionCode.COMMON_VALUE_ILLEGAL;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
@@ -45,11 +45,11 @@ import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
 /**
  * 定点调用
  */
-@Extension(value = PIN_POINT, order = Route.ORDER_PINPOINT)
-public class PinPointRoute extends AbstractRoute {
+@Extension(value = PIN_POINT, order = Router.ORDER_PINPOINT)
+public class PinPointRouter extends AbstractRouter {
 
     @Override
-    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
+    public CompletableFuture<Result> route(final RequestMessage<Invocation> request, final Candidate candidate) {
         String pinpoint = RequestContext.getContext().getAttachment(HIDDEN_KEY_PINPOINT);
         if (pinpoint == null || pinpoint.isEmpty()) {
             return Futures.completeExceptionally(new RpcException(".pinpoint is not configured in request context.", COMMON_VALUE_ILLEGAL));

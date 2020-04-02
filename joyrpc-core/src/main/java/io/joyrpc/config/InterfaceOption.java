@@ -22,19 +22,23 @@ package io.joyrpc.config;
 
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheKeyGenerator;
+import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.proxy.MethodCaller;
 
 import javax.validation.Validator;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiPredicate;
 
 /**
  * 接口运行时选项，抽取出接口是方便第三方在扩展Filter的时候也可以扩展实现方法选项，用于提前绑定相关参数
@@ -144,11 +148,18 @@ public interface InterfaceOption {
         int getForks();
 
         /**
+         * 节点选择器算法
+         *
+         * @return 节点选择器算法
+         */
+        BiPredicate<Shard, RequestMessage<Invocation>> getSelector();
+
+        /**
          * 获取分发策略
          *
          * @return 分发策略
          */
-        Route getRoute();
+        Router getRouter();
 
         /**
          * 故障切换策略

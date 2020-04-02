@@ -437,9 +437,9 @@
                         <xsd:documentation><![CDATA[ 序列化方式插件名称 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
-                <xsd:attribute name="router" type="xsd:string" use="optional">
+                <xsd:attribute name="nodeSelector" type="xsd:string" use="optional">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 路由规则插件名称 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 节点选择器插件名称 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
                 <xsd:attribute name="initSize" type="xsd:int" use="optional">

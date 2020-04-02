@@ -20,7 +20,7 @@ package io.joyrpc.config;
  * #L%
  */
 
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
@@ -56,6 +56,6 @@ public interface InterfaceOptionFactory {
      * @return 接口选项
      */
     InterfaceOption create(Class<?> interfaceClass, String interfaceName, URL url,
-                           Consumer<Route> configure,
+                           Consumer<Router> configure,
                            BiFunction<String, AdaptiveConfig, AdaptiveConfig> scorer);
 }

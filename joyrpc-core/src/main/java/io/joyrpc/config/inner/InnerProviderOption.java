@@ -21,6 +21,7 @@ package io.joyrpc.config.inner;
  */
 
 import io.joyrpc.config.AbstractInterfaceOption;
+import io.joyrpc.context.IntfConfiguration;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.extension.URL;
@@ -84,6 +85,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     public InnerProviderOption(final Class<?> interfaceClass, final String interfaceName, final URL url, final Object ref) {
         super(interfaceClass, interfaceName, url);
         this.ref = ref;
+        this.generic = false;
         setup();
         buildOptions();
     }

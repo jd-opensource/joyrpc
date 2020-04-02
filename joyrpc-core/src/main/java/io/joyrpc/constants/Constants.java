@@ -450,11 +450,12 @@ public class Constants {
     /**
      * 默认分发算法
      */
-    public static final String DEFAULT_ROUTE = "failover";
+    public static final String DEFAULT_ROUTER = "failover";
     /**
      * 分发选项
      */
-    public static final URLOption<String> ROUTE_OPTION = new URLOption<>("route", DEFAULT_ROUTE);
+    public static final URLOption<String> ROUTER_OPTION = new URLOption<>("router", DEFAULT_ROUTER);
+    public static final URLOption<String> NODE_SELECTOR_OPTION = new URLOption<>("nodeSelector", (String) null);
     public static final URLOption<String> FAILOVER_WHEN_THROWABLE_OPTION = new URLOption<>("failoverWhenThrowable", "");
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
@@ -538,7 +539,6 @@ public class Constants {
      */
     public static final URLOption<String> PROXY_OPTION = new URLOption<>("proxy", DEFAULT_PROXY);
     public static final URLOption<Boolean> VALIDATION_OPTION = new URLOption<>("validation", false);
-    public static final URLOption<String> ROUTER_OPTION = new URLOption<>("router", (String) null);
     //默认不压缩
     public static final URLOption<String> COMPRESS_OPTION = new URLOption<>("compress", (String) null);
     /**

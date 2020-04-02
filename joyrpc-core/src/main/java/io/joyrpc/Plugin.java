@@ -144,7 +144,7 @@ public interface Plugin {
     /**
      * 路由插件
      */
-    ExtensionPoint<Router, String> ROUTER = new ExtensionPointLazy<>(Router.class);
+    ExtensionPoint<NodeSelector, String> NODE_SELECTOR = new ExtensionPointLazy<>(NodeSelector.class);
 
     /**
      * 注册中心全局配置变更事件通知插件
@@ -409,9 +409,9 @@ public interface Plugin {
     ExtensionPoint<RateLimiter, String> LIMITER = new ExtensionPointLazy<>(RateLimiter.class);
 
     /**
-     * 集群分发策略插件
+     * 路由策略
      */
-    ExtensionPoint<Route, String> ROUTE = new ExtensionPointLazy<>(Route.class);
+    ExtensionPoint<Router, String> ROUTER = new ExtensionPointLazy<>(Router.class);
 
     /**
      * 重试目标节点选择器

@@ -20,8 +20,7 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive;
  * #L%
  */
 
-import io.joyrpc.cluster.Node;
-import io.joyrpc.extension.URL;
+import io.joyrpc.extension.Parametric;
 
 import java.io.Serializable;
 import java.util.Arrays;
@@ -30,8 +29,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
-import static io.joyrpc.util.StringUtils.split;
+import static io.joyrpc.util.StringUtils.*;
 
 /**
  * 自适应配置
@@ -148,7 +146,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
      *
      * @param url url
      */
-    public AdaptiveConfig(final URL url) {
+    public AdaptiveConfig(final Parametric url) {
         if (url != null) {
             String[] rooms = split(url.getString(ADAPTIVE_EXCLUSION_ROOMS), SEMICOLON_COMMA_WHITESPACE);
             arbiter = url.getString(ADAPTIVE_ARBITER);
@@ -342,7 +340,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
      *
      * @param url 参数
      */
-    public static RankScore<Integer> computeTpScore(final URL url) {
+    public static RankScore<Integer> computeTpScore(final Parametric url) {
         Integer fair = url.getInteger(ADAPTIVE_TP_FAIR);
         Integer poor = url.getInteger(ADAPTIVE_TP_POOR);
         Integer disable = url.getInteger(ADAPTIVE_TP_DISABLE);
@@ -369,7 +367,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
      *
      * @param url 参数
      */
-    public static RankScore<Double> computeAvailabilityScore(URL url) {
+    public static RankScore<Double> computeAvailabilityScore(Parametric url) {
         Double fair = url.getDouble(ADAPTIVE_AVAILABILITY_FAIR);
         Double poor = url.getDouble(ADAPTIVE_AVAILABILITY_POOR);
         Double disable = url.getDouble(ADAPTIVE_AVAILABILITY_DISABLE);
@@ -397,7 +395,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
     /**
      * 计算并发评分
      */
-    public static RankScore<Long> computeConcurrencyScore(URL url) {
+    public static RankScore<Long> computeConcurrencyScore(Parametric url) {
         Long fair = url.getLong(ADAPTIVE_CONCURRENCY_FAIR);
         Long poor = url.getLong(ADAPTIVE_CONCURRENCY_POOR);
         if (fair == null && poor == null) {
@@ -424,7 +422,7 @@ public class AdaptiveConfig implements Serializable, Cloneable {
     /**
      * 计算并发评分
      */
-    public static RankScore<Long> computeQpsScore(URL url) {
+    public static RankScore<Long> computeQpsScore(Parametric url) {
         Long fair = url.getLong(ADAPTIVE_QPS_FAIR);
         Long poor = url.getLong(ADAPTIVE_QPS_POOR);
         if (fair == null && poor == null) {

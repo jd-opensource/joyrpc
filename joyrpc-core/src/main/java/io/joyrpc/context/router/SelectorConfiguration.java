@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution;
+package io.joyrpc.context.router;
 
 /*-
  * #%L
@@ -20,16 +20,22 @@ package io.joyrpc.cluster.distribution;
  * #L%
  */
 
+import io.joyrpc.cluster.Shard;
+import io.joyrpc.context.AbstractInterfaceConfiguration;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
+
+import java.util.function.BiPredicate;
+
 /**
- * 异常策略
+ * 方法条件节点选择器配置信息
  */
-public interface ExceptionPolicy extends ExceptionPredication {
+public class SelectorConfiguration extends AbstractInterfaceConfiguration<String, BiPredicate<Shard, RequestMessage<Invocation>>> {
 
     /**
-     * 异常是否要重试
-     *
-     * @param throwable 异常
-     * @return 重试标识
+     * 结果缓存
      */
-    boolean test(Throwable throwable);
+    public static final SelectorConfiguration SELECTOR = new SelectorConfiguration();
+
+
 }

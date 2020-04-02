@@ -96,7 +96,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 集群处理算法
      */
-    @ValidatePlugin(extensible = Route.class, name = "ROUTE", defaultValue = DEFAULT_ROUTE)
+    @ValidatePlugin(extensible = Router.class, name = "ROUTER", defaultValue = DEFAULT_ROUTER)
     protected String cluster;
     /**
      * 负载均衡算法
@@ -166,10 +166,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     @ValidatePlugin(extensible = ChannelManagerFactory.class, name = "CHANNEL_MANAGER_FACTORY", defaultValue = DEFAULT_CHANNEL_FACTORY)
     protected String channelFactory;
     /**
-     * 路由规则
+     * 节点选择器
      */
-    @ValidatePlugin(extensible = Router.class, name = "ROUTER")
-    protected String router;
+    @ValidatePlugin(extensible = NodeSelector.class, name = "NODE_SELECTOR")
+    protected String nodeSelector;
     /**
      * 预热权重
      */
@@ -231,7 +231,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.failoverSelector = config.failoverSelector;
         this.forks = config.forks;
         this.channelFactory = config.channelFactory;
-        this.router = config.router;
+        this.nodeSelector = config.nodeSelector;
         this.warmupWeight = config.warmupWeight;
         this.warmupDuration = config.warmupDuration;
     }
@@ -569,12 +569,12 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         this.injvm = injvm;
     }
 
-    public String getRouter() {
-        return router;
+    public String getNodeSelector() {
+        return nodeSelector;
     }
 
-    public void setRouter(String router) {
-        this.router = router;
+    public void setNodeSelector(String nodeSelector) {
+        this.nodeSelector = nodeSelector;
     }
 
     public Integer getInitSize() {
@@ -662,7 +662,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             }
         }
         addElement2Map(params, Constants.GENERIC_OPTION, generic);
-        addElement2Map(params, Constants.ROUTE_OPTION, cluster);
+        addElement2Map(params, Constants.ROUTER_OPTION, cluster);
         addElement2Map(params, Constants.RETRIES_OPTION, retries);
         addElement2Map(params, Constants.RETRY_ONLY_ONCE_PER_NODE_OPTION, retryOnlyOncePerNode);
         addElement2Map(params, Constants.FAILOVER_WHEN_THROWABLE_OPTION, failoverWhenThrowable);
@@ -674,7 +674,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         addElement2Map(params, Constants.STICKY_OPTION, sticky);
         addElement2Map(params, Constants.CHECK_OPTION, check);
         addElement2Map(params, Constants.SERIALIZATION_OPTION, serialization);
-        addElement2Map(params, Constants.ROUTER_OPTION, router);
+        addElement2Map(params, Constants.NODE_SELECTOR_OPTION, nodeSelector);
         addElement2Map(params, Constants.INIT_SIZE_OPTION, initSize);
         addElement2Map(params, Constants.MIN_SIZE_OPTION, minSize);
         addElement2Map(params, Constants.CANDIDATURE_OPTION, candidature);

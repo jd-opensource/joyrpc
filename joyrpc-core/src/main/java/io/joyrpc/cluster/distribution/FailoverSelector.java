@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,7 +40,7 @@ public interface FailoverSelector {
      * @param retry     当前重试次数
      * @param fails     失败节点
      * @param origins   原始节点
-     * @return
+     * @return 候选者
      */
     Candidate select(Candidate candidate, Node node, int retry, List<Node> fails, List<Node> origins);
 

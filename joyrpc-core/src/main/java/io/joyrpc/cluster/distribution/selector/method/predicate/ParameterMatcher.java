@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.router.method.predicate;
+package io.joyrpc.cluster.distribution.selector.method.predicate;
 
 /*-
  * #%L

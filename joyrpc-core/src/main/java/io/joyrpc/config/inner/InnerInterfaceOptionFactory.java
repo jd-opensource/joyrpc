@@ -20,7 +20,7 @@ package io.joyrpc.config.inner;
  * #L%
  */
 
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOptionFactory;
@@ -43,7 +43,7 @@ public class InnerInterfaceOptionFactory implements InterfaceOptionFactory {
 
     @Override
     public InterfaceOption create(final Class<?> interfaceClass, final String interfaceName, final URL url,
-                                  final Consumer<Route> configure,
+                                  final Consumer<Router> configure,
                                   final BiFunction<String, AdaptiveConfig, AdaptiveConfig> scorer) {
         return new InnerConsumerOption(interfaceClass, interfaceName, url, configure, scorer);
     }

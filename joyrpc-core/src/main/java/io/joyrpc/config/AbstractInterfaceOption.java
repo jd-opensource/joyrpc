@@ -28,8 +28,6 @@ import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.AbstractInterfaceConfiguration;
-import io.joyrpc.context.ConfigEvent;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.URL;
@@ -49,10 +47,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
@@ -161,6 +156,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         this.interfaceClass = interfaceClass;
         this.interfaceName = interfaceName;
         this.url = url;
+        this.generic = GENERIC.test(interfaceClass);
     }
 
     /**
@@ -175,7 +171,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      */
     protected void setup() {
         //方法级别的隐藏参数，保留以"."开头
-        this.generic = GENERIC.test(interfaceClass);
         this.implicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
         this.timeout = url.getPositiveInt(TIMEOUT_OPTION);
         this.concurrency = url.getInteger(CONCURRENCY_OPTION);
@@ -502,82 +497,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public void reset(final RequestMessage<Invocation> request) {
             request.getHeader().setTimeout((int) (request.getTimeout() + request.getCreateTime() - SystemClock.now()));
-        }
-    }
-
-    /**
-     * 接口的配置
-     *
-     * @param <K>
-     * @param <V>
-     */
-    protected static class IntfConfiguration<K, V> implements Consumer<ConfigEvent<K, V>>, Supplier<V> {
-
-        /**
-         * 接口配置
-         */
-        protected final AbstractInterfaceConfiguration<K, V> configuration;
-        /**
-         * 键
-         */
-        protected final K key;
-        /**
-         * 变更通知
-         */
-        protected final Consumer<V> consumer;
-        /**
-         * 当前接口配置
-         */
-        protected volatile V config;
-
-        public IntfConfiguration(final AbstractInterfaceConfiguration<K, V> configuration, final K key) {
-            this(configuration, key, null);
-        }
-
-        public IntfConfiguration(final AbstractInterfaceConfiguration<K, V> configuration, final K key, final Consumer<V> consumer) {
-            this.configuration = configuration;
-            this.key = key;
-            this.consumer = consumer;
-            configuration.addListener(this);
-            this.config = configuration.get(key);
-            if (config != null && consumer != null) {
-                consumer.accept(config);
-            }
-        }
-
-        /**
-         * 通知
-         */
-        protected void publish() {
-            if (consumer != null) {
-                consumer.accept(config);
-            }
-        }
-
-        @Override
-        public void accept(final ConfigEvent<K, V> event) {
-            //本接口的配置
-            if (Objects.equals(key, event.getKey())) {
-                switch (event.getType()) {
-                    case ADD:
-                    case UPDATE:
-                        config = event.getValue();
-                        publish();
-                        break;
-                    case REMOVE:
-                        config = null;
-                        publish();
-                }
-            }
-        }
-
-        @Override
-        public V get() {
-            return config;
-        }
-
-        public void close() {
-            configuration.removeListener(this);
         }
     }
 

@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.router.method.predicate;
+package io.joyrpc.cluster.distribution.selector.method.predicate;
 
 /*-
  * #%L
@@ -23,28 +23,27 @@ package io.joyrpc.cluster.distribution.router.method.predicate;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.network.Ipv4;
+import io.joyrpc.util.network.Lan;
 
 import java.util.function.BiPredicate;
 
 /**
- * @ClassName: LocalIpEqual
- * @Description: 请求客户端IP匹配
- * @date 2019年3月4日 下午5:54:32
+ * 网段匹配
+ *
+ * @ClassName: IpPatternMatch
+ * @date 2019年3月5日 上午11:39:26
  */
-public class LocalIpMatcher implements BiPredicate<Shard, RequestMessage<Invocation>> {
+public class LanMatcher implements BiPredicate<Shard, RequestMessage<Invocation>> {
 
-    protected final String localIp;
+    protected Lan lan;
 
-    protected final Operator operator;
-
-    public LocalIpMatcher(final String localIp, final Operator operator) {
-        this.localIp = localIp;
-        this.operator = operator == null ? Operator.eq : operator;
+    public LanMatcher(final String pattern) {
+        this.lan = new Lan(pattern, true);
     }
 
     @Override
     public boolean test(final Shard s, final RequestMessage<Invocation> request) {
-        return operator.match(localIp, Ipv4.getLocalIp());
+        return lan.contains(s.getUrl().getHost());
     }
+
 }

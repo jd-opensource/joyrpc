@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.route.failover;
+package io.joyrpc.cluster.distribution.router.failover;
 
 /*-
  * #%L
@@ -27,8 +27,8 @@ import io.joyrpc.cluster.distribution.ExceptionPolicy;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.FailoverSelector;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
-import io.joyrpc.cluster.distribution.route.AbstractRoute;
-import io.joyrpc.cluster.distribution.route.failover.simple.SimpleFailoverSelector;
+import io.joyrpc.cluster.distribution.router.AbstractRouter;
+import io.joyrpc.cluster.distribution.router.failover.simple.SimpleFailoverSelector;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
@@ -40,20 +40,20 @@ import io.joyrpc.util.Futures;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static io.joyrpc.cluster.distribution.Route.FAIL_OVER;
-import static io.joyrpc.cluster.distribution.Route.ORDER_FAILOVER;
+import static io.joyrpc.cluster.distribution.Router.FAIL_OVER;
+import static io.joyrpc.cluster.distribution.Router.ORDER_FAILOVER;
 
 /**
  * 异常重试
  */
 @Extension(value = FAIL_OVER, order = ORDER_FAILOVER)
-public class FailoverRoute extends AbstractRoute {
+public class FailoverRouter extends AbstractRouter {
 
     /**
      * 构建过载异常
      *
-     * @param maxRetry
-     * @return
+     * @param maxRetry 最大重试次数
+     * @return 异常
      */
     protected Throwable createOverloadException(final int maxRetry) {
         return new FailoverException(String.format("Maximum number %d of retries reached", maxRetry));
@@ -62,17 +62,17 @@ public class FailoverRoute extends AbstractRoute {
     /**
      * 构建没有节点异常
      *
-     * @param count
-     * @param candidates
-     * @param retry
-     * @return
+     * @param retrys     重试次数
+     * @param candidates 候选者数量
+     * @param retry      是否可以重试
+     * @return 异常
      */
-    protected Throwable createEmptyException(final int count, final int candidates, final boolean retry) {
-        return new FailoverException(String.format("there is not any suitable node after retrying %d. candidates size %d", count, candidates), retry);
+    protected Throwable createEmptyException(final int retrys, final int candidates, final boolean retry) {
+        return new FailoverException(String.format("there is not any suitable node after retrying %d. candidates size %d", retrys, candidates), retry);
     }
 
     @Override
-    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
+    public CompletableFuture<Result> route(final RequestMessage<Invocation> request, final Candidate candidate) {
         //获取重试策略
         ConsumerMethodOption option = (ConsumerMethodOption) request.getOption();
         FailoverPolicy policy = option.getFailoverPolicy();
@@ -119,7 +119,7 @@ public class FailoverRoute extends AbstractRoute {
                     Futures.completeExceptionally(createEmptyException(retry, origins.size(), candidate.getNodes().size() != origins.size()));
             result.whenComplete((r, t) -> {
                 ExceptionPolicy exceptionPolicy = policy.getExceptionPolicy();
-                t = t == null && exceptionPolicy != null ? exceptionPolicy.getThrowable(r) : t;
+                t = t == null ? r.getException() : t;
                 if (t == null) {
                     future.complete(r);
                 } else {

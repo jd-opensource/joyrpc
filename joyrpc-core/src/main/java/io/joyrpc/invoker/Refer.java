@@ -31,7 +31,7 @@ import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.distribution.LoadBalance;
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.NodeSelector;
 import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveScorer;
 import io.joyrpc.cluster.event.NodeEvent;
@@ -108,9 +108,9 @@ public class Refer extends AbstractInvoker {
      */
     protected ConfigHandler configHandler;
     /**
-     * 路由器
+     * 路由节点选择器
      */
-    protected Router<RequestMessage<Invocation>> router;
+    protected NodeSelector nodeSelector;
     /**
      * 过滤链
      */
@@ -219,7 +219,7 @@ public class Refer extends AbstractInvoker {
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
         this.exporterName = NAME.apply(interfaceName, alias);
         //路由器
-        this.router = configure(ROUTER.get(url.getString(Constants.ROUTER_OPTION)));
+        this.nodeSelector = configure(NODE_SELECTOR.get(url.getString(Constants.NODE_SELECTOR_OPTION)));
         //方法选项
         this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure,
                 loadBalance instanceof AdaptiveScorer ? (method, cfg) -> ((AdaptiveScorer) loadBalance).score(cluster, method, cfg) : null);
@@ -268,7 +268,7 @@ public class Refer extends AbstractInvoker {
      * @return CompletableFuture
      */
     protected CompletableFuture<Result> invokeRemote(final Node node, final Node last, final RequestMessage<Invocation> request) {
-        Client client = node.getClient();
+        Client client = node == null ? null : node.getClient();
         if (client == null) {
             //选择完后，节点可能被其它线程断开连接了
             return Futures.completeExceptionally(new TransportException("Error occurs while sending message. caused by client is null.", true));
@@ -366,34 +366,33 @@ public class Refer extends AbstractInvoker {
     /**
      * 配置路由器
      *
-     * @param router 路由器
-     * @return 路由器
+     * @param selector 路由节点选择器
+     * @return 路由节点选择器
      */
-    protected Router<RequestMessage<Invocation>> configure(final Router<RequestMessage<Invocation>> router) {
-        if (router != null) {
-            router.setUrl(url);
-            router.setClass(interfaceClass);
-            router.setClassName(interfaceName);
-            router.setup();
+    protected NodeSelector configure(final NodeSelector selector) {
+        if (selector != null) {
+            selector.setUrl(url);
+            selector.setClass(interfaceClass);
+            selector.setClassName(interfaceName);
+            selector.setup();
         }
-        return router;
+        return selector;
     }
 
     /**
      * 配置分发策略
      *
-     * @param route 分发策略
+     * @param router 分发策略
      * @return 分发策略
      */
-    protected Route configure(final Route route) {
-        if (route != null) {
-            route.setUrl(url);
-            route.setLoadBalance(loadBalance);
-            route.setOperation(this::invokeRemote);
-            route.setJudge(Result::isException);
-            route.setup();
+    protected Router configure(final Router router) {
+        if (router != null) {
+            router.setUrl(url);
+            router.setLoadBalance(loadBalance);
+            router.setOperation(this::invokeRemote);
+            router.setup();
         }
-        return route;
+        return router;
     }
 
     @Override
@@ -442,9 +441,9 @@ public class Refer extends AbstractInvoker {
         }
         //集群节点
         List<Node> nodes = cluster.getNodes();
-        if (!nodes.isEmpty() && router != null) {
+        if (!nodes.isEmpty() && nodeSelector != null) {
             //路由选择
-            nodes = router.route(new Candidate(cluster, null, nodes, nodes.size()), request);
+            nodes = nodeSelector.select(new Candidate(cluster, null, nodes, nodes.size()), request);
         }
         if (nodes == null || nodes.isEmpty()) {
             //节点为空
@@ -452,8 +451,8 @@ public class Refer extends AbstractInvoker {
                     String.format("No alive provider found. class=%s alias=%s", interfaceName, alias),
                     CONSUMER_NO_ALIVE_PROVIDER);
         }
-        Route route = ((ConsumerMethodOption) request.getOption()).getRoute();
-        return route.invoke(request, new Candidate(cluster, null, nodes, nodes.size()));
+        Router route = ((ConsumerMethodOption) request.getOption()).getRouter();
+        return route.route(request, new Candidate(cluster, null, nodes, nodes.size()));
     }
 
     /**

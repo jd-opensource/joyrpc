@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.route.failover.simple;
+package io.joyrpc.cluster.distribution.router.failover.simple;
 
 /*-
  * #%L

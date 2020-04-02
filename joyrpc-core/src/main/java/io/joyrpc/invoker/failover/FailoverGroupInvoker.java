@@ -38,7 +38,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.INTERFACE_OPTION_FACTORY;
-import static io.joyrpc.cluster.distribution.Route.FAIL_FAST;
+import static io.joyrpc.cluster.distribution.Router.FAIL_FAST;
 
 /**
  * Failover分组路由

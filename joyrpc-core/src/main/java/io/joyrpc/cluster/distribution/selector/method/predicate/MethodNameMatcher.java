@@ -1,4 +1,4 @@
-package io.joyrpc.context.router;
+package io.joyrpc.cluster.distribution.selector.method.predicate;
 
 /*-
  * #%L
@@ -21,21 +21,36 @@ package io.joyrpc.context.router;
  */
 
 import io.joyrpc.cluster.Shard;
-import io.joyrpc.context.AbstractInterfaceConfiguration;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.function.BiPredicate;
 
 /**
- * 方法条件路由配置信息
+ * @ClassName: MethodNameMatch
+ * @Description: 方法名匹配
+ * @date 2019年3月4日 下午5:23:12
  */
-public class RouterConfiguration extends AbstractInterfaceConfiguration<String, BiPredicate<Shard, RequestMessage<Invocation>>> {
+public class MethodNameMatcher implements BiPredicate<Shard, RequestMessage<Invocation>> {
 
     /**
-     * 结果缓存
+     * 方法名称
      */
-    public static final RouterConfiguration ROUTER = new RouterConfiguration();
+    protected String methodName;
 
+    /**
+     * 操作符
+     */
+    protected Operator operator;
+
+    public MethodNameMatcher(final String methodName, final Operator operator) {
+        this.methodName = methodName;
+        this.operator = operator == null ? Operator.eq : operator;
+    }
+
+    @Override
+    public boolean test(final Shard s, final RequestMessage<Invocation> r) {
+        return operator.match(methodName, r.getPayLoad().getMethodName());
+    }
 
 }

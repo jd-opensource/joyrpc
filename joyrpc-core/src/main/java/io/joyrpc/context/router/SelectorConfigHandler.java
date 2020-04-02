@@ -21,7 +21,7 @@ package io.joyrpc.context.router;
  */
 
 
-import io.joyrpc.cluster.distribution.router.method.MethodRouterBuilder;
+import io.joyrpc.cluster.distribution.selector.method.MethodSelectorBuilder;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.extension.Extension;
 import org.slf4j.Logger;
@@ -33,16 +33,16 @@ import java.util.Objects;
 import static io.joyrpc.constants.Constants.GLOBAL_SETTING;
 import static io.joyrpc.constants.Constants.SETTING_ROUTER_RULE;
 import static io.joyrpc.context.ConfigEventHandler.BIZ_ORDER;
-import static io.joyrpc.context.router.RouterConfiguration.ROUTER;
+import static io.joyrpc.context.router.SelectorConfiguration.SELECTOR;
 
 
 /**
  * 方法条件路由配置
  */
-@Extension(value = "router", order = BIZ_ORDER)
-public class RouterConfigHandler implements ConfigEventHandler {
+@Extension(value = "selector", order = BIZ_ORDER)
+public class SelectorConfigHandler implements ConfigEventHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(RouterConfigHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(SelectorConfigHandler.class);
 
     @Override
     public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
@@ -51,7 +51,7 @@ public class RouterConfigHandler implements ConfigEventHandler {
             String newAttr = newAttrs.get(SETTING_ROUTER_RULE);
             if (!Objects.equals(oldAttr, newAttr)) {
                 try {
-                    ROUTER.update(className, MethodRouterBuilder.build(newAttr));
+                    SELECTOR.update(className, MethodSelectorBuilder.build(newAttr));
                 } catch (Exception e) {
                     logger.error("Error occurs while parsing router config. caused by " + e.getMessage(), e);
                 }

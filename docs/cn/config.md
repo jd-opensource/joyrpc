@@ -153,7 +153,7 @@
 |injvm|Boolean|否|true|是否走injvm调用（如果同一jvm内发布了服务，则不走远程调用）|
 |check|Boolean|否|false|是否强依赖服务端（无可用服务端启动失败）|
 |serialization|String|否|hessian|序列化插件名称：protostuff、msgpack、json@fastjson、fst、kryo、hessian、java，选用protostuff 性能更高，使用时需要注意数组、集合中不能有null元素|
-|router|String|否|methodRouter|路由规则插件名称，已支持 methodRouter(基于方法参数的路由)|
+|nodeSelector|String|否| |目标节点选择器插件名称，已支持 methodRouter(基于方法参数的路由)|
 |concurrency|int|否|-1|接口下**每方法**的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制|
 |validation|Boolean|否|false|是否校验参数|
 |compress|String|否|lz4|压缩算法插件名称：lz4、snappy、lzma、zlib|

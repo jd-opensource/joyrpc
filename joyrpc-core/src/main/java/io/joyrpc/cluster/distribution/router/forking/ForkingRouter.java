@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.route.forking;
+package io.joyrpc.cluster.distribution.router.forking;
 
 /*-
  * #%L
@@ -23,8 +23,8 @@ package io.joyrpc.cluster.distribution.route.forking;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
-import io.joyrpc.cluster.distribution.Route;
-import io.joyrpc.cluster.distribution.route.AbstractRoute;
+import io.joyrpc.cluster.distribution.Router;
+import io.joyrpc.cluster.distribution.router.AbstractRouter;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Invocation;
@@ -35,16 +35,16 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.joyrpc.cluster.distribution.Route.FORKING;
+import static io.joyrpc.cluster.distribution.Router.FORKING;
 
 /**
  * 并行调用
  */
-@Extension(value = FORKING, order = Route.ORDER_FORKING)
-public class ForkingRoute extends AbstractRoute {
+@Extension(value = FORKING, order = Router.ORDER_FORKING)
+public class ForkingRouter extends AbstractRouter {
 
     @Override
-    public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request, final Candidate candidate) {
+    public CompletableFuture<Result> route(final RequestMessage<Invocation> request, final Candidate candidate) {
         CompletableFuture<Result> result = new CompletableFuture<>();
         List<Node> nodes = candidate.getNodes();
         ConsumerMethodOption option = (ConsumerMethodOption) request.getOption();
@@ -80,20 +80,20 @@ public class ForkingRoute extends AbstractRoute {
         }
         AtomicInteger counter = new AtomicInteger(total);
         for (int i = 0; i < total; i++) {
-            futures[i].whenComplete((value, error) -> {
+            futures[i].whenComplete((r, error) -> {
                 int remain = counter.decrementAndGet();
                 if (error != null) {
                     //异常
                     if (remain == 0) {
-                        result.completeExceptionally(error);
+                        result.complete(new Result(request.getContext(), error));
                     }
-                } else if (judge.test(value)) {
+                } else if (r.isException()) {
                     //结果内容是异常
                     if (remain == 0) {
-                        result.complete(value);
+                        result.complete(r);
                     }
                 } else {
-                    result.complete(value);
+                    result.complete(r);
                 }
             });
         }

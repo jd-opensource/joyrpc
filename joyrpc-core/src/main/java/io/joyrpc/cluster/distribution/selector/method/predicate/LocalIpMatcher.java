@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.router.method.predicate;
+package io.joyrpc.cluster.distribution.selector.method.predicate;
 
 /*-
  * #%L
@@ -23,34 +23,28 @@ package io.joyrpc.cluster.distribution.router.method.predicate;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.util.network.Ipv4;
 
 import java.util.function.BiPredicate;
 
 /**
- * @ClassName: MethodNameMatch
- * @Description: 方法名匹配
- * @date 2019年3月4日 下午5:23:12
+ * @ClassName: LocalIpEqual
+ * @Description: 请求客户端IP匹配
+ * @date 2019年3月4日 下午5:54:32
  */
-public class MethodNameMatcher implements BiPredicate<Shard, RequestMessage<Invocation>> {
+public class LocalIpMatcher implements BiPredicate<Shard, RequestMessage<Invocation>> {
 
-    /**
-     * 方法名称
-     */
-    protected String methodName;
+    protected final String localIp;
 
-    /**
-     * 操作符
-     */
-    protected Operator operator;
+    protected final Operator operator;
 
-    public MethodNameMatcher(final String methodName, final Operator operator) {
-        this.methodName = methodName;
+    public LocalIpMatcher(final String localIp, final Operator operator) {
+        this.localIp = localIp;
         this.operator = operator == null ? Operator.eq : operator;
     }
 
     @Override
-    public boolean test(final Shard s, final RequestMessage<Invocation> r) {
-        return operator.match(methodName, r.getPayLoad().getMethodName());
+    public boolean test(final Shard s, final RequestMessage<Invocation> request) {
+        return operator.match(localIp, Ipv4.getLocalIp());
     }
-
 }

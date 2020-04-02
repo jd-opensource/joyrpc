@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.route;
+package io.joyrpc.cluster.distribution.router;
 
 /*-
  * #%L
@@ -23,19 +23,18 @@ package io.joyrpc.cluster.distribution.route;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.LoadBalance;
-import io.joyrpc.cluster.distribution.Route;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.TriFunction;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Predicate;
 
 /**
  * 抽象的Route实现
  */
-public abstract class AbstractRoute implements Route {
+public abstract class AbstractRouter implements Router {
 
     /**
      * 负载均衡
@@ -45,10 +44,6 @@ public abstract class AbstractRoute implements Route {
      * 路由操作
      */
     protected TriFunction<Node, Node, RequestMessage<Invocation>, CompletableFuture<Result>> operation;
-    /**
-     * 判断结果是否成功
-     */
-    protected Predicate<Result> judge;
     /**
      * URL
      */
@@ -62,11 +57,6 @@ public abstract class AbstractRoute implements Route {
     @Override
     public void setOperation(TriFunction<Node, Node, RequestMessage<Invocation>, CompletableFuture<Result>> operation) {
         this.operation = operation;
-    }
-
-    @Override
-    public void setJudge(Predicate<Result> judge) {
-        this.judge = judge;
     }
 
     @Override

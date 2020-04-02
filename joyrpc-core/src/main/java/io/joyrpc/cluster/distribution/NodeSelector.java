@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.router.method.predicate;
+package io.joyrpc.cluster.distribution;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.router.method.predicate;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,30 +20,28 @@ package io.joyrpc.cluster.distribution.router.method.predicate;
  * #L%
  */
 
-import io.joyrpc.cluster.Shard;
+import io.joyrpc.InvokerAware;
+import io.joyrpc.cluster.Candidate;
+import io.joyrpc.cluster.Node;
+import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.Prototype;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.network.Lan;
 
-import java.util.function.BiPredicate;
+import java.util.List;
 
 /**
- * 网段匹配
- *
- * @ClassName: IpPatternMatch
- * @date 2019年3月5日 上午11:39:26
+ * 路由目标节点选择
  */
-public class LanMatcher implements BiPredicate<Shard, RequestMessage<Invocation>> {
+@Extension("nodeSelector")
+public interface NodeSelector extends InvokerAware, Prototype {
 
-    protected Lan lan;
-
-    public LanMatcher(final String pattern) {
-        this.lan = new Lan(pattern, true);
-    }
-
-    @Override
-    public boolean test(final Shard s, final RequestMessage<Invocation> request) {
-        return lan.contains(s.getUrl().getHost());
-    }
-
+    /**
+     * 选择目标节点
+     *
+     * @param candidate 候选者
+     * @param request   请求
+     * @return List<Node>  路由结果
+     */
+    List<Node> select(Candidate candidate, RequestMessage<Invocation> request);
 }

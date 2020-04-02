@@ -37,7 +37,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static io.joyrpc.Plugin.INTERFACE_OPTION_FACTORY;
 import static io.joyrpc.cluster.distribution.Router.FAIL_FAST;
 
 /**
@@ -59,15 +58,9 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
      */
     protected ConsumerConfig<?>[] configs;
     /**
-     * 方法透传参数
+     * 接口参数
      */
-    protected InterfaceOption options;
-
-    @Override
-    public void setup() {
-        super.setup();
-        options = INTERFACE_OPTION_FACTORY.get().create(clazz, className, url, null, null);
-    }
+    protected InterfaceOption intfOption;
 
     @Override
     public CompletableFuture<Void> refer() {
@@ -84,21 +77,16 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
             configMap.put(alias, configs[i]);
             i++;
         }
-        return CompletableFuture.allOf(futures);
-    }
-
-    @Override
-    public CompletableFuture<Void> close(final boolean gracefully) {
-        if (options != null) {
-            options.close();
-        }
-        return super.close(gracefully);
+        return CompletableFuture.allOf(futures).thenAccept(v -> {
+            if (configs.length > 0) {
+                intfOption = configs[0].getRefer().getOptions();
+            }
+        });
     }
 
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-        Invocation invocation = request.getPayLoad();
-        ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(invocation.getMethodName());
+        ConsumerMethodOption option = (ConsumerMethodOption) intfOption.getOption(request.getMethodName());
         request.setTimeout(option.getTimeout());
         request.getHeader().setTimeout(option.getTimeout());
         CompletableFuture<Result> future = new CompletableFuture<>();
@@ -118,7 +106,6 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
                          final int retry,
                          final FailoverPolicy policy,
                          final CompletableFuture<Result> future) {
-
         //调用，如果节点不存在，则抛出Failover异常。
         ConsumerConfig<?> config = configs[retry % configs.length];
         CompletableFuture<Result> result = config.getRefer().invoke(request);

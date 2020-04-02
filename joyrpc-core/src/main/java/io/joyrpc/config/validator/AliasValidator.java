@@ -46,12 +46,18 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
         String message = null;
         if (alias == null || alias.isEmpty()) {
             message = "alias can not be empty.";
-        } else if (value instanceof AbstractConsumerConfig && !NORMAL_COLON.matcher(alias).matches()) {
-            message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':'";
-        } else if (value instanceof ProviderConfig && !NORMAL_COLON.matcher(alias).matches()) {
-            message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':'";
-        } else if (value instanceof ConsumerGroupConfig && !NORMAL_COMMA_COLON.matcher(alias).matches()) {
-            message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':' ','";
+        } else if (value instanceof ConsumerGroupConfig) {
+            if (!NORMAL_COMMA_COLON.matcher(alias).matches()) {
+                message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':' ','";
+            }
+        } else if (value instanceof AbstractConsumerConfig) {
+            if (!NORMAL_COLON.matcher(alias).matches()) {
+                message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':'";
+            }
+        } else if (value instanceof ProviderConfig) {
+            if (!NORMAL_COLON.matcher(alias).matches()) {
+                message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':'";
+            }
         }
         if (message != null) {
             context.disableDefaultConstraintViolation();

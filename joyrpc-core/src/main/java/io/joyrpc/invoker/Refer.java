@@ -637,4 +637,8 @@ public class Refer extends AbstractInvoker {
     public Registry getRegistry() {
         return registry;
     }
+
+    public InterfaceOption getOptions() {
+        return options;
+    }
 }

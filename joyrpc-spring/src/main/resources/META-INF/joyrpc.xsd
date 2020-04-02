@@ -539,11 +539,6 @@
                             <xsd:documentation><![CDATA[ 目标参数（机房/分组等）索引，从0开始计数 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
-                    <xsd:attribute name="aliasAdaptive" type="xsd:string" use="optional">
-                        <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 是否自动适配alias，即当没有alias时自动引入 ]]></xsd:documentation>
-                        </xsd:annotation>
-                    </xsd:attribute>
                 </xsd:extension>
             </xsd:complexContent>
         </xsd:complexType>

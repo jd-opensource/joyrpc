@@ -66,8 +66,6 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     @Override
     public void setup() {
         super.setup();
-        //不支持动态别名
-        aliasAdaptive = false;
         options = INTERFACE_OPTION_FACTORY.get().create(clazz, className, url, null, null);
     }
 

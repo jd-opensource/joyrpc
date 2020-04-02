@@ -27,7 +27,10 @@ import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -40,10 +43,6 @@ import static io.joyrpc.util.StringUtils.split;
  * 参数分组路由
  */
 public abstract class AbstractGroupInvoker implements GroupInvoker {
-    /**
-     * 自适应分组
-     */
-    protected boolean aliasAdaptive;
     /**
      * URL
      */
@@ -63,7 +62,7 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
     /**
      * 消费者函数
      */
-    protected Function<String, ConsumerConfig> consumerFunction;
+    protected Function<String, ConsumerConfig<?>> consumerFunction;
     /**
      * 分组别名
      */
@@ -71,16 +70,11 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
     /**
      * 分组下调用者配置
      */
-    protected Map<String, ConsumerConfig> configMap = new ConcurrentHashMap<>();
+    protected Map<String, ConsumerConfig<?>> configMap = new ConcurrentHashMap<>();
 
     @Override
     public void setUrl(URL url) {
         this.url = url;
-    }
-
-    @Override
-    public void setAliasAdaptive(boolean aliasAdaptive) {
-        this.aliasAdaptive = aliasAdaptive;
     }
 
     @Override
@@ -89,7 +83,7 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
     }
 
     @Override
-    public void setConfigFunction(final Function<String, ConsumerConfig> function) {
+    public void setConfigFunction(final Function<String, ConsumerConfig<?>> function) {
         this.consumerFunction = function;
     }
 
@@ -129,10 +123,10 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
 
     @Override
     public CompletableFuture<Void> close(final boolean gracefully) {
-        Map<String, ConsumerConfig> configs = new HashMap<>(configMap);
+        Map<String, ConsumerConfig<?>> configs = new HashMap<>(configMap);
         CompletableFuture<Void>[] futures = new CompletableFuture[configs.size()];
         int i = 0;
-        for (ConsumerConfig config : configs.values()) {
+        for (ConsumerConfig<?> config : configs.values()) {
             futures[i++] = config.unrefer(gracefully);
         }
         return CompletableFuture.allOf(futures);
@@ -155,7 +149,7 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
         /**
          * 构造函数
          *
-         * @param alias
+         * @param alias 分组
          */
         public AliasMeta(final String alias) {
             //计算别名，去重
@@ -180,21 +174,9 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
         }
 
         /**
-         * 添加并复制一份
-         *
-         * @param alias
-         * @return
-         */
-        public AliasMeta addAndCopy(String alias) {
-            Set<String> newAliases = new HashSet<>(aliases);
-            newAliases.add(alias);
-            return new AliasMeta(newAliases);
-        }
-
-        /**
          * 随机选择
          *
-         * @return
+         * @return 目标分组名称
          */
         public String random() {
             int size = arrays.length;
@@ -208,7 +190,7 @@ public abstract class AbstractGroupInvoker implements GroupInvoker {
         /**
          * 条数
          *
-         * @return
+         * @return 条数
          */
         public int size() {
             return arrays.length;

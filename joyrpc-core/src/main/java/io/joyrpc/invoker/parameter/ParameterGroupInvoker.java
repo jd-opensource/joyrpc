@@ -77,13 +77,23 @@ public class ParameterGroupInvoker extends AbstractGroupInvoker {
                             new URLOption<>(METHOD_KEY_FUNC.apply(method, DST_PARAM_OPTION.getName()), parameter)),
                     methodGroups);
         });
-        //分组路由
-        this.groupConfig = new IntfConfiguration<>(GROUP_ROUTER, className, config -> options.forEach((method, mg) -> {
-            //方法的参数路由配置
-            mg.groups = config == null ? null : config.get(method);
-            mg.defGroup = mg.groups == null ? null : mg.groups.get("*");
-        }));
+        //分组路由配置监听器
+        groupConfig = new IntfConfiguration<>(GROUP_ROUTER, className, config ->
+                options.forEach((method, mg) -> {
+                    //方法的参数路由配置
+                    mg.groups = config == null ? null : config.get(method);
+                    mg.defGroup = mg.groups == null ? null : mg.groups.get("*");
+                }));
 
+    }
+
+    @Override
+    public CompletableFuture<Void> close(final boolean gracefully) {
+        //关闭监听器
+        if (groupConfig != null) {
+            groupConfig.close();
+        }
+        return super.close(gracefully);
     }
 
     @Override
@@ -91,43 +101,12 @@ public class ParameterGroupInvoker extends AbstractGroupInvoker {
         //选择分组
         String alias = router(request);
         //找到分组配置
-        ConsumerConfig config = configMap.get(alias);
+        ConsumerConfig<?> config = configMap.get(alias);
         if (config != null) {
             //调用
             return config.getRefer().invoke(request);
         } else if (Shutdown.isShutdown()) {
             return CompletableFuture.completedFuture(new Result(request.getContext(), new ShutdownExecption("Refer is shutdown.", false)));
-        } else if (aliasAdaptive) {
-            //TODO 为何需要自适应分组，动态创建可能没有相应的服务提供者
-            //TODO 并发请求由问题，当一个分组正在创建的时候，另外一个请求来了
-            //自适应分组，没有则自动创建分组
-            CompletableFuture<Result> resultFuture = new CompletableFuture<>();
-            ConsumerConfig newConfig = configMap.computeIfAbsent(alias, s -> {
-                ConsumerConfig cfg = consumerFunction.apply(s);
-                aliasMeta = aliasMeta.addAndCopy(s);
-                return cfg;
-            });
-            //重新设置分组别名
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            future.whenComplete((v, t) -> {
-                if (t == null) {
-                    CompletableFuture<Result> invoke = newConfig.getRefer().invoke(request);
-                    invoke.whenComplete((o, s) -> {
-                        if (s == null) {
-                            resultFuture.complete(o);
-                        } else {
-                            resultFuture.completeExceptionally(s);
-                        }
-                    });
-                } else {
-                    //恢复上下文
-                    Result result = new Result(request.getContext(), t);
-                    RequestContext.restore(result.getContext());
-                    resultFuture.complete(result);
-                }
-            });
-            newConfig.refer(future);
-            return resultFuture;
         } else {
             CompletableFuture<Result> result = new CompletableFuture<>();
             result.completeExceptionally(new NoReferException(request.getHeader(),

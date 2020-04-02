@@ -42,10 +42,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
      */
     protected Integer dstParam;
     /**
-     * alias自适应，当没有分组时，可以自动增加
-     */
-    protected boolean aliasAdaptive;
-    /**
      * 分组路由插件配置
      */
     @ValidatePlugin(extensible = GroupInvoker.class, name = "GROUP_ROUTE", defaultValue = DEFAULT_GROUP_ROUTER)
@@ -57,14 +53,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
 
     public void setDstParam(Integer dstParam) {
         this.dstParam = dstParam;
-    }
-
-    public boolean isAliasAdaptive() {
-        return aliasAdaptive;
-    }
-
-    public void setAliasAdaptive(boolean aliasAdaptive) {
-        this.aliasAdaptive = aliasAdaptive;
     }
 
     public String getGroupRouter() {
@@ -79,7 +67,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
         addElement2Map(params, Constants.DST_PARAM_OPTION, dstParam);
-        addElement2Map(params, Constants.ALIAS_ADAPTIVE_OPTION, aliasAdaptive);
         return params;
     }
 
@@ -118,7 +105,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         protected CompletableFuture<Void> doOpen() {
             CompletableFuture<Void> future = new CompletableFuture<>();
             route = GROUP_ROUTE.get(config.groupRouter, Constants.GROUP_ROUTER_OPTION.getValue());
-            route.setAliasAdaptive(config.aliasAdaptive);
             route.setUrl(serviceUrl);
             route.setAlias(config.alias);
             route.setClass(config.getProxyClass());

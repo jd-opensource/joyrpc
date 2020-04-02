@@ -551,7 +551,6 @@ public class Constants {
     public static final URLOption<String> CANDIDATURE_OPTION = new URLOption<>("candidature", DEFAULT_CANDIDATURE);
 
     /*------------------------ consumer group配置 ------------------------*/
-    public static final URLOption<String> ALIAS_ADAPTIVE_OPTION = new URLOption<>("aliasAdaptive", "");
     public static final URLOption<Integer> DST_PARAM_OPTION = new URLOption<>("dstParam", (Integer) null);
     public static final URLOption<Boolean> MOCK_OPTION = new URLOption<>("mock", true);
     /**

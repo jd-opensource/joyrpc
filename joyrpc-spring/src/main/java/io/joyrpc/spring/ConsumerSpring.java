@@ -31,7 +31,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     /**
      * slf4j logger for this class
      */
-    private final static Logger logger = LoggerFactory.getLogger(ConsumerGroupBean.class);
+    private final static Logger logger = LoggerFactory.getLogger(ConsumerSpring.class);
     /**
      * consumer bean 计数
      */

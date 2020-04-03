@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,10 +43,10 @@ public abstract class AbstractReqHandler implements MessageHandler {
     protected Consumer<SendResult> sendFailed = (event) -> {
         if (!event.isSuccess()) {
             Throwable throwable = event.getThrowable();
-            getLogger().error(String.format(" %s Failed to send error to remote %s for message id: %d Cause by:",
+            getLogger().error(String.format(" %s Failed to send error to remote %s for message id: %s Cause by:",
                     ExceptionCode.format(ExceptionCode.PROVIDER_SEND_MESSAGE_ERROR),
                     Ipv4.toAddress(event.getRemoteAddress()),
-                    ((Message) event.getRequest()).getMsgId()),
+                    event.getRequest() != null ? String.valueOf(((Message) event.getRequest()).getMsgId()) : null),
                     throwable);
         }
     };

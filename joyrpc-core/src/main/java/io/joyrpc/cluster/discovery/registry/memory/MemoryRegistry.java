@@ -29,7 +29,6 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
-import io.joyrpc.context.Environment;
 import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 
@@ -42,8 +41,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiFunction;
-
-import static io.joyrpc.Plugin.ENVIRONMENT;
 
 /**
  * 内存注册中心，便于测试
@@ -85,9 +82,8 @@ public class MemoryRegistry extends AbstractRegistry {
      */
     public MemoryRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
-        Environment environment = ENVIRONMENT.get();
-        region = new DefaultRegion(environment.getString(Region.REGION),
-                environment.getString(Region.DATA_CENTER));
+        region = new DefaultRegion(url.getString(Region.REGION),
+                url.getString(Region.DATA_CENTER));
     }
 
     @Override

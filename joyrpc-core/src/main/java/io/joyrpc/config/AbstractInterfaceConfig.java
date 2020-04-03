@@ -37,7 +37,6 @@ import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
@@ -59,6 +58,7 @@ import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Configurator.CONFIG_ALLOWED;
 import static io.joyrpc.context.Configurator.GLOBAL_ALLOWED;
+import static io.joyrpc.util.StringUtils.isNotEmpty;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -541,18 +541,19 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 获取注册中心地址
      *
-     * @param config
-     * @return
+     * @param config 注册中心配置
+     * @return url
      */
     protected static URL parse(final RegistryConfig config) {
         Map<String, String> parameters = new HashMap<>();
-
-        if (StringUtils.isNotEmpty(config.getId())) {
+        //带上全局参数
+        GlobalContext.getContext().forEach((key, value) -> parameters.put(key, value.toString()));
+        if (isNotEmpty(config.getId())) {
             parameters.put(REGISTRY_NAME_KEY, config.getId());
         }
         //设置注册中心资源地址参数
         String address = config.getAddress();
-        if (StringUtils.isNotEmpty(address)) {
+        if (isNotEmpty(address)) {
             parameters.put(Constants.ADDRESS_OPTION.getName(), address);
         }
         //regConfig添加参数

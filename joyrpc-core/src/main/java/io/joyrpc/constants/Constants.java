@@ -630,14 +630,15 @@ public class Constants {
     public static final URLOption<Integer> QUEUES_OPTION = new URLOption<>("queues", 0);
     public static final URLOption<String> QUEUE_TYPE_OPTION = new URLOption<>("queueType", "normal");
 
-
-    /*------------------------ regisry配置 ------------------------*/
     public static final String REGISTRY_NAME_KEY = "name";
-    public static final URLOption<String> REGISTRY_BACKUP_PATH_OPTION = new URLOption<>("backupPath", (String) null);
-    public static final URLOption<Integer> REGISTRY_BACKUP_DATUM_OPTION = new URLOption<>("backupDatum", 3);
-    public static final URLOption<Boolean> SYSTEM_REFER_OPTION = new URLOption<>("systemRefer", Boolean.FALSE);
-    public static final URLOption<Long> TASK_RETRY_INTERVAL_OPTION = new URLOption<>("taskRetryInterval", 5000L);
+    public static final URLOption<Boolean> REGISTRY_BACKUP_ENABLED_OPTION = new URLOption<>("reg.backupEnabled", Boolean.TRUE);
+    public static final URLOption<String> REGISTRY_BACKUP_PATH_OPTION = new URLOption<>("reg.backupPath", (String) null);
+    public static final URLOption<Integer> REGISTRY_BACKUP_DATUM_OPTION = new URLOption<>("reg.backupDatum", 3);
+    public static final URLOption<Long> REGISTRY_BACKUP_INTERVAL_OPTION = new URLOption<>("reg.backupInterval", 10000L);
+    public static final URLOption<Long> REGISTRY_TASK_RETRY_INTERVAL_OPTION = new URLOption<>("reg.taskRetryInterval", 5000L);
+    public static final URLOption<Integer> REGISTRY_MAX_CONNECT_RETRY_TIMES_OPTION = new URLOption<>("reg.maxConnectRetryTimes", -1);
 
+    public static final URLOption<Boolean> SYSTEM_REFER_OPTION = new URLOption<>("systemRefer", Boolean.FALSE);
 
     public static final URLOption<Boolean> CACHE_OPTION = new URLOption<>("cache", false);
     /**

@@ -33,6 +33,36 @@
                     <xsd:documentation><![CDATA[ 调用注册中心的超时时间 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
+            <xsd:attribute name="backupEnabled" type="xsd:boolean" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 是否开启备份 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupPath" type="xsd:string" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 备份路径 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupDatum" type="xsd:int" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 备份数量 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupInterval" type="xsd:long" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 备份间隔 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="taskRetryInterval" type="xsd:long" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 任务重试间隔 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="maxConnectRetryTimes" type="xsd:int" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 最大连接重试次数 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
         </xsd:complexType>
     </xsd:element>
     <!-- ServerBean -->

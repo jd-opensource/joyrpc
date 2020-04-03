@@ -149,9 +149,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
         this.name = name == null || name.isEmpty() ? url.getString("name", url.getProtocol()) : name;
         this.url = url;
         this.backup = backup;
-        this.maxConnectRetryTimes = url.getInteger("maxConnectRetryTimes", -1);
-        this.taskRetryInterval = url.getLong("taskRetryInterval", 500L);
-        this.backupInterval = url.getPositive("backupInterval", 10000L);
+        this.maxConnectRetryTimes = url.getInteger(REGISTRY_MAX_CONNECT_RETRY_TIMES_OPTION);
+        this.taskRetryInterval = url.getPositiveLong(REGISTRY_TASK_RETRY_INTERVAL_OPTION);
+        this.backupInterval = url.getPositiveLong(REGISTRY_BACKUP_INTERVAL_OPTION);
         this.registryId = ID_GENERATOR.get();
     }
 

@@ -93,6 +93,10 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
         spring.afterPropertiesSet();
     }
 
+    public String getName() {
+        return id;
+    }
+
     public String getRegistryName() {
         return spring.getRegistryName();
     }

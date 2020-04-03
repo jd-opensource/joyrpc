@@ -46,6 +46,12 @@
       "type": "java.util.List<io.joyrpc.spring.ConsumerBean>",
       "sourceType": "io.joyrpc.spring.boot.RpcProperties",
       "sourceMethod": "getConsumers()"
+    },
+    {
+      "name": "rpc.groups",
+      "type": "java.util.List<io.joyrpc.spring.ConsumerGroupBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getGroups()"
     }
   ],
   "properties": [

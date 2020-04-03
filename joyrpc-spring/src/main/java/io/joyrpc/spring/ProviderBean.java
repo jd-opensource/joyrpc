@@ -299,10 +299,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     /**
      * 获取接口类
      *
-     * @param supplier
-     * @return
+     * @param supplier 接口名称提供者
+     * @return 接口类
      */
-    public Class getInterfaceClass(final Supplier<Class> supplier) {
+    public Class<?> getInterfaceClass(final Supplier<Class<?>> supplier) {
         if (interfaceClass == null) {
             if (interfaceClazz == null || interfaceClazz.isEmpty()) {
                 interfaceClass = supplier.get();

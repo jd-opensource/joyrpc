@@ -12,9 +12,9 @@ package io.joyrpc.protocol.telnet.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,15 +23,18 @@ package io.joyrpc.protocol.telnet.handler;
  * #L%
  */
 
+import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.telnet.TelnetResponse;
-import io.joyrpc.util.network.Ipv4;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 
-import java.net.InetSocketAddress;
 import java.util.List;
+
+import static io.joyrpc.invoker.InvokerManager.getServer;
+import static io.joyrpc.invoker.InvokerManager.getServers;
 
 /**
  * @date: 2019/1/22
@@ -67,48 +70,60 @@ public class PortTelnetHandler extends AbstractTelnetHandler {
     @Override
     public TelnetResponse telnet(Channel channel, String[] args) {
         CommandLine cmd = getCommand(options, args);
+        boolean detail = !cmd.hasOption("c");
         if (cmd.hasOption(HELP_SHORT)) {
             return new TelnetResponse(help());
-        }
-        boolean detail = true;
-        if (cmd.hasOption("c")) {
-            detail = false;
-        }
-        try {
-            if (args == null || args.length == 0 || (!detail && args.length == 1)) {
-                StringBuilder sb = new StringBuilder();
-                List<Channel> activeChannels = getActiveChannels(channel);
-                sb.append("count:").append(activeChannels.size()).append(LINE);
-                for (Channel cn : activeChannels) {
-                    if (detail) {
-                        sb.append(Channel.toString(cn)).append(LINE);
-                    }
-                }
-                return new TelnetResponse(sb.toString());
-            } else {
-                int port = detail ? Integer.parseInt(args[0]) : Integer.parseInt(args[1]);
-                StringBuilder sb = new StringBuilder();
-                List<Channel> activeChannels = getActiveChannels(channel);
-                int count = 0;
-                for (Channel cn : activeChannels) {
-                    InetSocketAddress address = cn.getLocalAddress();
-                    if (Ipv4.toAddress(address).endsWith(":" + port)) {
-                        if (detail) {
-                            sb.append(Channel.toString(cn)).append(LINE);
-                        }
-                        count++;
-                    }
-                }
-                sb.insert(0, "count:" + count + LINE);
-                return new TelnetResponse(sb.toString());
+        } else if (cmd.getArgList().isEmpty()) {
+            StringBuilder builder = new StringBuilder(1024);
+            int size = 0;
+            for (Server server : getServers()) {
+                size += showConnection(server.getServerChannel(), detail, builder);
             }
-        } catch (Exception e) {
-            return new TelnetResponse("Invalid port : " + args[0]);
+            builder.append("count:").append(size).append(LINE);
+            return new TelnetResponse(builder.toString());
+        } else {
+            String portArg = cmd.getArgList().get(0);
+            try {
+                int port = Integer.parseInt(portArg);
+                Server server = getServer(port);
+                if (server == null) {
+                    return new TelnetResponse("Invalid port " + portArg);
+                }
+                return new TelnetResponse(showConnection(server.getServerChannel(), detail));
+            } catch (NumberFormatException e) {
+                return new TelnetResponse("Invalid port " + portArg);
+            }
         }
+
     }
 
-    private List<Channel> getActiveChannels(Channel channel) {
-        ServerChannel serverChannel = channel.getAttribute(Channel.SERVER_CHANNEL);
-        return serverChannel.getChannels();
+    /**
+     * 显示连接信息
+     * @param serverChannel 服务
+     * @param detail 是否显示明细
+     * @return 连接信息
+     */
+    protected String showConnection(final ServerChannel serverChannel, final boolean detail) {
+        StringBuilder builder = new StringBuilder(detail ? 1024 : 100);
+        int size = showConnection(serverChannel, detail, builder);
+        builder.append("count:").append(size).append(LINE);
+        return builder.toString();
+    }
+
+    /**
+     * 显示连接信息
+     * @param serverChannel 服务
+     * @param detail 是否显示明细
+     * @param builder 缓冲区
+     * @return 连接信息
+     */
+    protected int showConnection(final ServerChannel serverChannel, final boolean detail, final StringBuilder builder) {
+        List<Channel> channels = serverChannel.getChannels();
+        if (detail) {
+            for (Channel cn : channels) {
+                builder.append(Channel.toString(cn)).append(LINE);
+            }
+        }
+        return channels.size();
     }
 }

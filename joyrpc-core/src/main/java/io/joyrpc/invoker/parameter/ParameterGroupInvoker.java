@@ -150,7 +150,6 @@ public class ParameterGroupInvoker extends AbstractGroupInvoker {
             }
         }
 
-        //TODO 判断泛型调用
         AliasMeta meta = aliasMeta;
         if (dstParam == null) {
             // 没有目标参数配置，随机全部分组

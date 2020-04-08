@@ -44,7 +44,7 @@ public class JoyCodec extends AbstractCodec {
     protected void adjustEncode(final Message message, final Serialization serialization) {
         //Invocation可以不传输类名和别名，BizReqHandler已经根据会话补充了类名和别名
         Object payLoad = message.getPayLoad();
-        if (serialization.sessionable() && payLoad instanceof Invocation) {
+        if (serialization.autoType() && payLoad instanceof Invocation) {
             Invocation invocation = (Invocation) payLoad;
             invocation.setClassName(null);
             //session中的别名与invocation的别名不同，认为是动态分组，invocation别名不置空，否则置空

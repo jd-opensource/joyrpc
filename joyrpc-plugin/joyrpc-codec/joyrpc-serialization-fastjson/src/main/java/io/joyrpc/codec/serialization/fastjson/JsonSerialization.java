@@ -66,7 +66,8 @@ public class JsonSerialization implements Serialization, Json {
     }
 
     @Override
-    public boolean sessionable() {
+    public boolean autoType() {
+        //在序列化Invocation的调用参数时候不支持类型，需要类名
         return false;
     }
 

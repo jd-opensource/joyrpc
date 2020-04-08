@@ -106,11 +106,11 @@ public interface Serialization extends CodecType {
     Serializer getSerializer();
 
     /**
-     * 是否支持会话
+     * 是否自动识别类型信息
      *
-     * @return 支持标识
+     * @return 支持自动识别类型
      */
-    default boolean sessionable() {
+    default boolean autoType() {
         return true;
     }
 

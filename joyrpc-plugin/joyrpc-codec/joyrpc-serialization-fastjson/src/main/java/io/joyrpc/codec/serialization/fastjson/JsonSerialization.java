@@ -66,6 +66,11 @@ public class JsonSerialization implements Serialization, Json {
     }
 
     @Override
+    public boolean sessionable() {
+        return false;
+    }
+
+    @Override
     public Serializer getSerializer() {
         return JsonSerializer.INSTANCE;
     }

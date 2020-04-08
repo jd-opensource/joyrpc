@@ -75,9 +75,9 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
         if (object == null) {
             serializer.writeNull();
         } else {
-            serializer.write("{");
-            SerializeWriter out = serializer.getWriter();
             Invocation invocation = (Invocation) object;
+            SerializeWriter out = serializer.getWriter();
+            out.append('{');
             //1、class name
             out.writeFieldName(CLASS_NAME);
             out.writeString(invocation.getClassName());
@@ -114,7 +114,7 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 ObjectSerializer mapSerializer = serializer.getObjectWriter(Map.class);
                 mapSerializer.write(serializer, attachments, ATTACHMENTS, null, features);
             }
-            serializer.write("}");
+            out.append('}');
         }
     }
 
@@ -169,8 +169,6 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 if (token == JSONToken.LITERAL_STRING) {
                     invocation.setClassName(lexer.stringVal());
                     lexer.nextToken();
-                } else {
-                    throw new CodecException("syntax error: className is empty");
                 }
             } else if (ALIAS.equals(key)) {
                 if (token == JSONToken.LITERAL_STRING) {

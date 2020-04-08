@@ -105,4 +105,13 @@ public interface Serialization extends CodecType {
      */
     Serializer getSerializer();
 
+    /**
+     * 是否支持会话
+     *
+     * @return 支持标识
+     */
+    default boolean sessionable() {
+        return true;
+    }
+
 }

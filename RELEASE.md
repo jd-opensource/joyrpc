@@ -164,6 +164,10 @@
   
   - 应答包装类参数传递有误
   
+- 序列化
+
+  - 修复Fastjson序列化Invocation的异常
+  
 - Proxy
 
   - javassist基本类型报错问题

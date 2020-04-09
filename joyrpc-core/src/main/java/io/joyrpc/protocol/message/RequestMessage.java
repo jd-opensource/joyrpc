@@ -289,7 +289,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.transport = transport;
     }
 
-    public long getTimeout() {
+    public int getTimeout() {
         return timeout;
     }
 

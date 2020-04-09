@@ -56,7 +56,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 原始超时时间，不是当前重试调用的超时时间
      */
-    protected transient long timeout;
+    protected transient int timeout;
     /**
      * 方法选项
      */
@@ -293,7 +293,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         return timeout;
     }
 
-    public void setTimeout(long timeout) {
+    public void setTimeout(int timeout) {
         this.timeout = timeout;
     }
 

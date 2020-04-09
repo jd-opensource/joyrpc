@@ -50,11 +50,6 @@ public class ContextTransmit implements Transmit {
         invocation.addAttachments(context.getRequests());
         invocation.addAttachments(context.getSessions());
         invocation.addAttachment(INTERNAL_KEY_TRACE, context.getTraces());
-        //超时时间
-        Object requestTimeout = invocation.getAttachment(HIDDEN_KEY_TIME_OUT);
-        if (requestTimeout != null) {
-            request.getHeader().setTimeout(requestTimeout instanceof Number ? ((Number) requestTimeout).intValue() : Integer.parseInt(requestTimeout.toString()));
-        }
     }
 
     @Override

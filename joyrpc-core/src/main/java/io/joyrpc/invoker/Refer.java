@@ -47,6 +47,8 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.NoAliveProviderException;
 import io.joyrpc.exception.ShutdownExecption;
 import io.joyrpc.exception.TransportException;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.Protocol.MessageConverter;
@@ -73,6 +75,7 @@ import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
+import static io.joyrpc.constants.Constants.HIDDEN_KEY_TIME_OUT;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
 import static io.joyrpc.invoker.InvokerManager.NAME;
 
@@ -410,17 +413,20 @@ public class Refer extends AbstractInvoker {
         if (request.getCreateTime() <= 0) {
             request.setCreateTime(SystemClock.now());
         }
-        if (request.getHeader().getTimeout() <= 0) {
-            request.setTimeout(option.getTimeout());
-            request.getHeader().setTimeout(option.getTimeout());
-        }
         //设置实际的类名，而不是泛化类
         invocation.setClassName(interfaceName);
         //方法透传参数，整合了接口级别的参数
         invocation.addAttachments(option.getImplicits());
         //透传处理
         transmits.forEach(o -> o.inject(request));
-
+        //超时时间放在后面，Invocation已经注入了请求上下文参数，隐藏参数等等
+        if (request.getHeader().getTimeout() <= 0) {
+            Parametric parametric = new MapParametric(invocation.getAttachments());
+            int timeout = parametric.getPositive(HIDDEN_KEY_TIME_OUT, option.getTimeout());
+            //超时时间
+            request.setTimeout(timeout);
+            request.getHeader().setTimeout(timeout);
+        }
         //执行调用链
         return chain.invoke(request);
     }

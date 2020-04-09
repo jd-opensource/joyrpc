@@ -37,6 +37,7 @@ import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.transport.transport.Transport;
+import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
 
 import java.io.Closeable;
@@ -200,8 +201,8 @@ public class CallbackManager implements Closeable {
          * @param function   函数
          */
         protected T add(String callbackId, ChannelTransport transport, BiFunction<String, ChannelTransport, T> function) {
-            channelIds.computeIfAbsent(transport, c -> new CopyOnWriteArraySet()).add(callbackId);
             T callback = function.apply(callbackId, transport);
+            channelIds.computeIfAbsent(transport, c -> new CopyOnWriteArraySet<>()).add(callbackId);
             callbacks.put(callbackId, callback);
             return callback;
         }
@@ -239,7 +240,7 @@ public class CallbackManager implements Closeable {
             request.getHeader().addAttribute(HEAD_CALLBACK_INSID, callbackId);
             //callback参数置空
             args[meta.index] = null;
-            add(callbackId, transport, (c, t) -> new ConsumerCallbackInvoker(callback, t));
+            add(callbackId, transport, (c, t) -> new ConsumerCallbackInvoker<>(callback, t));
         }
     }
 
@@ -258,11 +259,11 @@ public class CallbackManager implements Closeable {
             MessageHeader header = request.getHeader();
             String callbackId = (String) header.getAttribute(HEAD_CALLBACK_INSID);
             if (callbackId == null || callbackId.isEmpty()) {
-                throw new RuntimeException(" Server side handle RequestMessage callbackId can not be null! ");
+                throw new RpcException("callbackId can not be empty! ");
             }
             Class<? extends Callback<?, ?>> callbackClass = invocation.getArgClasses()[meta.index];
-            ProducerCallbackInvoker handler = add(callbackId, transport,
-                    (c, t) -> new ProducerCallbackInvoker(c, invocation.getClazz(),
+            ProducerCallbackInvoker<?, ?> handler = add(callbackId, transport,
+                    (c, t) -> new ProducerCallbackInvoker<>(c, invocation.getClazz(),
                             meta.getParameterType(), callbackClass, header, t, k -> callbacks.remove(k)));
 
             invocation.getArgs()[meta.index] = handler.callback;
@@ -272,15 +273,15 @@ public class CallbackManager implements Closeable {
     /**
      * 消费者注册用于处理服务端回调消息的处理器
      */
-    protected static class ConsumerCallbackInvoker implements CallbackInvoker {
+    protected static class ConsumerCallbackInvoker<Q, S> implements CallbackInvoker {
         /**
          * 回调
          */
-        protected Callback callback;
+        protected Callback<Q, S> callback;
         //通道
         protected ChannelTransport transport;
 
-        public ConsumerCallbackInvoker(Callback callback, ChannelTransport transport) {
+        public ConsumerCallbackInvoker(Callback<Q, S> callback, ChannelTransport transport) {
             this.callback = callback;
             this.transport = transport;
         }
@@ -288,7 +289,7 @@ public class CallbackManager implements Closeable {
         @Override
         public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
             try {
-                return CompletableFuture.completedFuture(new Result(request.getContext(), callback.notify(request.getPayLoad().getArgs()[0])));
+                return CompletableFuture.completedFuture(new Result(request.getContext(), callback.notify((Q) request.getPayLoad().getArgs()[0])));
             } catch (Exception e) {
                 return CompletableFuture.completedFuture(new Result(request.getContext(), e));
             }
@@ -300,7 +301,7 @@ public class CallbackManager implements Closeable {
         }
 
         @Override
-        public Callback getCallback() {
+        public Callback<Q, S> getCallback() {
             return callback;
         }
     }
@@ -309,6 +310,7 @@ public class CallbackManager implements Closeable {
      * 回调
      */
     protected static class ProducerCallbackInvoker<Q, S> implements CallbackInvoker {
+        public static final int TIMEOUT = 3000;
         /**
          * ID
          */
@@ -381,8 +383,8 @@ public class CallbackManager implements Closeable {
          * @param proxy  对象
          * @param method 方法
          * @param param  参数
-         * @return
-         * @throws Throwable
+         * @return 结果
+         * @throws Throwable 异常
          */
         protected Object doInvoke(final Object proxy, final Method method, final Object[] param) throws Throwable {
             String methodName = method.getName();
@@ -399,20 +401,25 @@ public class CallbackManager implements Closeable {
             RequestMessage<Invocation> request = RequestMessage.build(
                     new Invocation(interfaceClass, null, method, param, new Class[]{parameterType}));
             MessageHeader rh = request.getHeader();
+            //避免分组重试重复调用
+            request.setCreateTime(SystemClock.now());
+            request.setTimeout(TIMEOUT);
             //TODO 应答的压缩格式，老版协议没有会话
             rh.setCompression(session == null ? Compression.NONE : session.getCompressionType());
             rh.setProtocolType(header.getProtocolType());
             rh.setSerialization(header.getSerialization());
             rh.setMsgType(MsgType.CallbackReq.getType());
+            rh.setTimeout(TIMEOUT);
             rh.addAttribute(HEAD_CALLBACK_INSID, id);
+            //TODO 缺乏参数注入
 
             //为了兼容，目前只支持同步调用
-            ResponseMessage<ResponsePayload> message = (ResponseMessage) transport.sync(request, 3000);
-            ResponsePayload responsePayload = message.getPayLoad();
-            if (responsePayload.isError()) {
-                throw responsePayload.getException();
+            ResponseMessage<ResponsePayload> message = (ResponseMessage<ResponsePayload>) transport.sync(request, TIMEOUT);
+            ResponsePayload payLoad = message.getPayLoad();
+            if (payLoad.isError()) {
+                throw payLoad.getException();
             }
-            return responsePayload.getResponse();
+            return payLoad.getResponse();
         }
 
     }

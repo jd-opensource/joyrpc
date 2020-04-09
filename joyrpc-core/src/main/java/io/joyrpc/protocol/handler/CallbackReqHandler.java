@@ -32,6 +32,7 @@ import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.message.Header;
+import io.joyrpc.util.Futures;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,7 +42,7 @@ import java.util.concurrent.CompletableFuture;
 import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
 
 /**
- * @date: 2019/3/14
+ * 回调消息处理器
  */
 public class CallbackReqHandler implements MessageHandler {
 
@@ -53,16 +54,13 @@ public class CallbackReqHandler implements MessageHandler {
         RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
         String callbackInsId = (String) request.getHeader().getAttribute(HEAD_CALLBACK_INSID);
         Invoker invoker = InvokerManager.getConsumerCallback().getInvoker(callbackInsId);
-        if (invoker == null) {
-            logger.warn("Can't find callback invoker, invoker id: {}", callbackInsId);
-            return;
-        }
-        //TODO sync
         Channel channel = context.getChannel();
         Header header = message.getHeader();
         InvokerManager.getCallbackThreadPool().execute(() -> {
             try {
-                CompletableFuture<Result> future = invoker.invoke(request);
+                //TODO 参数恢复
+                CompletableFuture<Result> future = invoker != null ? invoker.invoke(request) :
+                        Futures.completeExceptionally(new RpcException("Can't find callback invoker, callback id:" + callbackInsId));
                 future.whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         logger.error("Error occurs while invoking callback in channel " + Channel.toString(channel)
@@ -91,11 +89,11 @@ public class CallbackReqHandler implements MessageHandler {
      * 发送应答消息
      *
      * @param channel 通道
-     * @param header  头部
+     * @param header  请求 头部
      * @param payload 包体
      */
-    protected void sendResponse(final Channel channel, final Header header, final Object payload) {
-        ResponseMessage<Object> response = new ResponseMessage<>((MessageHeader) header.clone(), MsgType.CallbackResp.getType());
+    protected void sendResponse(final Channel channel, final Header header, final ResponsePayload payload) {
+        ResponseMessage<ResponsePayload> response = new ResponseMessage<>((MessageHeader) header.clone(), MsgType.CallbackResp.getType());
         //write the callback response to the serverside
         response.setPayLoad(payload);
 

@@ -37,7 +37,6 @@ import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.transport.transport.Transport;
-import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
 
 import java.io.Closeable;
@@ -53,6 +52,7 @@ import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
+import static io.joyrpc.constants.Constants.HIDDEN_KEY_TIME_OUT;
 
 /**
  * 回调管理器
@@ -310,7 +310,6 @@ public class CallbackManager implements Closeable {
      * 回调
      */
     protected static class ProducerCallbackInvoker<Q, S> implements CallbackInvoker {
-        public static final int TIMEOUT = 3000;
         /**
          * ID
          */
@@ -398,23 +397,29 @@ public class CallbackManager implements Closeable {
             }
             Session session = transport.session();
             //回调不需要别名,需要设置真实的参数类型
-            RequestMessage<Invocation> request = RequestMessage.build(
-                    new Invocation(interfaceClass, null, method, param, new Class[]{parameterType}));
+            Invocation invocation = new Invocation(interfaceClass, null, method, param, new Class[]{parameterType});
+            //已经设置了创建时间
+            RequestMessage<Invocation> request = RequestMessage.build(invocation);
             MessageHeader rh = request.getHeader();
-            //避免分组重试重复调用
-            request.setCreateTime(SystemClock.now());
-            request.setTimeout(TIMEOUT);
-            //TODO 应答的压缩格式，老版协议没有会话
-            rh.setCompression(session == null ? Compression.NONE : session.getCompressionType());
+            //回调请求
+            rh.setMsgType(MsgType.CallbackReq.getType());
             rh.setProtocolType(header.getProtocolType());
             rh.setSerialization(header.getSerialization());
-            rh.setMsgType(MsgType.CallbackReq.getType());
-            rh.setTimeout(TIMEOUT);
+            //TODO 应答的压缩格式，老版协议没有会话
+            rh.setCompression(session == null ? Compression.NONE : session.getCompressionType());
             rh.addAttribute(HEAD_CALLBACK_INSID, id);
             //TODO 缺乏参数注入
+            //超时时间放在后面，Invocation已经注入了请求上下文参数，隐藏参数等等
+            if (request.getHeader().getTimeout() <= 0) {
+                Parametric parametric = new MapParametric(invocation.getAttachments());
+                int timeout = parametric.getPositive(HIDDEN_KEY_TIME_OUT, Constants.DEFAULT_TIMEOUT);
+                //超时时间
+                request.setTimeout(timeout);
+                rh.setTimeout(timeout);
+            }
 
             //为了兼容，目前只支持同步调用
-            ResponseMessage<ResponsePayload> message = (ResponseMessage<ResponsePayload>) transport.sync(request, TIMEOUT);
+            ResponseMessage<ResponsePayload> message = (ResponseMessage<ResponsePayload>) transport.sync(request, request.getTimeout());
             ResponsePayload payLoad = message.getPayLoad();
             if (payLoad.isError()) {
                 throw payLoad.getException();

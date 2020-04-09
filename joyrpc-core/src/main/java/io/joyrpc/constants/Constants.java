@@ -709,10 +709,6 @@ public class Constants {
      */
     public static final URLOption<Long> SESSION_TIMEOUT_OPTION = new URLOption<>("sessionTimeout", 90000L);
     /**
-     * 发送心跳的超时时间
-     */
-    public static final URLOption<Integer> SEND_TIMEOUT_OPTION = new URLOption<>("sendTimeout", 5000);
-    /**
      * 心跳时间间隔
      */
     public static final URLOption<Integer> HEARTBEAT_INTERVAL_OPTION = new URLOption<>("hbInterval", 10000);

@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.fastjson;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -57,16 +57,13 @@ public class JsonConfig extends ParserConfig {
         if (blackList != null && blackList.isBlack(clazz.getName())) {
             throw new JSONException("Failed to decode class " + type + " by json serialization, it is in blacklist");
         }
-
         ObjectDeserializer deserializer = super.getDeserializer(clazz, type);
-
-        if (deserializer != null && deserializer instanceof ThrowableDeserializer) {
+        if (deserializer instanceof ThrowableDeserializer) {
             //覆盖掉默认的异常解析器
             deserializer = new JsonThrowableDeserializer(this, clazz);
-            //n内部支持并发
+            //内部支持并发
             putDeserializer(type, deserializer);
         }
-
         return deserializer;
     }
 }

@@ -236,7 +236,10 @@ public class Constants {
      * 自定义设置：callback的线程池队列
      */
     public static final String SETTING_CALLBACK_POOL_QUEUE = "callback.pool.queue";
-
+    /**
+     * 序列化黑白名单
+     */
+    public static final String SETTING_SERIALIZATION_BLACKLIST = "serialization.blacklist";
     /**
      * properties 文件里默认注册中心key
      */

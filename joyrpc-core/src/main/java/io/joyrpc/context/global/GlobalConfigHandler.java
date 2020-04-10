@@ -21,13 +21,23 @@ package io.joyrpc.context.global;
  */
 
 
+import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.context.ConfigEventHandler;
+import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.permission.BlackList;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
+import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.Plugin.SERIALIZATION;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.ConfigEventHandler.GLOBAL_ORDER;
 
@@ -40,6 +50,8 @@ import static io.joyrpc.context.ConfigEventHandler.GLOBAL_ORDER;
 @Extension(value = "global", order = GLOBAL_ORDER)
 public class GlobalConfigHandler implements ConfigEventHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(GlobalConfigHandler.class);
+
     @Override
     public void handle(final String className, final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
         if (GLOBAL_SETTING.equals(className)) {
@@ -50,6 +62,46 @@ public class GlobalConfigHandler implements ConfigEventHandler {
                     new MapParametric(newAttrs),
                     SETTING_CALLBACK_POOL_CORE_SIZE,
                     SETTING_CALLBACK_POOL_MAX_SIZE);
+            updateSerializationBlackList(oldAttrs, newAttrs);
         }
     }
+
+    /**
+     * 修改序列化黑白名单
+     *
+     * @param oldAttrs 老的配置
+     * @param newAttrs 新的配置
+     */
+    protected void updateSerializationBlackList(final Map<String, String> oldAttrs, final Map<String, String> newAttrs) {
+        //修改序列化的黑白名单
+        String newBlackLists = newAttrs.get(SETTING_SERIALIZATION_BLACKLIST);
+        String oldBlackLists = oldAttrs == null ? null : oldAttrs.get(SETTING_SERIALIZATION_BLACKLIST);
+        if (!Objects.equals(newBlackLists, oldBlackLists)) {
+            if (newBlackLists == null) {
+                SERIALIZATION.extensions().forEach(o -> updateSerializationBlackList(o, null));
+            } else {
+                try {
+                    Map<String, List<String>> configs = JSON.get().parseObject(newBlackLists, new TypeReference<Map<String, List<String>>>() {
+                    });
+                    configs.forEach((type, blackList) -> updateSerializationBlackList(SERIALIZATION.get(type), blackList));
+                } catch (SerializerException e) {
+                    logger.error("Error occurs while parsing serialization blacklist config.\n" + newBlackLists);
+                }
+            }
+        }
+    }
+
+    /**
+     * 修改序列化黑名单
+     *
+     * @param serialization 序列化
+     * @param blackList     黑名单
+     */
+    protected void updateSerializationBlackList(final Serialization serialization, final List<String> blackList) {
+        if (serialization instanceof BlackList.BlackListAware) {
+            ((BlackList.BlackListAware) serialization).updateBlack(blackList);
+        }
+    }
+
+
 }

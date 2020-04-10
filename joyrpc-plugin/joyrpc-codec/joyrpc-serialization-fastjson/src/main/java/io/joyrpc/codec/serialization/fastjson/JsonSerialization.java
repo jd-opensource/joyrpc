@@ -41,6 +41,7 @@ import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -53,7 +54,7 @@ import static com.alibaba.fastjson.JSON.DEFAULT_GENERATE_FEATURE;
  */
 @Extension(value = "json", provider = "fastjson", order = Serialization.ORDER_FASTJSON)
 @ConditionalOnClass("com.alibaba.fastjson.JSON")
-public class JsonSerialization implements Serialization, Json {
+public class JsonSerialization implements Serialization, Json, BlackList.BlackListAware {
 
     @Override
     public byte getTypeId() {
@@ -119,6 +120,11 @@ public class JsonSerialization implements Serialization, Json {
     @Override
     public void parseObject(final Reader reader, final BiFunction<String, Function<Type, Object>, Boolean> function) throws SerializerException {
         JsonSerializer.INSTANCE.parseObject(reader, function);
+    }
+
+    @Override
+    public void updateBlack(final Collection<String> blackList) {
+        JsonSerializer.BLACK_LIST.updateBlack(blackList);
     }
 
     /**

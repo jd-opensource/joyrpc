@@ -30,12 +30,7 @@ import io.joyrpc.util.ClassUtils;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
-import static io.joyrpc.util.StringUtils.split;
+import java.util.Collection;
 
 /**
  * hessian2序列化协议
@@ -59,10 +54,8 @@ public class Hessian2Serialization implements Serialization, BlackList.BlackList
     }
 
     @Override
-    public void updateBlack(final String blackList) {
-        List<String> remotes = blackList == null || blackList.isEmpty() ?
-                new ArrayList<>(0) : Arrays.asList(split(blackList, SEMICOLON_COMMA_WHITESPACE));
-        Hessian2Serializer.BLACK_LIST.updateBlack(remotes);
+    public void updateBlack(final Collection<String> blackList) {
+        Hessian2Serializer.BLACK_LIST.updateBlack(blackList);
     }
 
     /**

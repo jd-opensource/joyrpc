@@ -28,12 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
-import static io.joyrpc.util.StringUtils.split;
+import java.util.Collection;
 
 /**
  * Java序列化
@@ -57,10 +52,8 @@ public class JavaSerialization implements Serialization, BlackList.BlackListAwar
     }
 
     @Override
-    public void updateBlack(final String blackList) {
-        List<String> remotes = blackList == null || blackList.isEmpty() ?
-                new ArrayList<>(0) : Arrays.asList(split(blackList, SEMICOLON_COMMA_WHITESPACE));
-        JavaSerializer.BLACK_LIST.updateBlack(remotes);
+    public void updateBlack(final Collection<String> blackList) {
+        JavaSerializer.BLACK_LIST.updateBlack(blackList);
     }
 
     /**

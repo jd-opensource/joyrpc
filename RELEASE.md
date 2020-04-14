@@ -3,7 +3,7 @@
 ## 1.0.6-SNAPSHOT
 
 
-## 1.0.5-SNAPSHOT
+## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement
 

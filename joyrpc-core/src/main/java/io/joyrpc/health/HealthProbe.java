@@ -102,7 +102,9 @@ public class HealthProbe {
             //调用插件进行诊断
             HealthState result = HealthState.HEALTHY;
             HealthState state;
+            int plugins = 0;
             for (Doctor doctor : DOCTOR.extensions()) {
+                plugins++;
                 state = doctor.diagnose();
                 if (state.ordinal() > result.ordinal()) {
                     result = state;
@@ -111,9 +113,11 @@ public class HealthProbe {
                     break;
                 }
             }
-            consumer.accept(result);
-            //继续执行
-            timer().add(this);
+            //有插件继续执行
+            if (plugins > 0) {
+                consumer.accept(result);
+                timer().add(this);
+            }
         }
     }
 

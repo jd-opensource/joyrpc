@@ -29,7 +29,7 @@ import java.util.Map;
  */
 public interface Call extends Serializable {
     /**
-     * 获取参数类型
+     * 获取参数类名，返回的数组不能修改
      *
      * @return 参数类型
      */
@@ -43,7 +43,7 @@ public interface Call extends Serializable {
     Object[] getArgs();
 
     /**
-     * 获取参数类型
+     * 获取参数类型，返回的数组不能修改
      *
      * @return 参数类型
      */

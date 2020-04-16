@@ -2,6 +2,9 @@
 
 ## 1.0.6-SNAPSHOT
 
+### Enhancement
+
+- 消费者调用，通过缓存的参数类型，加快构造Invocation的性能
 
 ## 1.0.5-RELEASE(2020-04-14)
 

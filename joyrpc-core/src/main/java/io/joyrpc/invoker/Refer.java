@@ -400,11 +400,6 @@ public class Refer extends AbstractInvoker {
 
     @Override
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
-        //ConsumerInvokerHandler已经设置了class和method对象
-        Invocation invocation = request.getPayLoad();
-        invocation.setAlias(alias);
-        invocation.setObject(config.getStub());
-
         //实际的方法名称，泛型调用进行了处理
         ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(request.getMethodName());
         option.setAutoScore(true);
@@ -412,6 +407,17 @@ public class Refer extends AbstractInvoker {
         //避免分组重试重复调用
         if (request.getCreateTime() <= 0) {
             request.setCreateTime(SystemClock.now());
+        }
+
+        //用缓存的信息设置参数类型，加快性能
+        InterfaceOption.ArgType argType = option.getArgType();
+        //已经设置了class和method对象
+        Invocation invocation = request.getPayLoad();
+        invocation.setAlias(alias);
+        invocation.setObject(config.getStub());
+        if (argType != null) {
+            //泛化调用为null
+            invocation.setArgsType(argType.getClasses(), argType.getTypes());
         }
         //设置实际的类名，而不是泛化类
         invocation.setClassName(interfaceName);

@@ -925,8 +925,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             RequestContext context = RequestContext.getContext();
             //上下文的异步必须设置成completeFuture
             context.setAsync(isReturnFuture);
-            //构造请求消息
-            Invocation invocation = new Invocation(iface, null, method, param, method.getParameterTypes(), generic);
+            //构造请求消息，参数类型放在Refer里面设置，使用缓存避免每次计算加快性能
+            Invocation invocation = new Invocation(iface, null, method, param, generic);
             RequestMessage<Invocation> request = RequestMessage.build(invocation);
             //分组Failover调用，需要在这里设置创建时间和超时时间，不能再Refer里面。否则会重置。
             request.setCreateTime(SystemClock.now());

@@ -134,6 +134,13 @@ public interface InterfaceOption {
          */
         boolean isAsync();
 
+        /**
+         * 获取参数信息
+         *
+         * @return 参数信息
+         */
+        ArgType getArgType();
+
     }
 
     /**
@@ -329,6 +336,33 @@ public interface InterfaceOption {
 
         public CacheKeyGenerator getGenerator() {
             return generator;
+        }
+    }
+
+    /**
+     * 参数类型
+     */
+    class ArgType {
+        /**
+         * 参数类
+         */
+        protected Class[] classes;
+        /**
+         * 参数类名
+         */
+        protected String[] types;
+
+        public ArgType(Class[] classes, String[] types) {
+            this.classes = classes;
+            this.types = types;
+        }
+
+        public Class[] getClasses() {
+            return classes;
+        }
+
+        public String[] getTypes() {
+            return types;
         }
     }
 

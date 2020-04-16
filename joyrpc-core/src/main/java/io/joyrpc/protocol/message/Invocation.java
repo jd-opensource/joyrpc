@@ -181,6 +181,25 @@ public class Invocation implements Call {
     /**
      * 构造函数
      *
+     * @param iface   接口
+     * @param alias   别名
+     * @param method  方法
+     * @param args    参数
+     * @param generic 泛化
+     */
+    public Invocation(final Class iface, final String alias, final Method method, final Object[] args, final Boolean generic) {
+        this.clazz = iface;
+        this.className = iface.getName();
+        this.alias = alias;
+        this.method = method;
+        this.methodName = method.getName();
+        this.args = args == null ? new Object[0] : args;
+        this.generic = generic;
+    }
+
+    /**
+     * 构造函数
+     *
      * @param iface    接口
      * @param alias    别名
      * @param method   方法
@@ -204,6 +223,11 @@ public class Invocation implements Call {
         return argsType;
     }
 
+    /**
+     * 设置参数类型
+     *
+     * @param argsType 参数类名
+     */
     public void setArgsType(String[] argsType) {
         this.argsType = argsType;
         // 清空缓存
@@ -213,7 +237,7 @@ public class Invocation implements Call {
     /**
      * 设置参数类型，只在回调函数和解析请求的时候主动设置
      *
-     * @param argsType
+     * @param argsType 参数类型
      */
     public void setArgsType(Class[] argsType) {
         if (argsType == null) {
@@ -223,6 +247,17 @@ public class Invocation implements Call {
             this.argClasses = argsType;
             this.argsType = getNames(argsType);
         }
+    }
+
+    /**
+     * 设置参数类型
+     *
+     * @param argClasses 参数类
+     * @param argTypes   参数类名
+     */
+    public void setArgsType(Class[] argClasses, String[] argTypes) {
+        this.argClasses = argClasses;
+        this.argsType = argTypes;
     }
 
     @Override

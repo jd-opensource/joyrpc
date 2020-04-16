@@ -53,6 +53,7 @@ import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.ClassUtils.getNames;
 
 /**
  * 内部的接口选项
@@ -372,6 +373,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          */
         protected Method method;
         /**
+         * 参数类型
+         */
+        protected ArgType argType;
+        /**
          * 方法级别隐式传参，合并了接口的隐藏参数，只读
          */
         protected Map<String, ?> implicits;
@@ -428,6 +433,8 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final boolean async,
                                  final CallbackMethod callback) {
             this.method = method;
+            Class<?>[] types = method == null ? null : method.getParameterTypes();
+            this.argType = method == null ? null : new ArgType(types, getNames(types));
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.concurrency = concurrency;
@@ -441,6 +448,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public Method getMethod() {
             return method;
+        }
+
+        @Override
+        public ArgType getArgType() {
+            return argType;
         }
 
         @Override

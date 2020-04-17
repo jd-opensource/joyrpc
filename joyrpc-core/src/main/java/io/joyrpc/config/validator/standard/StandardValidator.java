@@ -239,7 +239,7 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onCustomAbstract(final Class clazz, final Scope scope) {
-            throw new ValidationException(String.format("The type is abstract. scope is %s, class is %s.", scope.getName(), clazz.getName()));
+            throw new ValidationException(String.format("The type is abstract at %s. %s, it may cause serialization problems.", scope.getName(), clazz.getName()));
         }
 
         /**

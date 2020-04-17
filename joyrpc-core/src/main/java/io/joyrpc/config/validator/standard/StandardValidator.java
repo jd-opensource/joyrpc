@@ -230,7 +230,7 @@ public class StandardValidator implements InterfaceValidator {
             if (scope == Scope.PARAMETER) {
                 return;
             }
-            throw new ValidationException(String.format("The interface is not allowed at %s. %s", scope.getName(), clazz.getName()));
+            throw new ValidationException(String.format("The interface is not allowed at %s. %s, it may cause serialization problems.", scope.getName(), clazz.getName()));
         }
 
         /**

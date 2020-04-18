@@ -25,6 +25,9 @@ import org.slf4j.LoggerFactory;
 import java.lang.management.ManagementFactory;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -173,37 +176,58 @@ public class ConsulRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(ClusterBooking booking) {
             return Futures.call(future -> {
                 ConsulClusterBooking clusterBooking = (ConsulClusterBooking) booking;
-                List<HealthService.Service> services = lookupProvider(clusterBooking.getPath(),
-                        clusterBooking.getUrl().getString(Constants.ALIAS_OPTION), true);
-                if (services == null || services.isEmpty()) {
-                    //移除服务订阅
-                    if (!clusterBooking.getRegisteredUrls().isEmpty()) {
-                        clusterBooking.handle(new ClusterEvent(ConsulRegistry.this, null,
-                                UpdateEvent.UpdateType.UPDATE, clusterBooking.getEventVersion().incrementAndGet(),
-                                clusterBooking.getRegisteredUrls().stream()
-                                        .map(url -> new ClusterEvent.ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.DELETE))
-                                        .collect(Collectors.toList())));
+                //周期性地从服务端检查
+                clusterBooking.getExecutorService().scheduleAtFixedRate(() -> {
+                    List<HealthService.Service> services = lookupProvider(clusterBooking.getPath(),
+                            clusterBooking.getUrl().getString(Constants.ALIAS_OPTION), true);
+                    if (services == null || services.isEmpty()) {
+                        //移除服务订阅
+                        if (!clusterBooking.getRegisteredUrls().isEmpty()) {
+                            clusterBooking.handle(new ClusterEvent(ConsulRegistry.this, null,
+                                    UpdateEvent.UpdateType.UPDATE, clusterBooking.getEventVersion().incrementAndGet(),
+                                    clusterBooking.getRegisteredUrls().stream()
+                                            .map(url -> new ClusterEvent.ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.DELETE))
+                                            .collect(Collectors.toList())));
+                        }
+                    } else {
+                        List<URL> urls = services.stream().map(ConsulRegistry.this::getUrl)
+                                .collect(Collectors.toList());
+                        List<URL> notRegisteredUrls = urls.stream()
+                                .filter(url -> !clusterBooking.getRegisteredUrls().contains(url))
+                                .collect(Collectors.toList());
+
+                        Function<URL, String> keyFunc = url -> url.getHost() + ":" + url.getPort();
+
+                        Set<String> availableProviders = urls.stream().map(keyFunc).collect(Collectors.toSet());
+                        //需要移除
+                        List<ClusterEvent.ShardEvent> deleteEvents = clusterBooking.getRegisteredUrls().stream()
+                                .filter(url -> !availableProviders.contains(keyFunc.apply(url)))
+                                .peek(url -> clusterBooking.getRegisteredUrls().remove(url))
+                                .map(url -> new ClusterEvent.ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.DELETE))
+                                .collect(Collectors.toList());
+                        //检查是否存在更新
+                        Map<String, URL> registeredUrlMap = clusterBooking.getRegisteredUrls().stream()
+                                .collect(Collectors.toMap(keyFunc, url -> url));
+
+                        List<ClusterEvent.ShardEvent> updateEvents = notRegisteredUrls.stream().peek(url -> {
+                            String key = keyFunc.apply(url);
+                            if (registeredUrlMap.containsKey(key)) {
+                                clusterBooking.getRegisteredUrls().remove(registeredUrlMap.get(key));
+                            }
+                            clusterBooking.getRegisteredUrls().add(url);
+                        }).map(url -> new ClusterEvent.ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.UPDATE))
+                                .collect(Collectors.toList());
+
+                        List<ClusterEvent.ShardEvent> events = Stream.of(deleteEvents, updateEvents)
+                                .flatMap(List::stream).collect(Collectors.toList());
+                        if (!events.isEmpty()) {
+                            clusterBooking.handle(new ClusterEvent(ConsulRegistry.this, null,
+                                    UpdateEvent.UpdateType.FULL,
+                                    clusterBooking.getEventVersion().incrementAndGet(), events));
+                        }
+
                     }
-                } else {
-                    List<URL> urls = services.stream().map(ConsulRegistry.this::getUrl)
-                            .collect(Collectors.toList());
-                    List<URL> notRegisteredUrls = urls.stream()
-                            .filter(url -> !clusterBooking.getRegisteredUrls().contains(url))
-                            .collect(Collectors.toList());
-                    //检查是否存在更新
-                    Map<String, URL> registeredUrlMap = clusterBooking.getRegisteredUrls().stream()
-                            .collect(Collectors.toMap(url -> url.getHost() + ":" + url.getPort(), url -> url));
-                    clusterBooking.handle(new ClusterEvent(ConsulRegistry.this, null,
-                            UpdateEvent.UpdateType.FULL,
-                            clusterBooking.getEventVersion().incrementAndGet(),
-                            notRegisteredUrls.stream().peek(url -> {
-                                String key = url.getHost() + ":" + url.getPort();
-                                if (registeredUrlMap.containsKey(key)) {
-                                    clusterBooking.getRegisteredUrls().remove(registeredUrlMap.get(key));
-                                }
-                            }).map(url -> new ClusterEvent.ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.UPDATE))
-                                    .collect(Collectors.toList())));
-                }
+                }, 0, 10, TimeUnit.SECONDS);
             });
         }
 
@@ -225,7 +249,10 @@ public class ConsulRegistry extends AbstractRegistry {
 
         @Override
         protected CompletableFuture<Void> doUnsubscribe(ClusterBooking booking) {
-            return Futures.call(future -> ((ConsulClusterBooking) booking).getRegisteredUrls().stream().forEach(this::deregisterFromConsul));
+            ConsulClusterBooking clusterBooking = ((ConsulClusterBooking) booking);
+            clusterBooking.getExecutorService().shutdown();
+            clusterBooking.getRegisteredUrls().stream().forEach(this::deregisterFromConsul);
+            return CompletableFuture.completedFuture(null);
         }
 
         @Override
@@ -296,6 +323,8 @@ public class ConsulRegistry extends AbstractRegistry {
         //已注册的服务URL
         private Set<URL> registeredUrls = Collections.synchronizedSet(new HashSet<>());
 
+        private ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+
         public ConsulClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher, String path) {
             super(key, dirty, publisher, path);
         }
@@ -306,6 +335,10 @@ public class ConsulRegistry extends AbstractRegistry {
 
         public AtomicLong getEventVersion() {
             return eventVersion;
+        }
+
+        public ScheduledExecutorService getExecutorService() {
+            return executorService;
         }
     }
 

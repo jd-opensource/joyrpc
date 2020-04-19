@@ -25,7 +25,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 系统时钟，替换 {@link System.currentTimeMillis()} ，防止CPU切换频繁
+ * 系统时钟，替换 {@link System#currentTimeMillis()} ，防止CPU切换频繁
  * <p/>
  */
 public class SystemClock {

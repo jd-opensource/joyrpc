@@ -55,8 +55,9 @@ public class FailoverRouter extends AbstractRouter {
      * @param maxRetry 最大重试次数
      * @return 异常
      */
-    protected Throwable createOverloadException(final int maxRetry) {
-        return new FailoverException(String.format("Maximum number %d of retries reached", maxRetry));
+    protected Throwable createOverloadException(final int maxRetry, final Throwable cause) {
+        return new FailoverException(String.format("Maximum number %d of retries reached. The last exception caused by %s ",
+                maxRetry, cause.getMessage()), cause);
     }
 
     /**
@@ -133,7 +134,7 @@ public class FailoverRouter extends AbstractRouter {
                         future.completeExceptionally(t);
                     } else if (retry >= policy.getMaxRetry()) {
                         //超过重试次数
-                        future.completeExceptionally(createOverloadException(policy.getMaxRetry()));
+                        future.completeExceptionally(createOverloadException(policy.getMaxRetry(), t));
                     } else {
                         //删除失败的节点进行重试
                         List<Node> shards = candidate.getNodes();

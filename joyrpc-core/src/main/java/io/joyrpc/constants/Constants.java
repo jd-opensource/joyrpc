@@ -499,7 +499,7 @@ public class Constants {
     /**
      * 失败重试次数
      */
-    public static final URLOption<Integer> RETRIES_OPTION = new URLOption<>("retries", 1);
+    public static final URLOption<Integer> RETRIES_OPTION = new URLOption<>("retries", 0);
     /**
      * 每个节点只重试一次
      */

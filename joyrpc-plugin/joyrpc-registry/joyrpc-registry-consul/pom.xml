@@ -3,26 +3,19 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc-test</artifactId>
+        <artifactId>joyrpc-registry</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.0.6-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>joyrpc-test-quickstart</artifactId>
+    <artifactId>joyrpc-registry-consul</artifactId>
 
     <dependencies>
         <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-registry-broadcast</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-registry-consul</artifactId>
-            <version>${project.version}</version>
+            <groupId>com.ecwid.consul</groupId>
+            <artifactId>consul-api</artifactId>
+            <version>1.4.2</version>
         </dependency>
     </dependencies>
-
-
 </project>

@@ -66,6 +66,7 @@ import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.Protocol.ProtocolVersion;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.proxy.GrpcFactory;
+import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.EndpointFactory;
@@ -297,6 +298,11 @@ public interface Plugin {
      * Proxy插件
      */
     ExtensionPoint<ProxyFactory, String> PROXY = new ExtensionPointLazy<>(ProxyFactory.class);
+
+    /**
+     * 编译器
+     */
+    ExtensionPoint<JCompiler, String> COMPILER = new ExtensionPointLazy<>(JCompiler.class);
 
     /**
      * GRPC工厂插件

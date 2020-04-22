@@ -29,9 +29,9 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
+import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.JCompiler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +40,7 @@ import java.lang.reflect.*;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static io.joyrpc.Plugin.COMPILER;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.auth.IPPermissionConfiguration.IP_PERMISSION;
 import static io.joyrpc.context.limiter.LimiterConfiguration.LIMITERS;
@@ -73,6 +74,10 @@ public class InnerProviderOption extends AbstractInterfaceOption {
      * 预编译
      */
     protected boolean precompilation;
+    /**
+     * 编译器
+     */
+    protected JCompiler compiler;
 
     /**
      * 构造函数
@@ -86,6 +91,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         super(interfaceClass, interfaceName, url);
         this.ref = ref;
         this.generic = false;
+        this.compiler = COMPILER.get();
         setup();
         buildOptions();
     }
@@ -135,7 +141,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
      * @return 动态编译
      */
     protected MethodCaller compile(final Method method) {
-        if (method == null) {
+        if (method == null || compiler == null) {
             return null;
         }
         String name = method.getName();
@@ -172,7 +178,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         try {
             Class<?> clazz = ClassUtils.forName(fullName, (n) -> {
                 try {
-                    return JCompiler.compile(n, builder);
+                    return compiler.compile(n, builder);
                 } catch (Throwable e) {
                     logger.error(e.getMessage() + " java:\n" + builder.toString());
                     return null;

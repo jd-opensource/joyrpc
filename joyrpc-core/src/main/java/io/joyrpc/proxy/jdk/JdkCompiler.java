@@ -1,4 +1,4 @@
-package io.joyrpc.util;
+package io.joyrpc.proxy.jdk;
 
 /*-
  * #%L
@@ -20,6 +20,10 @@ package io.joyrpc.util;
  * #L%
  */
 
+import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.proxy.JCompiler;
+
 import javax.tools.*;
 import javax.tools.JavaCompiler.CompilationTask;
 import java.net.URI;
@@ -32,7 +36,9 @@ import static javax.tools.JavaFileObject.Kind.SOURCE;
 /**
  * Java运行时编译器
  */
-public class JCompiler {
+@Extension("jdk")
+@ConditionalOnClass("javax.tools.ToolProvider")
+public class JdkCompiler implements JCompiler {
 
     /**
      * 编译
@@ -42,18 +48,21 @@ public class JCompiler {
      * @return 编译好的内
      * @throws ClassNotFoundException 类没有找到
      */
-    public static Class<?> compile(final String className, final CharSequence context) throws ClassNotFoundException {
+    public Class<?> compile(final String className, final CharSequence context) throws ClassNotFoundException {
         // compilation units
         JavaFileObject fileObject = new CharSequenceJavaFileObject(className, context);
         Iterable<? extends JavaFileObject> fileObjs = Collections.singletonList(fileObject);
         // compiler options
-        ClassLoader classLoader = JCompiler.class.getClassLoader();
+        ClassLoader classLoader = JdkCompiler.class.getClassLoader();
         String path = classLoader.getResource("").getPath();
         List<String> options = new ArrayList<>();
         options.add("-d");
         options.add(path);
         // compile the dynamic class
         JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+        if (compiler == null) {
+            return null;
+        }
         StandardJavaFileManager fileMgr = compiler.getStandardFileManager(null, null, null);
         CompilationTask task = compiler.getTask(null, fileMgr, null, options, null, fileObjs);
         if (!task.call()) {

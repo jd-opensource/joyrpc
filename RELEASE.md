@@ -6,6 +6,8 @@
 
 - 消费者调用，通过缓存的参数类型，加快构造Invocation的性能
 
+- 增加JCompiler插件，避免系统没有tools.jar的时候编译报错
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

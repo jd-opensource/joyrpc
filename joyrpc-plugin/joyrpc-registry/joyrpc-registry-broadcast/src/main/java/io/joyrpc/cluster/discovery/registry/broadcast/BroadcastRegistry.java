@@ -34,7 +34,6 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
-import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.URL;
@@ -271,7 +270,7 @@ public class BroadcastRegistry extends AbstractRegistry {
             if (instance != null) {
                 instance.shutdown();
             }
-            return CompletableFuture.completedFuture(null);
+            return super.doDisconnect();
         }
 
         @Override

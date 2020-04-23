@@ -1095,6 +1095,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @return 异步Future
          */
         protected CompletableFuture<Void> doDisconnect() {
+            connected.set(false);
             return CompletableFuture.completedFuture(null);
         }
 

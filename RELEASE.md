@@ -8,6 +8,12 @@
 
 - 增加JCompiler插件，避免系统没有tools.jar的时候编译报错
 
+- 增加Consul注册中心支持
+
+### Bugfixes
+
+- ETCD注册中心断开连接后，连接标识没有清空，造成重连可能不成功问题
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

@@ -254,7 +254,7 @@ public class EtcdRegistry extends AbstractRegistry {
                 client.close();
             }
             leaseId = 0;
-            return CompletableFuture.completedFuture(null);
+            return super.doDisconnect();
         }
 
         @Override

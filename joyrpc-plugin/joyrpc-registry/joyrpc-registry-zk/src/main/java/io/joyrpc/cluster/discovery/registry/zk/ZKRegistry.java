@@ -203,7 +203,7 @@ public class ZKRegistry extends AbstractRegistry {
             if (curator != null) {
                 curator.unwrap().close();
             }
-            return CompletableFuture.completedFuture(null);
+            return super.doDisconnect();
         }
 
         @Override

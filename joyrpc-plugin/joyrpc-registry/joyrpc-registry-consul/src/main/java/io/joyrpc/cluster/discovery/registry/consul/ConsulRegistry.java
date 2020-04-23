@@ -25,6 +25,7 @@ import com.ecwid.consul.v1.ConsulRawClient;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.Member;
 import com.ecwid.consul.v1.agent.model.NewService;
+import com.ecwid.consul.v1.agent.model.Self;
 import com.ecwid.consul.v1.health.HealthServicesRequest;
 import com.ecwid.consul.v1.health.model.HealthService;
 import io.joyrpc.cluster.Shard;
@@ -34,42 +35,51 @@ import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.StringUtils;
+import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.management.ManagementFactory;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static io.joyrpc.util.Timer.timer;
+
 public class ConsulRegistry extends AbstractRegistry {
 
-    private Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(ConsulRegistry.class);
+    /**
+     * 服务ID函数
+     */
+    protected static final Function<URL, String> serviceIdFunction = u -> u.getHost() + ":" + u.getPort() + "_" + GlobalContext.getPid();
 
-    private List<String> configAddresses = Collections.emptyList();
+    protected List<String> addresses = Collections.emptyList();
 
-    private final String pid = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
-
-    private Function<URL, String> serviceIdFunction = u -> u.getPath() + "_" + u.getHost() + ":" + u.getPort() + "_" + this.pid;
+    protected boolean check;
+    protected int checkInterval;
+    protected int checkTimeout;
 
     public ConsulRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         String address = url.getString(Constants.ADDRESS_OPTION);
         if (StringUtils.isNotBlank(address)) {
-            this.configAddresses = Stream.of(address.split(",")).distinct()
+            this.addresses = Stream.of(address.split(",")).distinct()
                     .collect(Collectors.toList());
         }
+        check = url.getBoolean("consul.check", true);
+        checkInterval = url.getPositive("consul.checkInterval", 10000) + ThreadLocalRandom.current().nextInt(10000);
+        checkTimeout = url.getPositive("consul.checkTimeout", 1000);
     }
 
     @Override
@@ -77,33 +87,49 @@ public class ConsulRegistry extends AbstractRegistry {
         return new ConsulRegistryController(this);
     }
 
-    private String randomAddress() {
-        return configAddresses.get(Math.abs(new Random().nextInt()) % configAddresses.size());
+    /**
+     * 随机获取地址
+     *
+     * @return
+     */
+    protected String randomAddress() {
+        int size = addresses.size();
+        switch (size) {
+            case 0:
+                return null;
+            case 1:
+                return addresses.get(0);
+            default:
+                return addresses.get(ThreadLocalRandom.current().nextInt(size));
+        }
     }
 
 
-    private Map<String, String> filterIllegalParameters(Map<String, String> parameters) {
-        return parameters.entrySet().stream()
-                .filter(entry -> !entry.getKey().contains(".") || entry.getKey().startsWith("."))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-    }
-
-
-    private URL getUrl(HealthService.Service service) {
-        return new URL(service.getMeta().get(Constants.PROTOCOL_KEY),
-                service.getAddress(), service.getPort(), service.getService(), service.getMeta());
-    }
-
-
-    private class ConsulRegistryController extends RegistryController<ConsulRegistry> {
-
-        private ConsulRawClient consulRawClient;
-
-        private ConsulClient consulClient;
+    /**
+     * Consul控制器
+     */
+    protected static class ConsulRegistryController extends RegistryController<ConsulRegistry> {
+        /**
+         * Consul可贺的
+         */
+        protected ConsulClient client;
+        /**
+         * 连续续约失败次数
+         */
+        protected AtomicInteger leaseErr = new AtomicInteger();
+        /**
+         * 续约间隔
+         */
+        protected int leaseInterval;
+        /**
+         * 续约任务名称
+         */
+        protected String leaseTaskName;
 
         public ConsulRegistryController(ConsulRegistry registry) {
             super(registry);
+            this.leaseTaskName = "Lease-" + registry.registryId;
+            this.leaseInterval = 5000 + ThreadLocalRandom.current().nextInt(5000);
         }
 
         @Override
@@ -118,75 +144,59 @@ public class ConsulRegistry extends AbstractRegistry {
 
         @Override
         protected CompletableFuture<Void> doConnect() {
-            return CompletableFuture.runAsync(() -> {
-                do {
-                    String address = randomAddress();
-                    String[] hostPort = address.split(":");
-                    this.consulRawClient = ConsulRawClient.Builder.builder()
-                            .setHost(hostPort[0]).setPort(Integer.parseInt(hostPort[1]))
-                            .build();
-                    this.consulClient = new ConsulClient(this.consulRawClient);
-                    logger.info("connected to consul {}", address);
-                } while (!checkConnection());
+            leaseErr.set(0);
+            URL url = URL.valueOf(registry.randomAddress(), "http", 8500, null);
+            ConsulRawClient.Builder builder = ConsulRawClient.Builder.builder();
+            this.client = new ConsulClient(builder.setHost(url.getHost()).setPort(url.getPort()).build());
+            return Futures.call(future -> {
+                client.getAgentSelf();
+                //续约
+                timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
+                future.complete(null);
             });
         }
 
         @Override
-        protected CompletableFuture<Void> doDisconnect() {
-            return super.doDisconnect();
-        }
-
-        @Override
-        protected CompletableFuture<Void> doRegister(Registion registion) {
-            return CompletableFuture.runAsync(() -> {
-                checkConnection();
-                URL url = registion.getUrl();
-                String serviceName = url.getPath();
-                String ip = url.getHost();
-                int port = url.getPort();
-                String serviceId = serviceIdFunction.apply(url);
-                if (getServiceById(serviceId, serviceName) != null) {
-                    return;
-                }
-                //注册
-                NewService service = new NewService();
-                service.setId(serviceId);
-                service.setMeta(filterIllegalParameters(url.getParameters()));
-                service.setAddress(ip);
-                service.setName(serviceName);
-                service.setPort(port);
-                service.setTags(Arrays.asList(
-                        port > 0 ? Constants.SIDE_PROVIDER : Constants.SIDE_CONSUMER
-                ));
-                if (port > 0) {
-                    NewService.Check check = new NewService.Check();
-                    check.setTcp(ip + ":" + port);
-                    check.setInterval("10s");
-                    check.setTimeout("1s");
-                    check.setStatus("passing");
-                    service.setCheck(check);
-                }
-                try {
-                    consulClient.agentServiceRegister(service);
-                    logger.info("register service {}", serviceName);
-                } catch (Exception e) {
-                    logger.warn("register service {} failed, cause: {}", serviceName, e.getMessage());
-                }
+        protected CompletableFuture<Void> doRegister(final Registion registion) {
+            URL url = registion.getUrl();
+            String serviceName = url.getPath();
+            String ip = url.getHost();
+            int port = url.getPort();
+            String serviceId = serviceIdFunction.apply(url);
+            //注册
+            NewService service = new NewService();
+            service.setId(serviceId);
+            service.setMeta(filterIllegalParameters(url.getParameters()));
+            service.setAddress(ip);
+            service.setName(serviceName);
+            service.setPort(port);
+            service.setTags(Arrays.asList(port > 0 ? Constants.SIDE_PROVIDER : Constants.SIDE_CONSUMER));
+            if (registry.check && port > 0) {
+                NewService.Check check = new NewService.Check();
+                check.setTcp(url.getAddress());
+                check.setInterval(registry.checkInterval + "ms");
+                check.setTimeout(registry.checkTimeout + "ms");
+                check.setStatus("passing");
+                service.setCheck(check);
+            }
+            return Futures.call(future -> {
+                client.agentServiceRegister(service);
+                future.complete(null);
             });
         }
 
         @Override
         protected CompletableFuture<Void> doDeregister(Registion registion) {
-            checkConnection();
-            logger.info("deregister {} {}", registion.getKey(),
-                    deregisterFromConsul(registion.getUrl()) ? "succeed" : "failed");
-            return CompletableFuture.completedFuture(null);
+            return Futures.call(future -> {
+                client.agentServiceDeregister(serviceIdFunction.apply(registion.getUrl()));
+                future.complete(null);
+            });
         }
 
         private boolean deregisterFromConsul(URL url) {
             String serviceId = serviceIdFunction.apply(url);
             if (getServiceById(serviceId, url.getPath()) != null) {
-                consulClient.agentServiceDeregister(serviceId);
+                client.agentServiceDeregister(serviceId);
                 return true;
             }
             return false;
@@ -203,14 +213,14 @@ public class ConsulRegistry extends AbstractRegistry {
                     if (services == null || services.isEmpty()) {
                         //移除服务订阅
                         if (!clusterBooking.getRegisteredUrls().isEmpty()) {
-                            clusterBooking.handle(new ClusterEvent(ConsulRegistry.this, null,
+                            clusterBooking.handle(new ClusterEvent(registry, null,
                                     UpdateEvent.UpdateType.UPDATE, clusterBooking.getEventVersion().incrementAndGet(),
                                     clusterBooking.getRegisteredUrls().stream()
                                             .map(url -> new ClusterEvent.ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.DELETE))
                                             .collect(Collectors.toList())));
                         }
                     } else {
-                        List<URL> urls = services.stream().map(ConsulRegistry.this::getUrl)
+                        List<URL> urls = services.stream().map(this::getUrl)
                                 .collect(Collectors.toList());
                         List<URL> notRegisteredUrls = urls.stream()
                                 .filter(url -> !clusterBooking.getRegisteredUrls().contains(url))
@@ -241,7 +251,7 @@ public class ConsulRegistry extends AbstractRegistry {
                         List<ClusterEvent.ShardEvent> events = Stream.of(deleteEvents, updateEvents)
                                 .flatMap(List::stream).collect(Collectors.toList());
                         if (!events.isEmpty()) {
-                            clusterBooking.handle(new ClusterEvent(ConsulRegistry.this, null,
+                            clusterBooking.handle(new ClusterEvent(registry, null,
                                     UpdateEvent.UpdateType.FULL,
                                     clusterBooking.getEventVersion().incrementAndGet(), events));
                         }
@@ -258,11 +268,11 @@ public class ConsulRegistry extends AbstractRegistry {
                 List<HealthService.Service> services = lookupProvider(configBooking.getPath(),
                         configBooking.getUrl().getString(Constants.ALIAS_OPTION), true);
                 if (services == null || services.isEmpty()) {
-                    configBooking.handle(new ConfigEvent(ConsulRegistry.this, null,
+                    configBooking.handle(new ConfigEvent(registry, null,
                             configBooking.getEventVersion().incrementAndGet(), new HashMap<>()));
                     return;
                 }
-                services.stream().forEach(service -> configBooking.handle(new ConfigEvent(ConsulRegistry.this, null,
+                services.stream().forEach(service -> configBooking.handle(new ConfigEvent(registry, null,
                         configBooking.getEventVersion().incrementAndGet(), service.getMeta())));
             });
         }
@@ -282,7 +292,7 @@ public class ConsulRegistry extends AbstractRegistry {
 
         private HealthService.Service getServiceById(String serviceId, String serviceName) {
             checkConnection();
-            Response<List<HealthService>> response = this.consulClient
+            Response<List<HealthService>> response = this.client
                     .getHealthServices(serviceName, HealthServicesRequest.newBuilder()
                             .setPassing(true).build());
             Optional<HealthService> optional = Optional.empty();
@@ -297,7 +307,7 @@ public class ConsulRegistry extends AbstractRegistry {
 
         private List<HealthService.Service> lookupProvider(String serviceName, String alias, boolean passing) {
             checkConnection();
-            return consulClient.getHealthServices(serviceName,
+            return client.getHealthServices(serviceName,
                     HealthServicesRequest.newBuilder().setPassing(passing)
                             .setTag(Constants.SIDE_PROVIDER)
                             .build()).getValue().stream()
@@ -310,19 +320,82 @@ public class ConsulRegistry extends AbstractRegistry {
 
         private boolean checkConnection() {
             try {
-                Response<List<Member>> response = consulClient.getAgentMembers();
+                Response<List<Member>> response = client.getAgentMembers();
                 return !response.getValue().isEmpty();
             } catch (Exception e) {
-                logger.warn("consul registry can't connect {}", e.getMessage(), e);
+                if (leaseErr.incrementAndGet() >= 3) {
+                    logger.error(String.format("Error occurs while lease than 3 times, caused by %s. reconnect....", e.getMessage()));
+                    //先关闭连接，再重连
+                    doDisconnect().whenComplete((v, t) -> {
+                        if (isOpen()) {
+                            reconnect(new CompletableFuture<>(), 0, registry.maxConnectRetryTimes);
+                        }
+                    });
+                }
             }
             CompletableFuture<Void> future = new CompletableFuture<>();
             reconnect(future, 1, 10);
             //没有异常即认为重连成功
             return !future.isCompletedExceptionally();
         }
+
+        /**
+         * 续约
+         */
+        protected void lease() {
+            //TODO 是否要加在注册中心的任务里面执行
+            if (isOpen()) {
+                try {
+                    Response<Self> response = client.getAgentSelf();
+                    if (isOpen()) {
+                        if (response.getValue() == null) {
+                            //先关闭连接，再重连
+                            doDisconnect().whenComplete((v, t) -> {
+                                if (isOpen()) {
+                                    reconnect(new CompletableFuture<>(), 0, registry.maxConnectRetryTimes);
+                                }
+                            });
+                        } else {
+                            leaseErr.set(0);
+                            //继续续约
+                            timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
+                        }
+                    }
+                } catch (Exception e) {
+                    if (isOpen()) {
+                        if (leaseErr.incrementAndGet() >= 3) {
+                            logger.error(String.format("Error occurs while lease than 3 times, caused by %s. reconnect....", e.getMessage()));
+                            //先关闭连接，再重连
+                            doDisconnect().whenComplete((v, t) -> {
+                                if (isOpen()) {
+                                    reconnect(new CompletableFuture<>(), 0, registry.maxConnectRetryTimes);
+                                }
+                            });
+                        } else {
+                            //继续续约
+                            timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + leaseInterval, this::lease));
+                        }
+                    }
+                }
+            }
+        }
+
+        private Map<String, String> filterIllegalParameters(Map<String, String> parameters) {
+            return parameters.entrySet().stream()
+                    .filter(entry -> !entry.getKey().contains(".") || entry.getKey().startsWith("."))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        }
+
+
+        private URL getUrl(HealthService.Service service) {
+            return new URL(service.getMeta().get(Constants.PROTOCOL_KEY),
+                    service.getAddress(), service.getPort(), service.getService(), service.getMeta());
+        }
     }
 
-    private class ConsulConfigBooking extends ConfigBooking {
+
+    protected static class ConsulConfigBooking extends ConfigBooking {
 
         //事件版本
         private AtomicLong eventVersion = new AtomicLong();
@@ -336,7 +409,7 @@ public class ConsulRegistry extends AbstractRegistry {
         }
     }
 
-    private class ConsulClusterBooking extends ClusterBooking {
+    protected static class ConsulClusterBooking extends ClusterBooking {
         //事件版本
         private AtomicLong eventVersion = new AtomicLong();
 

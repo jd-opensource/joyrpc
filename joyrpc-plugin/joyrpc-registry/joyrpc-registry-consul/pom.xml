@@ -15,7 +15,8 @@
         <dependency>
             <groupId>com.ecwid.consul</groupId>
             <artifactId>consul-api</artifactId>
-            <version>1.4.2</version>
+            <version>${consul.version}</version>
         </dependency>
     </dependencies>
+
 </project>

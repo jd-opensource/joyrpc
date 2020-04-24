@@ -26,6 +26,7 @@ import com.ecwid.consul.v1.ConsulRawClient;
 import com.ecwid.consul.v1.OperationException;
 import com.ecwid.consul.v1.Response;
 import com.ecwid.consul.v1.agent.model.NewService;
+import com.ecwid.consul.v1.agent.model.Self;
 import com.ecwid.consul.v1.health.HealthServicesRequest;
 import com.ecwid.consul.v1.health.model.HealthService;
 import io.joyrpc.cluster.Region;
@@ -38,6 +39,7 @@ import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.Version;
+import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent.UpdateType;
@@ -56,9 +58,9 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
+import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
-import static io.joyrpc.util.StringUtils.split;
+import static io.joyrpc.util.StringUtils.*;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -147,7 +149,28 @@ public class ConsulRegistry extends AbstractRegistry {
             ConsulRawClient.Builder builder = ConsulRawClient.Builder.builder();
             this.client = new ConsulClient(builder.setHost(url.getHost()).setPort(url.getPort()).build());
             return Futures.call(future -> {
-                client.getAgentSelf();
+                Response<Self> response = client.getAgentSelf();
+                Self self = response.getValue();
+                String dataCenter = self.getConfig().getDatacenter();
+                //设置数据中心
+                if (!isEmpty(dataCenter)) {
+                    String[] parts = split(dataCenter, ':');
+                    String region = null;
+                    if (parts.length >= 2) {
+                        //region:dataCenter
+                        region = parts[0];
+                        dataCenter = parts[1];
+                    }
+                    Environment environment = ENVIRONMENT.get();
+                    if (!isEmpty(region) && isEmpty(GlobalContext.getString(REGION))) {
+                        GlobalContext.put(REGION, region);
+                        environment.put(REGION, region);
+                    }
+                    if (!isEmpty(dataCenter) && isEmpty(GlobalContext.getString(DATA_CENTER))) {
+                        GlobalContext.put(DATA_CENTER, dataCenter);
+                        environment.put(DATA_CENTER, dataCenter);
+                    }
+                }
                 future.complete(null);
             });
         }
@@ -404,7 +427,6 @@ public class ConsulRegistry extends AbstractRegistry {
             }
             result.put(SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
             result.put(WEIGHT_OPTION.getName(), String.valueOf(url.getInteger(WEIGHT_OPTION)));
-            result.put(DYNAMIC_OPTION.getName(), String.valueOf(url.getBoolean(DYNAMIC_OPTION)));
             result.put(TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
             result.put(PROTOCOL_KEY, url.getProtocol());
             result.put(ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));

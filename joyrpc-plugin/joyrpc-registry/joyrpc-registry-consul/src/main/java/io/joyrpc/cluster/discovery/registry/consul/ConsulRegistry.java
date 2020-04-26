@@ -21,14 +21,12 @@ package io.joyrpc.cluster.discovery.registry.consul;
  */
 
 import com.ecwid.consul.transport.TransportException;
-import com.ecwid.consul.v1.ConsulClient;
-import com.ecwid.consul.v1.ConsulRawClient;
-import com.ecwid.consul.v1.OperationException;
-import com.ecwid.consul.v1.Response;
+import com.ecwid.consul.v1.*;
 import com.ecwid.consul.v1.agent.model.NewService;
 import com.ecwid.consul.v1.agent.model.Self;
 import com.ecwid.consul.v1.health.HealthServicesRequest;
 import com.ecwid.consul.v1.health.model.HealthService;
+import com.ecwid.consul.v1.kv.model.GetValue;
 import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
@@ -37,6 +35,7 @@ import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
+import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.Version;
 import io.joyrpc.context.Environment;
@@ -47,18 +46,24 @@ import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.Futures;
+import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
+import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.StringUtils.*;
 import static io.joyrpc.util.Timer.timer;
@@ -74,6 +79,13 @@ public class ConsulRegistry extends AbstractRegistry {
      * 服务ID函数
      */
     protected static final Predicate<String> SERVICE_LOSS = s -> s != null && s.contains("does not have associated TTL");
+    /**
+     * 配置路径
+     */
+    protected static final Function<URL, String> CONFIG_PATH = u -> {
+        String appName = GlobalContext.getString(KEY_APPNAME);
+        return u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : ("/" + appName));
+    };
     public static final String CONSUL_TTL = "consul.ttl";
     public static final String CONSUL_LEASE_INTERVAL = "consul.leaseInterval";
     public static final String CONSUL_BOOKING_INTERVAL = "consul.bookingInterval";
@@ -128,19 +140,35 @@ public class ConsulRegistry extends AbstractRegistry {
          * Consul可贺的
          */
         protected ConsulClient client;
+        /**
+         * 编码后的应用名称
+         */
+        protected String appPath;
 
         public ConsulRegistryController(ConsulRegistry registry) {
             super(registry);
+            String appName = GlobalContext.getString(KEY_APPNAME);
+            if (appName == null || appName.isEmpty()) {
+                appPath = "";
+            } else {
+                try {
+                    appPath = "/" + URLEncoder.encode(appName, "UTF-8");
+                } catch (UnsupportedEncodingException e) {
+                    appPath = "";
+                }
+            }
         }
 
         @Override
-        protected ClusterBooking createClusterBooking(URLKey key) {
+        protected ClusterBooking createClusterBooking(final URLKey key) {
             return new ConsulClusterBooking(key, this::dirty, getPublisher(key.getKey()), key.getUrl().getPath());
         }
 
         @Override
-        protected ConfigBooking createConfigBooking(URLKey key) {
-            return new ConsulConfigBooking(key, this::dirty, getPublisher(key.getKey()), key.getUrl().getPath());
+        protected ConfigBooking createConfigBooking(final URLKey key) {
+            URL url = key.getUrl();
+            String path = url.getPath() + "/" + url.getString(ROLE_OPTION) + appPath;
+            return new ConsulConfigBooking(key, this::dirty, getPublisher(key.getKey()), path);
         }
 
         @Override
@@ -212,7 +240,7 @@ public class ConsulRegistry extends AbstractRegistry {
         }
 
         @Override
-        protected CompletableFuture<Void> doDeregister(Registion registion) {
+        protected CompletableFuture<Void> doDeregister(final Registion registion) {
             return Futures.call(future -> {
                 client.agentServiceDeregister(((ConsulRegistion) registion).uuid);
                 future.complete(null);
@@ -225,6 +253,16 @@ public class ConsulRegistry extends AbstractRegistry {
                 ConsulClusterBooking ccb = (ConsulClusterBooking) booking;
                 doUpdate(ccb);
                 addClusterTimer(ccb);
+                future.complete(null);
+            });
+        }
+
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
+            return Futures.call(future -> {
+                ConsulConfigBooking ccb = (ConsulConfigBooking) booking;
+                doUpdate(ccb);
+                addConfigTimer(ccb);
                 future.complete(null);
             });
         }
@@ -385,25 +423,59 @@ public class ConsulRegistry extends AbstractRegistry {
             }
         }
 
-        @Override
-        protected CompletableFuture<Void> doSubscribe(ConfigBooking booking) {
-            return Futures.call(future -> {
-                doUpdate((ConsulConfigBooking) booking);
-                future.complete(null);
-            });
+        /**
+         * 添加配置订阅定时器
+         *
+         * @param booking 订阅
+         */
+        protected void addConfigTimer(final ConsulConfigBooking booking) {
+            //加上随机时间
+            long time = SystemClock.now() + registry.bookingInterval + ThreadLocalRandom.current().nextInt(2000);
+            timer().add(new Timer.DelegateTask("Cluster-" + booking.getKey(), time, () -> addConfigTask(booking)));
+        }
+
+        /**
+         * 添加配置订阅任务
+         *
+         * @param booking 订阅
+         */
+        protected void addConfigTask(final ConsulConfigBooking booking) {
+            if (!isOpen() || !connected.get() || !configs.containsKey(booking.getKey())) {
+                return;
+            }
+            //添加任务
+            addNewTask(new Task("Cluster-" + booking.getKey(), null, new CompletableFuture<>(), () -> {
+                if (isOpen() && connected.get() && configs.containsKey(booking.getKey())) {
+                    try {
+                        doUpdate(booking);
+                    } finally {
+                        //再次添加配置订阅定时器
+                        addConfigTimer(booking);
+                    }
+                }
+                return CompletableFuture.completedFuture(null);
+            }, 0, 0, 0, null));
         }
 
         /**
          * 更新配置
          *
-         * @param booking
+         * @param booking 配置订阅
          */
         protected void doUpdate(final ConsulConfigBooking booking) {
             if (!isOpen() || !connected.get() || !configs.containsKey(booking.getKey())) {
                 return;
             }
-            booking.handle(new ConfigEvent(registry, null, SystemClock.now(), new HashMap<>()));
-            //TODO 配置订阅参考资料https://blog.csdn.net/liuzhuchen/article/details/81913562
+            QueryParams params = QueryParams.Builder.builder().setIndex(booking.getVersion()).setWaitTime(0).build();
+            Response<GetValue> response = client.getKVValue(booking.getPath(), params);
+            GetValue getValue = response.getValue();
+            if (getValue != null && getValue.getModifyIndex() > booking.getVersion()) {
+                Map<String, String> map = JSON.get().parseObject(getValue.getDecodedValue(StandardCharsets.UTF_8), new TypeReference<Map<String, String>>() {
+                });
+                booking.handle(new ConfigEvent(registry, null, getValue.getModifyIndex(), map));
+            } else if (booking.getVersion() < 0) {
+                booking.handle(new ConfigEvent(registry, null, 0, new HashMap<>()));
+            }
         }
 
         /**
@@ -540,12 +612,9 @@ public class ConsulRegistry extends AbstractRegistry {
      * 配置订阅
      */
     protected static class ConsulConfigBooking extends ConfigBooking {
-        protected String value;
-
         public ConsulConfigBooking(URLKey key, Runnable dirty, Publisher<ConfigEvent> publisher, String path) {
             super(key, dirty, publisher, path);
         }
-
     }
 
     /**

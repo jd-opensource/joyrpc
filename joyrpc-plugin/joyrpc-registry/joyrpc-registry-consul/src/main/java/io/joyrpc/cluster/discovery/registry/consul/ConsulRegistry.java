@@ -26,6 +26,7 @@ import com.ecwid.consul.v1.agent.model.NewService;
 import com.ecwid.consul.v1.agent.model.Self;
 import com.ecwid.consul.v1.health.HealthServicesRequest;
 import com.ecwid.consul.v1.health.model.HealthService;
+import com.ecwid.consul.v1.health.model.HealthService.Service;
 import com.ecwid.consul.v1.kv.model.GetValue;
 import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.Shard;
@@ -46,7 +47,6 @@ import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -59,7 +59,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
@@ -79,13 +78,6 @@ public class ConsulRegistry extends AbstractRegistry {
      * 服务ID函数
      */
     protected static final Predicate<String> SERVICE_LOSS = s -> s != null && s.contains("does not have associated TTL");
-    /**
-     * 配置路径
-     */
-    protected static final Function<URL, String> CONFIG_PATH = u -> {
-        String appName = GlobalContext.getString(KEY_APPNAME);
-        return u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : ("/" + appName));
-    };
     public static final String CONSUL_TTL = "consul.ttl";
     public static final String CONSUL_LEASE_INTERVAL = "consul.leaseInterval";
     public static final String CONSUL_BOOKING_INTERVAL = "consul.bookingInterval";
@@ -386,40 +378,19 @@ public class ConsulRegistry extends AbstractRegistry {
                     HealthServicesRequest.newBuilder().setPassing(true)
                             .setTag(booking.getUrl().getString(ALIAS_OPTION))
                             .build());
-            List<HealthService> healthServices = response.getValue();
-            List<MyService> services = new ArrayList<>(healthServices == null || healthServices.isEmpty() ? 0 : healthServices.size());
-            if (healthServices != null && !healthServices.isEmpty()) {
-                healthServices.forEach(healthService -> services.add(new MyService(healthService.getService())));
-            }
-            boolean changed = false;
-            if (services.isEmpty()) {
-                if (booking.services == null || !booking.services.isEmpty()) {
-                    //有变化
-                    booking.services = new HashMap<>();
-                    booking.handle(new ClusterEvent(registry, null, UpdateType.FULL, SystemClock.now(), new ArrayList<>(0)));
-                }
-            } else if (booking.services != null && booking.services.size() == services.size()) {
-                //判断是否有变化
-                for (MyService service : services) {
-                    if (!Objects.equals(service, booking.services.get(service.getId()))) {
-                        //有变化
-                        changed = true;
-                        break;
-                    }
-                }
-            } else {
-                changed = true;
-            }
-            if (changed) {
-                List<ShardEvent> shards = new ArrayList<>(services.size());
-                Map<String, MyService> map = new HashMap<>(services.size());
+            if (booking.getVersion() < 0 || response.getConsulIndex() > booking.getVersion()) {
                 String defProtocol = GlobalContext.getString(Constants.PROTOCOL_KEY);
-                services.forEach(o -> {
-                    if (map.putIfAbsent(o.getId(), o) == null) {
-                        shards.add(new ShardEvent(new Shard.DefaultShard(o.toUrl(defProtocol)), ClusterEvent.ShardEventType.UPDATE));
-                    }
+                List<HealthService> healthServices = response.getValue() == null ? new ArrayList<>(0) : response.getValue();
+                List<ShardEvent> shards = new ArrayList<>(healthServices.size());
+                healthServices.forEach(healthService -> {
+                    Service service = healthService.getService();
+                    Map<String, String> meta = service.getMeta();
+                    String protocol = meta == null ? null : meta.remove(Constants.PROTOCOL_KEY);
+                    protocol = protocol == null || protocol.isEmpty() ? defProtocol : protocol;
+                    URL url = new URL(protocol, service.getAddress(), service.getPort(), service.getService(), meta);
+                    shards.add(new ShardEvent(new Shard.DefaultShard(url), ClusterEvent.ShardEventType.UPDATE));
                 });
-                booking.handle(new ClusterEvent(registry, null, UpdateType.FULL, SystemClock.now(), shards));
+                booking.handle(new ClusterEvent(registry, null, UpdateType.FULL, response.getConsulIndex(), shards));
             }
         }
 
@@ -510,73 +481,6 @@ public class ConsulRegistry extends AbstractRegistry {
     }
 
     /**
-     * 服务对象
-     */
-    protected static class MyService extends HealthService.Service {
-        protected String id;
-        protected String service;
-        protected String address;
-        protected Integer port;
-        protected Map<String, String> meta;
-
-        public MyService(HealthService.Service service) {
-            this.id = service.getId();
-            this.service = service.getService();
-            this.address = service.getAddress();
-            this.port = service.getPort();
-            this.meta = service.getMeta();
-        }
-
-        /**
-         * 转成URL
-         *
-         * @param defProtocol
-         * @return
-         */
-        public URL toUrl(String defProtocol) {
-            String protocol = meta == null ? null : meta.remove(Constants.PROTOCOL_KEY);
-            protocol = protocol == null || protocol.isEmpty() ? defProtocol : protocol;
-            return new URL(protocol, address, port, service, meta);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            MyService myService = (MyService) o;
-
-            if (id != null ? !id.equals(myService.id) : myService.id != null) {
-                return false;
-            }
-            if (service != null ? !service.equals(myService.service) : myService.service != null) {
-                return false;
-            }
-            if (address != null ? !address.equals(myService.address) : myService.address != null) {
-                return false;
-            }
-            if (port != null ? !port.equals(myService.port) : myService.port != null) {
-                return false;
-            }
-            return meta != null ? meta.equals(myService.meta) : myService.meta == null;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = id != null ? id.hashCode() : 0;
-            result = 31 * result + (service != null ? service.hashCode() : 0);
-            result = 31 * result + (address != null ? address.hashCode() : 0);
-            result = 31 * result + (port != null ? port.hashCode() : 0);
-            result = 31 * result + (meta != null ? meta.hashCode() : 0);
-            return result;
-        }
-    }
-
-    /**
      * 注册信息
      */
     protected static class ConsulRegistion extends Registion {
@@ -621,7 +525,6 @@ public class ConsulRegistry extends AbstractRegistry {
      * 集群订阅
      */
     protected static class ConsulClusterBooking extends ClusterBooking {
-        protected Map<String, MyService> services;
 
         public ConsulClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher, String path) {
             super(key, dirty, publisher, path);

@@ -63,6 +63,7 @@ public class ConcurrencyFilter extends AbstractConcurrencyFilter implements Cons
             elapsed = SystemClock.now() - start;
             remain = timeout - elapsed;
             if (remain <= 0) {
+                //TODO 被限流后会抛出大量异常，很耗CPU
                 return new Result(request.getContext(),
                         new OverloadException("Waiting concurrent timeout in client-side when invoke"
                                 + invocation.getClassName() + "." + invocation.getMethodName() + ", elapsed: " + elapsed

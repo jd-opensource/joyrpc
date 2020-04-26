@@ -39,6 +39,7 @@ public class ConcurrencyFilter extends AbstractConcurrencyFilter implements Prov
     @Override
     protected Result onExceed(final RequestMessage<Invocation> request, final Concurrency concurrency) {
         Invocation invocation = request.getPayLoad();
+        //TODO 被限流后会抛出大量异常，很耗CPU
         return new Result(request.getContext(),
                 new OverloadException("Failed to invoke method " + invocation.getClassName() + "." + invocation.getMethodName()
                         + ", The service using threads greater than: " + concurrency.getMax() + ". Change it by interface or method concurrency",

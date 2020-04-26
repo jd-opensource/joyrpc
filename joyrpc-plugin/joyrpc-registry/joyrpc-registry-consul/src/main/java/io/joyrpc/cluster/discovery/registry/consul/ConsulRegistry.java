@@ -146,6 +146,7 @@ public class ConsulRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doConnect() {
             URL url = URL.valueOf(registry.randomAddress(), "http", 8500, null);
+            //TODO 默认超时时间过长，DEFAULT_READ_TIMEOUT为10分钟
             ConsulRawClient.Builder builder = ConsulRawClient.Builder.builder();
             this.client = new ConsulClient(builder.setHost(url.getHost()).setPort(url.getPort()).build());
             return Futures.call(future -> {
@@ -249,6 +250,7 @@ public class ConsulRegistry extends AbstractRegistry {
             }
 
             //添加任务
+            //TODO 要不要用独立的线程池来管理
             addNewTask(new Task("Lease-" + registion.getKey(), null, new CompletableFuture<>(), () -> {
                 if (isOpen() && connected.get() && registers.containsKey(registion.getKey())) {
                     doLease((ConsulRegistion) registion);
@@ -401,7 +403,7 @@ public class ConsulRegistry extends AbstractRegistry {
                 return;
             }
             booking.handle(new ConfigEvent(registry, null, SystemClock.now(), new HashMap<>()));
-            //TODO 暂时不支持配置订阅
+            //TODO 配置订阅参考资料https://blog.csdn.net/liuzhuchen/article/details/81913562
         }
 
         /**

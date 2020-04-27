@@ -1408,6 +1408,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return version;
         }
 
+        public void setVersion(long version) {
+            this.version = version;
+        }
+
         public long getLastEventTime() {
             return lastEventTime;
         }

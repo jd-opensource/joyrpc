@@ -23,10 +23,18 @@ package io.joyrpc.util.network;
  * #L%
  */
 
+import io.joyrpc.exception.ConnectionException;
+import io.joyrpc.util.Resource;
+
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.LineNumberReader;
+import java.net.ConnectException;
+import java.net.NoRouteToHostException;
 import java.text.MessageFormat;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,6 +56,8 @@ public class Ping {
 
     // less than 1ms
     private static final Pattern WINDOWS_LESS = Pattern.compile("(bytes|字节)=\\d+ (time|时间)<(.*?)ms TTL=\\d+");
+
+    public static final List<String> DEAD_MSG = Resource.lines(new String[]{"META-INF/system_network_error", "user_network_error"}, true);
 
     /**
      * Ping IP
@@ -152,5 +162,40 @@ public class Ping {
         } finally {
             input.close();
         }
+    }
+
+    /**
+     * 检查目标节点是否已经不存活了
+     *
+     * @param throwable 异常
+     * @return 是否是死亡节点
+     */
+    public static boolean detectDead(Throwable throwable) {
+        if (throwable == null) {
+            return false;
+        }
+        Queue<Throwable> queue = new LinkedList<>();
+        queue.add(throwable);
+        Throwable t;
+        while (!queue.isEmpty()) {
+            t = queue.poll();
+            t = t instanceof ConnectionException ? t.getCause() : t;
+            if (t instanceof NoRouteToHostException) {
+                //没有路由
+                return true;
+            } else if (t instanceof ConnectException) {
+                //连接异常
+                String msg = t.getMessage().toLowerCase();
+                for (String deadMsg : DEAD_MSG) {
+                    if (msg.contains(deadMsg)) {
+                        return true;
+                    }
+                }
+                return false;
+            } else if (t.getCause() != null) {
+                queue.add(t.getCause());
+            }
+        }
+        return false;
     }
 }

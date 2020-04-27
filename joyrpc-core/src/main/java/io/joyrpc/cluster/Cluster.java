@@ -33,7 +33,10 @@ import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.PublisherConfig;
-import io.joyrpc.exception.*;
+import io.joyrpc.exception.AuthenticationException;
+import io.joyrpc.exception.InitializationException;
+import io.joyrpc.exception.ProtocolException;
+import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.metric.Dashboard;
@@ -43,11 +46,10 @@ import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.util.Timer;
 import io.joyrpc.util.*;
+import io.joyrpc.util.network.Ping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.ConnectException;
-import java.net.NoRouteToHostException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -79,7 +81,6 @@ public class Cluster {
     public static final PublisherConfig EVENT_PUBLISHER_METRIC_CONF = PublisherConfig.builder().timeout(1000).build();
     public static final String EVENT_PUBLISHER_CLUSTER = "event.cluster";
     public static final PublisherConfig EVENT_PUBLISHER_CLUSTER_CONF = PublisherConfig.builder().timeout(1000).build();
-    public static final List<String> DEAD_MSG = Resource.lines(new String[]{"META-INF/system_network_error", "user_network_error"}, true);
     /**
      * 名称
      */
@@ -388,47 +389,12 @@ public class Cluster {
         } else if (throwable instanceof AuthenticationException) {
             //认证失败，最少20秒重连
             return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
-        } else if (detectDead(throwable)) {
+        } else if (Ping.detectDead(throwable)) {
             //目标节点不存在了，最少20秒重连
             return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
         } else {
             return SystemClock.now() + reconnectInterval + ThreadLocalRandom.current().nextInt(1000);
         }
-    }
-
-    /**
-     * 检查目标节点是否已经不存活了
-     *
-     * @param throwable 异常
-     * @return 是否是死亡节点
-     */
-    protected boolean detectDead(Throwable throwable) {
-        if (throwable == null) {
-            return false;
-        }
-        Queue<Throwable> queue = new LinkedList<>();
-        queue.add(throwable);
-        Throwable t;
-        while (!queue.isEmpty()) {
-            t = queue.poll();
-            t = t instanceof ConnectionException ? t.getCause() : t;
-            if (t instanceof NoRouteToHostException) {
-                //没有路由
-                return true;
-            } else if (t instanceof ConnectException) {
-                //连接异常
-                String msg = t.getMessage().toLowerCase();
-                for (String deadMsg : DEAD_MSG) {
-                    if (msg.contains(deadMsg)) {
-                        return true;
-                    }
-                }
-                return false;
-            } else if (t.getCause() != null) {
-                queue.add(t.getCause());
-            }
-        }
-        return false;
     }
 
     /**

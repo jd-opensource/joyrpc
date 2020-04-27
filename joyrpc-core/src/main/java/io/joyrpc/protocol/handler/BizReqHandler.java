@@ -198,7 +198,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         String className = invocation.getClassName();
         if (isEmpty(className)) {
             //session 为空，类名也为空，可能是session超时并被清理
-            throw new SessionException(error(invocation, channel, " session has been cleared, may be the session has expired",
+            throw new SessionException(error(invocation, channel, " may be the session has expired",
                     PROVIDER_TASK_SESSION_EXPIRED));
         }
         //检查接口ID，兼容老版本

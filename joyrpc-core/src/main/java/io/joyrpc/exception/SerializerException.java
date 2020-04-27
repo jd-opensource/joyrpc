@@ -9,9 +9,9 @@ package io.joyrpc.exception;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,29 +28,30 @@ public class SerializerException extends LafException {
     private static final long serialVersionUID = 9184777691669750392L;
 
     public SerializerException() {
+        super(null, null, false, false, null, false);
     }
 
     public SerializerException(String message) {
-        super(message);
+        super(message, null, false, false, null, false);
     }
 
     public SerializerException(String message, String errorCode) {
-        super(message, errorCode);
+        super(message, null, false, false, errorCode, false);
     }
 
     public SerializerException(String message, Throwable cause) {
-        super(message, cause);
+        super(message, cause, false, false, null, false);
     }
 
     public SerializerException(String message, Throwable cause, String errorCode) {
-        super(message, cause, errorCode);
+        super(message, cause, false, false, errorCode, false);
     }
 
     public SerializerException(Throwable cause) {
-        super(cause);
+        super(cause == null ? null : cause.toString(), cause, false, false, null, false);
     }
 
     public SerializerException(Throwable cause, String errorCode) {
-        super(cause, errorCode);
+        super(cause == null ? null : cause.toString(), cause, false, false, errorCode, false);
     }
 }

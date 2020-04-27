@@ -39,9 +39,9 @@
             <artifactId>hazelcast</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.ecwid.consul</groupId>
-            <artifactId>consul-api</artifactId>
-            <version>${consul.version}</version>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-consul-client</artifactId>
+            <version>${vertx-consul-client}</version>
         </dependency>
         <dependency>
             <groupId>org.jboss.resteasy</groupId>

@@ -66,6 +66,10 @@ public class RpcException extends LafException {
         super(message, cause, errorCode, retry);
     }
 
+    public RpcException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace, String errorCode, boolean retry) {
+        super(message, cause, enableSuppression, writableStackTrace, errorCode, retry);
+    }
+
     public RpcException(Throwable cause) {
         super(cause);
     }

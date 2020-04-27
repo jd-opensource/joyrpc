@@ -27,57 +27,23 @@ package io.joyrpc.exception;
 public class ShutdownExecption extends RejectException {
 
     public ShutdownExecption() {
+        super(null, null, false, false, null, true);
     }
 
     public ShutdownExecption(boolean retry) {
-        super(retry);
+        super(null, null, false, false, null, retry);
     }
 
     public ShutdownExecption(String message) {
-        super(message);
+        super(message, null, false, false, null, true);
     }
 
     public ShutdownExecption(String message, boolean retry) {
-        super(message, retry);
+        super(message, null, false, false, null, retry);
     }
 
     public ShutdownExecption(String message, String errorCode, boolean retry) {
-        super(message, errorCode, retry);
+        super(message, null, false, false, errorCode, retry);
     }
 
-    public ShutdownExecption(String message, String errorCode) {
-        super(message, errorCode);
-    }
-
-    public ShutdownExecption(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public ShutdownExecption(String message, Throwable cause, boolean retry) {
-        super(message, cause, retry);
-    }
-
-    public ShutdownExecption(String message, Throwable cause, String errorCode) {
-        super(message, cause, errorCode);
-    }
-
-    public ShutdownExecption(String message, Throwable cause, String errorCode, boolean retry) {
-        super(message, cause, errorCode, retry);
-    }
-
-    public ShutdownExecption(Throwable cause) {
-        super(cause);
-    }
-
-    public ShutdownExecption(Throwable cause, boolean retry) {
-        super(cause, retry);
-    }
-
-    public ShutdownExecption(Throwable cause, String errorCode) {
-        super(cause, errorCode);
-    }
-
-    public ShutdownExecption(Throwable cause, String errorCode, boolean retry) {
-        super(cause, errorCode, retry);
-    }
 }

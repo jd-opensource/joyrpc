@@ -35,6 +35,15 @@
       <joyrpc:registry id="joyRpcRegistry" address="memory://127.0.0.1" registry="memory"/>
   </beans>
   ```
+  目前支持的注册中心类型如下：
+  
+  |类型|名称|描述|
+  | :----: | :----: | :----: | 
+  |memory|内存|基于内存的注册中心，适合单节点，可用于测试|
+  |broadcast|广播|广播模式|
+  |consul|Consul|Consul注册中心|
+  |etcd|ETCD|ETCD注册中心|
+  |zk|Zookeeper|Zookeeper注册中心|
 
 #### 服务server配置  
 

@@ -80,6 +80,12 @@ public class LafException extends RuntimeException {
         this.retry = retry;
     }
 
+    public LafException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace, String errorCode, boolean retry) {
+        super(message, cause, enableSuppression, writableStackTrace);
+        this.errorCode = errorCode;
+        this.retry = retry;
+    }
+
     public LafException(Throwable cause) {
         super(cause);
     }

@@ -65,6 +65,10 @@ public class RejectException extends LafException {
         super(message, cause, errorCode, retry);
     }
 
+    public RejectException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace, String errorCode, boolean retry) {
+        super(message, cause, enableSuppression, writableStackTrace, errorCode, retry);
+    }
+
     public RejectException(Throwable cause) {
         super(cause, true);
     }

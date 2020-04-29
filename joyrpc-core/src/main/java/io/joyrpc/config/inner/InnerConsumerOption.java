@@ -41,6 +41,7 @@ import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -239,10 +240,11 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
-        Method method = getMethod(parametric.getName());
+        GrpcMethod grpcMethod = getMethod(parametric.getName());
+        Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         Map<String, Map<String, Object>> methodMocks = mockConfig.get();
         return new InnerConsumerMethodOption(
-                method,
+                grpcMethod,
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
@@ -398,7 +400,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected volatile Map<String, Object> mock;
 
-        public InnerConsumerMethodOption(final Method method, final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
+        public InnerConsumerMethodOption(final GrpcMethod method, final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final CallbackMethod callback, final int forks,
                                          final Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector,

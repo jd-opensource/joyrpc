@@ -25,10 +25,13 @@ import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.GrpcType;
 
+import java.lang.reflect.Method;
 import java.util.function.BiFunction;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
+import static io.joyrpc.Plugin.GRPC_FACTORY;
 
 /**
  * 常量定义
@@ -807,6 +810,11 @@ public class Constants {
      * 自适应负载均衡，集群TP
      */
     public static final URLOption<String> ADAPTIVE_CLUSTER_TP = new URLOption<>("adaptive.clusterTp", "tp30");
+
+    /**
+     * GrpcType函数
+     */
+    public static final BiFunction<Class<?>, Method, GrpcType> GRPC_TYPE_FUNCTION = (c, m) -> GRPC_FACTORY.get().generate(c, m);
 
     /**
      * 是否启用epoll

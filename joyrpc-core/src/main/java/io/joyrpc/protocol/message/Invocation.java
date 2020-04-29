@@ -27,6 +27,8 @@ import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcMethod;
+import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.StringUtils;
 
 import java.lang.reflect.InvocationTargetException;
@@ -34,6 +36,7 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -93,6 +96,10 @@ public class Invocation implements Call {
      * 方法对象，泛化调用的时候该对象可能为null
      */
     protected transient Method method;
+    /**
+     * grpc类型信息
+     */
+    protected transient GrpcType grpcType;
     /**
      * 所在的类，泛化调用的时候该对象可能为null
      */
@@ -322,6 +329,14 @@ public class Invocation implements Call {
         this.method = method;
     }
 
+    public GrpcType getGrpcType() {
+        return grpcType;
+    }
+
+    public void setGrpcType(GrpcType grpcType) {
+        this.grpcType = grpcType;
+    }
+
     @Override
     public Class getClazz() {
         return clazz;
@@ -472,17 +487,36 @@ public class Invocation implements Call {
     }
 
     /**
-     * 构建HTTP请求
+     * 构建调用对象
      *
-     * @param url
-     * @param parametric
-     * @param supplier
-     * @return
+     * @param url        url
+     * @param parametric 参数
+     * @param supplier   异常提供者
+     * @return 调用对象
      * @throws ClassNotFoundException
      * @throws NoSuchMethodException
      * @throws MethodOverloadException
      */
     public static Invocation build(final URL url, final Parametric parametric, final Supplier<LafException> supplier)
+            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
+        return build(url, parametric, null, supplier);
+    }
+
+    /**
+     * 构建调用对象
+     *
+     * @param url        url
+     * @param parametric 参数
+     * @param function   GrpcType函数
+     * @param supplier   异常提供者
+     * @return 调用对象
+     * @throws ClassNotFoundException
+     * @throws NoSuchMethodException
+     * @throws MethodOverloadException
+     */
+    public static Invocation build(final URL url, final Parametric parametric,
+                                   final BiFunction<Class<?>, Method, GrpcType> function,
+                                   final Supplier<LafException> supplier)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
         String path = url.getPath();
         String[] parts = path == null ? new String[0] : StringUtils.split(path, '/');
@@ -496,7 +530,7 @@ public class Invocation implements Call {
         } else if (parts.length == 2) {
             className = parts[0];
             methodName = parts[1];
-            alias = parametric.getString("alias", null);
+            alias = parametric.getString(ALIAS_OPTION);
             if (alias == null || alias.isEmpty()) {
                 throw supplier.get();
             }
@@ -504,7 +538,17 @@ public class Invocation implements Call {
             throw supplier.get();
         }
         Class ifaceClass = forName(className);
-        Method method = getPublicMethod(ifaceClass, methodName);
+        //获取方法信息
+        Method method;
+        GrpcType grpcType = null;
+        if (function == null) {
+            method = getPublicMethod(ifaceClass, methodName);
+        } else {
+            //需要GrpcType信息
+            GrpcMethod grpcMethod = getPublicMethod(ifaceClass, methodName, function);
+            method = grpcMethod.getMethod();
+            grpcType = grpcMethod.getType();
+        }
         Class[] paramTypes = method.getParameterTypes();
 
         Invocation invocation = new Invocation(className, alias, methodName, paramTypes).
@@ -514,6 +558,7 @@ public class Invocation implements Call {
                 addAttachment(HIDDEN_KEY_APPINSID, parametric.getString(KEY_APPINSID));
         invocation.setClazz(ifaceClass);
         invocation.setMethod(method);
+        invocation.setGrpcType(grpcType);
         //隐式传参
         parametric.foreach((key, value) -> {
             if (!key.isEmpty() && key.charAt(0) == Constants.HIDE_KEY_PREFIX) {
@@ -524,11 +569,11 @@ public class Invocation implements Call {
     }
 
     /**
-     * 构建HTTP请求
+     * 构建调用对象
      *
-     * @param url
-     * @param headers
-     * @param supplier
+     * @param url      url
+     * @param headers  http头
+     * @param supplier 异常提供者
      * @return
      * @throws ClassNotFoundException
      * @throws NoSuchMethodException
@@ -536,7 +581,7 @@ public class Invocation implements Call {
      */
     public static Invocation build(final URL url, final Map<CharSequence, Object> headers, final Supplier<LafException> supplier)
             throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        return build(url, new MapParametric(headers), supplier);
+        return build(url, new MapParametric(headers), null, supplier);
     }
 
     @Override

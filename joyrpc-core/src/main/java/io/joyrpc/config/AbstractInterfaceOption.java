@@ -35,7 +35,7 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 import io.joyrpc.util.SystemClock;
 
@@ -54,6 +54,7 @@ import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.getNames;
+import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
  * 内部的接口选项
@@ -253,12 +254,12 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param methodName 方法名称
      * @return 回调方法对象
      */
-    protected Method getMethod(final String methodName) {
+    protected GrpcMethod getMethod(final String methodName) {
         if (generic) {
             return null;
         }
         try {
-            return ClassUtils.getPublicMethod(interfaceClass, methodName);
+            return getPublicMethod(interfaceClass, methodName, GRPC_TYPE_FUNCTION);
         } catch (NoSuchMethodException | MethodOverloadException e) {
             return null;
         }
@@ -306,7 +307,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             return null;
         }
         try {
-            Method method = ClassUtils.getPublicMethod(interfaceClass, parametric.getName());
+            Method method = getPublicMethod(interfaceClass, parametric.getName());
             //判断该方法上是有有验证注解
             MethodDescriptor descriptor = beanDescriptor.getConstraintsForMethod(method.getName(), method.getParameterTypes());
             return descriptor != null && descriptor.hasConstrainedParameters() ? validator : null;
@@ -414,7 +415,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         /**
          * 构造函数
          *
-         * @param method      方法
+         * @param grpcMethod  方法
          * @param implicits   隐式传参
          * @param timeout     超时时间
          * @param concurrency 并发数配置
@@ -424,7 +425,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * @param async       判断方法是否是异步调用
          * @param callback    回调方法
          */
-        public InnerMethodOption(final Method method,
+        public InnerMethodOption(final GrpcMethod grpcMethod,
                                  final Map<String, ?> implicits, int timeout,
                                  final Concurrency concurrency,
                                  final CachePolicy cachePolicy,
@@ -432,9 +433,9 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final String token,
                                  final boolean async,
                                  final CallbackMethod callback) {
-            this.method = method;
+            this.method = grpcMethod.getMethod();
             Class<?>[] types = method == null ? null : method.getParameterTypes();
-            this.argType = method == null ? null : new ArgType(types, getNames(types));
+            this.argType = method == null ? null : new ArgType(types, getNames(types), grpcMethod.getSupplier());
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.concurrency = concurrency;

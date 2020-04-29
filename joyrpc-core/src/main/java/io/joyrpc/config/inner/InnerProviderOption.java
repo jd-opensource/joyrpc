@@ -32,6 +32,7 @@ import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,9 +118,10 @@ public class InnerProviderOption extends AbstractInterfaceOption {
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
-        Method method = getMethod(parametric.getName());
+        GrpcMethod grpcMethod = getMethod(parametric.getName());
+        Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         return new InnerProviderMethodOption(
-                method,
+                grpcMethod,
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
@@ -215,7 +217,8 @@ public class InnerProviderOption extends AbstractInterfaceOption {
          */
         protected MethodCaller caller;
 
-        public InnerProviderMethodOption(final Method method, final Map<String, ?> implicits, final int timeout,
+        public InnerProviderMethodOption(final GrpcMethod method,
+                                         final Map<String, ?> implicits, final int timeout,
                                          final Concurrency concurrency, final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,

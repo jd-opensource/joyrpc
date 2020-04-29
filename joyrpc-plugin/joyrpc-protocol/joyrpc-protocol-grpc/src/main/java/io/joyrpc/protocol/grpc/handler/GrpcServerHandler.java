@@ -60,8 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
-import static io.joyrpc.Plugin.GRPC_FACTORY;
 import static io.joyrpc.Plugin.SERIALIZATION_SELECTOR;
+import static io.joyrpc.constants.Constants.GRPC_TYPE_FUNCTION;
 import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.protocol.grpc.HeaderMapping.ACCEPT_ENCODING;
 import static io.joyrpc.util.ClassUtils.*;
@@ -73,7 +73,7 @@ import static io.joyrpc.util.GrpcType.F_RESULT;
 public class GrpcServerHandler extends AbstractHttpHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcServerHandler.class);
-    public static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(":path interfaceClazz/methodName with alias header or interfaceClazz/alias/methodName");
+    protected static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(":path interfaceClazz/methodName with alias header or interfaceClazz/alias/methodName");
     /**
      * 默认序列化
      */
@@ -149,9 +149,9 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), message.getStreamId());
         header.addAttribute(ACCEPT_ENCODING.getNum(), parametric.getString(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
         //构造invocation
-        Invocation invocation = Invocation.build(url, parametric, EXCEPTION_SUPPLIER);
+        Invocation invocation = Invocation.build(url, parametric, GRPC_TYPE_FUNCTION, EXCEPTION_SUPPLIER);
         //获取 grpcType
-        GrpcType grpcType = getGrpcType(invocation.getClazz(), invocation.getMethodName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        GrpcType grpcType = invocation.getGrpcType();
         //构造消息输入流
         UnsafeByteArrayInputStream in = new UnsafeByteArrayInputStream(message.content());
         int compressed = in.read();

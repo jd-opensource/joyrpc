@@ -212,20 +212,19 @@ public class ClassUtils {
     }
 
     /**
-     * 获取包装参数的动态类
+     * 获取GRPC方法信息
      *
      * @param clazz      类
      * @param methodName 方法名
-     * @param function   函数
-     * @return 包装参数的动态类
+     * @param function   GrpcType函数
+     * @return GRPC方法信息
      * @throws NoSuchMethodException   如果找不到匹配的方法
      * @throws MethodOverloadException 有方法重载异常
      */
-    public static GrpcType getGrpcType(final Class<?> clazz, final String methodName,
-                                       final BiFunction<Class<?>, Method, GrpcType> function)
+    public static GrpcMethod getPublicMethod(final Class<?> clazz, final String methodName,
+                                             final BiFunction<Class<?>, Method, GrpcType> function)
             throws NoSuchMethodException, MethodOverloadException {
-        return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethodMeta().
-                getMethodInfo(methodName).getGrpcType(function);
+        return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethodMeta().getMethod(methodName, function);
     }
 
     /**
@@ -1512,6 +1511,25 @@ public class ClassUtils {
                 throw new NoSuchMethodException(String.format("Method is not found. %s", name));
             }
             return method.getMethod();
+        }
+
+        /**
+         * 获取GRPC方法信息
+         *
+         * @param name     方法名称
+         * @param function GrpcType函数
+         * @return
+         * @throws NoSuchMethodException
+         * @throws MethodOverloadException
+         */
+        public GrpcMethod getMethod(final String name, final BiFunction<Class<?>, Method, GrpcType> function) throws
+                NoSuchMethodException, MethodOverloadException {
+            OverloadMethod method = getOverloadMethod(name);
+            if (method == null) {
+                throw new NoSuchMethodException(String.format("Method is not found. %s", name));
+            }
+            MethodInfo info = method.get();
+            return new GrpcMethod(method.getMethod(), () -> info.getGrpcType(function));
         }
 
         /**

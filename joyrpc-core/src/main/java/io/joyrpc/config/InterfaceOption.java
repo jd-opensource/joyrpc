@@ -33,12 +33,14 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.proxy.MethodCaller;
+import io.joyrpc.util.GrpcType;
 
 import javax.validation.Validator;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiPredicate;
+import java.util.function.Supplier;
 
 /**
  * 接口运行时选项，抽取出接口是方便第三方在扩展Filter的时候也可以扩展实现方法选项，用于提前绑定相关参数
@@ -351,10 +353,15 @@ public interface InterfaceOption {
          * 参数类名
          */
         protected String[] types;
+        /**
+         * GrpcType提供者
+         */
+        protected Supplier<GrpcType> supplier;
 
-        public ArgType(Class[] classes, String[] types) {
+        public ArgType(Class[] classes, String[] types, Supplier<GrpcType> supplier) {
             this.classes = classes;
             this.types = types;
+            this.supplier = supplier;
         }
 
         public Class[] getClasses() {
@@ -363,6 +370,10 @@ public interface InterfaceOption {
 
         public String[] getTypes() {
             return types;
+        }
+
+        public GrpcType getGrpcType() {
+            return supplier.get();
         }
     }
 

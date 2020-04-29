@@ -27,6 +27,7 @@ import io.joyrpc.codec.serialization.model.*;
 import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -195,8 +196,9 @@ public class SerializationTest {
         serializer.serialize(baos, phoneNumber);
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
 
-        Method method = ClassUtils.getPublicMethod(HelloGrpc.class, "hello");
-        GrpcType grpcType = ClassUtils.getGrpcType(HelloGrpc.class, method.getName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        GrpcMethod grpcMethod = ClassUtils.getPublicMethod(HelloGrpc.class, "hello", (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        Method method = grpcMethod.getMethod();
+        GrpcType grpcType = grpcMethod.getType();
         Object obj = serializer.deserialize(bais, grpcType.getRequest().getClazz());
         List<Field> fields = ClassUtils.getFields(grpcType.getRequest().getClazz());
         fields.forEach(o -> o.setAccessible(true));

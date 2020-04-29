@@ -26,7 +26,7 @@ import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
-import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
@@ -208,7 +208,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
      * @param message
      * @return
      */
-    protected Object output(final Channel channel, final RequestMessage<?> message) throws IOException, NoSuchMethodException, MethodOverloadException {
+    protected Object output(final Channel channel, final RequestMessage<?> message) throws IOException {
         if (!(message.getPayLoad() instanceof Invocation)) {
             return message;
         }
@@ -216,7 +216,8 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         Session session = message.getSession();
         Http2Headers headers = buildHeaders(invocation, session, channel);
         //做grpc入参与返回值的类型转换，获取GrpcType
-        GrpcType grpcType = getGrpcType(invocation.getClazz(), invocation.getMethodName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        InterfaceOption.MethodOption option = message.getOption();
+        GrpcType grpcType = option.getArgType().getGrpcType();
         //包装payload
         Object payLoad = wrapPayload(invocation, grpcType);
         //将返回值类型放到 future 中
@@ -369,16 +370,8 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
             return returnType;
         }
 
-        public void setReturnType(Class<?> returnType) {
-            this.returnType = returnType;
-        }
-
         public boolean isWrapper() {
             return wrapper;
-        }
-
-        public void setWrapper(boolean wrapper) {
-            this.wrapper = wrapper;
         }
     }
 

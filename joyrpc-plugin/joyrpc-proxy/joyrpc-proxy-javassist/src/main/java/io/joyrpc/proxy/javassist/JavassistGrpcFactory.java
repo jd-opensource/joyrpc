@@ -23,9 +23,11 @@ package io.joyrpc.proxy.javassist;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.proxy.AbstractGrpcFactory;
+import io.joyrpc.proxy.MethodArgs;
 import io.joyrpc.util.GrpcType;
 import javassist.*;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -43,20 +45,30 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
         CtClass ctClass = pool.makeClass(clz.getName() + "$" + suffix.get());
+        ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(MethodArgs.class.getName())});
         //添加字段
         CtField ctField;
         String name;
         Type type;
+        int i = 0;
+        StringBuilder toArgs = new StringBuilder(50).append("return new Object[]{");
         for (Parameter parameter : method.getParameters()) {
             name = parameter.getName();
             type = parameter.getParameterizedType();
             ctField = new CtField(pool.getCtClass(type.getTypeName()), name, ctClass);
             ctField.setModifiers(Modifier.PRIVATE);
             ctClass.addField(ctField);
+            if (i++ > 0) {
+                toArgs.append(',');
+            }
+            toArgs.append(name);
             name = name.substring(0, 1).toUpperCase() + name.substring(1);
             ctClass.addMethod(CtNewMethod.getter((boolean.class == type ? "is" : "get") + name, ctField));
             ctClass.addMethod(CtNewMethod.setter("set" + name, ctField));
         }
+        toArgs.append("};");
+        ctClass.addMethod(CtNewMethod.make(pool.getCtClass("java.lang.Object[]"),
+                "toArgs", new CtClass[0], new CtClass[0], toArgs.toString(), ctClass));
         return ctClass.toClass();
     }
 

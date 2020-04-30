@@ -23,6 +23,7 @@ package io.joyrpc.proxy.jdk;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.proxy.AbstractGrpcFactory;
+import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.util.ClassUtils;
 
 import java.io.Serializable;
@@ -31,12 +32,10 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.function.Supplier;
 
-import static io.joyrpc.proxy.GrpcFactory.ORDER_JDK;
-
 /**
  * JDK的GrpcType工厂
  */
-@Extension(value = "jdk", order = ORDER_JDK)
+@Extension(value = "jdk", order = GrpcFactory.ORDER_JDK)
 @ConditionalOnClass("javax.tools.ToolProvider")
 public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable {
 
@@ -75,7 +74,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String fullName = clz.getName() + "$" + name;
         StringBuilder builder = new StringBuilder(200).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
-                append("public class ").append(simpleName).append(" implements java.io.Serializable{\n");
+                append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n");
         //添加字段
         for (Parameter parameter : method.getParameters()) {
             builder.append("\t").append("private ").append(parameter.getParameterizedType().getTypeName()).append(' ').append(parameter.getName()).append(";\n");
@@ -96,7 +95,17 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
                     append("\t\t").append("this.").append(name).append("=").append(name).append(";\n").
                     append("\t}\n");
         }
-
+        //添加toArgs方法
+        builder.append("\t").append("public Object[] toArgs(){\n").
+                append("\t\t").append("return new Object[]{");
+        int i = 0;
+        for (Parameter parameter : method.getParameters()) {
+            if (i++ > 0) {
+                builder.append(',');
+            }
+            builder.append(parameter.getName());
+        }
+        builder.append("};\n").append("\t}\n");
         builder.append('}');
         return ClassUtils.forName(fullName, (n) -> {
             try {

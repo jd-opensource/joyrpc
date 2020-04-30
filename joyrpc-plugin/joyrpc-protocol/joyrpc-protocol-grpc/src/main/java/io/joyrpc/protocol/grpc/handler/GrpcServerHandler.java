@@ -41,6 +41,7 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
+import io.joyrpc.proxy.MethodArgs;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
@@ -168,8 +169,7 @@ public class GrpcServerHandler extends AbstractHttpHandler {
             Object wrapperObj = serializer.deserialize(compression == null ? in : compression.decompress(in), reqWrapper.getClazz());
             //isWrapper为true，为包装对象，遍历每个field，逐个取值赋值给args数组，否则，直接赋值args[0]
             if (reqWrapper.isWrapper()) {
-                //TODO 性能优化，去掉反射
-                args = getValues(wrapperObj.getClass(), wrapperObj);
+                args = wrapperObj instanceof MethodArgs ? ((MethodArgs) wrapperObj).toArgs() : getValues(wrapperObj.getClass(), wrapperObj);
             } else {
                 args = new Object[]{wrapperObj};
             }

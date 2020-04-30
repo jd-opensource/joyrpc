@@ -29,6 +29,7 @@ import net.bytebuddy.NamingStrategy;
 import net.bytebuddy.NamingStrategy.SuffixingRandom.BaseNameResolver;
 import net.bytebuddy.dynamic.DynamicType;
 
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.function.Supplier;
@@ -43,10 +44,11 @@ public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
     protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> suffix) {
         DynamicType.Builder<?> builder = new ByteBuddy().with(
                 new NamingStrategy.SuffixingRandom(suffix.get(), new BaseNameResolver.ForFixedValue(clz.getName()), "")).
-                subclass(Object.class);
+                subclass(Object.class).implement(Serializable.class);
         for (Parameter parameter : method.getParameters()) {
             builder = builder.defineProperty(parameter.getName(), parameter.getParameterizedType());
         }
+        //TODO 目前不能自定义方法体，无法实现MethodArgs接口
         return builder.make().load(Thread.currentThread().getContextClassLoader()).getLoaded();
     }
 

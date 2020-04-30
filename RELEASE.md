@@ -12,9 +12,9 @@
 
 - 过载异常和限流异常不输出堆栈，减少CPU消耗
 
-- 优化获取GrpcType的性能
-
 - 增加JdkGrpcFactory
+
+- 优化GRPC获取GrpcType和构建方法参数的性能
 
 ### Bugfixes
 

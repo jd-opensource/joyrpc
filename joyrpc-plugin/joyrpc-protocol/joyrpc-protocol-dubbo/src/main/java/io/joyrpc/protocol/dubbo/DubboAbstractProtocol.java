@@ -29,8 +29,18 @@ import io.joyrpc.transport.codec.Codec;
  */
 public abstract class DubboAbstractProtocol extends AbstractProtocol {
 
+    /**
+     * Dubbo的MagicCode
+     */
+    protected static final byte[] MAGIC_CODE = new byte[]{(byte) 0xDA, (byte) 0xBB};
+
     @Override
     protected Codec createCodec() {
         return new DubboCodec(this);
+    }
+
+    @Override
+    public byte[] getMagicCode() {
+        return MAGIC_CODE;
     }
 }

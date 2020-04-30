@@ -19,12 +19,4 @@
         <module>joyrpc-registry-consul</module>
     </modules>
 
-    <dependencies>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
-
 </project>

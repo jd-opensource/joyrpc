@@ -3,17 +3,14 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc-plugin</artifactId>
+        <artifactId>joyrpc</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.0.6-SNAPSHOT</version>
+        <relativePath>../../../pom.xml</relativePath>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>joyrpc-cache</artifactId>
-    <packaging>pom</packaging>
-    <modules>
-        <module>joyrpc-cache-guava</module>
-        <module>joyrpc-cache-caffeine</module>
-        <module>joyrpc-cache-cache2k</module>
-    </modules>
+    <artifactId>joyrpc-protocol-dubbo</artifactId>
+
+
 </project>

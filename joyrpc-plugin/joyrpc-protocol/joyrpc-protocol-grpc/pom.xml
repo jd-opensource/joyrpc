@@ -14,11 +14,6 @@
     <dependencies>
         <dependency>
             <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-transport-netty4</artifactId>
             <version>${project.version}</version>
         </dependency>

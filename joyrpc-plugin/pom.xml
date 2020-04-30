@@ -23,9 +23,10 @@
 
     <dependencies>
         <dependency>
-            <artifactId>joyrpc-extension-core</artifactId>
-            <version>${project.version}</version>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-core</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

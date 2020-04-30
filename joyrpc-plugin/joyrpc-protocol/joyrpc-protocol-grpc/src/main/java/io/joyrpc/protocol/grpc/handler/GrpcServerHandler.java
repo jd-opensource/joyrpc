@@ -170,6 +170,7 @@ public class GrpcServerHandler extends AbstractHttpHandler {
             Object wrapperObj = serializer.deserialize(compression == null ? in : compression.decompress(in), reqWrapper.getClazz());
             //isWrapper为true，为包装对象，遍历每个field，逐个取值赋值给args数组，否则，直接赋值args[0]
             if (reqWrapper.isWrapper()) {
+                //TODO 性能优化，去掉反射
                 List<Field> wrapperFields = getFields(wrapperObj.getClass());
                 int i = 0;
                 for (Field field : wrapperFields) {

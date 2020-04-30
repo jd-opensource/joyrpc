@@ -70,6 +70,7 @@ public class DubboCodec extends AbstractCodec {
         boolean request = (flag & FLAG_REQUEST) > 0;
         boolean event = (flag & FLAG_EVENT) > 0;
         boolean twoWay = (flag & FLAG_TWOWAY) > 0;
+        //应答状态
         byte status = buffer.readByte();
         //4-11
         long requestId = buffer.readLong();
@@ -77,6 +78,6 @@ public class DubboCodec extends AbstractCodec {
         int len = buffer.readInt();
         //数据长度
         header.setLength(len + HEADER_LENGTH);
-        return super.decodeHeader(buffer);
+        return header;
     }
 }

@@ -600,6 +600,30 @@ public class ClassUtils {
     }
 
     /**
+     * 获取目标对象字段值
+     *
+     * @param clazz  类
+     * @param target 目标对象
+     * @return 字段值
+     * @throws ReflectionException
+     */
+    public static Object[] getValues(final Class<?> clazz, final Object target) throws ReflectionException {
+        if (clazz == null || target == null) {
+            return null;
+        }
+        ClassMeta meta = getClassMeta(clazz);
+        List<Field> fields = meta.getFields();
+        Object[] result = new Object[fields.size()];
+        ReflectAccessor accessor;
+        int i = 0;
+        for (Field field : fields) {
+            accessor = meta.getFieldAccessor(field);
+            result[i++] = accessor == null || !accessor.isReadable() ? null : accessor.get(target);
+        }
+        return result;
+    }
+
+    /**
      * 设置值
      *
      * @param clazz  类

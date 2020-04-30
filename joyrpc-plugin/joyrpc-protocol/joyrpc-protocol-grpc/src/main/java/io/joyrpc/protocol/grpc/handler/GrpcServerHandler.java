@@ -55,8 +55,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -158,7 +156,7 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         if (in.skip(4) < 4) {
             throw new IOException(String.format("request data is not full. id=%d", message.getBizMsgId()));
         }
-        Object[] args = new Object[invocation.getMethod().getParameterCount()];
+        Object[] args;
         ClassWrapper reqWrapper = grpcType.getRequest();
         //如果方法没有参数，则返回null
         if (reqWrapper != null) {
@@ -171,14 +169,12 @@ public class GrpcServerHandler extends AbstractHttpHandler {
             //isWrapper为true，为包装对象，遍历每个field，逐个取值赋值给args数组，否则，直接赋值args[0]
             if (reqWrapper.isWrapper()) {
                 //TODO 性能优化，去掉反射
-                List<Field> wrapperFields = getFields(wrapperObj.getClass());
-                int i = 0;
-                for (Field field : wrapperFields) {
-                    args[i++] = getValue(wrapperObj.getClass(), field, wrapperObj);
-                }
+                args = getValues(wrapperObj.getClass(), wrapperObj);
             } else {
-                args[0] = wrapperObj;
+                args = new Object[]{wrapperObj};
             }
+        } else {
+            args = new Object[0];
         }
         invocation.setArgs(args);
         RequestMessage<Invocation> reqMessage = RequestMessage.build(header, invocation, channel, parametric, receiveTime);

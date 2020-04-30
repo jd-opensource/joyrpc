@@ -33,7 +33,9 @@ public interface GrpcFactory {
 
     int ORDER_BYTE_BUDDY = 100;
 
-    int ORDER_JAVASSIST = 101;
+    int ORDER_JAVASSIST = 200;
+
+    int ORDER_JDK = Short.MAX_VALUE;
 
     /**
      * 动态生成参数和返回值的包装类，便于支持grpc调用

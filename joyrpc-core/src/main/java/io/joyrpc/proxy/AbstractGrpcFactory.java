@@ -49,7 +49,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
             return new GrpcType(request, response);
         } catch (ProxyException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ProxyException(String.format("Error occurs while building grpcType of %s.%s",
                     clz.getName(), method.getName()), e);
         }
@@ -117,11 +117,11 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      *
      * @param clz    类
      * @param method 方法
-     * @param naming 方法名称提供者
+     * @param suffix 方法名后缀提供者
      * @return 包装的类
      * @throws Exception 异常
      */
-    protected ClassWrapper getRequestWrapper(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected ClassWrapper getRequestWrapper(final Class<?> clz, final Method method, final Supplier<String> suffix) throws Exception {
         Parameter[] parameters = method.getParameters();
         switch (parameters.length) {
             case 0:
@@ -132,7 +132,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
                     return new ClassWrapper(clazz, false);
                 }
             default:
-                return new ClassWrapper(buildRequestClass(clz, method, naming), true);
+                return new ClassWrapper(buildRequestClass(clz, method, suffix), true);
         }
     }
 
@@ -140,7 +140,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      * 构建请求类型
      *
      * @param method 方法
-     * @param suffix 方法后缀提供者
+     * @param suffix 方法名后缀提供者
      * @return
      * @throws Exception
      */

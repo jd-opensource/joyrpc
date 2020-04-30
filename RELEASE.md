@@ -14,6 +14,8 @@
 
 - 优化获取GrpcType的性能
 
+- 增加JdkGrpcFactory
+
 ### Bugfixes
 
 - ETCD注册中心断开连接后，连接标识没有清空，造成重连可能不成功问题

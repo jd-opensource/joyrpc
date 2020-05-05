@@ -218,9 +218,9 @@ public interface Channel {
     /**
      * 获取Future管理器
      *
-     * @return
+     * @return Future管理器
      */
-    FutureManager<Integer, Message> getFutureManager();
+    FutureManager<Long, Message> getFutureManager();
 
     /**
      * 申请一个ChannelBuffer

@@ -35,7 +35,7 @@ public class MockMessageHeader implements Header {
 
     private int msgType;
 
-    private int id;
+    private long msgId;
 
     protected Session session;
 
@@ -43,19 +43,19 @@ public class MockMessageHeader implements Header {
         this.msgType = msgType;
     }
 
-    public MockMessageHeader(int id, int msgType) {
-        this.id = id;
+    public MockMessageHeader(long msgId, int msgType) {
+        this.msgId = msgId;
         this.msgType = msgType;
     }
 
     @Override
-    public int getMsgId() {
-        return id;
+    public long getMsgId() {
+        return msgId;
     }
 
     @Override
-    public void setMsgId(int id) {
-        this.id = id;
+    public void setMsgId(long id) {
+        this.msgId = id;
     }
 
     @Override
@@ -65,7 +65,7 @@ public class MockMessageHeader implements Header {
 
     @Override
     public Header clone() {
-        return new MockMessageHeader(id, msgType);
+        return new MockMessageHeader(msgId, msgType);
     }
 
     @Override
@@ -87,7 +87,7 @@ public class MockMessageHeader implements Header {
     public String toString() {
         return "MockMessageHeader{" +
                 "msgType=" + msgType +
-                ", id=" + id +
+                ", id=" + msgId +
                 '}';
     }
 }

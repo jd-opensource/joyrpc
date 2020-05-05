@@ -21,6 +21,7 @@ package io.joyrpc.protocol.grpc.handler;
  */
 
 import io.grpc.Status;
+import io.grpc.Status.Code;
 import io.grpc.internal.GrpcUtil;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
@@ -37,7 +38,10 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.channel.EnhanceCompletableFuture;
 import io.joyrpc.transport.http.HttpMethod;
-import io.joyrpc.transport.http2.*;
+import io.joyrpc.transport.http2.DefaultHttp2Headers;
+import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
+import io.joyrpc.transport.http2.Http2Headers;
+import io.joyrpc.transport.http2.Http2ResponseMessage;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.GrpcType;
@@ -82,14 +86,14 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
     @Override
     public Object received(final ChannelContext ctx, final Object message) {
         if (message instanceof Http2ResponseMessage) {
-            Http2ResponseMessage http2RespMsg = (Http2ResponseMessage) message;
+            Http2ResponseMessage response = (Http2ResponseMessage) message;
             try {
-                return input(ctx.getChannel(), http2RespMsg);
+                return input(ctx.getChannel(), response);
             } catch (Throwable e) {
                 logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 MessageHeader header = new MessageHeader((byte) Serialization.PROTOBUF_ID, MsgType.BizReq.getType(), GRPC_NUMBER);
-                header.setMsgId(((Http2Message) message).getBizMsgId());
-                header.addAttribute(HeaderMapping.STREAM_ID.getNum(), ((Http2Message) message).getStreamId());
+                header.setMsgId(response.getMsgId());
+                header.addAttribute(HeaderMapping.STREAM_ID.getNum(), response.getStreamId());
                 throw new RpcException(header, e);
             }
         } else {
@@ -100,11 +104,12 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
     @Override
     public Object wrote(final ChannelContext ctx, final Object message) {
         if (message instanceof RequestMessage) {
+            RequestMessage<?> request = (RequestMessage<?>) message;
             try {
-                return output(ctx.getChannel(), (RequestMessage<?>) message);
+                return output(ctx.getChannel(), request);
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while write grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
-                throw new RpcException(((RequestMessage) message).getHeader(), e);
+                throw new RpcException(request.getHeader(), e);
             }
         } else {
             return message;
@@ -127,17 +132,17 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
             return null;
         }
         MessageHeader header = new MessageHeader(serialization.getTypeId(), MsgType.BizResp.getType(), GRPC_NUMBER);
-        header.setMsgId(http2Msg.getBizMsgId());
+        header.setMsgId(http2Msg.getMsgId());
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), http2Msg.getStreamId());
         ResponsePayload payload;
-        Object grpcStatusVal = http2Msg.endHeaders().get(GRPC_STATUS_KEY);
-        int grpcStatus = grpcStatusVal == null ? Status.Code.UNKNOWN.value() : Integer.parseInt(grpcStatusVal.toString());
-        if (grpcStatus == Status.Code.OK.value()) {
-            EnhanceCompletableFuture<Integer, Message> future = channel.getFutureManager().get(http2Msg.getBizMsgId());
+        Object grpcStatusVal = http2Msg.getEndHeaders().get(GRPC_STATUS_KEY);
+        int grpcStatus = grpcStatusVal == null ? Code.UNKNOWN.value() : Integer.parseInt(grpcStatusVal.toString());
+        if (grpcStatus == Code.OK.value()) {
+            EnhanceCompletableFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
             if (future != null) {
                 payload = decodePayload(http2Msg, (ReturnType) future.getAttr());
             } else {
-                payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", http2Msg.getBizMsgId())));
+                payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", http2Msg.getMsgId())));
             }
         } else {
             Status status = Status.fromCodeValue(grpcStatus);
@@ -162,7 +167,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         int isCompression = in.read();
         //读长度共4位
         if (in.skip(4) < 4) {
-            throw new IOException(String.format("request data is not full. id=%d", message.getBizMsgId()));
+            throw new IOException(String.format("request data is not full. id=%d", message.getMsgId()));
         }
         //解压处理
         if (isCompression > 0) {
@@ -174,6 +179,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         //反序列化
         Object response = serialization.getSerializer().deserialize(in, returnType.getReturnType());
         if (returnType.isWrapper()) {
+            //TODO 性能优化
             response = getValue(returnType.getReturnType(), F_RESULT, response);
         }
         return new ResponsePayload(response);
@@ -187,13 +193,13 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
      */
     protected Http2ResponseMessage adjoin(final Http2ResponseMessage message) {
         Http2ResponseMessage http2Msg = null;
-        if (message.endHeaders() == null) {
+        if (message.getEndHeaders() == null) {
             http2ResponseNoEnds.put(message.getStreamId(), message);
             return null;
         } else {
             http2Msg = http2ResponseNoEnds.remove(message.getStreamId());
             if (http2Msg != null) {
-                http2Msg.setEndHeaders(message.endHeaders());
+                http2Msg.setEndHeaders(message.getEndHeaders());
             } else {
                 http2Msg = message;
             }
@@ -221,7 +227,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         //包装payload
         Object payLoad = wrapPayload(invocation, grpcType);
         //将返回值类型放到 future 中
-        EnhanceCompletableFuture<Integer, Message> future = channel.getFutureManager().get(message.getMsgId());
+        EnhanceCompletableFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
         storeReturnType(invocation, grpcType, future);
 
         byte compressType = message.getHeader().getCompression();
@@ -311,10 +317,10 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
      * @param future     future
      */
     protected void storeReturnType(final Invocation invocation, final GrpcType grpcType,
-                                   final EnhanceCompletableFuture<Integer, Message> future) {
-        ClassWrapper respWrapper = grpcType.getResponse();
-        if (respWrapper != null) {
-            future.setAttr(new ReturnType(respWrapper.getClazz(), respWrapper.isWrapper()));
+                                   final EnhanceCompletableFuture<Long, Message> future) {
+        ClassWrapper wrapper = grpcType.getResponse();
+        if (wrapper != null) {
+            future.setAttr(new ReturnType(wrapper.getClazz(), wrapper.isWrapper()));
         } else {
             //调用的时候已经赋值了方法
             future.setAttr(new ReturnType(invocation.getMethod().getReturnType(), false));
@@ -322,7 +328,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
     }
 
     /**
-     * 包装payload
+     * 包装载体，进行类型转换
      *
      * @param invocation 调用请求
      * @param grpcType   类型
@@ -332,10 +338,11 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         Object payLoad;
         Object[] args = invocation.getArgs();
         ClassWrapper wrapper = grpcType.getRequest();
-        //根据reqWrapper，转换payLoad
         if (wrapper == null) {
+            //不需要转换
             payLoad = (args == null || args.length == 0) ? null : args[0];
         } else if (wrapper.isWrapper()) {
+            //TODO 可以加快性能
             payLoad = newInstance(wrapper.getClazz());
             List<Field> wrapperFields = getFields(payLoad.getClass());
             int i = 0;

@@ -53,7 +53,7 @@ public class MessageHeader implements Header {
     /**
      * 消息标识ID
      */
-    protected int msgId;
+    protected long msgId;
     /**
      * 客户端超时时长
      */
@@ -98,10 +98,10 @@ public class MessageHeader implements Header {
     /**
      * 构造函数
      *
-     * @param msgType
-     * @param msgId
+     * @param msgType 消息类型
+     * @param msgId   消息ID
      */
-    public MessageHeader(byte msgType, int msgId) {
+    public MessageHeader(byte msgType, long msgId) {
         this.msgType = msgType;
         this.msgId = msgId;
     }
@@ -109,8 +109,8 @@ public class MessageHeader implements Header {
     /**
      * 构造函数
      *
-     * @param msgType
-     * @param serialization
+     * @param msgType       消息类型
+     * @param serialization 序列化方式
      */
     public MessageHeader(byte msgType, byte serialization) {
         this.serialization = serialization;
@@ -120,9 +120,9 @@ public class MessageHeader implements Header {
     /**
      * 构造函数
      *
-     * @param msgType
-     * @param serialization
-     * @param protocolType
+     * @param msgType       消息类型
+     * @param serialization 序列化方式
+     * @param protocolType  协议类型
      */
     public MessageHeader(byte msgType, byte serialization, byte protocolType) {
         this.protocolType = protocolType;
@@ -179,12 +179,12 @@ public class MessageHeader implements Header {
     }
 
     @Override
-    public int getMsgId() {
+    public long getMsgId() {
         return msgId;
     }
 
     @Override
-    public void setMsgId(int msgId) {
+    public void setMsgId(long msgId) {
         this.msgId = msgId;
     }
 
@@ -218,10 +218,20 @@ public class MessageHeader implements Header {
         this.timeout = timeout;
     }
 
+    /**
+     * 获取扩展属性
+     *
+     * @return 扩展属性
+     */
     public Map<Byte, Object> getAttributes() {
         return attributes;
     }
 
+    /**
+     * 设置扩展属性
+     *
+     * @param attributes 扩展属性
+     */
     public void setAttributes(Map<Byte, Object> attributes) {
         this.attributes = attributes;
     }
@@ -436,7 +446,7 @@ public class MessageHeader implements Header {
 
     @Override
     public int hashCode() {
-        int result = msgId;
+        int result = (int) (msgId ^ (msgId >>> 32));
         result = 31 * result + (length != null ? length.hashCode() : 0);
         result = 31 * result + serialization;
         result = 31 * result + msgType;
@@ -473,8 +483,8 @@ public class MessageHeader implements Header {
     /**
      * 构造应答的消息头
      *
-     * @param msgType
-     * @return
+     * @param msgType 消息类型
+     * @return 应答的消息头
      */
     public MessageHeader response(final byte msgType) {
         return response(msgType, compression);
@@ -483,14 +493,22 @@ public class MessageHeader implements Header {
     /**
      * 构造应答的消息头
      *
-     * @param msgType
-     * @param compression
-     * @return
+     * @param msgType     消息类型
+     * @param compression 压缩方式
+     * @return 应答的消息头
      */
     public MessageHeader response(final byte msgType, final byte compression) {
         return response(msgType, compression, null);
     }
 
+    /**
+     * 构造应答消息头
+     *
+     * @param msgType     消息类型
+     * @param compression 压缩方式
+     * @param attributes  扩展属性
+     * @return 应答消息头
+     */
     public MessageHeader response(final byte msgType, final byte compression, Map<Byte, Object> attributes) {
         MessageHeader result = new MessageHeader();
         result.msgId = msgId;

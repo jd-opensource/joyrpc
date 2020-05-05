@@ -128,7 +128,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             encoder().writeHeaders(ctx, streamId, http2Headers, 0, false, promise).addListener(
                     f -> {
                         Http2Stream http2Stream = connection().stream(streamId);
-                        http2Stream.setProperty(streamKey, request.getBizMsgId());
+                        http2Stream.setProperty(streamKey, request.getMsgId());
                     }
             );
         }

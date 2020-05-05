@@ -68,7 +68,7 @@ public class ResponseChannelHandler implements ChannelHandler {
      * @param throwable 异常
      */
     protected void complete(final ChannelContext context, final Message<?,?> message, final Throwable throwable) {
-        FutureManager<Integer, Message> futureManager = context.getChannel().getFutureManager();
+        FutureManager<Long, Message> futureManager = context.getChannel().getFutureManager();
         if (futureManager != null) {
             CompletableFuture<Message> future = futureManager.remove(message.getMsgId());
             if (future != null) {

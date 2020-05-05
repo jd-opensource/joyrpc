@@ -219,7 +219,8 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         int start = buffer.writerIndex();
         buffer.setShort(start, 0);
         buffer.setByte(start + 2, header.getMsgType());
-        buffer.setInt(start + 3, header.getMsgId());
+        //内部的消息ID默认是Int，为了兼容其它才使用了long类型
+        buffer.setInt(start + 3, (int) header.getMsgId());
         buffer.setInt(start + 7, header.getSessionId());
         buffer.setByte(start + 11, header.getSerialization());
         //压缩位置

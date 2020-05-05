@@ -44,7 +44,7 @@ public class MockCoverChannelHandler implements ChannelHandler {
     @Override
     public Object received(ChannelContext context, Object message) {
         if (message instanceof Http2ResponseMessage) {
-            int bizId = ((Http2ResponseMessage) message).getBizMsgId();
+            long bizId = ((Http2ResponseMessage) message).getMsgId();
             MockMessage respMsg = new MockMessage();
             respMsg.setHeader(new MockMessageHeader(bizId, MsgType.BizResp.getType()));
             respMsg.setPayLoad(("response message, id: " + respMsg.getMsgId()).getBytes());

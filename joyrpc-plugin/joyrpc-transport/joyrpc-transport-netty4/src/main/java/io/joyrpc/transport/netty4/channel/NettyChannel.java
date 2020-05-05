@@ -56,7 +56,7 @@ public class NettyChannel implements Channel {
     /**
      * Future管理器
      */
-    protected FutureManager<Integer, Message> futureManager;
+    protected FutureManager<Long, Message> futureManager;
     /**
      * 会话管理器
      */
@@ -74,7 +74,7 @@ public class NettyChannel implements Channel {
     public NettyChannel(io.netty.channel.Channel channel, boolean server) {
         this.channel = channel;
         this.server = server;
-        this.futureManager = new FutureManager<>(this, () -> idGenerator.incrementAndGet());
+        this.futureManager = new FutureManager<>(this, () -> (long) idGenerator.incrementAndGet());
         this.sessionManager = new SessionManager(server);
     }
 
@@ -219,7 +219,7 @@ public class NettyChannel implements Channel {
     }
 
     @Override
-    public FutureManager<Integer, Message> getFutureManager() {
+    public FutureManager<Long, Message> getFutureManager() {
         return futureManager;
     }
 

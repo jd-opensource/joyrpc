@@ -221,8 +221,8 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     }
 
     @Override
-    public void setPayLoad(T data) {
-        this.payload = data;
+    public void setPayLoad(T payload) {
+        this.payload = payload;
     }
 
     public long getCreateTime() {

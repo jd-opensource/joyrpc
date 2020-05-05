@@ -86,14 +86,14 @@ public class GrpcServerHandler extends AbstractHttpHandler {
     @Override
     public Object received(final ChannelContext ctx, final Object message) {
         if (message instanceof Http2RequestMessage) {
-            Http2RequestMessage http2Req = (Http2RequestMessage) message;
+            Http2RequestMessage request = (Http2RequestMessage) message;
             try {
-                return input(http2Req, ctx.getChannel(), SystemClock.now());
+                return input(request, ctx.getChannel(), SystemClock.now());
             } catch (Throwable e) {
                 logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 MessageHeader header = new MessageHeader();
-                header.addAttribute(HeaderMapping.STREAM_ID.getNum(), http2Req.getStreamId());
-                header.setMsgId(http2Req.getBizMsgId());
+                header.addAttribute(HeaderMapping.STREAM_ID.getNum(), request.getStreamId());
+                header.setMsgId(request.getMsgId());
                 header.setMsgType(MsgType.BizReq.getType());
                 throw new RpcException(header, e);
             }
@@ -120,14 +120,13 @@ public class GrpcServerHandler extends AbstractHttpHandler {
     /**
      * 构造请求消息
      *
-     * @param message
-     * @param channel
+     * @param message     消息
+     * @param channel     通道
+     * @param receiveTime 接收时间
      * @return
      * @throws Exception
      */
-    protected RequestMessage<Invocation> input(final Http2RequestMessage message,
-                                               final Channel channel,
-                                               final long receiveTime) throws Exception {
+    protected RequestMessage<Invocation> input(final Http2RequestMessage message, final Channel channel, final long receiveTime) throws Exception {
         if (message.getStreamId() <= 0) {
             return null;
         }
@@ -142,7 +141,7 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         URL url = URL.valueOf(path, "http");
         //消息头
         MessageHeader header = new MessageHeader(serialization.getTypeId(), MsgType.BizReq.getType(), GRPC_NUMBER);
-        header.setMsgId(message.getBizMsgId());
+        header.setMsgId(message.getMsgId());
         header.setMsgType(MsgType.BizReq.getType());
         header.setTimeout(getTimeout(parametric, GrpcUtil.TIMEOUT));
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), message.getStreamId());
@@ -155,7 +154,7 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         UnsafeByteArrayInputStream in = new UnsafeByteArrayInputStream(message.content());
         int compressed = in.read();
         if (in.skip(4) < 4) {
-            throw new IOException(String.format("request data is not full. id=%d", message.getBizMsgId()));
+            throw new IOException(String.format("request data is not full. id=%d", message.getMsgId()));
         }
         Object[] args;
         ClassWrapper reqWrapper = grpcType.getRequest();
@@ -188,8 +187,8 @@ public class GrpcServerHandler extends AbstractHttpHandler {
     /**
      * 构建应答消息
      *
-     * @param message
-     * @return
+     * @param message 消息
+     * @return 应答消息
      */
     protected Http2ResponseMessage output(final GrpcResponseMessage<?> message) throws IOException {
         MessageHeader header = message.getHeader();
@@ -236,20 +235,21 @@ public class GrpcServerHandler extends AbstractHttpHandler {
     }
 
     /**
-     * 包装payload
+     * 包装载体，进行类型转换
      *
-     * @param payload
-     * @param grpcType
-     * @return
+     * @param payload  载体
+     * @param grpcType 类型
+     * @return 包装载体
      */
     protected Object wrapPayload(final ResponsePayload payload, final GrpcType grpcType) {
         //获取 grpcType
-        ClassWrapper respWrapper = grpcType.getResponse();
+        ClassWrapper wrapper = grpcType.getResponse();
         //设置反正值
         Object result;
-        if (respWrapper.isWrapper()) {
-            result = newInstance(respWrapper.getClazz());
-            setValue(respWrapper.getClazz(), F_RESULT, result, payload.getResponse());
+        if (wrapper.isWrapper()) {
+            //TODO 加快构建性你能
+            result = newInstance(wrapper.getClazz());
+            setValue(wrapper.getClazz(), F_RESULT, result, payload.getResponse());
         } else {
             result = payload.getResponse();
         }

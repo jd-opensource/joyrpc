@@ -78,7 +78,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
             encoder().writeHeaders(ctx, response.getStreamId(), http2Headers, 0, false, promise);
         }
         //是否有结束头
-        boolean withEndHeaders = response.endHeaders() != null;
+        boolean withEndHeaders = response.getEndHeaders() != null;
         //写应答内容
         if (response.content() != null) {
             ByteBuf byteBuf = ctx.alloc().buffer();
@@ -94,7 +94,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
         //write end header
         if (withEndHeaders) {
             Http2Headers endHeaders = new DefaultHttp2Headers();
-            response.endHeaders().getAll().forEach((k, v) -> endHeaders.add(k, v.toString()));
+            response.getEndHeaders().getAll().forEach((k, v) -> endHeaders.add(k, v.toString()));
             //write
             encoder().writeHeaders(ctx, response.getStreamId(), endHeaders, 0, true, promise);
         }

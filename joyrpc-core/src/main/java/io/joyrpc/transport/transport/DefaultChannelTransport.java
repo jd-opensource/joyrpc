@@ -120,7 +120,7 @@ public class DefaultChannelTransport implements ChannelTransport {
         } else {
             try {
                 int timeout = timeoutMillis <= 0 ? Constants.DEFAULT_TIMEOUT : timeoutMillis;
-                FutureManager<Integer, Message> futureManager = channel.getFutureManager();
+                FutureManager<Long, Message> futureManager = channel.getFutureManager();
                 //设置id
                 message.setMsgId(futureManager.generateId());
                 message.setSessionId(transportId);

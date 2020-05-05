@@ -28,6 +28,7 @@ import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
@@ -67,8 +68,6 @@ import static io.joyrpc.transport.http.HttpHeaders.Values.GZIP;
 public class GrpcClienttHandler extends AbstractHttpHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcClienttHandler.class);
-
-    protected static final String USER_AGENT = "joyrpc";
 
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 
@@ -295,7 +294,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         }
         headers.set(GrpcUtil.CONTENT_TYPE_KEY.name(), GrpcUtil.CONTENT_TYPE_GRPC);
         headers.set(GrpcUtil.TE_HEADER.name(), GrpcUtil.TE_TRAILERS);
-        headers.set(GrpcUtil.USER_AGENT_KEY.name(), USER_AGENT);
+        headers.set(GrpcUtil.USER_AGENT_KEY.name(), GlobalContext.getString(PROTOCOL_VERSION_KEY));
         headers.set(ALIAS_OPTION.getName(), invocation.getAlias());
         String acceptEncoding = GZIP;
         if (session != null && session.getCompressions() != null) {

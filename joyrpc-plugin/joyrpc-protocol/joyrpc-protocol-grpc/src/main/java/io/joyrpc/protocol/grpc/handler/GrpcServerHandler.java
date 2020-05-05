@@ -41,7 +41,6 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
-import io.joyrpc.proxy.MethodArgs;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
@@ -63,8 +62,6 @@ import static io.joyrpc.Plugin.SERIALIZATION_SELECTOR;
 import static io.joyrpc.constants.Constants.GRPC_TYPE_FUNCTION;
 import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.protocol.grpc.HeaderMapping.ACCEPT_ENCODING;
-import static io.joyrpc.util.ClassUtils.*;
-import static io.joyrpc.util.GrpcType.F_RESULT;
 
 /**
  * @date: 2019/5/6
@@ -157,20 +154,20 @@ public class GrpcServerHandler extends AbstractHttpHandler {
             throw new IOException(String.format("request data is not full. id=%d", message.getMsgId()));
         }
         Object[] args;
-        ClassWrapper reqWrapper = grpcType.getRequest();
+        ClassWrapper wrapper = grpcType.getRequest();
         //如果方法没有参数，则返回null
-        if (reqWrapper != null) {
+        if (wrapper != null) {
             //获取反序列化插件
             Serializer serializer = getSerialization(parametric, GrpcUtil.CONTENT_ENCODING, serialization).getSerializer();
             //获取压缩类型
             Compression compression = compressed == 0 ? null : getCompression(parametric, GrpcUtil.MESSAGE_ENCODING);
-            //反序列化 wrapper
-            Object wrapperObj = serializer.deserialize(compression == null ? in : compression.decompress(in), reqWrapper.getClazz());
+            //反序列化
+            Object target = serializer.deserialize(compression == null ? in : compression.decompress(in), wrapper.getClazz());
             //isWrapper为true，为包装对象，遍历每个field，逐个取值赋值给args数组，否则，直接赋值args[0]
-            if (reqWrapper.isWrapper()) {
-                args = wrapperObj instanceof MethodArgs ? ((MethodArgs) wrapperObj).toArgs() : getValues(wrapperObj.getClass(), wrapperObj);
+            if (wrapper.isWrapper()) {
+                args = wrapper.getConversion().getToParameter().apply(target);
             } else {
-                args = new Object[]{wrapperObj};
+                args = new Object[]{target};
             }
         } else {
             args = new Object[0];
@@ -247,9 +244,8 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         //设置反正值
         Object result;
         if (wrapper.isWrapper()) {
-            //TODO 加快构建性你能
-            result = newInstance(wrapper.getClazz());
-            setValue(wrapper.getClazz(), F_RESULT, result, payload.getResponse());
+            //加快构建性能
+            result = wrapper.getConversion().getToWrapper().apply(new Object[]{payload.getResponse()});
         } else {
             result = payload.getResponse();
         }

@@ -29,6 +29,7 @@ import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 
 import static io.joyrpc.util.ClassUtils.isJavaClass;
@@ -43,9 +44,10 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
 
     @Override
     public GrpcType generate(final Class<?> clz, final Method method) throws ProxyException {
+        final int random = ThreadLocalRandom.current().nextInt(1000);
         try {
-            ClassWrapper request = getRequestWrapper(clz, method, () -> getSuffix(method, REQUEST_SUFFIX));
-            ClassWrapper response = getResponseWrapper(clz, method, () -> getSuffix(method, RESPONSE_SUFFIX));
+            ClassWrapper request = getRequestWrapper(clz, method, () -> getSuffix(method, REQUEST_SUFFIX, random));
+            ClassWrapper response = getResponseWrapper(clz, method, () -> getSuffix(method, RESPONSE_SUFFIX, random));
             return new GrpcType(request, response);
         } catch (ProxyException e) {
             throw e;
@@ -60,14 +62,16 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      *
      * @param method 方法
      * @param suffix 后缀
+     * @param random 随机数
      * @return 名称
      */
-    protected String getSuffix(final Method method, final String suffix) {
+    protected String getSuffix(final Method method, final String suffix, final int random) {
+        //加一个随机数，方式JDK&Javassit&Bytebuddy生成相同的类名报错
         String methodName = method.getName();
         return new StringBuilder(100)
                 .append(Character.toUpperCase(methodName.charAt(0)))
                 .append(methodName.substring(1))
-                .append(suffix)
+                .append(suffix).append(random)
                 .toString();
     }
 
@@ -139,6 +143,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
     /**
      * 构建请求类型
      *
+     * @param clz    类
      * @param method 方法
      * @param suffix 方法名后缀提供者
      * @return
@@ -150,7 +155,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      * 是否是POJO类
      *
      * @param clazz 类
-     * @return
+     * @retrn
      */
     protected boolean isPojo(final Class<?> clazz) {
         return !isJavaClass(clazz);

@@ -25,6 +25,7 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.proxy.AbstractGrpcFactory;
 import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcType;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
@@ -47,15 +48,22 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String simpleName = clz.getSimpleName() + "$" + name;
         String fullName = clz.getName() + "$" + name;
         String typeName = method.getGenericReturnType().getTypeName();
+        String field = GrpcType.F_RESULT;
+        String upperField = field.substring(0, 1).toUpperCase() + field.substring(1);
         StringBuilder builder = new StringBuilder(200).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
-                append("public class ").append(simpleName).append(" implements java.io.Serializable{\n").
-                append("\t").append("private ").append(typeName).append(" result;\n").
-                append("\t").append("public ").append(typeName).append(" getResult(){\n").
-                append("\t\t").append("return result;").append("\n").
+                append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n").
+                append("\t").append("private ").append(typeName).append(' ').append(field).append(";\n").
+                append("\t").append("public ").append(typeName).append(" get").append(upperField).append("(){\n").
+                append("\t\t").append("return ").append(field).append(";").append("\n").
                 append("\t}\n").
-                append("\t").append("public void setResult(").append(typeName).append(" result){\n").
-                append("\t\t").append("this.result=result;").append("\n").
+                append("\t").append("public void set").append(upperField).append("(").append(typeName).append(' ').append(field).append("){\n").
+                append("\t\t").append("this.").append(field).append('=').append(field).append(";\n").
+                append("\t}\n").
+                append("\t").append("public Object[] toArgs(){\n").
+                append("\t\t").append("return new Object[]{").append(field).append("};\n").
+                append("\t}\n").
+                append("\t").append("public void toFields(Object[] args){\n").append("\t\t").append(field).append("=(").append(typeName).append(")args[0];\n").
                 append("\t}\n").
                 append('}');
         return ClassUtils.forName(fullName, (n) -> {
@@ -72,7 +80,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String name = suffix.get();
         String simpleName = clz.getSimpleName() + "$" + name;
         String fullName = clz.getName() + "$" + name;
-        StringBuilder builder = new StringBuilder(200).
+        StringBuilder builder = new StringBuilder(1024).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
                 append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n");
         //添加字段
@@ -83,6 +91,9 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         Type type;
         String upperName;
         String typeName;
+        StringBuilder toFields = new StringBuilder(200);
+        StringBuilder toArgs = new StringBuilder(100);
+        int i = 0;
         for (Parameter parameter : method.getParameters()) {
             type = parameter.getParameterizedType();
             name = parameter.getName();
@@ -94,18 +105,20 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
                     append("\t").append("public void set").append(upperName).append("(").append(typeName).append(" ").append(name).append("){\n").
                     append("\t\t").append("this.").append(name).append("=").append(name).append(";\n").
                     append("\t}\n");
+            if (i > 0) {
+                toArgs.append(',');
+            }
+            toArgs.append(parameter.getName());
+            toFields.append("\t\t").append(name).append("=(").append(typeName).append(")args[").append(i).append("];\n");
+            i++;
         }
         //添加toArgs方法
         builder.append("\t").append("public Object[] toArgs(){\n").
-                append("\t\t").append("return new Object[]{");
-        int i = 0;
-        for (Parameter parameter : method.getParameters()) {
-            if (i++ > 0) {
-                builder.append(',');
-            }
-            builder.append(parameter.getName());
-        }
-        builder.append("};\n").append("\t}\n");
+                append("\t\t").append("return new Object[]{").
+                append(toArgs.toString()).
+                append("};\n\t}\n");
+        //添加toFields方法
+        builder.append("\t").append("public void toFields(Object[] args){\n").append(toFields.toString()).append("\t};\n");
         builder.append('}');
         return ClassUtils.forName(fullName, (n) -> {
             try {

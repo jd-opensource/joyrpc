@@ -53,7 +53,7 @@ public class MockMessage implements Message<MockMessageHeader, byte[]> {
     }
 
     @Override
-    public int getMsgId() {
+    public long getMsgId() {
         return getHeader().getMsgId();
     }
 

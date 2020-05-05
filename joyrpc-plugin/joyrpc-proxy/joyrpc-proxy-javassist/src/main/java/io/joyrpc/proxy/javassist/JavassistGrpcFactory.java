@@ -49,26 +49,32 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         //添加字段
         CtField ctField;
         String name;
+        String typeName;
         Type type;
         int i = 0;
-        StringBuilder toArgs = new StringBuilder(50).append("return new Object[]{");
+        StringBuilder toArgs = new StringBuilder(100).append("public Object[] toArgs(){\n\treturn new Object[]{");
+        StringBuilder toFields = new StringBuilder(200).append("public void toFields(Object[] args){\n");
         for (Parameter parameter : method.getParameters()) {
             name = parameter.getName();
             type = parameter.getParameterizedType();
-            ctField = new CtField(pool.getCtClass(type.getTypeName()), name, ctClass);
+            typeName = type.getTypeName();
+            ctField = new CtField(pool.getCtClass(typeName), name, ctClass);
             ctField.setModifiers(Modifier.PRIVATE);
             ctClass.addField(ctField);
-            if (i++ > 0) {
+            if (i > 0) {
                 toArgs.append(',');
             }
             toArgs.append(name);
+            toFields.append('\t').append(name).append("=(").append(typeName).append(")args[").append(i).append("];\n");
             name = name.substring(0, 1).toUpperCase() + name.substring(1);
             ctClass.addMethod(CtNewMethod.getter((boolean.class == type ? "is" : "get") + name, ctField));
             ctClass.addMethod(CtNewMethod.setter("set" + name, ctField));
+            i++;
         }
-        toArgs.append("};");
-        ctClass.addMethod(CtNewMethod.make(pool.getCtClass("java.lang.Object[]"),
-                "toArgs", new CtClass[0], new CtClass[0], toArgs.toString(), ctClass));
+        toArgs.append("};\n};");
+        toFields.append("};");
+        ctClass.addMethod(CtMethod.make(toArgs.toString(), ctClass));
+        ctClass.addMethod(CtMethod.make(toFields.toString(), ctClass));
         return ctClass.toClass();
     }
 
@@ -78,14 +84,18 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
         CtClass ctClass = pool.makeClass(clz.getName() + "$" + naming.get());
+        ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(MethodArgs.class.getName())});
         Type type = method.getGenericReturnType();
-        String name = GrpcType.F_RESULT;
-        CtField ctField = new CtField(pool.getCtClass(type.getTypeName()), name, ctClass);
+        String typeName = type.getTypeName();
+        String field = GrpcType.F_RESULT;
+        String upperField = field.substring(0, 1).toUpperCase() + field.substring(1);
+        CtField ctField = new CtField(pool.getCtClass(typeName), field, ctClass);
         ctField.setModifiers(Modifier.PRIVATE);
         ctClass.addField(ctField);
-        name = name.substring(0, 1).toUpperCase() + name.substring(1);
-        ctClass.addMethod(CtNewMethod.getter((boolean.class == type ? "is" : "get") + name, ctField));
-        ctClass.addMethod(CtNewMethod.setter("set" + name, ctField));
+        ctClass.addMethod(CtNewMethod.getter((boolean.class == type ? "is" : "get") + upperField, ctField));
+        ctClass.addMethod(CtNewMethod.setter("set" + upperField, ctField));
+        ctClass.addMethod(CtMethod.make("public Object[] toArgs(){\n\treturn new Object[]{" + field + "};\n};", ctClass));
+        ctClass.addMethod(CtMethod.make("public void toFields(Object[] args){\n\t" + field + "=(java.lang.String)args[0];\n};", ctClass));
         return ctClass.toClass();
     }
 

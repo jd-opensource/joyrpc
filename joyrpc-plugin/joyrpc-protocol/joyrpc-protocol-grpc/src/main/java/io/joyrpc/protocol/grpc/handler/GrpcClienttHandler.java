@@ -52,9 +52,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -62,8 +60,6 @@ import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.transport.http.HttpHeaders.Values.GZIP;
-import static io.joyrpc.util.ClassUtils.*;
-import static io.joyrpc.util.GrpcType.F_RESULT;
 
 /**
  * grpc client端消息转换handler
@@ -140,7 +136,7 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
         if (grpcStatus == Code.OK.value()) {
             EnhanceCompletableFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
             if (future != null) {
-                payload = decodePayload(http2Msg, (ReturnType) future.getAttr());
+                payload = decodePayload(http2Msg, (ClassWrapper) future.getAttr());
             } else {
                 payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", http2Msg.getMsgId())));
             }
@@ -155,12 +151,12 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
     /**
      * 解析应答
      *
-     * @param message    消息
-     * @param returnType 返回类型
+     * @param message 消息
+     * @param wrapper 返回类型
      * @return 应答
      * @throws IOException
      */
-    protected ResponsePayload decodePayload(final Http2ResponseMessage message, final ReturnType returnType) throws IOException {
+    protected ResponsePayload decodePayload(final Http2ResponseMessage message, final ClassWrapper wrapper) throws IOException {
         Http2Headers headers = message.headers();
         InputStream in = new UnsafeByteArrayInputStream(message.content());
         //读压缩位标识
@@ -177,10 +173,11 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
             }
         }
         //反序列化
-        Object response = serialization.getSerializer().deserialize(in, returnType.getReturnType());
-        if (returnType.isWrapper()) {
-            //TODO 性能优化
-            response = getValue(returnType.getReturnType(), F_RESULT, response);
+        Object response = serialization.getSerializer().deserialize(in, wrapper.getClazz());
+        if (wrapper.isWrapper()) {
+            //性能优化
+            Object[] parameters = wrapper.getConversion().getToParameter().apply(response);
+            response = parameters[0];
         }
         return new ResponsePayload(response);
     }
@@ -320,10 +317,10 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
                                    final EnhanceCompletableFuture<Long, Message> future) {
         ClassWrapper wrapper = grpcType.getResponse();
         if (wrapper != null) {
-            future.setAttr(new ReturnType(wrapper.getClazz(), wrapper.isWrapper()));
+            future.setAttr(wrapper);
         } else {
             //调用的时候已经赋值了方法
-            future.setAttr(new ReturnType(invocation.getMethod().getReturnType(), false));
+            future.setAttr(new ClassWrapper(invocation.getMethod().getReturnType(), false));
         }
     }
 
@@ -342,44 +339,13 @@ public class GrpcClienttHandler extends AbstractHttpHandler {
             //不需要转换
             payLoad = (args == null || args.length == 0) ? null : args[0];
         } else if (wrapper.isWrapper()) {
-            //TODO 可以加快性能
-            payLoad = newInstance(wrapper.getClazz());
-            List<Field> wrapperFields = getFields(payLoad.getClass());
-            int i = 0;
-            for (Field field : wrapperFields) {
-                setValue(wrapper.getClazz(), field, payLoad, args[i++]);
-            }
+            //加快构建性能
+            payLoad = wrapper.getConversion().getToWrapper().apply(args);
+
         } else {
             payLoad = args[0];
         }
         return payLoad;
-    }
-
-    /**
-     * 返回值类型存储类，存储在响应Future中
-     */
-    protected static class ReturnType {
-        /**
-         * 返回值类型
-         */
-        protected Class<?> returnType;
-        /**
-         * 是否为转换类
-         */
-        protected boolean wrapper;
-
-        public ReturnType(Class<?> returnType, boolean wrapper) {
-            this.returnType = returnType;
-            this.wrapper = wrapper;
-        }
-
-        public Class<?> getReturnType() {
-            return returnType;
-        }
-
-        public boolean isWrapper() {
-            return wrapper;
-        }
     }
 
 }

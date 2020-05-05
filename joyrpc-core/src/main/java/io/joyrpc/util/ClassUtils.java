@@ -23,6 +23,8 @@ package io.joyrpc.util;
 import io.joyrpc.exception.CreationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.ReflectionException;
+import io.joyrpc.proxy.MethodArgs;
+import io.joyrpc.util.GrpcType.GrpcConversion;
 
 import java.lang.reflect.*;
 import java.net.URL;
@@ -600,30 +602,6 @@ public class ClassUtils {
     }
 
     /**
-     * 获取目标对象字段值
-     *
-     * @param clazz  类
-     * @param target 目标对象
-     * @return 字段值
-     * @throws ReflectionException
-     */
-    public static Object[] getValues(final Class<?> clazz, final Object target) throws ReflectionException {
-        if (clazz == null || target == null) {
-            return null;
-        }
-        ClassMeta meta = getClassMeta(clazz);
-        List<Field> fields = meta.getFields();
-        Object[] result = new Object[fields.size()];
-        ReflectAccessor accessor;
-        int i = 0;
-        for (Field field : fields) {
-            accessor = meta.getFieldAccessor(field);
-            result[i++] = accessor == null || !accessor.isReadable() ? null : accessor.get(target);
-        }
-        return result;
-    }
-
-    /**
      * 设置值
      *
      * @param clazz  类
@@ -783,6 +761,18 @@ public class ClassUtils {
      */
     public static <T> T newInstance(final Class<T> clazz) throws CreationException {
         return clazz == null ? null : getClassMeta(clazz).newInstance();
+    }
+
+    /**
+     * 获取GRPC转换函数
+     *
+     * @param clazz 对象类
+     * @return 对象实例
+     * @throws CreationException 实例化异常
+     */
+    public static GrpcConversion getGrpcConversion(final Class<?> clazz) throws CreationException {
+        ClassMeta meta = getClassMeta(clazz);
+        return meta == null ? null : meta.getConversion();
     }
 
     /**
@@ -1050,6 +1040,8 @@ public class ClassUtils {
          * jar文件
          */
         protected volatile Optional<String> codebase;
+
+        protected volatile GrpcConversion conversion;
 
         /**
          * 构造函数
@@ -1328,6 +1320,66 @@ public class ClassUtils {
          */
         public <T> T newInstance() throws CreationException {
             return getConstructorMeta().newInstance();
+        }
+
+        /**
+         * 获取GRPC转换函数
+         *
+         * @return GRPC转换函数
+         */
+        public GrpcConversion getConversion() {
+            if (conversion == null) {
+                synchronized (this) {
+                    if (conversion == null) {
+                        conversion = new GrpcConversion(this::toWrapper, this::toParameters);
+                    }
+                }
+            }
+            return conversion;
+        }
+
+        /**
+         * 包装对象转换成参数
+         *
+         * @param target 包装对象
+         * @return 参数数组
+         */
+        protected Object[] toParameters(final Object target) {
+            if (target instanceof MethodArgs) {
+                return ((MethodArgs) target).toArgs();
+            }
+            List<Field> fields = getFields();
+            Object[] result = new Object[fields.size()];
+            ReflectAccessor accessor;
+            int i = 0;
+            for (Field field : fields) {
+                accessor = getFieldAccessor(field);
+                result[i++] = accessor == null || !accessor.isReadable() ? null : accessor.get(target);
+            }
+            return result;
+        }
+
+        /**
+         * 参数转成包装对象
+         *
+         * @param args 参数数组
+         * @return 包装对象
+         */
+        protected Object toWrapper(final Object[] args) {
+            Object result = newInstance();
+            if (result instanceof MethodArgs) {
+                ((MethodArgs) result).toFields(args);
+            } else {
+                List<Field> fields = getFields();
+                int i = 0;
+                for (Field field : fields) {
+                    ReflectAccessor accessor = getFieldAccessor(field);
+                    if (accessor != null && accessor.isWriteable()) {
+                        accessor.set(result, args[i++]);
+                    }
+                }
+            }
+            return result;
         }
     }
 

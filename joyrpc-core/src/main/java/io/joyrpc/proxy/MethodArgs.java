@@ -26,9 +26,16 @@ package io.joyrpc.proxy;
 public interface MethodArgs {
 
     /**
-     * 获取方法参数
+     * 把字段转换成参数数组
      *
      * @return 方法参数
      */
     Object[] toArgs();
+
+    /**
+     * 根据参数设置字段
+     *
+     * @param args 参数
+     */
+    void toFields(Object[] args);
 }

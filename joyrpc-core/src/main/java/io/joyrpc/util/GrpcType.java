@@ -20,11 +20,16 @@ package io.joyrpc.util;
  * #L%
  */
 
+import java.util.function.Function;
+
 /**
  * Grpc方法参数和结果类型
  */
 public class GrpcType {
 
+    /**
+     * 应答包装对象固定字段
+     */
     public static final String F_RESULT = "result";
 
     /**
@@ -68,10 +73,23 @@ public class GrpcType {
          * 包装请求
          */
         protected boolean wrapper;
+        /**
+         * 转换函数
+         */
+        protected GrpcConversion conversion;
 
+        /**
+         * 构造函数
+         *
+         * @param clazz   类型
+         * @param wrapper 包装类型标识
+         */
         public ClassWrapper(Class<?> clazz, boolean wrapper) {
             this.clazz = clazz;
             this.wrapper = wrapper;
+            if (wrapper) {
+                this.conversion = ClassUtils.getGrpcConversion(clazz);
+            }
         }
 
         public Class<?> getClazz() {
@@ -80,6 +98,38 @@ public class GrpcType {
 
         public boolean isWrapper() {
             return wrapper;
+        }
+
+        public GrpcConversion getConversion() {
+            return conversion;
+        }
+    }
+
+    /**
+     * Grpc参数转换
+     */
+    public static final class GrpcConversion {
+        /**
+         * 参数转换成包装对象函数
+         */
+        protected Function<Object[], Object> toWrapper;
+        /**
+         * 包装对象转换成参数函数
+         */
+        protected Function<Object, Object[]> toParameter;
+
+        public GrpcConversion(final Function<Object[], Object> toWrapper,
+                              final Function<Object, Object[]> toParameter) {
+            this.toWrapper = toWrapper;
+            this.toParameter = toParameter;
+        }
+
+        public Function<Object[], Object> getToWrapper() {
+            return toWrapper;
+        }
+
+        public Function<Object, Object[]> getToParameter() {
+            return toParameter;
         }
     }
 }

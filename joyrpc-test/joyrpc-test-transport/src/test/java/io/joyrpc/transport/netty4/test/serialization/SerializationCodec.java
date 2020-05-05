@@ -9,9 +9,9 @@ package io.joyrpc.transport.netty4.test.serialization;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,7 +64,7 @@ public class SerializationCodec implements Codec {
         //写长度
         buffer.writeInt(13);
         //写id
-        buffer.writeInt(mockMessage.getHeader().getMsgId());
+        buffer.writeInt((int) mockMessage.getHeader().getMsgId());
         //写消息类型
         buffer.writeByte(mockMessage.getMsgType());
         //写body并序列化

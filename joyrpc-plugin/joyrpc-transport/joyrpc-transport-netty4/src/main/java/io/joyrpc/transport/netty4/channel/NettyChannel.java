@@ -45,12 +45,14 @@ import java.util.function.Supplier;
  * @date: 2019/1/15
  */
 public class NettyChannel implements Channel {
+    protected static final String SEND_REQUEST_TOO_FAST = "Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s";
+    protected static final String SEND_REQUEST_NOT_ACTIVE = "Send request exception, causing channel is not active. at  %s : %s";
     /**
      * 通道接口
      */
     protected io.netty.channel.Channel channel;
     /**
-     * 消息ID
+     * 消息ID，默认采用int
      */
     protected AtomicInteger idGenerator = new AtomicInteger(0);
     /**
@@ -69,7 +71,8 @@ public class NettyChannel implements Channel {
     /**
      * 构造函数
      *
-     * @param channel
+     * @param channel 通道
+     * @param server  服务端标识
      */
     public NettyChannel(io.netty.channel.Channel channel, boolean server) {
         this.channel = channel;
@@ -81,16 +84,9 @@ public class NettyChannel implements Channel {
     @Override
     public void send(final Object object, final Consumer<SendResult> consumer) {
         if (!isWritable()) {
-            LafException throwable;
-            if (this.isActive()) {
-                throwable = new OverloadException(
-                        String.format("Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s",
-                                Channel.toString(this), object.toString())
-                        , 0, isServer());
-            } else {
-                throwable = new ChannelClosedException(String.format("Send request exception, causing channel is not active. at  %s : %s",
-                        Channel.toString(this), object.toString()));
-            }
+            LafException throwable = isActive() ?
+                    new OverloadException(String.format(SEND_REQUEST_TOO_FAST, Channel.toString(this), object.toString()), 0, isServer()) :
+                    new ChannelClosedException(String.format(SEND_REQUEST_NOT_ACTIVE, Channel.toString(this), object.toString()));
             if (consumer != null) {
                 consumer.accept(new SendResult(throwable, this));
             } else {

@@ -57,6 +57,21 @@ public class DubboCodec extends AbstractCodec {
     protected static final byte KRYO_SERIALIZATION2_ID = 25;
 
     /**
+     * 序列化映射
+     */
+    protected static final byte[] SERIALIZATIONS = new byte[127];
+
+    static {
+        SERIALIZATIONS[HESSIAN2_SERIALIZATION_ID] = (byte) Serialization.HESSIAN_ID;
+        SERIALIZATIONS[KRYO_SERIALIZATION_ID] = (byte) Serialization.KRYO_ID;
+        SERIALIZATIONS[PROTOSTUFF_SERIALIZATION_ID] = (byte) Serialization.PROTOSTUFF_ID;
+        SERIALIZATIONS[PROTOBUF_SERIALIZATION_ID] = (byte) Serialization.PROTOBUF_ID;
+        SERIALIZATIONS[FST_SERIALIZATION_ID] = (byte) Serialization.FST_ID;
+        SERIALIZATIONS[JAVA_SERIALIZATION_ID] = (byte) Serialization.JAVA_ID;
+        SERIALIZATIONS[FASTJSON_SERIALIZATION_ID] = (byte) Serialization.JSON_ID;
+    }
+
+    /**
      * 构造函数
      *
      * @param protocol 协议
@@ -80,30 +95,9 @@ public class DubboCodec extends AbstractCodec {
         }
         //序列化转换
         byte serial = (byte) (flag & SERIALIZATION_MASK);
-        switch (serial) {
-            case KRYO_SERIALIZATION2_ID:
-                header.setSerialization((byte) Serialization.KRYO_ID);
-                break;
-            case PROTOSTUFF_SERIALIZATION_ID:
-                header.setSerialization((byte) Serialization.PROTOSTUFF_ID);
-                break;
-            case PROTOBUF_SERIALIZATION_ID:
-                header.setSerialization((byte) Serialization.PROTOBUF_ID);
-                break;
-            case FST_SERIALIZATION_ID:
-                header.setSerialization((byte) Serialization.FST_ID);
-                break;
-            case JAVA_SERIALIZATION_ID:
-                header.setSerialization((byte) Serialization.JAVA_ID);
-                break;
-            case FASTJSON_SERIALIZATION_ID:
-                header.setSerialization((byte) Serialization.JSON_ID);
-                break;
-            case HESSIAN2_SERIALIZATION_ID:
-                header.setSerialization((byte) Serialization.HESSIAN_ID);
-                break;
-            default:
-                throw new CodecException(String.format("Error occurs while decoding. unsupported serial type %d!", serial), ExceptionCode.CODEC_SERIALIZER_EXCEPTION);
+        serial = serial < 0 ? 0 : SERIALIZATIONS[serial];
+        if (serial <= 0) {
+            throw new CodecException(String.format("Error occurs while decoding. unsupported serial type %d!", serial), ExceptionCode.CODEC_SERIALIZER_EXCEPTION);
         }
         //应答状态
         byte status = buffer.readByte();

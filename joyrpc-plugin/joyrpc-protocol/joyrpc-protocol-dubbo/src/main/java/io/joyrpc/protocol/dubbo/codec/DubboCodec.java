@@ -99,6 +99,7 @@ public class DubboCodec extends AbstractCodec {
         if (serial <= 0) {
             throw new CodecException(String.format("Error occurs while decoding. unsupported serial type %d!", serial), ExceptionCode.CODEC_SERIALIZER_EXCEPTION);
         }
+        header.setSerialization(serial);
         //应答状态
         byte status = buffer.readByte();
         //4-11

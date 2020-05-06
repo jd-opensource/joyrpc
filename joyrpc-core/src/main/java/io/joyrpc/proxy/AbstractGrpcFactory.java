@@ -43,7 +43,6 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
 
     @Override
     public GrpcType generate(final Class<?> clz, final Method method, final Supplier<String> suffix) throws ProxyException {
-        String methodName = method.getName();
         try {
             ClassWrapper request = getRequestWrapper(clz, method, new Naming(clz, method, REQUEST_SUFFIX, suffix));
             ClassWrapper response = getResponseWrapper(clz, method, new Naming(clz, method, RESPONSE_SUFFIX, suffix));

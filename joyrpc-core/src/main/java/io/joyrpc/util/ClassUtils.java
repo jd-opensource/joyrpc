@@ -891,6 +891,44 @@ public class ClassUtils {
         return CompletableFuture.class == method.getReturnType();
     }
 
+    /**
+     * Class[]转String[] <br>
+     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     *
+     * @param types Class[]
+     * @return 对象描述
+     */
+    public static String[] getNames(final Class[] types) {
+        if (types == null || types.length == 0) {
+            return new String[0];
+        } else {
+            String[] strings = new String[types.length];
+            for (int i = 0; i < types.length; i++) {
+                strings[i] = getName(types[i]);
+            }
+            return strings;
+        }
+    }
+
+    /**
+     * Class转String<br>
+     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     *
+     * @param clazz Class
+     * @return 对象
+     * @see #getClass(String)
+     */
+    public static String getName(final Class clazz) {
+        return clazz == null ? null : typeNames.computeIfAbsent(clazz,
+                o -> o.isArray() ? jvmNameToCanonicalName(clazz.getName()) : clazz.getName());
+    }
+
+    /**
+     * 标准名称转换成JVM名称
+     *
+     * @param name 标准名称
+     * @return JVM名称
+     */
     protected static String canonicalNameToJvmName(String name) {
         boolean isarray = name.endsWith("[]");
         if (isarray) {
@@ -937,37 +975,11 @@ public class ClassUtils {
     }
 
     /**
-     * Class[]转String[] <br>
-     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     * JVM名称转换成标准名称
      *
-     * @param types Class[]
-     * @return 对象描述
+     * @param jvmName JVM名称
+     * @return 标准名称
      */
-    public static String[] getNames(final Class[] types) {
-        if (types == null || types.length == 0) {
-            return new String[0];
-        } else {
-            String[] strings = new String[types.length];
-            for (int i = 0; i < types.length; i++) {
-                strings[i] = getName(types[i]);
-            }
-            return strings;
-        }
-    }
-
-    /**
-     * Class转String<br>
-     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
-     *
-     * @param clazz Class
-     * @return 对象
-     * @see #getClass(String)
-     */
-    public static String getName(final Class clazz) {
-        return clazz == null ? null : typeNames.computeIfAbsent(clazz,
-                o -> o.isArray() ? jvmNameToCanonicalName(clazz.getName()) : clazz.getName());
-    }
-
     protected static String jvmNameToCanonicalName(final String jvmName) {
         boolean isarray = jvmName.charAt(0) == '[';
         if (isarray) {
@@ -1002,6 +1014,80 @@ public class ClassUtils {
             return cnName;
         }
         return jvmName;
+    }
+
+    /**
+     * get class desc.
+     * boolean[].class => "[Z"
+     * Object.class => "Ljava/lang/Object;"
+     *
+     * @param c class.
+     * @return desc.
+     */
+    public static String getDesc(final Class<?> c) {
+        return getDesc(c, new StringBuilder());
+    }
+
+    /**
+     * get class desc.
+     * boolean[].class => "[Z"
+     * Object.class => "Ljava/lang/Object;"
+     *
+     * @param clazz   class.
+     * @param builder String builder.
+     * @return desc.
+     */
+    protected static String getDesc(final Class<?> clazz, final StringBuilder builder) {
+        Class<?> c = clazz;
+        while (c.isArray()) {
+            builder.append('[');
+            c = c.getComponentType();
+        }
+        if (c.isPrimitive()) {
+            String t = c.getName();
+            if ("void".equals(t)) {
+                builder.append('V');
+            } else if ("boolean".equals(t)) {
+                builder.append('Z');
+            } else if ("byte".equals(t)) {
+                builder.append('B');
+            } else if ("char".equals(t)) {
+                builder.append('C');
+            } else if ("double".equals(t)) {
+                builder.append('D');
+            } else if ("float".equals(t)) {
+                builder.append('F');
+            } else if ("int".equals(t)) {
+                builder.append('I');
+            } else if ("long".equals(t)) {
+                builder.append('J');
+            } else if ("short".equals(t)) {
+                builder.append('S');
+            }
+        } else {
+            builder.append('L');
+            builder.append(c.getName().replace('.', '/'));
+            builder.append(';');
+        }
+        return builder.toString();
+    }
+
+    /**
+     * get class array desc.
+     * [int.class, boolean[].class, Object.class] => "I[ZLjava/lang/Object;"
+     *
+     * @param cs class array.
+     * @return desc.
+     */
+    public static String getDesc(final Class<?>[] cs) {
+        if (cs.length == 0) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(64);
+        for (Class<?> c : cs) {
+            getDesc(c, builder);
+        }
+        return builder.toString();
     }
 
     /**

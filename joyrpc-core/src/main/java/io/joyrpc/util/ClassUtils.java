@@ -919,7 +919,18 @@ public class ClassUtils {
      * @see #getClass(String)
      */
     public static String getCanonicalName(final Class clazz) {
-        return clazz == null ? null : canonicalNames.computeIfAbsent(clazz, Class::getCanonicalName);
+        return clazz == null ? null : canonicalNames.computeIfAbsent(clazz,
+                o -> {
+                    if (!o.isArray()) {
+                        return clazz.getName();
+                    }
+                    StringBuilder builder = new StringBuilder();
+                    while (o.isArray()) {
+                        builder.append("[]");
+                        o = o.getComponentType();
+                    }
+                    return o.getName() + builder.toString();
+                });
     }
 
     /**

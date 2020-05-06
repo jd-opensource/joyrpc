@@ -65,9 +65,9 @@ import static io.joyrpc.transport.http.HttpHeaders.Values.GZIP;
 /**
  * grpc client端消息转换handler
  */
-public class GrpcClienttHandler extends AbstractHttpHandler {
+public class GrpcClientHandler extends AbstractHttpHandler {
 
-    private final static Logger logger = LoggerFactory.getLogger(GrpcClienttHandler.class);
+    private final static Logger logger = LoggerFactory.getLogger(GrpcClientHandler.class);
 
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 

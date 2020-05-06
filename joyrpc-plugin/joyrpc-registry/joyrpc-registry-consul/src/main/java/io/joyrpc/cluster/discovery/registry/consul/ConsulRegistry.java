@@ -462,7 +462,7 @@ public class ConsulRegistry extends AbstractRegistry {
             result.put(KEY_APPNAME, context.getString(KEY_APPNAME));
             result.put(KEY_APPINSID, context.getString(KEY_APPINSID));
             result.put(JAVA_VERSION_KEY, context.getString(KEY_JAVA_VERSION));
-            result.put(VERSION_KEY, context.getString(VERSION_KEY));
+            result.put(VERSION_KEY, context.getString(PROTOCOL_VERSION_KEY));
             result.put(Region.REGION, registry.getRegion());
             result.put(Region.DATA_CENTER, registry.getDataCenter());
             result.put(BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));

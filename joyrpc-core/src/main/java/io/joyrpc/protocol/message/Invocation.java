@@ -252,7 +252,7 @@ public class Invocation implements Call {
             this.argClasses = new Class[0];
         } else {
             this.argClasses = argsType;
-            this.argsType = getNames(argsType);
+            this.argsType = getCanonicalNames(argsType);
         }
     }
 
@@ -363,9 +363,9 @@ public class Invocation implements Call {
     public String[] computeArgsType() {
         if (argsType == null) {
             if (argClasses != null) {
-                argsType = getNames(argClasses);
+                argsType = getCanonicalNames(argClasses);
             } else if (method != null) {
-                argsType = getNames(method.getParameterTypes());
+                argsType = getCanonicalNames(method.getParameterTypes());
             }
         }
         return argsType;

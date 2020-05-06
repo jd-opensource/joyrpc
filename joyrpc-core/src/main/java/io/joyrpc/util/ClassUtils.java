@@ -73,7 +73,7 @@ public class ClassUtils {
     /**
      * String-->Class 缓存，指定大小
      */
-    protected final static Map<Class<?>, String> typeNames = new ConcurrentHashMap<>(5000);
+    protected final static Map<Class<?>, String> canonicalNames = new ConcurrentHashMap<>(5000);
 
     /**
      * 类的元数据
@@ -778,17 +778,17 @@ public class ClassUtils {
     /**
      * Class[]转String[]
      *
-     * @param names 对象描述[]
+     * @param canonicalNames 对象描述[]
      * @return Class[]
      * @throws ClassNotFoundException 类没有找到异常
      */
-    public static Class[] getClasses(final String[] names) throws ClassNotFoundException {
-        if (names == null || names.length == 0) {
+    public static Class[] getClasses(final String[] canonicalNames) throws ClassNotFoundException {
+        if (canonicalNames == null || canonicalNames.length == 0) {
             return new Class[0];
         } else {
-            Class[] classes = new Class[names.length];
-            for (int i = 0; i < names.length; i++) {
-                classes[i] = getClass(names[i]);
+            Class[] classes = new Class[canonicalNames.length];
+            for (int i = 0; i < canonicalNames.length; i++) {
+                classes[i] = getClass(canonicalNames[i]);
             }
             return classes;
         }
@@ -797,19 +797,19 @@ public class ClassUtils {
     /**
      * 类名称数组转换成类数组，如果不存在，抛出运行时异常
      *
-     * @param names    类名称数组
-     * @param function 异常转换
+     * @param canonicalNames 类名称数组
+     * @param function       异常转换
      * @return Class[]
      * @throws RuntimeException 运行时异常
      */
-    public static Class[] getClasses(final String[] names, final Function<ClassNotFoundException, RuntimeException> function)
+    public static Class[] getClasses(final String[] canonicalNames, final Function<ClassNotFoundException, RuntimeException> function)
             throws RuntimeException {
-        if (names == null || names.length == 0) {
+        if (canonicalNames == null || canonicalNames.length == 0) {
             return new Class[0];
         } else {
-            Class[] classes = new Class[names.length];
-            for (int i = 0; i < names.length; i++) {
-                classes[i] = getClass(names[i], function);
+            Class[] classes = new Class[canonicalNames.length];
+            for (int i = 0; i < canonicalNames.length; i++) {
+                classes[i] = getClass(canonicalNames[i], function);
             }
             return classes;
         }
@@ -818,14 +818,14 @@ public class ClassUtils {
     /**
      * String转Class，如果不存在，抛出运行时异常
      *
-     * @param name     对象描述
-     * @param function 函数
+     * @param canonicalName 对象描述
+     * @param function      函数
      * @return Class 类
      * @throws RuntimeException 运行时异常
      */
-    public static Class<?> getClass(final String name, final Function<ClassNotFoundException, RuntimeException> function) throws RuntimeException {
+    public static Class<?> getClass(final String canonicalName, final Function<ClassNotFoundException, RuntimeException> function) throws RuntimeException {
         try {
-            return getClass(name);
+            return getClass(canonicalName);
         } catch (ClassNotFoundException e) {
             throw function != null ? function.apply(e) : new RuntimeException(e);
         }
@@ -834,17 +834,17 @@ public class ClassUtils {
     /**
      * String转Class
      *
-     * @param name 对象描述
+     * @param canonicalName 对象描述
      * @return Class
      * @throws ClassNotFoundException
      */
-    public static Class<?> getClass(final String name) throws ClassNotFoundException {
-        if (name == null) {
+    public static Class<?> getClass(final String canonicalName) throws ClassNotFoundException {
+        if (canonicalName == null) {
             return null;
         }
-        Class<?> result = nameTypes.get(name);
+        Class<?> result = nameTypes.get(canonicalName);
         if (result == null) {
-            switch (name) {
+            switch (canonicalName) {
                 case "void":
                     result = void.class;
                     break;
@@ -874,9 +874,9 @@ public class ClassUtils {
                     break;
                 default:
                     //不存在的不要缓存，防止缓存大量的无效类，撑爆内存
-                    result = forName(canonicalNameToJvmName(name));
+                    result = forName(canonicalNameToJvmName(canonicalName));
             }
-            nameTypes.putIfAbsent(name, result);
+            nameTypes.putIfAbsent(canonicalName, result);
         }
         return result;
     }
@@ -898,13 +898,13 @@ public class ClassUtils {
      * @param types Class[]
      * @return 对象描述
      */
-    public static String[] getNames(final Class[] types) {
+    public static String[] getCanonicalNames(final Class[] types) {
         if (types == null || types.length == 0) {
             return new String[0];
         } else {
             String[] strings = new String[types.length];
             for (int i = 0; i < types.length; i++) {
-                strings[i] = getName(types[i]);
+                strings[i] = getCanonicalName(types[i]);
             }
             return strings;
         }
@@ -918,9 +918,8 @@ public class ClassUtils {
      * @return 对象
      * @see #getClass(String)
      */
-    public static String getName(final Class clazz) {
-        return clazz == null ? null : typeNames.computeIfAbsent(clazz,
-                o -> o.isArray() ? jvmNameToCanonicalName(clazz.getName()) : clazz.getName());
+    public static String getCanonicalName(final Class clazz) {
+        return clazz == null ? null : canonicalNames.computeIfAbsent(clazz, Class::getCanonicalName);
     }
 
     /**
@@ -930,13 +929,13 @@ public class ClassUtils {
      * @return JVM名称
      */
     protected static String canonicalNameToJvmName(String name) {
-        boolean isarray = name.endsWith("[]");
-        if (isarray) {
+        boolean array = name.endsWith("[]");
+        if (array) {
             String t = ""; // 计数，看上几维数组
-            while (isarray) {
+            while (array) {
                 name = name.substring(0, name.length() - 2);
                 t += "[";
-                isarray = name.endsWith("[]");
+                array = name.endsWith("[]");
             }
             switch (name) {
                 case "void":
@@ -975,49 +974,7 @@ public class ClassUtils {
     }
 
     /**
-     * JVM名称转换成标准名称
-     *
-     * @param jvmName JVM名称
-     * @return 标准名称
-     */
-    protected static String jvmNameToCanonicalName(final String jvmName) {
-        boolean isarray = jvmName.charAt(0) == '[';
-        if (isarray) {
-            String cnName = ""; // 计数，看上几维数组
-            int i = 0;
-            for (; i < jvmName.length(); i++) {
-                if (jvmName.charAt(i) != '[') {
-                    break;
-                }
-                cnName += "[]";
-            }
-            String componentType = jvmName.substring(i, jvmName.length());
-            if ("Z".equals(componentType)) {
-                cnName = "boolean" + cnName;
-            } else if ("B".equals(componentType)) {
-                cnName = "byte" + cnName;
-            } else if ("C".equals(componentType)) {
-                cnName = "char" + cnName;
-            } else if ("D".equals(componentType)) {
-                cnName = "double" + cnName;
-            } else if ("F".equals(componentType)) {
-                cnName = "float" + cnName;
-            } else if ("I".equals(componentType)) {
-                cnName = "int" + cnName;
-            } else if ("J".equals(componentType)) {
-                cnName = "long" + cnName;
-            } else if ("S".equals(componentType)) {
-                cnName = "short" + cnName;
-            } else {
-                cnName = componentType.substring(1, componentType.length() - 1) + cnName; // 对象的 去掉L
-            }
-            return cnName;
-        }
-        return jvmName;
-    }
-
-    /**
-     * get class desc.
+     * 获取类型描述，兼容Dubbo.
      * boolean[].class => "[Z"
      * Object.class => "Ljava/lang/Object;"
      *
@@ -1073,7 +1030,7 @@ public class ClassUtils {
     }
 
     /**
-     * get class array desc.
+     * 获取类型数组描述，兼容Dubbo.
      * [int.class, boolean[].class, Object.class] => "I[ZLjava/lang/Object;"
      *
      * @param classes class array.

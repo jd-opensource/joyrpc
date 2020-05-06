@@ -24,7 +24,6 @@ import io.joyrpc.exception.ProxyException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.proxy.ProxyFactory;
-import io.joyrpc.util.ClassUtils;
 import javassist.*;
 
 import java.lang.reflect.InvocationHandler;
@@ -72,7 +71,7 @@ public class JavassistProxyFactory implements ProxyFactory {
                 synchronized (clz) {
                     clazz = PROXIES.get(clz);
                     if (clazz == null) {
-                        String interfaceName = ClassUtils.getName(clz);
+                        String interfaceName = clz.getName();
                         String className = interfaceName + "_proxy_" + COUNTER.getAndIncrement();
                         CodeGenerator generator = new CodeGenerator(className, interfaceName, clz.getMethods());
                         clazz = generator.build(mPool);

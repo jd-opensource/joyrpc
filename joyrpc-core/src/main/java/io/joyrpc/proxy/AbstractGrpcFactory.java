@@ -177,6 +177,9 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
         protected String getRandom() {
             if (random == null) {
                 random = randomSuffix == null ? "" : randomSuffix.get();
+                if (random == null) {
+                    random = "";
+                }
             }
             return random;
         }

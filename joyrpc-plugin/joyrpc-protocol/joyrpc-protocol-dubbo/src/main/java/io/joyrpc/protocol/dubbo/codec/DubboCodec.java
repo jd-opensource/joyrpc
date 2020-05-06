@@ -20,7 +20,11 @@ package io.joyrpc.protocol.dubbo.codec;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.constants.ExceptionCode;
+import io.joyrpc.exception.CodecException;
 import io.joyrpc.protocol.AbstractCodec;
+import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.buffer.ChannelBuffer;
@@ -65,19 +69,53 @@ public class DubboCodec extends AbstractCodec {
     protected Header decodeHeader(final ChannelBuffer buffer) {
         MessageHeader header = new MessageHeader();
 
-        header.setHeaderLength(HEADER_LENGTH);
         byte flag = buffer.readByte();
         boolean request = (flag & FLAG_REQUEST) > 0;
         boolean event = (flag & FLAG_EVENT) > 0;
         boolean twoWay = (flag & FLAG_TWOWAY) > 0;
+        if (request) {
+            if (!event) {
+                header.setMsgType(MsgType.BizReq.getType());
+            }
+        }
+        //序列化转换
+        byte serial = (byte) (flag & SERIALIZATION_MASK);
+        switch (serial) {
+            case KRYO_SERIALIZATION2_ID:
+                header.setSerialization((byte) Serialization.KRYO_ID);
+                break;
+            case PROTOSTUFF_SERIALIZATION_ID:
+                header.setSerialization((byte) Serialization.PROTOSTUFF_ID);
+                break;
+            case PROTOBUF_SERIALIZATION_ID:
+                header.setSerialization((byte) Serialization.PROTOBUF_ID);
+                break;
+            case FST_SERIALIZATION_ID:
+                header.setSerialization((byte) Serialization.FST_ID);
+                break;
+            case JAVA_SERIALIZATION_ID:
+                header.setSerialization((byte) Serialization.JAVA_ID);
+                break;
+            case FASTJSON_SERIALIZATION_ID:
+                header.setSerialization((byte) Serialization.JSON_ID);
+                break;
+            case HESSIAN2_SERIALIZATION_ID:
+                header.setSerialization((byte) Serialization.HESSIAN_ID);
+                break;
+            default:
+                throw new CodecException(String.format("Error occurs while decoding. unsupported serial type %d!", serial), ExceptionCode.CODEC_SERIALIZER_EXCEPTION);
+        }
         //应答状态
         byte status = buffer.readByte();
         //4-11
-        long requestId = buffer.readLong();
+        header.setMsgId(buffer.readLong());
         //12-15
         int len = buffer.readInt();
         //数据长度
+        header.setHeaderLength(HEADER_LENGTH);
         header.setLength(len + HEADER_LENGTH);
+
         return header;
     }
+
 }

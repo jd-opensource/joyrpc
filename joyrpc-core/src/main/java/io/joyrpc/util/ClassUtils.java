@@ -776,9 +776,9 @@ public class ClassUtils {
     }
 
     /**
-     * Class[]转String[]
+     * 根据标准名称获取类型
      *
-     * @param canonicalNames 对象描述[]
+     * @param canonicalNames 标准名称数组
      * @return Class[]
      * @throws ClassNotFoundException 类没有找到异常
      */
@@ -795,10 +795,10 @@ public class ClassUtils {
     }
 
     /**
-     * 类名称数组转换成类数组，如果不存在，抛出运行时异常
+     * 根据标准名称获取类型，如果不存在，抛出运行时异常
      *
-     * @param canonicalNames 类名称数组
-     * @param function       异常转换
+     * @param canonicalNames 标准名称数组
+     * @param function       异常转换函数
      * @return Class[]
      * @throws RuntimeException 运行时异常
      */
@@ -816,10 +816,10 @@ public class ClassUtils {
     }
 
     /**
-     * String转Class，如果不存在，抛出运行时异常
+     * 根据标准名称获取类型，如果不存在，抛出运行时异常
      *
-     * @param canonicalName 对象描述
-     * @param function      函数
+     * @param canonicalName 标准名称
+     * @param function      异常转换函数
      * @return Class 类
      * @throws RuntimeException 运行时异常
      */
@@ -832,9 +832,9 @@ public class ClassUtils {
     }
 
     /**
-     * String转Class
+     * 根据标准名称获取类型
      *
-     * @param canonicalName 对象描述
+     * @param canonicalName 标准名称
      * @return Class
      * @throws ClassNotFoundException
      */
@@ -892,10 +892,9 @@ public class ClassUtils {
     }
 
     /**
-     * Class[]转String[] <br>
-     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     * 根据类型获取标准名称
      *
-     * @param types Class[]
+     * @param types 类型
      * @return 对象描述
      */
     public static String[] getCanonicalNames(final Class[] types) {
@@ -911,10 +910,9 @@ public class ClassUtils {
     }
 
     /**
-     * Class转String<br>
-     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     * 获取标准名称
      *
-     * @param clazz Class
+     * @param clazz 类型
      * @return 对象
      * @see #getClass(String)
      */

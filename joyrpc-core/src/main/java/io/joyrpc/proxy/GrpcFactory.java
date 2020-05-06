@@ -24,6 +24,7 @@ import io.joyrpc.exception.ProxyException;
 import io.joyrpc.util.GrpcType;
 
 import java.lang.reflect.Method;
+import java.util.function.Supplier;
 
 /**
  * Grpc工厂类，负责生成参数和返回值的类型
@@ -45,5 +46,18 @@ public interface GrpcFactory {
      * @return
      * @throws ProxyException
      */
-    GrpcType generate(final Class<?> clz, final Method method) throws ProxyException;
+    default GrpcType generate(Class<?> clz, Method method) throws ProxyException {
+        return generate(clz, method, null);
+    }
+
+    /**
+     * 动态生成参数和返回值的包装类，便于支持grpc调用
+     *
+     * @param clz    类型
+     * @param method 方法
+     * @param suffix 包装类后缀提供者
+     * @return
+     * @throws ProxyException
+     */
+    GrpcType generate(Class<?> clz, Method method, Supplier<String> suffix) throws ProxyException;
 }

@@ -31,7 +31,6 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.function.Supplier;
 
 /**
  * JDK的GrpcType工厂
@@ -43,10 +42,9 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
     protected JdkCompiler compiler = new JdkCompiler();
 
     @Override
-    protected Class<?> buildResponseClass(Class<?> clz, Method method, Supplier<String> suffix) throws Exception {
-        String name = suffix.get();
-        String simpleName = clz.getSimpleName() + "$" + name;
-        String fullName = clz.getName() + "$" + name;
+    protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Naming naming) throws Exception {
+        String simpleName = naming.getSimpleName();
+        String fullName = naming.getFullName();
         String typeName = method.getGenericReturnType().getTypeName();
         String field = GrpcType.F_RESULT;
         String upperField = field.substring(0, 1).toUpperCase() + field.substring(1);
@@ -76,10 +74,9 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
     }
 
     @Override
-    protected Class<?> buildRequestClass(Class<?> clz, Method method, Supplier<String> suffix) throws Exception {
-        String name = suffix.get();
-        String simpleName = clz.getSimpleName() + "$" + name;
-        String fullName = clz.getName() + "$" + name;
+    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Naming naming) throws Exception {
+        String simpleName = naming.getSimpleName();
+        String fullName = naming.getFullName();
         StringBuilder builder = new StringBuilder(1024).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
                 append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n");
@@ -89,6 +86,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         }
         //添加Getter&Setter
         Type type;
+        String name;
         String upperName;
         String typeName;
         StringBuilder toFields = new StringBuilder(200);

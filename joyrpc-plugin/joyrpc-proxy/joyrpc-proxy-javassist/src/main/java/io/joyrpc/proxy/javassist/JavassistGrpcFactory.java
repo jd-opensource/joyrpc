@@ -31,7 +31,6 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
-import java.util.function.Supplier;
 
 import static io.joyrpc.proxy.GrpcFactory.ORDER_JAVASSIST;
 
@@ -40,11 +39,11 @@ import static io.joyrpc.proxy.GrpcFactory.ORDER_JAVASSIST;
 public class JavassistGrpcFactory extends AbstractGrpcFactory {
 
     @Override
-    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> suffix) throws Exception {
+    protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Naming naming) throws Exception {
         //ClassPool：CtClass对象的容器
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
-        CtClass ctClass = pool.makeClass(clz.getName() + "$" + suffix.get());
+        CtClass ctClass = pool.makeClass(naming.getFullName());
         ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(MethodArgs.class.getName())});
         //添加字段
         CtField ctField;
@@ -79,11 +78,11 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
     }
 
     @Override
-    protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Naming naming) throws Exception {
         //ClassPool：CtClass对象的容器
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
-        CtClass ctClass = pool.makeClass(clz.getName() + "$" + naming.get());
+        CtClass ctClass = pool.makeClass(naming.getFullName());
         ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(MethodArgs.class.getName())});
         Type type = method.getGenericReturnType();
         String typeName = type.getTypeName();

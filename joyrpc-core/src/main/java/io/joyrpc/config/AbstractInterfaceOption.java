@@ -438,6 +438,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final CallbackMethod callback) {
             this.method = grpcMethod.getMethod();
             Class<?>[] types = method == null ? null : method.getParameterTypes();
+            //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
             this.argType = method == null ? null : new ArgType(types, getCanonicalNames(types), grpcMethod.getSupplier());
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;

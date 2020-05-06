@@ -252,6 +252,7 @@ public class Invocation implements Call {
             this.argClasses = new Class[0];
         } else {
             this.argClasses = argsType;
+            //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
             this.argsType = getCanonicalNames(argsType);
         }
     }
@@ -362,6 +363,7 @@ public class Invocation implements Call {
      */
     public String[] computeArgsType() {
         if (argsType == null) {
+            //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
             if (argClasses != null) {
                 argsType = getCanonicalNames(argClasses);
             } else if (method != null) {

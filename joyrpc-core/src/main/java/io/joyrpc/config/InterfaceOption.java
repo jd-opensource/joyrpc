@@ -143,6 +143,13 @@ public interface InterfaceOption {
          */
         ArgType getArgType();
 
+        /**
+         * 获取参数描述信息
+         *
+         * @return 参数描述信息
+         */
+        String getDescription();
+
     }
 
     /**

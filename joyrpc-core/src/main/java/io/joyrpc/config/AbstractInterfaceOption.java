@@ -53,8 +53,7 @@ import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.ClassUtils.getNames;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
+import static io.joyrpc.util.ClassUtils.*;
 
 /**
  * 内部的接口选项
@@ -411,6 +410,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 回调方法
          */
         protected CallbackMethod callback;
+        /**
+         * 参数描述
+         */
+        protected String description;
 
         /**
          * 构造函数
@@ -444,6 +447,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.token = token;
             this.async = async;
             this.callback = callback;
+            this.description = getDesc(types);
         }
 
         @Override
@@ -454,6 +458,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public ArgType getArgType() {
             return argType;
+        }
+
+        @Override
+        public String getDescription() {
+            return description;
         }
 
         @Override

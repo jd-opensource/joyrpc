@@ -1076,15 +1076,15 @@ public class ClassUtils {
      * get class array desc.
      * [int.class, boolean[].class, Object.class] => "I[ZLjava/lang/Object;"
      *
-     * @param cs class array.
+     * @param classes class array.
      * @return desc.
      */
-    public static String getDesc(final Class<?>[] cs) {
-        if (cs.length == 0) {
+    public static String getDesc(final Class<?>[] classes) {
+        if (classes == null || classes.length == 0) {
             return "";
         }
         StringBuilder builder = new StringBuilder(64);
-        for (Class<?> c : cs) {
+        for (Class<?> c : classes) {
             getDesc(c, builder);
         }
         return builder.toString();

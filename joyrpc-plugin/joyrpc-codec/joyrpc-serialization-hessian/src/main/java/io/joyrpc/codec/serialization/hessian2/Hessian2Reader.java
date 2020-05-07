@@ -51,6 +51,11 @@ public class Hessian2Reader implements ObjectReader {
     }
 
     @Override
+    public <T> T readObject(Class<T> clazz) throws IOException {
+        return (T) hessian2Input.readObject(clazz);
+    }
+
+    @Override
     public int read() throws IOException {
         return hessian2Input.read();
     }

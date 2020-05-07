@@ -24,10 +24,7 @@ import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.protostuff.schema.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-import io.protostuff.LinkedBuffer;
-import io.protostuff.ProtostuffOutput;
-import io.protostuff.ProtostuffReader;
-import io.protostuff.ProtostuffWriter;
+import io.protostuff.*;
 import io.protostuff.runtime.DefaultIdStrategy;
 import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
@@ -93,6 +90,8 @@ public class ProtostuffSerialization implements Serialization {
             RuntimeSchema.register(Timestamp.class, SqlTimestampSchema.INSTANCE);
             RuntimeSchema.register(Locale.class, LocaleSchema.INSTANCE);
             //ID_STRATEGY.ARRAY_SCHEMA
+            //注册插件，便于第三方协议注册序列化实现
+            register(AutowiredObjectSerializer.class, o -> RuntimeSchema.register(o.getType(), o));
         }
 
         protected ThreadLocal<LinkedBuffer> local = ThreadLocal.withInitial(() -> LinkedBuffer.allocate(1024));

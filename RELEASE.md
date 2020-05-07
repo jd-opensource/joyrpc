@@ -16,6 +16,8 @@
 
 - 优化GRPC获取GrpcType和构建方法参数的性能
 
+- kryo、protostuff、protobuff、hessian和fst增加自动注册序列化插件
+
 ### Bugfixes
 
 - ETCD注册中心断开连接后，连接标识没有清空，造成重连可能不成功问题

@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.kryo;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package io.joyrpc.codec.serialization.kryo;
  * #L%
  */
 
+import com.esotericsoftware.kryo.AutowiredObjectSerializer;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
@@ -58,15 +59,18 @@ public class KryoSerialization implements Serialization {
      * Kryo序列化和反序列化实现
      */
     protected static final class KryoSerializer extends AbstractSerializer {
-
+        /**
+         * 绑定在线程变量里面
+         */
         protected static final ThreadLocal<Kryo> local = ThreadLocal.withInitial(() -> {
             final Kryo kryo = new Kryo();
+            //注册插件，便于第三方协议注册序列化实现
+            register(AutowiredObjectSerializer.class, o -> kryo.addDefaultSerializer(o.getType(), o));
             kryo.setInstantiatorStrategy(new Kryo.DefaultInstantiatorStrategy(new StdInstantiatorStrategy()));
             return kryo;
         });
 
         protected static final KryoSerializer INSTANCE = new KryoSerializer();
-
 
         protected KryoSerializer() {
         }

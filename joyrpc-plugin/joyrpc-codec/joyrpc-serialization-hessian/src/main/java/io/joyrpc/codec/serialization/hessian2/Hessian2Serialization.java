@@ -20,10 +20,10 @@ package io.joyrpc.codec.serialization.hessian2;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.AbstractSerializer;
+import io.joyrpc.codec.serialization.Serializer;
 import io.joyrpc.codec.serialization.*;
-import io.joyrpc.com.caucho.hessian.io.Hessian2Input;
-import io.joyrpc.com.caucho.hessian.io.Hessian2Output;
-import io.joyrpc.com.caucho.hessian.io.SerializerFactory;
+import io.joyrpc.com.caucho.hessian.io.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.util.ClassUtils;
@@ -72,7 +72,13 @@ public class Hessian2Serialization implements Serialization, BlackList.BlackList
 
         static {
             SERIALIZER_FACTORY.setAllowNonSerializable(true);
-            SERIALIZER_FACTORY.addFactory(new Java8SerializerFactory());
+            Hessian2SerializerFactory factory = new Hessian2SerializerFactory();
+            register(AutowiredObjectSerializer.class, o -> factory.serializers.put(o.getType(), o));
+            register(AutowiredObjectDeserializer.class, o -> factory.deserializers.put(o.getType(), o));
+            if (factory.deserializers.isEmpty()) {
+                factory.deserializers = null;
+            }
+            SERIALIZER_FACTORY.addFactory(factory);
         }
 
         @Override

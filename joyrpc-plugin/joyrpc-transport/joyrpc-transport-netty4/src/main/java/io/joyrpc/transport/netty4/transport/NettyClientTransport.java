@@ -24,14 +24,13 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.event.AsyncResult;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.SslException;
-import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy.HeartbeatMode;
 import io.joyrpc.transport.netty4.Plugin;
 import io.joyrpc.transport.netty4.binder.HandlerBinder;
-import io.joyrpc.transport.netty4.channel.NettyChannel;
+import io.joyrpc.transport.netty4.channel.NettyClientChannel;
 import io.joyrpc.transport.netty4.handler.ConnectionChannelHandler;
 import io.joyrpc.transport.netty4.handler.IdleHeartbeatHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
@@ -56,11 +55,6 @@ import static io.joyrpc.constants.Constants.*;
  */
 public class NettyClientTransport extends AbstractClientTransport {
     /**
-     * 线程池
-     */
-    protected EventLoopGroup ioGroup;
-
-    /**
      * 构造函数
      *
      * @param url
@@ -84,84 +78,55 @@ public class NettyClientTransport extends AbstractClientTransport {
         if (codec == null) {
             consumer.accept(new AsyncResult<>(error("codec can not be null!")));
         } else {
+            final EventLoopGroup[] ioGroups = new EventLoopGroup[1];
+            final Channel[] channels = new Channel[1];
+            //当出现异常的时候关闭线程池
+            Consumer<AsyncResult<Channel>> myConsumer = result -> {
+                if (!result.isSuccess()) {
+                    //异常的时候都赋值了
+                    Channel channel = result.getResult();
+                    channel.close(r -> consumer.accept(result));
+                } else {
+                    consumer.accept(result);
+                }
+            };
             try {
-                ioGroup = EventLoopGroupFactory.getClientEventLoopGroup(url);
+                ioGroups[0] = EventLoopGroupFactory.getClientGroup(url);
                 //获取SSL上下文
                 SslContext sslContext = SslContextManager.getClientSslContext(url);
-                final Channel[] channels = new Channel[1];
                 //TODO 考虑根据不同的参数，创建不同的连接
-                Bootstrap bootstrap = handler(configure(new Bootstrap()), channels, sslContext);
+                Bootstrap bootstrap = configure(new Bootstrap(), ioGroups[0], channels, sslContext);
                 // Bind and start to accept incoming connections.
                 bootstrap.connect(url.getHost(), url.getPort()).addListener((ChannelFutureListener) f -> {
                     if (f.isSuccess()) {
-                        consumer.accept(new AsyncResult<>(channels[0]));
+                        myConsumer.accept(new AsyncResult<>(channels[0]));
                     } else {
-                        consumer.accept(new AsyncResult<>(error(f.cause())));
+                        myConsumer.accept(new AsyncResult<>(new NettyClientChannel(f.channel(), ioGroups[0]), error(f.cause())));
                     }
                 });
             } catch (SslException e) {
-                consumer.accept(new AsyncResult<>(e));
+                myConsumer.accept(new AsyncResult<>(new NettyClientChannel(null, ioGroups[0]), e));
             } catch (ConnectionException e) {
-                consumer.accept(new AsyncResult<>(e));
+                myConsumer.accept(new AsyncResult<>(new NettyClientChannel(null, ioGroups[0]), e));
             } catch (Throwable e) {
                 //捕获Throwable，防止netty报错
-                consumer.accept(new AsyncResult<>(error(e)));
+                myConsumer.accept(new AsyncResult<>(new NettyClientChannel(null, ioGroups[0]), error(e)));
             }
         }
     }
 
     /**
-     * 绑定处理器
-     *
-     * @param bootstrap
-     * @param channels
-     * @param sslContext
-     * @return
-     */
-    protected Bootstrap handler(final Bootstrap bootstrap, final Channel[] channels, final SslContext sslContext) {
-        bootstrap.handler(new ChannelInitializer<SocketChannel>() {
-            @Override
-            protected void initChannel(final SocketChannel ch) {
-                //及时发送 与 缓存发送
-                channels[0] = new NettyChannel(ch, false);
-                //设置
-                channels[0].setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD))
-                        .setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
-                //添加连接事件监听
-                ch.pipeline().addLast("connection", new ConnectionChannelHandler(channels[0], publisher));
-                //添加编解码和处理链
-                HandlerBinder binder = Plugin.HANDLER_BINDER.get(codec.binder());
-                binder.bind(ch.pipeline(), codec, handlerChain, channels[0]);
-                //若配置idle心跳策略，配置心跳handler
-                if (heartbeatStrategy != null && heartbeatStrategy.getHeartbeatMode() == HeartbeatMode.IDLE) {
-                    ch.pipeline().addLast("idleState",
-                            new IdleStateHandler(0, heartbeatStrategy.getInterval(), 0, TimeUnit.MILLISECONDS))
-                            .addLast("idleHeartbeat", new IdleHeartbeatHandler());
-                }
-
-                if (sslContext != null) {
-                    ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
-                }
-                //若开启了ss5代理，添加ss5
-                if (url.getBoolean(SS5_ENABLE)) {
-                    String host = url.getString(SS5_HOST);
-                    if (host != null && !host.isEmpty()) {
-                        InetSocketAddress ss5Address = new InetSocketAddress(host, url.getInteger(SS5_PORT));
-                        ch.pipeline().addFirst("ss5",
-                                new Socks5ProxyHandler(ss5Address, url.getString(SS5_USER), url.getString(SS5_PASSWORD)));
-                    }
-                }
-            }
-        });
-        return bootstrap;
-    }
-
-    /**
      * 配置
      *
-     * @param bootstrap
+     * @param bootstrap  bootstrap
+     * @param ioGroup    线程池
+     * @param channels   通道
+     * @param sslContext ssl上下文
      */
-    protected Bootstrap configure(final Bootstrap bootstrap) {
+    protected Bootstrap configure(final Bootstrap bootstrap,
+                                  final EventLoopGroup ioGroup,
+                                  final Channel[] channels,
+                                  final SslContext sslContext) {
         //Unknown channel option 'SO_BACKLOG' for channel
         bootstrap.group(ioGroup).channel(Constants.isUseEpoll(url) ? EpollSocketChannel.class : NioSocketChannel.class)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
@@ -170,7 +135,40 @@ public class NettyClientTransport extends AbstractClientTransport {
                 .option(ChannelOption.ALLOCATOR, BufAllocator.create(url))
                 .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(url.getPositiveInt(Constants.WRITE_BUFFER_LOW_WATERMARK_OPTION),
                         url.getPositiveInt(Constants.WRITE_BUFFER_HIGH_WATERMARK_OPTION)))
-                .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT);
+                .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
+                .handler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(final SocketChannel ch) {
+                        //及时发送 与 缓存发送
+                        channels[0] = new NettyClientChannel(ch, ioGroup);
+                        //设置
+                        channels[0].
+                                setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
+                                setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
+                        //添加连接事件监听
+                        ch.pipeline().addLast("connection", new ConnectionChannelHandler(channels[0], publisher));
+                        //添加编解码和处理链
+                        HandlerBinder binder = Plugin.HANDLER_BINDER.get(codec.binder());
+                        binder.bind(ch.pipeline(), codec, handlerChain, channels[0]);
+                        //若配置idle心跳策略，配置心跳handler
+                        if (heartbeatStrategy != null && heartbeatStrategy.getHeartbeatMode() == HeartbeatMode.IDLE) {
+                            ch.pipeline().
+                                    addLast("idleState", new IdleStateHandler(0, heartbeatStrategy.getInterval(), 0, TimeUnit.MILLISECONDS)).
+                                    addLast("idleHeartbeat", new IdleHeartbeatHandler());
+                        }
+                        if (sslContext != null) {
+                            ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
+                        }
+                        //若开启了ss5代理，添加ss5
+                        if (url.getBoolean(SS5_ENABLE)) {
+                            String host = url.getString(SS5_HOST);
+                            if (host != null && !host.isEmpty()) {
+                                InetSocketAddress ss5Address = new InetSocketAddress(host, url.getInteger(SS5_PORT));
+                                ch.pipeline().addFirst("ss5", new Socks5ProxyHandler(ss5Address, url.getString(SS5_USER), url.getString(SS5_PASSWORD)));
+                            }
+                        }
+                    }
+                });
         return bootstrap;
     }
 
@@ -196,26 +194,4 @@ public class NettyClientTransport extends AbstractClientTransport {
                 new ConnectionException(throwable.getMessage(), throwable);
     }
 
-    @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        super.close(o -> {
-            EventLoopGroup group = this.ioGroup;
-            if (group != null && !url.getBoolean(EventLoopGroupFactory.NETTY_EVENTLOOP_SHARE, true)) {
-                if (consumer == null) {
-                    group.shutdownGracefully();
-                } else {
-                    group.shutdownGracefully().addListener(f -> {
-                        if (!f.isSuccess()) {
-                            Throwable throwable = f.cause() == null ? new TransportException("unknown exception.") : f.cause();
-                            consumer.accept(new AsyncResult<>(o.getResult(), throwable));
-                        } else {
-                            consumer.accept(o);
-                        }
-                    });
-                }
-            } else if (consumer != null) {
-                consumer.accept(o);
-            }
-        });
-    }
 }

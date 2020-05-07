@@ -26,10 +26,9 @@ import io.joyrpc.thread.NamedThreadFactory;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ScheduledFuture;
-import io.netty.util.concurrent.SucceededFuture;
+import io.netty.util.concurrent.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,9 +50,9 @@ public class EventLoopGroupFactory {
     public static final String EVENT_LOOP_GROUP_CLIENT = "EventLoopGroup-Client";
     public static final String EVENT_LOOP_GROUP_WORKER = "EventLoopGroup-Worker";
     public static final String EVENT_LOOP_GROUP_BOSS = "EventLoopGroup-Boss";
-    public static final String NETTY_EVENTLOOP_SHARE = "netty.eventloop.share";
+    public static final String NETTY_EVENT_LOOP_SHARE = "netty.eventloop.share";
 
-    protected static Map<String, ShareEventLoopGroup> groups = new ConcurrentHashMap<>();
+    protected static Map<String, ReferenceEventLoopGroup> groups = new ConcurrentHashMap<>();
 
 
     /**
@@ -62,10 +61,10 @@ public class EventLoopGroupFactory {
      * @param url url实例
      * @return EventLoopGroup
      */
-    public static EventLoopGroup getParentEventLoopGroup(URL url) {
-        String key = getKey(url, EVENT_LOOP_GROUP_BOSS, false);
-        ShareEventLoopGroup result = groups.computeIfAbsent(key,
-                o -> create(key, url, EVENT_LOOP_GROUP_BOSS, BOSS_THREAD_OPTION));
+    public static EventLoopGroup getBossGroup(URL url) {
+        boolean share = url.getBoolean(NETTY_EVENT_LOOP_SHARE, false);
+        ReferenceEventLoopGroup result = groups.computeIfAbsent(getKey(url, EVENT_LOOP_GROUP_BOSS, share),
+                o -> create(o, url, EVENT_LOOP_GROUP_BOSS, BOSS_THREAD_OPTION, share));
         result.addRef();
         return result;
     }
@@ -76,47 +75,12 @@ public class EventLoopGroupFactory {
      * @param url url实例
      * @return EventLoopGroup
      */
-    public static EventLoopGroup getChildEventLoopGroup(final URL url) {
-        String key = getKey(url, EVENT_LOOP_GROUP_WORKER, false);
-        ShareEventLoopGroup result = groups.computeIfAbsent(key,
-                o -> create(key, url, EVENT_LOOP_GROUP_WORKER, IO_THREAD_OPTION));
+    public static EventLoopGroup getWorkerGroup(final URL url) {
+        boolean share = url.getBoolean(NETTY_EVENT_LOOP_SHARE, false);
+        ReferenceEventLoopGroup result = groups.computeIfAbsent(getKey(url, EVENT_LOOP_GROUP_WORKER, share),
+                o -> create(o, url, EVENT_LOOP_GROUP_WORKER, IO_THREAD_OPTION, share));
         result.addRef();
         return result;
-    }
-
-    /**
-     * 获取Key
-     *
-     * @param url
-     * @param type
-     * @param share
-     * @return
-     */
-    protected static String getKey(final URL url, final String type, final boolean share) {
-        boolean s = url.getBoolean(NETTY_EVENTLOOP_SHARE, share);
-        return s ? type : type + "." + url.getAddress();
-    }
-
-    /**
-     * 创建EventLoop
-     *
-     * @param name
-     * @param url
-     * @param threadName
-     * @param ioThread
-     * @return
-     */
-    protected static ShareEventLoopGroup create(final String name, final URL url, final String threadName, URLOption<Integer> ioThread) {
-        int threads = url.getPositiveInt(ioThread);
-        if (isUseEpoll(url)) {
-            logger.info(String.format("Success creating eventLoopGroup. name:%s, threads:%d, epoll:true. ", ioThread.getName(), threads));
-            return new ShareEventLoopGroup(name,
-                    new EpollEventLoopGroup(threads, new NamedThreadFactory(threadName, true)), groups);
-        } else {
-            logger.info(String.format("Success creating eventLoopGroup. name:%s, threads:%d, epoll:false. ", ioThread.getName(), threads));
-            return new ShareEventLoopGroup(name,
-                    new NioEventLoopGroup(threads, new NamedThreadFactory(threadName, true)), groups);
-        }
     }
 
     /**
@@ -125,18 +89,56 @@ public class EventLoopGroupFactory {
      * @param url url实例
      * @return EventLoopGroup
      */
-    public static EventLoopGroup getClientEventLoopGroup(final URL url) {
-        String key = getKey(url, EVENT_LOOP_GROUP_CLIENT, true);
-        ShareEventLoopGroup result = groups.computeIfAbsent(key,
-                o -> create(key, url, EVENT_LOOP_GROUP_CLIENT, IO_THREAD_OPTION));
+    public static EventLoopGroup getClientGroup(final URL url) {
+        boolean share = url.getBoolean(NETTY_EVENT_LOOP_SHARE, true);
+        ReferenceEventLoopGroup result = groups.computeIfAbsent(getKey(url, EVENT_LOOP_GROUP_CLIENT, share),
+                o -> create(o, url, EVENT_LOOP_GROUP_CLIENT, IO_THREAD_OPTION, share));
         result.addRef();
         return result;
     }
 
+
     /**
-     * 共享线程池
+     * 获取Key
+     *
+     * @param url   url
+     * @param type  类型
+     * @param share 共享标识
+     * @return 键
      */
-    protected static class ShareEventLoopGroup implements EventLoopGroup {
+    protected static String getKey(final URL url, final String type, final boolean share) {
+        return share ? type : type + "." + url.getAddress();
+    }
+
+    /**
+     * 创建EventLoop
+     *
+     * @param name       名称
+     * @param url        url
+     * @param threadName 线程名称
+     * @param ioThread   ioThread
+     * @param share      共享标识
+     * @return
+     */
+    protected static ReferenceEventLoopGroup create(final String name,
+                                                    final URL url,
+                                                    final String threadName,
+                                                    final URLOption<Integer> ioThread,
+                                                    final boolean share) {
+        int threads = url.getPositiveInt(ioThread);
+        boolean epoll = isUseEpoll(url);
+        logger.info(String.format("Success creating eventLoopGroup. name:%s, threads:%d, epoll:%b. ", ioThread.getName(), threads, epoll));
+        return new ReferenceEventLoopGroup(name,
+                epoll ?
+                        new EpollEventLoopGroup(threads, new NamedThreadFactory(threadName, true)) :
+                        new NioEventLoopGroup(threads, new NamedThreadFactory(threadName, true)),
+                groups, share);
+    }
+
+    /**
+     * 引用计数器线程池
+     */
+    protected static class ReferenceEventLoopGroup implements EventLoopGroup {
         /**
          * 名称
          */
@@ -153,18 +155,35 @@ public class EventLoopGroupFactory {
          * 计数器
          */
         protected AtomicLong counter = new AtomicLong(0);
+        /**
+         * 共享标识
+         */
+        protected boolean share;
 
         /**
          * 构造函数
          *
-         * @param name
-         * @param group
-         * @param groups
+         * @param name   名称
+         * @param group  线程池
+         * @param groups 分组
          */
-        public ShareEventLoopGroup(String name, EventLoopGroup group, Map<String, ? extends EventLoopGroup> groups) {
+        public ReferenceEventLoopGroup(String name, EventLoopGroup group, Map<String, ? extends EventLoopGroup> groups) {
+            this(name, group, groups, false);
+        }
+
+        /**
+         * 构造函数
+         *
+         * @param name   名称
+         * @param group  线程池
+         * @param groups 分组
+         * @param share  共享标识
+         */
+        public ReferenceEventLoopGroup(String name, EventLoopGroup group, Map<String, ? extends EventLoopGroup> groups, boolean share) {
             this.name = name;
             this.group = group;
             this.groups = groups;
+            this.share = share;
         }
 
         /**
@@ -172,22 +191,25 @@ public class EventLoopGroupFactory {
          *
          * @return
          */
-        public long addRef() {
+        protected long addRef() {
             return counter.incrementAndGet();
         }
 
         /**
          * 释放引用计数
          *
-         * @return
+         * @return 释放标识
          */
-        public long release() {
+        protected boolean release() {
             long result = counter.decrementAndGet();
-            if (result == 0) {
+            if (share) {
+                return false;
+            } else if (result == 0) {
                 //从容器里面删除
                 groups.remove(name);
+                return true;
             }
-            return result;
+            return false;
         }
 
         @Override
@@ -217,19 +239,19 @@ public class EventLoopGroupFactory {
 
         @Override
         public Future<?> shutdownGracefully() {
-            if (release() == 0) {
+            if (release()) {
                 return group.shutdownGracefully();
             } else {
-                return new SucceededFuture(null, Boolean.TRUE);
+                return new SucceededFuture(GlobalEventExecutor.INSTANCE, Boolean.TRUE);
             }
         }
 
         @Override
         public Future<?> shutdownGracefully(final long quietPeriod, final long timeout, final TimeUnit unit) {
-            if (release() == 0) {
+            if (release()) {
                 return group.shutdownGracefully(quietPeriod, timeout, unit);
             } else {
-                return new SucceededFuture(null, Boolean.TRUE);
+                return new SucceededFuture(GlobalEventExecutor.INSTANCE, Boolean.TRUE);
             }
         }
 
@@ -240,14 +262,14 @@ public class EventLoopGroupFactory {
 
         @Override
         public void shutdown() {
-            if (release() == 0) {
+            if (release()) {
                 group.shutdown();
             }
         }
 
         @Override
         public List<Runnable> shutdownNow() {
-            if (release() == 0) {
+            if (release()) {
                 return group.shutdownNow();
             } else {
                 return new ArrayList<>(0);

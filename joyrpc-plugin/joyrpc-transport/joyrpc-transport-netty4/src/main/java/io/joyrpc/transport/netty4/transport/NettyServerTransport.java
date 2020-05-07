@@ -99,8 +99,8 @@ public class NettyServerTransport extends AbstractServerTransport {
         } else {
             try {
                 SslContext sslContext = SslContextManager.getServerSslContext(url);
-                EventLoopGroup bossGroup = EventLoopGroupFactory.getParentEventLoopGroup(url);
-                EventLoopGroup workerGroup = EventLoopGroupFactory.getChildEventLoopGroup(url);
+                EventLoopGroup bossGroup = EventLoopGroupFactory.getBossGroup(url);
+                EventLoopGroup workerGroup = EventLoopGroupFactory.getWorkerGroup(url);
                 ServerBootstrap bootstrap = configure(new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
                 bootstrap.bind(new InetSocketAddress(host, port)).addListener((ChannelFutureListener) f -> {
                     NettyServerChannel channel = new NettyServerChannel(f.channel(), bossGroup, workerGroup, supplier);

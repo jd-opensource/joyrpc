@@ -21,7 +21,7 @@ package org.nustaq.serialization;
  */
 
 /**
- * 字段注册序列化器
+ * 自动注册序列化器
  */
 public interface AutowiredObjectSerializer extends FSTObjectSerializer {
 

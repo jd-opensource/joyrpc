@@ -522,25 +522,34 @@ public class MessageHeader implements Header {
     }
 
     /**
+     * 复制属性
+     *
+     * @param header 头
+     */
+    protected void copy(final MessageHeader header) {
+        msgId = header.msgId;
+        serialization = header.serialization;
+        msgType = header.msgType;
+        protocolType = header.protocolType;
+        timeout = header.timeout;
+        compression = header.compression;
+        length = header.length;
+        headerLength = header.headerLength;
+        sessionId = header.sessionId;
+        attributes = header.attributes;
+    }
+
+    /**
      * 克隆后和整体原来不是一个对象，
      * 属性相同，修改当前属性不会改变原来的
      * map和原来是一个对象，修改当前map也会改原来的
      *
-     * @return
+     * @return 克隆对象
      */
     @Override
     public MessageHeader clone() {
         MessageHeader result = new MessageHeader();
-        result.msgId = msgId;
-        result.serialization = serialization;
-        result.msgType = msgType;
-        result.protocolType = protocolType;
-        result.timeout = timeout;
-        result.compression = compression;
-        result.length = length;
-        result.headerLength = headerLength;
-        result.sessionId = sessionId;
-        result.attributes = attributes;
+        result.copy(this);
         return result;
     }
 

@@ -20,6 +20,7 @@ package io.joyrpc.protocol.dubbo.codec;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.protocol.AbstractCodec;
@@ -27,8 +28,15 @@ import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
+import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
+import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.buffer.ChannelBuffer;
+import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.message.Header;
+import io.joyrpc.transport.message.Message;
+
+import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
+import static io.joyrpc.protocol.dubbo.message.DubboMessageHeader.HEAD_STATUS;
 
 /**
  * Dubbo编解码
@@ -41,9 +49,6 @@ public class DubboCodec extends AbstractCodec {
     protected static final byte FLAG_EVENT = (byte) 0x20;
     protected static final int SERIALIZATION_MASK = 0x1f;
 
-    public static final Object[] EMPTY_OBJECT_ARRAY = new Object[0];
-    public static final Class<?>[] EMPTY_CLASS_ARRAY = new Class[0];
-
     /**
      * 构造函数
      *
@@ -51,6 +56,50 @@ public class DubboCodec extends AbstractCodec {
      */
     public DubboCodec(Protocol protocol) {
         super(protocol);
+    }
+
+    @Override
+    protected int encodeHeader(ChannelBuffer buffer, Header header) {
+        int start = buffer.writerIndex();
+        byte flag;
+        MsgType msgType = MsgType.valueOf(header.getMsgType());
+        //byte status = ((MessageHeader) header).getAttribute(HEAD_STATUS.getKey(), (byte) 0);
+        switch (msgType) {
+            case BizReq:
+                flag = (byte) (FLAG_REQUEST | header.getSerialization());
+                break;
+            case HbReq:
+                flag = (byte) (FLAG_REQUEST | header.getSerialization() | FLAG_EVENT);
+                break;
+            case BizResp:
+                flag = header.getSerialization();
+                break;
+            case HbResp:
+                flag = (byte) (header.getSerialization() | FLAG_EVENT);
+                break;
+            default:
+                flag = FLAG_EVENT;
+                break;
+        }
+        //写flag
+        buffer.setByte(start, flag);
+        //写status
+        buffer.setByte(start + 1, 0);
+        //写msgId
+        buffer.setLong(start + 2, header.getMsgId());
+        //设置到header末尾
+        buffer.writerIndex(start + 14);
+        return 0;
+    }
+
+    @Override
+    protected void encodePayload(EncodeContext context, ChannelBuffer buffer, Message message, int compress) throws Exception {
+        //编码response消息，需要设置header的status
+        if (!message.isRequest() && message.getHeader() instanceof DubboMessageHeader) {
+            byte status = ((DubboMessageHeader) message.getHeader()).getStatus();
+            buffer.setByte(buffer.writerIndex() - 13, status);
+        }
+        super.encodePayload(context, buffer, message, compress);
     }
 
     @Override
@@ -91,9 +140,28 @@ public class DubboCodec extends AbstractCodec {
         switch (type) {
             case BizReq:
                 return DubboInvocation.class;
+            case BizResp:
+                return DubboResponsePayload.class;
             default:
                 return type.getPayloadClz();
         }
+    }
+
+    @Override
+    protected void adjustDecode(Message message, Serialization serialization) {
+        //请求消息，将dubboversion设置到header中，序列化response时需要
+        if (message.isRequest()
+                && message.getHeader() instanceof DubboMessageHeader
+                && message.getPayLoad() instanceof DubboInvocation) {
+            DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
+            DubboInvocation invocation = (DubboInvocation) message.getPayLoad();
+            header.setDubboVersion(invocation.getAttachment(DUBBO_VERSION_KEY));
+        }
+    }
+
+    @Override
+    protected int getHeaderLengthFieldOffset() {
+        return 10;
     }
 
     @Override

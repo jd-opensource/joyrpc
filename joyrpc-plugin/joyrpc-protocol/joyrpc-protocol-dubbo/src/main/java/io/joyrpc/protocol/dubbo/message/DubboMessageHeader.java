@@ -1,11 +1,15 @@
 package io.joyrpc.protocol.dubbo.message;
 
+import io.joyrpc.constants.Head;
 import io.joyrpc.protocol.message.MessageHeader;
 
 /**
  * dubbo消息头
  */
 public class DubboMessageHeader extends MessageHeader {
+
+
+    public static final Head HEAD_STATUS = new Head((byte) 20, Byte.class);
 
     /**
      * 应答状态
@@ -15,6 +19,10 @@ public class DubboMessageHeader extends MessageHeader {
      * 双向标识
      */
     protected boolean twoWay;
+    /**
+     * dubbo版本
+     */
+    protected String dubboVersion;
 
     public byte getStatus() {
         return status;
@@ -24,12 +32,21 @@ public class DubboMessageHeader extends MessageHeader {
         this.status = status;
     }
 
+
     public boolean isTwoWay() {
         return twoWay;
     }
 
     public void setTwoWay(boolean twoWay) {
         this.twoWay = twoWay;
+    }
+
+    public String getDubboVersion() {
+        return dubboVersion;
+    }
+
+    public void setDubboVersion(String dubboVersion) {
+        this.dubboVersion = dubboVersion;
     }
 
     /**
@@ -41,6 +58,7 @@ public class DubboMessageHeader extends MessageHeader {
         super.copy(header);
         status = header.status;
         twoWay = header.twoWay;
+        dubboVersion = header.dubboVersion;
     }
 
     @Override

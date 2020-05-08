@@ -24,6 +24,9 @@ import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
+import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
+import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
+import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
 
@@ -38,6 +41,8 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
      * Dubbo的MagicCode
      */
     protected static final byte[] MAGIC_CODE = new byte[]{(byte) 0xDA, (byte) 0xBB};
+
+    protected static final String DEFALUT_DUBBO_VERSION = "2.0.2";
 
     protected static final byte HESSIAN2_SERIALIZATION_ID = 2;
     protected static final byte JAVA_SERIALIZATION_ID = 3;
@@ -108,10 +113,8 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
                     switch (type) {
                         case BizReq:
                         case CallbackReq:
-                            //return inputRequest((RequestMessage<Invocation>) message);
                         case BizResp:
                         case HbResp:
-                            //return inputResponse((ResponseMessage) message);
                         default:
                             return message;
                     }
@@ -138,11 +141,11 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
                         case BizReq:
                         case CallbackReq:
                         case HbReq:
-                            //return outputRequest((RequestMessage<io.joyrpc.protocol.message.Invocation>) message);
+                            return outputRequest((RequestMessage<Invocation>) message);
                         case BizResp:
                         case CallbackResp:
                         case HbResp:
-                            //return outputResponse((ResponseMessage) message);
+                            return outputResponse((ResponseMessage) message);
                         default:
                             return message;
                     }
@@ -151,5 +154,36 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
         };
     }
 
+    /**
+     * 输出应答
+     *
+     * @param message
+     */
+    protected Object outputRequest(final RequestMessage message) {
+        return message;
+    }
 
+    /**
+     * 输出应答
+     *
+     * @param message
+     */
+    protected Object outputResponse(final ResponseMessage message) {
+        Object payload = message.getPayLoad();
+        ResponsePayload responsePayload = payload != null && payload instanceof ResponsePayload ? (ResponsePayload) message.getPayLoad() : null;
+        //获取dubbo版本
+        String dubboVersion = DEFALUT_DUBBO_VERSION;
+        if (message.getHeader() instanceof DubboMessageHeader) {
+            DubboMessageHeader header = ((DubboMessageHeader) message.getHeader());
+            //获取dubbo版本
+            dubboVersion = header.getDubboVersion();
+        }
+        //创建dubbo payload
+        DubboResponsePayload dubboPayload = responsePayload == null
+                ? new DubboResponsePayload(dubboVersion)
+                : new DubboResponsePayload(responsePayload.getResponse(), responsePayload.getException(), dubboVersion);
+        message.setPayLoad(dubboPayload);
+
+        return message;
+    }
 }

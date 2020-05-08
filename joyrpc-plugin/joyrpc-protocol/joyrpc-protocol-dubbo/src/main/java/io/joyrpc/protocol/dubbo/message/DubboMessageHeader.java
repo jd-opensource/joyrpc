@@ -11,6 +11,10 @@ public class DubboMessageHeader extends MessageHeader {
      * 应答状态
      */
     protected byte status;
+    /**
+     * 双向标识
+     */
+    protected boolean twoWay;
 
     public byte getStatus() {
         return status;
@@ -20,20 +24,29 @@ public class DubboMessageHeader extends MessageHeader {
         this.status = status;
     }
 
+    public boolean isTwoWay() {
+        return twoWay;
+    }
+
+    public void setTwoWay(boolean twoWay) {
+        this.twoWay = twoWay;
+    }
+
+    /**
+     * 复制
+     *
+     * @param header 头
+     */
+    protected void copy(final DubboMessageHeader header) {
+        super.copy(header);
+        status = header.status;
+        twoWay = header.twoWay;
+    }
+
     @Override
     public DubboMessageHeader clone() {
         DubboMessageHeader result = new DubboMessageHeader();
-        result.msgId = msgId;
-        result.serialization = serialization;
-        result.msgType = msgType;
-        result.protocolType = protocolType;
-        result.timeout = timeout;
-        result.compression = compression;
-        result.length = length;
-        result.headerLength = headerLength;
-        result.sessionId = sessionId;
-        result.attributes = attributes;
-        result.status = status;
+        result.copy(this);
         return result;
     }
 }

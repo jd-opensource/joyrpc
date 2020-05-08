@@ -20,8 +20,6 @@ package io.joyrpc.protocol.dubbo.codec;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.codec.serialization.Serializer;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.protocol.AbstractCodec;
@@ -29,13 +27,8 @@ import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
-import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.buffer.ChannelBuffer;
-import io.joyrpc.transport.codec.DecodeContext;
 import io.joyrpc.transport.message.Header;
-
-import java.io.InputStream;
-import java.lang.reflect.Type;
 
 /**
  * Dubbo编解码
@@ -67,7 +60,7 @@ public class DubboCodec extends AbstractCodec {
         byte flag = buffer.readByte();
         boolean request = (flag & FLAG_REQUEST) != 0;
         boolean event = (flag & FLAG_EVENT) != 0;
-        boolean twoWay = (flag & FLAG_TWOWAY) > 0;
+        header.setTwoWay((flag & FLAG_TWOWAY) > 0);
         //设置消息类型
         if (request) {
             header.setMsgType(!event ? MsgType.BizReq.getType() : MsgType.HbReq.getType());
@@ -94,12 +87,11 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected Object deserialize(Serialization serialization, InputStream is, Type type, MessageHeader header, DecodeContext context) {
-        Type payloadClz = type;
-        if (type == MsgType.BizReq.getPayloadClz()) {
-            payloadClz = DubboInvocation.class;
+    protected Class getPayloadClass(final MsgType type) {
+        if (type == MsgType.BizReq) {
+            return DubboInvocation.class;
         }
-        return serialization.getSerializer().deserialize(is, payloadClz);
+        return type.getPayloadClz();
     }
 
     @Override

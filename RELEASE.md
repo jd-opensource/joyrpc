@@ -18,6 +18,8 @@
 
 - kryo、protostuff、protobuff、hessian和fst增加自动注册序列化插件
 
+- 客户端增加TCP_NODELAY设置
+
 ### Bugfixes
 
 - ETCD注册中心断开连接后，连接标识没有清空，造成重连可能不成功问题

@@ -174,11 +174,14 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
                 buffer.setBytes(start, magicCodes, 0, magicCodes.length);
                 start += magicCodes.length;
             }
-            int lengthStart = start + getHeaderLengthFieldOffset();
+            //相对于魔法位的偏移位置
+            int relativeLengthOffset = getLengthFieldOffset();
+            //长度绝对位置
+            int absoluteLengthOffset = start + relativeLengthOffset;
             //预留数据包长度
-            buffer.setInt(lengthStart, 0);
+            buffer.setInt(absoluteLengthOffset, 0);
             //定位到数据包长度后面
-            buffer.writerIndex(getHeaderLengthFieldOffset() == 0 ? start + 4 : start);
+            buffer.writerIndex(relativeLengthOffset == 0 ? start + 4 : start);
             //编码数据头
             int compress = encodeHeader(buffer, header);
             //编码数据包
@@ -188,7 +191,7 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
             }
             int length = buffer.writerIndex() - start;
             header.setLength(length);
-            buffer.setInt(lengthStart, length);
+            buffer.setInt(absoluteLengthOffset, length);
         } catch (CodecException e) {
             e.setHeader(header == null ? target.getHeader() : header);
             throw e;
@@ -538,7 +541,7 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
      *
      * @return int
      */
-    protected int getHeaderLengthFieldOffset() {
+    protected int getLengthFieldOffset() {
         return 0;
     }
 

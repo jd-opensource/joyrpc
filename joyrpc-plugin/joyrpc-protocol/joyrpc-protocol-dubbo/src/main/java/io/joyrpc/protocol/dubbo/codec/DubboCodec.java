@@ -29,14 +29,12 @@ import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
-import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
-import static io.joyrpc.protocol.dubbo.message.DubboMessageHeader.HEAD_STATUS;
 
 /**
  * Dubbo编解码
@@ -148,19 +146,19 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected void adjustDecode(Message message, Serialization serialization) {
-        //请求消息，将dubboversion设置到header中，序列化response时需要
-        if (message.isRequest()
-                && message.getHeader() instanceof DubboMessageHeader
-                && message.getPayLoad() instanceof DubboInvocation) {
-            DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
-            DubboInvocation invocation = (DubboInvocation) message.getPayLoad();
-            header.setDubboVersion(invocation.getAttachment(DUBBO_VERSION_KEY));
+    protected void adjustDecode(final Message message, final Serialization serialization) {
+        if (message.isRequest()) {
+            //请求消息，将dubboVersion设置到header中，序列化response时需要
+            Header header = message.getHeader();
+            Object payLoad = message.getPayLoad();
+            if (header instanceof DubboMessageHeader && payLoad instanceof DubboInvocation) {
+                ((DubboMessageHeader) header).setDubboVersion(((DubboInvocation) payLoad).getAttachment(DUBBO_VERSION_KEY));
+            }
         }
     }
 
     @Override
-    protected int getHeaderLengthFieldOffset() {
+    protected int getLengthFieldOffset() {
         return 10;
     }
 

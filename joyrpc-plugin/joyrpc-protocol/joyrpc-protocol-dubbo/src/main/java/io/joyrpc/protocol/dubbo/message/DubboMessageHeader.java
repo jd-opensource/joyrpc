@@ -3,6 +3,8 @@ package io.joyrpc.protocol.dubbo.message;
 import io.joyrpc.constants.Head;
 import io.joyrpc.protocol.message.MessageHeader;
 
+import java.util.Map;
+
 /**
  * dubbo消息头
  */
@@ -47,6 +49,22 @@ public class DubboMessageHeader extends MessageHeader {
 
     public void setDubboVersion(String dubboVersion) {
         this.dubboVersion = dubboVersion;
+    }
+
+    @Override
+    public MessageHeader response(byte msgType, byte compression, Map<Byte, Object> attributes) {
+        DubboMessageHeader result = new DubboMessageHeader();
+        result.msgId = msgId;
+        result.msgType = msgType;
+        result.serialization = serialization;
+        result.protocolType = protocolType;
+        result.compression = compression;
+        result.sessionId = sessionId;
+        result.attributes = attributes;
+        result.dubboVersion = dubboVersion;
+        result.twoWay = twoWay;
+        result.status = status;
+        return result;
     }
 
     /**

@@ -150,13 +150,13 @@ public class DubboCodec extends AbstractCodec {
 
     @Override
     protected void adjustDecode(Message message, Serialization serialization) {
-        //请求消息，将dubboversion设置到header中，序列化response时需要
-        if (message.isRequest()
-                && message.getHeader() instanceof DubboMessageHeader
-                && message.getPayLoad() instanceof DubboInvocation) {
-            DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
-            DubboInvocation invocation = (DubboInvocation) message.getPayLoad();
-            header.setDubboVersion(invocation.getAttachment(DUBBO_VERSION_KEY));
+        if (message.isRequest()) {
+            //请求消息，将dubboVersion设置到header中，序列化response时需要
+            Header header = message.getHeader();
+            Object payLoad = message.getPayLoad();
+            if (header instanceof DubboMessageHeader && payLoad instanceof DubboInvocation) {
+                ((DubboMessageHeader) header).setDubboVersion(((DubboInvocation) payLoad).getAttachment(DUBBO_VERSION_KEY));
+            }
         }
     }
 

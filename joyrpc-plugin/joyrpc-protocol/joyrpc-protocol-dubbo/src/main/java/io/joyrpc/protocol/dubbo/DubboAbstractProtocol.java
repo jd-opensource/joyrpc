@@ -24,8 +24,6 @@ import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
-import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
 
@@ -93,7 +91,7 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
         return MAGIC_CODE;
     }
 
-
+    @Override
     protected MessageConverter createInConverter() {
         return new MessageConverter() {
 
@@ -122,6 +120,7 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
         };
     }
 
+    @Override
     protected MessageConverter createOutConverter() {
         return new MessageConverter() {
 

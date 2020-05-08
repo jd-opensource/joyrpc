@@ -177,11 +177,11 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
                 buffer.setBytes(start, magicCodes, 0, magicCodes.length);
                 start += magicCodes.length;
             }
-            int lengthStart = start + headerLengthFrame.getLengthFieldOffset();
+            int lengthStart = start + headerLengthFrame.lengthFieldOffset;
             //预留数据包长度
             buffer.setInt(lengthStart, 0);
             //定位到数据包长度后面
-            buffer.writerIndex(headerLengthFrame.getLengthFieldOffset() == 0 ? start + 4 : start);
+            buffer.writerIndex(headerLengthFrame.lengthFieldOffset == 0 ? start + 4 : start);
             //编码数据头
             int compress = encodeHeader(buffer, header);
             //编码数据包
@@ -191,7 +191,7 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
             }
             int length = buffer.writerIndex() - start;
             header.setLength(length);
-            buffer.setInt(lengthStart, headerLengthFrame.computeLength(length));
+            buffer.setInt(lengthStart, headerLengthFrame.lengthCompute + length);
         } catch (CodecException e) {
             e.setHeader(header == null ? target.getHeader() : header);
             throw e;
@@ -549,36 +549,17 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         /**
          * header中长度字段所在位置（不考虑魔术位）
          */
-        private int lengthFieldOffset;
+        protected int lengthFieldOffset;
         /**
          * 长度计算
          */
-        private int lengthCompute;
+        protected int lengthCompute;
 
         public HeaderLengthFrame(int lengthFieldOffset, int lengthCompute) {
             this.lengthFieldOffset = lengthFieldOffset;
             this.lengthCompute = lengthCompute;
         }
 
-        public int getLengthFieldOffset() {
-            return lengthFieldOffset;
-        }
-
-        public void setLengthFieldOffset(int lengthFieldOffset) {
-            this.lengthFieldOffset = lengthFieldOffset;
-        }
-
-        public int getLengthCompute() {
-            return lengthCompute;
-        }
-
-        public void setLengthCompute(int lengthCompute) {
-            this.lengthCompute = lengthCompute;
-        }
-
-        public int computeLength(int length) {
-            return length + lengthCompute;
-        }
     }
 
     /**

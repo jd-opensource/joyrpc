@@ -128,15 +128,18 @@ public class NettyClientTransport extends AbstractClientTransport {
                                   final Channel[] channels,
                                   final SslContext sslContext) {
         //Unknown channel option 'SO_BACKLOG' for channel
-        bootstrap.group(ioGroup).channel(Constants.isUseEpoll(url) ? EpollSocketChannel.class : NioSocketChannel.class)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
-                //.option(ChannelOption.SO_TIMEOUT, url.getPositiveInt(Constants.SO_TIMEOUT_OPTION))
-                .option(ChannelOption.SO_KEEPALIVE, url.getBoolean(Constants.SO_KEEPALIVE_OPTION))
-                .option(ChannelOption.ALLOCATOR, BufAllocator.create(url))
-                .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(url.getPositiveInt(Constants.WRITE_BUFFER_LOW_WATERMARK_OPTION),
-                        url.getPositiveInt(Constants.WRITE_BUFFER_HIGH_WATERMARK_OPTION)))
-                .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
-                .handler(new ChannelInitializer<SocketChannel>() {
+        bootstrap.group(ioGroup).channel(Constants.isUseEpoll(url) ? EpollSocketChannel.class : NioSocketChannel.class).
+                option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION)).
+                //option(ChannelOption.SO_TIMEOUT, url.getPositiveInt(Constants.SO_TIMEOUT_OPTION)).
+                option(ChannelOption.TCP_NODELAY, url.getBoolean(TCP_NODELAY)).
+                option(ChannelOption.SO_KEEPALIVE, url.getBoolean(Constants.SO_KEEPALIVE_OPTION)).
+                option(ChannelOption.ALLOCATOR, BufAllocator.create(url)).
+                option(ChannelOption.WRITE_BUFFER_WATER_MARK,
+                        new WriteBufferWaterMark(
+                                url.getPositiveInt(Constants.WRITE_BUFFER_LOW_WATERMARK_OPTION),
+                                url.getPositiveInt(Constants.WRITE_BUFFER_HIGH_WATERMARK_OPTION))).
+                option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT).
+                handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(final SocketChannel ch) {
                         //及时发送 与 缓存发送

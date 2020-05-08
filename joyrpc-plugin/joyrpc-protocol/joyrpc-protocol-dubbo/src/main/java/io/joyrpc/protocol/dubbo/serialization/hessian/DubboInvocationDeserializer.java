@@ -7,12 +7,10 @@ import io.joyrpc.util.ClassUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
 import java.util.Map;
 
-import static io.joyrpc.protocol.dubbo.codec.DubboCodec.EMPTY_OBJECT_ARRAY;
-import static io.joyrpc.protocol.dubbo.codec.DubboCodec.EMPTY_CLASS_ARRAY;
-
+import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_GROUP_KEY;
+import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
 
 public class DubboInvocationDeserializer implements AutowiredObjectDeserializer {
 
@@ -30,7 +28,7 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
     public Object readObject(AbstractHessianInput in) throws IOException {
 
         String dubboVersion = in.readString();
-        String path = in.readString();
+        String className = in.readString();
         String version = in.readString();
         String methodName = in.readString();
         String desc = in.readString();
@@ -40,7 +38,7 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
         Method method;
 
         try {
-            method = ClassUtils.getPublicMethod(path, methodName);
+            method = ClassUtils.getPublicMethod(className, methodName);
             pts = method.getParameterTypes();
             if (pts.length == 0) {
                 args = new Object[0];
@@ -54,20 +52,24 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
             throw new IOException("Read dubbo invocation data failed.", e);
         }
 
+        //获取传参信息
         Map<String, Object> attachments = (Map<String, Object>) in.readObject(Map.class);
-        String group = (String) attachments.get("group");
-
+        //设置 dubboVersion
+        attachments.put(DUBBO_VERSION_KEY, dubboVersion);
+        //获取别名
+        String alias = (String) attachments.get(DUBBO_GROUP_KEY);
+        //创建DubboInvocation对象
         DubboInvocation invocation = new DubboInvocation();
-        invocation.setPath(path);
+        invocation.setClassName(className);
         invocation.setMethodName(methodName);
-        invocation.setGroup(group);
+        invocation.setAlias(alias);
         invocation.setAttachments(attachments);
         invocation.setMethod(method);
-        invocation.setArguments(args);
+        invocation.setArgs(args);
         invocation.setVersion(version);
-        invocation.setParameterTypes(pts);
+        invocation.setArgsType(pts);
         invocation.setParameterTypesDesc(desc);
-        return null;
+        return invocation;
     }
 
     @Override

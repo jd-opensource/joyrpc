@@ -1,14 +1,16 @@
 package io.joyrpc.protocol.dubbo.message;
 
-import java.lang.reflect.Method;
+import io.joyrpc.protocol.message.Invocation;
+
 import java.util.HashMap;
 import java.util.Map;
 
-public class DubboInvocation {
+public class DubboInvocation extends Invocation {
+
+    public static String DUBBO_VERSION_KEY = "dubbo";
+    public static String DUBBO_GROUP_KEY = "group";
 
     private String targetServiceUniqueName;
-
-    private String methodName;
 
     private String serviceName;
 
@@ -16,39 +18,19 @@ public class DubboInvocation {
 
     private String[] compatibleParamSignatures;
 
-    private Object[] arguments;
-
-    private Map<String, Object> attachments;
-
-    private Map<Object, Object> attributes = new HashMap<Object, Object>();
-
-    private transient Class<?>[] parameterTypes;
-
-    private transient String group;
+    private Map<Object, Object> attributes = new HashMap<>();
 
     private transient String version = "0.0.0";
 
-    private transient String path;
-
-    private transient Method method;
-
     public String getTargetServiceUniqueName() {
-        if (targetServiceUniqueName == null && path != null) {
-            targetServiceUniqueName = group == null ? path + "/" + group + ":" + version : path + ":" + version;
+        if (targetServiceUniqueName == null && className != null) {
+            targetServiceUniqueName = alias == null ? className + "/" + alias + ":" + version : className + ":" + version;
         }
         return targetServiceUniqueName;
     }
 
     public void setTargetServiceUniqueName(String targetServiceUniqueName) {
         this.targetServiceUniqueName = targetServiceUniqueName;
-    }
-
-    public String getMethodName() {
-        return methodName;
-    }
-
-    public void setMethodName(String methodName) {
-        this.methodName = methodName;
     }
 
     public String getServiceName() {
@@ -75,18 +57,6 @@ public class DubboInvocation {
         this.compatibleParamSignatures = compatibleParamSignatures;
     }
 
-    public Object[] getArguments() {
-        return arguments;
-    }
-
-    public void setArguments(Object[] arguments) {
-        this.arguments = arguments;
-    }
-
-    public Map<String, Object> getAttachments() {
-        return attachments;
-    }
-
     public void setAttachments(Map<String, Object> attachments) {
         this.attachments = attachments;
     }
@@ -99,22 +69,6 @@ public class DubboInvocation {
         this.attributes = attributes;
     }
 
-    public Class<?>[] getParameterTypes() {
-        return parameterTypes;
-    }
-
-    public void setParameterTypes(Class<?>[] parameterTypes) {
-        this.parameterTypes = parameterTypes;
-    }
-
-    public String getGroup() {
-        return group;
-    }
-
-    public void setGroup(String group) {
-        this.group = group;
-    }
-
     public String getVersion() {
         return version;
     }
@@ -123,19 +77,4 @@ public class DubboInvocation {
         this.version = version;
     }
 
-    public String getPath() {
-        return path;
-    }
-
-    public void setPath(String path) {
-        this.path = path;
-    }
-
-    public Method getMethod() {
-        return method;
-    }
-
-    public void setMethod(Method method) {
-        this.method = method;
-    }
 }

@@ -2,6 +2,7 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
 
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianInput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
+import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 
 import java.io.IOException;
 
@@ -9,7 +10,7 @@ public class DubboResponsePayloadDeserializer implements AutowiredObjectDeserial
 
     @Override
     public Class<?> getType() {
-        return null;
+        return DubboResponsePayload.class;
     }
 
     @Override

@@ -56,6 +56,7 @@ public class DubboCodec extends AbstractCodec {
      */
     public DubboCodec(Protocol protocol) {
         super(protocol);
+        this.headerLengthFrame = new HeaderLengthFrame(10, -14);
     }
 
     @Override
@@ -95,8 +96,8 @@ public class DubboCodec extends AbstractCodec {
     @Override
     protected void encodePayload(EncodeContext context, ChannelBuffer buffer, Message message, int compress) throws Exception {
         //编码response消息，需要设置header的status
-        if (!message.isRequest() && message.getHeader() instanceof DubboMessageHeader) {
-            byte status = ((DubboMessageHeader) message.getHeader()).getStatus();
+        if (!message.isRequest() && message.getPayLoad() instanceof DubboResponsePayload) {
+            byte status = ((DubboResponsePayload) message.getPayLoad()).getStatus();
             buffer.setByte(buffer.writerIndex() - 13, status);
         }
         super.encodePayload(context, buffer, message, compress);
@@ -157,11 +158,6 @@ public class DubboCodec extends AbstractCodec {
             DubboInvocation invocation = (DubboInvocation) message.getPayLoad();
             header.setDubboVersion(invocation.getAttachment(DUBBO_VERSION_KEY));
         }
-    }
-
-    @Override
-    protected int getHeaderLengthFieldOffset() {
-        return 10;
     }
 
     @Override

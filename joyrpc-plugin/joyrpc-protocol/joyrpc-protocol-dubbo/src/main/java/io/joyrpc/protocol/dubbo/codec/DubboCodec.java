@@ -88,10 +88,12 @@ public class DubboCodec extends AbstractCodec {
 
     @Override
     protected Class getPayloadClass(final MsgType type) {
-        if (type == MsgType.BizReq) {
-            return DubboInvocation.class;
+        switch (type) {
+            case BizResp:
+                return DubboInvocation.class;
+            default:
+                return type.getPayloadClz();
         }
-        return type.getPayloadClz();
     }
 
     @Override

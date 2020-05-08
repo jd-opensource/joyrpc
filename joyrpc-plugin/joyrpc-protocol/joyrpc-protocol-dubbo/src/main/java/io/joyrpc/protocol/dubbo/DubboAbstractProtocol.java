@@ -169,6 +169,12 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
      * @param message
      */
     protected Object outputResponse(final ResponseMessage message) {
+        //心跳，payload置空
+        if (message.getMsgType() == MsgType.HbResp.getType()) {
+            message.setPayLoad(new DubboResponsePayload(true));
+            return message;
+        }
+        //转换payload
         Object payload = message.getPayLoad();
         ResponsePayload responsePayload = payload != null && payload instanceof ResponsePayload ? (ResponsePayload) message.getPayLoad() : null;
         //获取dubbo版本

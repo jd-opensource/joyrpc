@@ -22,6 +22,12 @@ public class DubboResponsePayloadSerializer implements AutowiredObjectSerializer
                     + obj.getClass());
         }
         DubboResponsePayload payload = (DubboResponsePayload) obj;
+        //心跳响应，直接写null
+        if (payload.isHeartbeat()) {
+            out.writeNull();
+            return;
+        }
+        //序列化payload
         if (payload.getStatus() == OK) {
             boolean attach = payload.isSupportResponseAttachment();
             Throwable th = payload.getException();

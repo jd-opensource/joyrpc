@@ -1,7 +1,6 @@
 package io.joyrpc.protocol.dubbo.message;
 
 import io.joyrpc.protocol.message.ResponsePayload;
-import org.apache.dubbo.common.utils.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -46,9 +45,15 @@ public class DubboResponsePayload extends ResponsePayload {
 
     private transient byte status = OK;
 
+    private transient boolean heartbeat = false;
+
     private Map<String, Object> attachments = new HashMap<>();
 
     public DubboResponsePayload() {
+    }
+
+    public DubboResponsePayload(boolean heartbeat) {
+        this.heartbeat = heartbeat;
     }
 
     public DubboResponsePayload(Object response, Throwable exception, String dubboVersion) {
@@ -83,6 +88,14 @@ public class DubboResponsePayload extends ResponsePayload {
 
     public void setStatus(byte status) {
         this.status = status;
+    }
+
+    public boolean isHeartbeat() {
+        return heartbeat;
+    }
+
+    public void setHeartbeat(boolean heartbeat) {
+        this.heartbeat = heartbeat;
     }
 
     public boolean isSupportResponseAttachment() {

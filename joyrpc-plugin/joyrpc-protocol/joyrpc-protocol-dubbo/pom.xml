@@ -11,15 +11,10 @@
 
     <artifactId>joyrpc-protocol-dubbo</artifactId>
 
-    <properties>
-        <dubbo.version>2.7.6</dubbo.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo</artifactId>
-            <version>${dubbo.version}</version>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>

@@ -24,7 +24,6 @@ import io.joyrpc.protocol.message.ResponsePayload;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 import static io.joyrpc.protocol.dubbo.DubboVersion.LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT;
 import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
@@ -34,8 +33,6 @@ import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
  */
 public class DubboResponsePayload extends ResponsePayload {
 
-
-
     public static final byte RESPONSE_WITH_EXCEPTION = 0;
     public static final byte RESPONSE_VALUE = 1;
     public static final byte RESPONSE_NULL_VALUE = 2;
@@ -43,11 +40,18 @@ public class DubboResponsePayload extends ResponsePayload {
     public static final byte RESPONSE_VALUE_WITH_ATTACHMENTS = 4;
     public static final byte RESPONSE_NULL_VALUE_WITH_ATTACHMENTS = 5;
 
-    private transient String dubboVersion;
-
-    private transient boolean heartbeat = false;
-
-    private Map<String, Object> attachments = new HashMap<>();
+    /**
+     * dubbo版本
+     */
+    protected transient String dubboVersion;
+    /**
+     * 心跳标识
+     */
+    protected transient boolean heartbeat = false;
+    /**
+     * 扩展属性
+     */
+    protected Map<String, Object> attachments = new HashMap<>();
 
     public DubboResponsePayload() {
     }

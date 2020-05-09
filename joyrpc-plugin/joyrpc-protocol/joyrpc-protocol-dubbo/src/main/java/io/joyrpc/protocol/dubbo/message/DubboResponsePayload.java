@@ -34,17 +34,7 @@ import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
  */
 public class DubboResponsePayload extends ResponsePayload {
 
-    public static final byte OK = 20;
-    public static final byte CLIENT_TIMEOUT = 30;
-    public static final byte SERVER_TIMEOUT = 31;
-    public static final byte CHANNEL_INACTIVE = 35;
-    public static final byte BAD_REQUEST = 40;
-    public static final byte BAD_RESPONSE = 50;
-    public static final byte SERVICE_NOT_FOUND = 60;
-    public static final byte SERVICE_ERROR = 70;
-    public static final byte SERVER_ERROR = 80;
-    public static final byte CLIENT_ERROR = 90;
-    public static final byte SERVER_THREADPOOL_EXHAUSTED_ERROR = 100;
+
 
     public static final byte RESPONSE_WITH_EXCEPTION = 0;
     public static final byte RESPONSE_VALUE = 1;
@@ -53,19 +43,7 @@ public class DubboResponsePayload extends ResponsePayload {
     public static final byte RESPONSE_VALUE_WITH_ATTACHMENTS = 4;
     public static final byte RESPONSE_NULL_VALUE_WITH_ATTACHMENTS = 5;
 
-    /**
-     * 异常转换消息状态
-     */
-    protected static final Function<Throwable, Byte> CONVERT_STATUS_FUNC = err -> {
-        if (err == null) {
-            return OK;
-        }
-        return BAD_REQUEST;
-    };
-
     private transient String dubboVersion;
-
-    private transient byte status = OK;
 
     private transient boolean heartbeat = false;
 
@@ -81,7 +59,6 @@ public class DubboResponsePayload extends ResponsePayload {
     public DubboResponsePayload(Object response, Throwable exception, String dubboVersion) {
         super(response, exception);
         this.dubboVersion = dubboVersion;
-        this.status = CONVERT_STATUS_FUNC.apply(exception);
     }
 
     public DubboResponsePayload(String dubboVersion) {
@@ -102,14 +79,6 @@ public class DubboResponsePayload extends ResponsePayload {
 
     public void setDubboVersion(String dubboVersion) {
         this.dubboVersion = dubboVersion;
-    }
-
-    public byte getStatus() {
-        return status;
-    }
-
-    public void setStatus(byte status) {
-        this.status = status;
     }
 
     public boolean isHeartbeat() {

@@ -32,6 +32,8 @@ import io.joyrpc.transport.message.Message;
 
 import java.util.function.Function;
 
+import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
+
 /**
  * Dubbo协议
  */
@@ -41,9 +43,14 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
      * Dubbo的MagicCode
      */
     protected static final byte[] MAGIC_CODE = new byte[]{(byte) 0xDA, (byte) 0xBB};
-
+    /**
+     * 默认Dubbo版本号
+     */
     protected static final String DEFALUT_DUBBO_VERSION = "2.0.2";
 
+    /**
+     * Dubbo序列化标识
+     */
     protected static final byte HESSIAN2_SERIALIZATION_ID = 2;
     protected static final byte JAVA_SERIALIZATION_ID = 3;
     protected static final byte COMPACTED_JAVA_SERIALIZATION_ID = 4;
@@ -177,12 +184,15 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
         //转换payload
         Object payload = message.getPayLoad();
         ResponsePayload responsePayload = payload != null && payload instanceof ResponsePayload ? (ResponsePayload) message.getPayLoad() : null;
-        //获取dubbo版本
+        //获取dubbo版本，设置status
         String dubboVersion = DEFALUT_DUBBO_VERSION;
         if (message.getHeader() instanceof DubboMessageHeader) {
             DubboMessageHeader header = ((DubboMessageHeader) message.getHeader());
             //获取dubbo版本
             dubboVersion = header.getDubboVersion();
+            //设置status
+            byte status = getStatus(responsePayload == null ? null : responsePayload.getException());
+            header.setStatus(status);
         }
         //创建dubbo payload
         DubboResponsePayload dubboPayload = responsePayload == null

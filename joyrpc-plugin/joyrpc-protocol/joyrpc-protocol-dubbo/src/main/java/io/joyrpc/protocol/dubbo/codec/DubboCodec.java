@@ -95,9 +95,9 @@ public class DubboCodec extends AbstractCodec {
     protected void encodePayload(final EncodeContext context, final ChannelBuffer buffer, final Message message, final int compress) throws Exception {
         //编码response消息，需要设置header的status
         if (!message.isRequest()) {
-            Object payLoad = message.getPayLoad();
-            if (payLoad instanceof DubboResponsePayload) {
-                byte status = ((DubboResponsePayload) payLoad).getStatus();
+            Header header = message.getHeader();
+            if (header instanceof DubboMessageHeader) {
+                byte status = ((DubboMessageHeader) header).getStatus();
                 buffer.setByte(buffer.writerIndex() - 13, status);
             }
         }

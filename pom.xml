@@ -68,7 +68,7 @@
         <license.path>license_config</license.path>
         <checker-qual.version>2.8.1</checker-qual.version>
         <objenesis.version>2.6</objenesis.version>
-        <caffeine.version>2.8.0</caffeine.version>
+        <caffeine.version>2.8.2</caffeine.version>
         <cache2k.version>1.2.4.Final</cache2k.version>
         <dubbo.version>2.7.6</dubbo.version>
     </properties>

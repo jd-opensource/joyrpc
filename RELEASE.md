@@ -20,6 +20,10 @@
 
 - 客户端增加TCP_NODELAY设置
 
+- Dependency
+
+  - 升级caffeine为2.8.2版本
+
 ### Bugfixes
 
 - ETCD注册中心断开连接后，连接标识没有清空，造成重连可能不成功问题

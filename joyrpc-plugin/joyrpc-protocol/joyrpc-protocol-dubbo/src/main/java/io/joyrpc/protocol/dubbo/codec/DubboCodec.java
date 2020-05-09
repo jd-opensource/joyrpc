@@ -26,7 +26,6 @@ import io.joyrpc.exception.CodecException;
 import io.joyrpc.protocol.AbstractCodec;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
-import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
@@ -148,10 +147,7 @@ public class DubboCodec extends AbstractCodec {
             case BizReq:
                 return DubboInvocation.class;
             case BizResp:
-                if (header instanceof DubboMessageHeader && ((DubboMessageHeader) header).getStatus() != OK) {
-                    return DubboResponseErrorPayload.class;
-                }
-                return DubboResponsePayload.class;
+                return ((DubboMessageHeader) header).getStatus() != OK ? DubboResponseErrorPayload.class : DubboResponsePayload.class;
             default:
                 return type.getPayloadClz();
         }

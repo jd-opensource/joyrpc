@@ -49,6 +49,8 @@ public class DubboInvocationSerializer implements AutowiredObjectSerializer {
         out.writeString(DEFALUT_DUBBO_VERSION);
         //写接口名
         out.writeString(invocation.getClassName());
+        //写服务版本
+        out.writeString(invocation.getVersion());
         //写方法名
         out.writeString(invocation.getMethodName());
         //写参数描述

@@ -175,6 +175,7 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
             if (appName != null && !appName.isEmpty()) {
                 dubboInvocation.addAttachment(DUBBO_APPLICATION_KEY, String.valueOf(message.getTimeout()));
             }
+            message.setPayLoad(dubboInvocation);
         }
         return message;
     }

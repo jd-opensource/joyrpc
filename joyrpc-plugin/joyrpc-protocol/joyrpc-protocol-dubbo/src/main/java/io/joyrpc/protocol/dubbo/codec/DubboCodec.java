@@ -65,10 +65,10 @@ public class DubboCodec extends AbstractCodec {
         //byte status = ((MessageHeader) header).getAttribute(HEAD_STATUS.getKey(), (byte) 0);
         switch (msgType) {
             case BizReq:
-                flag = (byte) (FLAG_REQUEST | header.getSerialization());
+                flag = (byte) (FLAG_REQUEST | header.getSerialization() | FLAG_TWOWAY);
                 break;
             case HbReq:
-                flag = (byte) (FLAG_REQUEST | header.getSerialization() | FLAG_EVENT);
+                flag = (byte) (FLAG_REQUEST | header.getSerialization() | FLAG_TWOWAY | FLAG_EVENT);
                 break;
             case BizResp:
                 flag = header.getSerialization();

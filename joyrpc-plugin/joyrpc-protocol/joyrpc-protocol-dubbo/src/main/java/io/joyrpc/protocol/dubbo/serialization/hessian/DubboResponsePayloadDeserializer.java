@@ -25,6 +25,9 @@ import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 
 import java.io.IOException;
+import java.util.Map;
+
+import static io.joyrpc.protocol.dubbo.message.DubboResponsePayload.*;
 
 /**
  * DubboResponsePayload反序列化
@@ -43,7 +46,44 @@ public class DubboResponsePayloadDeserializer implements AutowiredObjectDeserial
 
     @Override
     public Object readObject(AbstractHessianInput in) throws IOException {
-        return null;
+        DubboResponsePayload payload = new DubboResponsePayload();
+        int respFlag = in.readInt();
+        switch (respFlag) {
+            case RESPONSE_NULL_VALUE:
+                break;
+            case RESPONSE_VALUE:
+                payload.setResponse(in.readObject());
+                break;
+            case RESPONSE_WITH_EXCEPTION:
+                payload.setException((Throwable) in.readObject());
+                break;
+            case RESPONSE_NULL_VALUE_WITH_ATTACHMENTS: {
+                Map<String, Object> attrs = (Map<String, Object>) in.readObject();
+                if (attrs != null) {
+                    payload.setAttachments(attrs);
+                }
+                break;
+            }
+            case RESPONSE_VALUE_WITH_ATTACHMENTS: {
+                payload.setResponse(in.readObject());
+                Map<String, Object> attrs = (Map<String, Object>) in.readObject();
+                if (attrs != null) {
+                    payload.setAttachments(attrs);
+                }
+                break;
+            }
+            case RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS: {
+                payload.setException((Throwable) in.readObject());
+                Map<String, Object> attrs = (Map<String, Object>) in.readObject();
+                if (attrs != null) {
+                    payload.setAttachments(attrs);
+                }
+                break;
+            }
+            default:
+                throw new IOException("Unknown result flag, expect '0' '1' '2' '3' '4' '5', but received: " + respFlag);
+        }
+        return payload;
     }
 
     @Override

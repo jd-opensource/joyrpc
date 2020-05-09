@@ -21,18 +21,23 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
+import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.util.ClassUtils;
 
 import java.util.function.Function;
 
+import static io.joyrpc.constants.Constants.KEY_APPNAME;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
+import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 
 /**
  * Dubbo协议
@@ -46,7 +51,7 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
     /**
      * 默认Dubbo版本号
      */
-    protected static final String DEFALUT_DUBBO_VERSION = "2.0.2";
+    public static final String DEFALUT_DUBBO_VERSION = "2.0.2";
 
     /**
      * Dubbo序列化标识
@@ -120,8 +125,10 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
                     switch (type) {
                         case BizReq:
                         case CallbackReq:
+                            return inputRequest((RequestMessage<DubboInvocation>) message);
                         case BizResp:
                         case HbResp:
+                            return inputResponse((ResponseMessage) message);
                         default:
                             return message;
                     }
@@ -162,11 +169,59 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
     }
 
     /**
-     * 输出应答
+     * 输入请求
+     */
+    protected Object inputRequest(final RequestMessage<DubboInvocation> message) {
+        if (message.getMsgType() == MsgType.BizReq.getType()) {
+            DubboInvocation invocation = message.getPayLoad();
+            String timeoutVal = invocation == null ? null : invocation.getAttachment(DUBBO_TIMEOUT_KEY);
+            int timeout = timeoutVal == null || timeoutVal.isEmpty() ? message.getTimeout() : Integer.parseInt(timeoutVal);
+            message.setTimeout(timeout);
+        }
+        return message;
+    }
+
+    /**
+     * 输入响应
+     *
+     * @param message
+     * @return
+     */
+    protected Object inputResponse(final ResponseMessage message) {
+        if (message.getHeader() instanceof DubboMessageHeader
+                && message.getPayLoad() instanceof ResponsePayload) {
+            DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
+            byte status = header.getStatus();
+            Throwable err = DubboStatus.getThrowable(status, null);
+            ((ResponsePayload) message.getPayLoad()).setException(err);
+        }
+        return message;
+    }
+
+    /**
+     * 输出请求
      *
      * @param message
      */
-    protected Object outputRequest(final RequestMessage message) {
+    protected Object outputRequest(final RequestMessage<Invocation> message) {
+        Invocation payLoad = message.getPayLoad();
+        if (payLoad != null) {
+            DubboInvocation dubboInvocation = new DubboInvocation();
+            dubboInvocation.setClassName(payLoad.getClassName());
+            dubboInvocation.setMethodName(payLoad.getMethodName());
+            dubboInvocation.setAlias(payLoad.getAlias());
+            dubboInvocation.setParameterTypesDesc(message.getOption().getDescription());
+            dubboInvocation.setArgs(payLoad.getArgs());
+            dubboInvocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
+            dubboInvocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
+            dubboInvocation.addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias());
+            dubboInvocation.addAttachment(DUBBO_SERVICE_VERSION_KEY, dubboInvocation.getVersion());
+            dubboInvocation.addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()));
+            String appName = GlobalContext.getString(KEY_APPNAME);
+            if (appName != null && !appName.isEmpty()) {
+                dubboInvocation.addAttachment(DUBBO_APPLICATION_KEY, String.valueOf(message.getTimeout()));
+            }
+        }
         return message;
     }
 

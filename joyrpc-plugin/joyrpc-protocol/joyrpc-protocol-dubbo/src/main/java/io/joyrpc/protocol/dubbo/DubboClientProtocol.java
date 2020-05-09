@@ -22,10 +22,26 @@ package io.joyrpc.protocol.dubbo;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.ClientProtocol;
+import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.message.MessageHeader;
+import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.protocol.message.ResponseMessage;
+import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.message.Message;
+
+import java.util.Arrays;
+import java.util.List;
+
+import static io.joyrpc.Plugin.COMPRESSION;
+import static io.joyrpc.Plugin.SERIALIZATION;
+import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.ALIAS_OPTION;
+import static io.joyrpc.protocol.message.negotiation.NegotiationResponse.NOT_SUPPORT;
+import static io.joyrpc.protocol.message.negotiation.NegotiationResponse.SUCCESS;
 
 /**
  * Dubbo客户端协议
@@ -34,9 +50,29 @@ import io.joyrpc.transport.message.Message;
 @ConditionalOnClass("org.apache.dubbo.rpc.Protocol")
 public class DubboClientProtocol extends DubboAbstractProtocol implements ClientProtocol {
 
+    /**
+     * 默认序列化参数
+     */
+    protected static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", "hessian");
+
+    /**
+     * 序列化列表，优先级排序
+     */
+    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian", "fst", "protobuf", "kryo");
+
     @Override
-    public Message negotiate(URL clusterUrl, Client client) {
-        return null;
+    public Message negotiate(final URL clusterUrl, final Client client) {
+        //拿到服务端的版本
+        NegotiationResponse response = new NegotiationResponse();
+        //设置可用的序列化插件
+        response.setSerializations(SERIALIZATION.available(SERIALIZATIONS));
+        //设置优先序列化方式
+        response.setSerialization(clusterUrl.getString(SERIALIZATION_OPTION));
+        //添加扩展属性信息
+        response.addAttribute(CONFIG_KEY_INTERFACE, clusterUrl.getPath());
+        response.addAttribute(ALIAS_OPTION.getName(), clusterUrl.getString(ALIAS_OPTION));
+        // 构造协商响应消息
+        return new ResponseMessage<>(new MessageHeader(MsgType.NegotiationResp.getType()), response);
     }
 
     @Override
@@ -46,6 +82,6 @@ public class DubboClientProtocol extends DubboAbstractProtocol implements Client
 
     @Override
     public Message heartbeat(URL clusterUrl, Client client) {
-        return null;
+        return new RequestMessage(new MessageHeader(MsgType.HbReq.getType()));
     }
 }

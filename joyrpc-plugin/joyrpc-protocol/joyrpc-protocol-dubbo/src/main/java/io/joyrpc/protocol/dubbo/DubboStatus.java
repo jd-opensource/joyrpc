@@ -62,8 +62,19 @@ public class DubboStatus {
             return SERVER_THREADPOOL_EXHAUSTED_ERROR;
         }
         return SERVICE_ERROR;
-
     }
+
+    public static Throwable getThrowable(byte status, String errMsg){
+        switch (status){
+            case OK:
+                return null;
+            case SERVER_TIMEOUT:
+                return null;
+            default:
+                return null;
+        }
+    }
+
 
 
 }

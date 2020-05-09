@@ -32,6 +32,11 @@ public class DubboInvocation extends Invocation {
 
     public static String DUBBO_VERSION_KEY = "dubbo";
     public static String DUBBO_GROUP_KEY = "group";
+    public static String DUBBO_PATH_KEY = "path";
+    public static String DUBBO_INTERFACE_KEY = "path";
+    public static String DUBBO_APPLICATION_KEY = "remote.application";
+    public static String DUBBO_SERVICE_VERSION_KEY = "version";
+    public static String DUBBO_TIMEOUT_KEY = "timeout";
 
     private String targetServiceUniqueName;
 

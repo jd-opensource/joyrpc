@@ -22,10 +22,12 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
 
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianOutput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectSerializer;
+import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 
 import java.io.IOException;
 
+import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
 import static io.joyrpc.protocol.dubbo.message.DubboResponsePayload.*;
 
 /**
@@ -41,7 +43,7 @@ public class DubboResponsePayloadSerializer implements AutowiredObjectSerializer
     @Override
     public void writeObject(Object obj, AbstractHessianOutput out) throws IOException {
         if (!(obj instanceof DubboResponsePayload)) {
-            throw new IOException("Write dubbo response payload data failed, because payload class is error,  payload class"
+            throw new IOException("Write dubbo response payload data failed, because payload class is error,  payload class is "
                     + obj.getClass());
         }
         DubboResponsePayload payload = (DubboResponsePayload) obj;
@@ -51,7 +53,7 @@ public class DubboResponsePayloadSerializer implements AutowiredObjectSerializer
             return;
         }
         //序列化payload
-        if (payload.getStatus() == OK) {
+        if (DubboStatus.getStatus(payload.getException()) == OK) {
             boolean attach = payload.isSupportResponseAttachment();
             Throwable th = payload.getException();
             if (th == null) {

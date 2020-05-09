@@ -26,6 +26,8 @@ import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 
 import java.io.IOException;
 
+import static io.joyrpc.protocol.dubbo.DubboAbstractProtocol.DEFALUT_DUBBO_VERSION;
+
 /**
  * DubboInvocation序列化
  */
@@ -38,6 +40,28 @@ public class DubboInvocationSerializer implements AutowiredObjectSerializer {
 
     @Override
     public void writeObject(Object obj, AbstractHessianOutput out) throws IOException {
-
+        if (!(obj instanceof DubboInvocation)) {
+            throw new IOException("Write dubbo invocation data failed, because invocation class is error,  invocation class is "
+                    + obj.getClass());
+        }
+        DubboInvocation invocation = (DubboInvocation) obj;
+        //写dubboversion
+        out.writeString(DEFALUT_DUBBO_VERSION);
+        //写接口名
+        out.writeString(invocation.getClassName());
+        //写方法名
+        out.writeString(invocation.getMethodName());
+        //写参数描述
+        out.writeString(invocation.getParameterTypesDesc());
+        //写参数
+        Object[] args = invocation.getArgs();
+        if (args != null) {
+            for (int i = 0; i < args.length; i++) {
+                //TODO callback处理
+                out.writeObject(args[i]);
+            }
+        }
+        //写attachments
+        out.writeObject(invocation.getAttachments());
     }
 }

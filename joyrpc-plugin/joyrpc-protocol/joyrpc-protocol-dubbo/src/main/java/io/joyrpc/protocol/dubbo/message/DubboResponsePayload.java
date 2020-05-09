@@ -1,11 +1,37 @@
 package io.joyrpc.protocol.dubbo.message;
 
+/*-
+ * #%L
+ * joyrpc
+ * %%
+ * Copyright (C) 2019 joyrpc.io
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import io.joyrpc.protocol.message.ResponsePayload;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import static io.joyrpc.protocol.dubbo.DubboVersion.LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT;
+import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
+
+/**
+ * Dubbo应答消息
+ */
 public class DubboResponsePayload extends ResponsePayload {
 
     public static final byte OK = 20;
@@ -26,10 +52,6 @@ public class DubboResponsePayload extends ResponsePayload {
     public static final byte RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS = 3;
     public static final byte RESPONSE_VALUE_WITH_ATTACHMENTS = 4;
     public static final byte RESPONSE_NULL_VALUE_WITH_ATTACHMENTS = 5;
-
-    private static final int LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT = 2000200; // 2.0.2
-
-    private static final Map<String, Integer> VERSION2INT = new HashMap<String, Integer>();
 
     /**
      * 异常转换消息状态
@@ -117,30 +139,4 @@ public class DubboResponsePayload extends ResponsePayload {
         return iVersion >= LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT;
     }
 
-    private static int getIntVersion(String version) {
-        Integer v = VERSION2INT.get(version);
-        if (v == null) {
-            try {
-                v = parseInt(version);
-                // e.g., version number 2.6.3 will convert to 2060300
-                if (version.split("\\.").length == 3) {
-                    v = v * 100;
-                }
-            } catch (Exception e) {
-                v = LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT;
-            }
-            VERSION2INT.put(version, v);
-        }
-        return v;
-    }
-
-    private static int parseInt(String version) {
-        int v = 0;
-        String[] vArr = version.split("\\.");
-        int len = vArr.length;
-        for (int i = 0; i < len; i++) {
-            v += Integer.parseInt(vArr[i]) * Math.pow(10, (len - i - 1) * 2);
-        }
-        return v;
-    }
 }

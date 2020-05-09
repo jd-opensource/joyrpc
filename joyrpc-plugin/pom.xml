@@ -26,7 +26,6 @@
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-core</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 </project>

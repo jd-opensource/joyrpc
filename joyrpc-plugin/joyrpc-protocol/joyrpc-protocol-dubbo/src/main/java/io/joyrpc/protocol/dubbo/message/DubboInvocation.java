@@ -38,10 +38,6 @@ public class DubboInvocation extends Invocation {
     public static String DUBBO_SERVICE_VERSION_KEY = "version";
     public static String DUBBO_TIMEOUT_KEY = "timeout";
 
-    private String targetServiceUniqueName;
-
-    private String serviceName;
-
     private String parameterTypesDesc;
 
     private String[] compatibleParamSignatures;
@@ -50,23 +46,16 @@ public class DubboInvocation extends Invocation {
 
     private transient String version = "0.0.0";
 
-    public String getTargetServiceUniqueName() {
-        if (targetServiceUniqueName == null && className != null) {
-            targetServiceUniqueName = alias == null ? className + "/" + alias + ":" + version : className + ":" + version;
-        }
-        return targetServiceUniqueName;
+    /**
+     * 心跳标识
+     */
+    protected transient boolean heartbeat = false;
+
+    public DubboInvocation() {
     }
 
-    public void setTargetServiceUniqueName(String targetServiceUniqueName) {
-        this.targetServiceUniqueName = targetServiceUniqueName;
-    }
-
-    public String getServiceName() {
-        return serviceName;
-    }
-
-    public void setServiceName(String serviceName) {
-        this.serviceName = serviceName;
+    public DubboInvocation(boolean heartbeat) {
+        this.heartbeat = heartbeat;
     }
 
     public String getParameterTypesDesc() {
@@ -105,4 +94,11 @@ public class DubboInvocation extends Invocation {
         this.version = version;
     }
 
+    public boolean isHeartbeat() {
+        return heartbeat;
+    }
+
+    public void setHeartbeat(boolean heartbeat) {
+        this.heartbeat = heartbeat;
+    }
 }

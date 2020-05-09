@@ -26,6 +26,7 @@ import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
@@ -36,12 +37,9 @@ import io.joyrpc.transport.message.Message;
 import java.util.Arrays;
 import java.util.List;
 
-import static io.joyrpc.Plugin.COMPRESSION;
 import static io.joyrpc.Plugin.SERIALIZATION;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.Constants.ALIAS_OPTION;
-import static io.joyrpc.protocol.message.negotiation.NegotiationResponse.NOT_SUPPORT;
-import static io.joyrpc.protocol.message.negotiation.NegotiationResponse.SUCCESS;
 
 /**
  * Dubbo客户端协议
@@ -82,6 +80,6 @@ public class DubboClientProtocol extends DubboAbstractProtocol implements Client
 
     @Override
     public Message heartbeat(URL clusterUrl, Client client) {
-        return new RequestMessage(new MessageHeader(MsgType.HbReq.getType()));
+        return new RequestMessage(new MessageHeader(MsgType.HbReq.getType()), new DubboInvocation(true));
     }
 }

@@ -159,7 +159,7 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
      */
     protected Object outputRequest(final RequestMessage<Invocation> message) {
         Invocation payLoad = message.getPayLoad();
-        if (payLoad != null) {
+        if (payLoad != null && message.getMsgType() != MsgType.HbReq.getType()) {
             DubboInvocation dubboInvocation = new DubboInvocation();
             dubboInvocation.setClassName(payLoad.getClassName());
             dubboInvocation.setMethodName(payLoad.getMethodName());

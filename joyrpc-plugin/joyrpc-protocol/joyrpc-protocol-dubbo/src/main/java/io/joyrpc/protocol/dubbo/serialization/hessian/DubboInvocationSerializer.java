@@ -45,6 +45,11 @@ public class DubboInvocationSerializer implements AutowiredObjectSerializer {
                     + obj.getClass());
         }
         DubboInvocation invocation = (DubboInvocation) obj;
+        //心跳响应，直接写null
+        if (invocation.isHeartbeat()) {
+            out.writeNull();
+            return;
+        }
         //写dubboversion
         out.writeString(DEFALUT_DUBBO_VERSION);
         //写接口名

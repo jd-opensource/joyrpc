@@ -23,12 +23,8 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianInput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
 import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
-import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 
 import java.io.IOException;
-import java.util.Map;
-
-import static io.joyrpc.protocol.dubbo.message.DubboResponsePayload.*;
 
 /**
  * DubboResponseErrorPayload反序列化
@@ -47,8 +43,7 @@ public class DubboResponseErrorPayloadDeserializer implements AutowiredObjectDes
 
     @Override
     public Object readObject(AbstractHessianInput in) throws IOException {
-        String errorMsg = in.readString();
-        return new DubboResponseErrorPayload(errorMsg);
+        return new DubboResponseErrorPayload(in.readString());
     }
 
     @Override

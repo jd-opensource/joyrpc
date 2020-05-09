@@ -27,12 +27,13 @@ import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
-import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
-import io.joyrpc.protocol.message.*;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.protocol.message.ResponseMessage;
+import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
-import io.joyrpc.util.ClassUtils;
 
 import java.util.function.Function;
 
@@ -117,24 +118,6 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
             public Function<Byte, Byte> serialization() {
                 return s -> SERIALIZATIONS_TO_JOY[s];
             }
-
-            @Override
-            public Function<Object, Object> message() {
-                return obj -> {
-                    Message message = (Message) obj;
-                    MsgType type = MsgType.valueOf(message.getMsgType());
-                    switch (type) {
-                        case BizReq:
-                        case CallbackReq:
-                            return inputRequest((RequestMessage<DubboInvocation>) message);
-                        case BizResp:
-                        case HbResp:
-                            return inputResponse((ResponseMessage) message);
-                        default:
-                            return message;
-                    }
-                };
-            }
         };
     }
 
@@ -167,37 +150,6 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
                 };
             }
         };
-    }
-
-    /**
-     * 输入请求
-     */
-    protected Object inputRequest(final RequestMessage<DubboInvocation> message) {
-        if (message.getMsgType() == MsgType.BizReq.getType()) {
-            DubboInvocation invocation = message.getPayLoad();
-            String timeoutVal = invocation == null ? null : invocation.getAttachment(DUBBO_TIMEOUT_KEY);
-            int timeout = timeoutVal == null || timeoutVal.isEmpty() ? message.getTimeout() : Integer.parseInt(timeoutVal);
-            message.setTimeout(timeout);
-        }
-        return message;
-    }
-
-    /**
-     * 输入响应
-     *
-     * @param message
-     * @return
-     */
-    protected Object inputResponse(final ResponseMessage message) {
-        if (message.getHeader() instanceof DubboMessageHeader
-                && message.getPayLoad() instanceof DubboResponseErrorPayload) {
-            DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
-            DubboResponseErrorPayload payload = (DubboResponseErrorPayload) message.getPayLoad();
-            byte status = header.getStatus();
-            Throwable err = DubboStatus.getThrowable(status, payload.getExceptionMessage());
-            payload.setException(err);
-        }
-        return message;
     }
 
     /**

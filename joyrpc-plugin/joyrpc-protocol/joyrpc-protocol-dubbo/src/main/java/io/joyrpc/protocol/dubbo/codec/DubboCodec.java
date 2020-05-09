@@ -26,17 +26,20 @@ import io.joyrpc.exception.CodecException;
 import io.joyrpc.protocol.AbstractCodec;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
+import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 import io.joyrpc.protocol.message.MessageHeader;
+import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 
 import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
+import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_TIMEOUT_KEY;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
 
 /**
@@ -153,16 +156,26 @@ public class DubboCodec extends AbstractCodec {
         }
     }
 
-
     @Override
-    protected void adjustDecode(Message message, Serialization serialization) {
+    protected void adjustDecode(final Message message, final Serialization serialization) {
+        //请求消息，将dubboVersion设置到header中，序列化response时需要
+        DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
+        Object payLoad = message.getPayLoad();
         if (message.isRequest()) {
-            //请求消息，将dubboVersion设置到header中，序列化response时需要
-            Header header = message.getHeader();
-            Object payLoad = message.getPayLoad();
-            if (header instanceof DubboMessageHeader && payLoad instanceof DubboInvocation) {
-                ((DubboMessageHeader) header).setDubboVersion(((DubboInvocation) payLoad).getAttachment(DUBBO_VERSION_KEY));
+            if (payLoad instanceof DubboInvocation) {
+                DubboInvocation invocation = (DubboInvocation) payLoad;
+                header.setDubboVersion(invocation.getAttachment(DUBBO_VERSION_KEY));
+                String timeout = invocation.getAttachment(DUBBO_TIMEOUT_KEY);
+                if (timeout != null && !timeout.isEmpty()) {
+                    try {
+                        ((RequestMessage) message).setTimeout(Integer.parseInt(timeout));
+                    } catch (NumberFormatException e) {
+                    }
+                }
             }
+        } else if (payLoad instanceof DubboResponseErrorPayload) {
+            DubboResponseErrorPayload errorPayload = (DubboResponseErrorPayload) message.getPayLoad();
+            errorPayload.setException(DubboStatus.getThrowable(header.getStatus(), errorPayload.getExceptionMessage()));
         }
     }
 

@@ -22,7 +22,6 @@ package io.joyrpc.protocol.dubbo;
 
 import io.joyrpc.exception.*;
 import io.joyrpc.protocol.MsgType;
-import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Header;
 
 import java.util.concurrent.TimeoutException;
@@ -65,6 +64,13 @@ public class DubboStatus {
         return SERVICE_ERROR;
     }
 
+    /**
+     * 获取异常
+     *
+     * @param status
+     * @param errMsg
+     * @return
+     */
     public static Throwable getThrowable(byte status, String errMsg) {
         switch (status) {
             case OK:

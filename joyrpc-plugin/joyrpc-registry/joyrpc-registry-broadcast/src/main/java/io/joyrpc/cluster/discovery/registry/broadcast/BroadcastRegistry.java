@@ -39,6 +39,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.util.Futures;
+import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -165,7 +166,8 @@ public class BroadcastRegistry extends AbstractRegistry {
         this.providersRootKeyFunc = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
         this.serviceRootKeyFunc = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION);
         this.serviceNodeKeyFunc = u -> u.getProtocol() + "://" + u.getHost() + ":" + u.getPort();
-        this.configRootKeyFunc = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + "/" + GlobalContext.getString(KEY_APPNAME);
+        String appName = GlobalContext.getString(KEY_APPNAME);
+        this.configRootKeyFunc = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
     }
 
     @Override

@@ -174,7 +174,7 @@ public class DubboCodec extends AbstractCodec {
                 }
             }
         } else if (payLoad instanceof DubboResponseErrorPayload) {
-            DubboResponseErrorPayload errorPayload = (DubboResponseErrorPayload) message.getPayLoad();
+            DubboResponseErrorPayload errorPayload = (DubboResponseErrorPayload) payLoad;
             errorPayload.setException(DubboStatus.getThrowable(header.getStatus(), errorPayload.getExceptionMessage()));
         }
     }

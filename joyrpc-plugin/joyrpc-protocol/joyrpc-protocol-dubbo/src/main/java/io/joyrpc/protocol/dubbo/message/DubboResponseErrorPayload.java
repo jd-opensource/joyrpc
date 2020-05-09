@@ -21,10 +21,12 @@ package io.joyrpc.protocol.dubbo.message;
  */
 
 /**
- * Dubbo服务应答消息
+ * Dubbo异常应答消息
  */
 public class DubboResponseErrorPayload extends DubboResponsePayload {
-
+    /**
+     * 异常信息
+     */
     protected String exceptionMessage;
 
     public DubboResponseErrorPayload() {

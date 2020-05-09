@@ -25,6 +25,8 @@ import io.joyrpc.protocol.message.Invocation;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.joyrpc.constants.Constants.GENERIC_OPTION;
+
 /**
  * Dubbo调用
  */
@@ -37,6 +39,7 @@ public class DubboInvocation extends Invocation {
     public static String DUBBO_APPLICATION_KEY = "remote.application";
     public static String DUBBO_SERVICE_VERSION_KEY = "version";
     public static String DUBBO_TIMEOUT_KEY = "timeout";
+    public static String DUBBO_GENERIC_KEY = "generic";
 
     private String parameterTypesDesc;
 
@@ -90,5 +93,18 @@ public class DubboInvocation extends Invocation {
 
     public void setHeartbeat(boolean heartbeat) {
         this.heartbeat = heartbeat;
+    }
+
+    @Override
+    public boolean isGeneric() {
+        if (generic == null) {
+            Object attr = attachments == null ? null : attachments.get(DUBBO_GENERIC_KEY);
+            if (attr instanceof String) {
+                generic = Boolean.parseBoolean((String) attr);
+            } else {
+                generic = attr == null ? Boolean.FALSE : Boolean.TRUE.equals(attr);
+            }
+        }
+        return generic;
     }
 }

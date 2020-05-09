@@ -39,8 +39,7 @@ import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 
 import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
-import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_TIMEOUT_KEY;
-import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
+import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 
 /**
  * Dubbo编解码

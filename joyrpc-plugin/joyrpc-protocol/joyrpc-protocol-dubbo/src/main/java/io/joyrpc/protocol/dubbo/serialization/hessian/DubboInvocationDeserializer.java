@@ -22,8 +22,10 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
 
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianInput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
+import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.util.ClassUtils;
+import org.apache.dubbo.common.utils.ReflectUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -58,11 +60,16 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
 
         Object[] args;
         Class<?>[] pts;
-        Method method;
+        Method method = null;
 
         try {
-            method = ClassUtils.getPublicMethod(className, methodName);
-            pts = method.getParameterTypes();
+            if (!methodName.equals("$invoke") && !methodName.equals("$invokeAsync")) {
+                method = ClassUtils.getPublicMethod(className, methodName);
+                pts = method.getParameterTypes();
+            } else {
+                methodName = null;
+                pts = ReflectUtils.desc2classArray(desc);
+            }
             if (pts.length == 0) {
                 args = new Object[0];
             } else {
@@ -84,14 +91,24 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
         //创建DubboInvocation对象
         DubboInvocation invocation = new DubboInvocation();
         invocation.setClassName(className);
-        invocation.setMethodName(methodName);
         invocation.setAlias(alias);
         invocation.setAttachments(attachments);
-        invocation.setMethod(method);
         invocation.setArgs(args);
         invocation.setVersion(version);
         invocation.setArgsType(pts);
         invocation.setParameterTypesDesc(desc);
+        if(invocation.isGeneric()){
+            methodName = (String) args[0];
+            try {
+                method = ClassUtils.getPublicMethod(className, methodName);
+            } catch (Exception e) {
+                throw new IOException("Read dubbo invocation data failed.", e);
+            }
+        }
+
+        invocation.setMethodName(methodName);
+        invocation.setMethod(method);
+
         return invocation;
     }
 

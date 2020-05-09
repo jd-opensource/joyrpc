@@ -37,47 +37,8 @@ public class DubboResponseErrorPayloadDeserializer implements AutowiredObjectDes
     }
 
     @Override
-    public boolean isReadResolve() {
-        return false;
-    }
-
-    @Override
     public Object readObject(AbstractHessianInput in) throws IOException {
         return new DubboResponseErrorPayload(in.readString());
     }
 
-    @Override
-    public Object readList(AbstractHessianInput in, int length) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object readLengthList(AbstractHessianInput in, int length) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object readMap(AbstractHessianInput in) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object[] createFields(int len) {
-        return new Object[0];
-    }
-
-    @Override
-    public Object createField(String name) {
-        return null;
-    }
-
-    @Override
-    public Object readObject(AbstractHessianInput in, Object[] fields) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object readObject(AbstractHessianInput in, String[] fieldNames) throws IOException {
-        return null;
-    }
 }

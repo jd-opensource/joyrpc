@@ -25,6 +25,8 @@ package io.joyrpc.com.caucho.hessian.io;
  */
 public interface AutowiredObjectSerializer extends Serializer {
 
+
+
     /**
      * 注册的类型
      *

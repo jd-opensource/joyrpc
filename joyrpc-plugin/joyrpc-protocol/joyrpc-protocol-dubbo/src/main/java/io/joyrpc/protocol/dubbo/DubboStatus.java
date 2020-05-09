@@ -50,7 +50,7 @@ public class DubboStatus {
      * @return 状态
      */
     public static byte getStatus(final Throwable err) {
-        if (err == null) {
+        if (err == null || !(err instanceof LafException)) {
             return OK;
         } else if (err instanceof ProtocolException) {
             Header header = ((ProtocolException) err).getHeader();

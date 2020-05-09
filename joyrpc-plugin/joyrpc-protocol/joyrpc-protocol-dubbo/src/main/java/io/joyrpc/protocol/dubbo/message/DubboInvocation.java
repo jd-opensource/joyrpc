@@ -40,8 +40,6 @@ public class DubboInvocation extends Invocation {
 
     private String parameterTypesDesc;
 
-    private String[] compatibleParamSignatures;
-
     private Map<Object, Object> attributes = new HashMap<>();
 
     private transient String version = "0.0.0";
@@ -64,14 +62,6 @@ public class DubboInvocation extends Invocation {
 
     public void setParameterTypesDesc(String parameterTypesDesc) {
         this.parameterTypesDesc = parameterTypesDesc;
-    }
-
-    public String[] getCompatibleParamSignatures() {
-        return compatibleParamSignatures;
-    }
-
-    public void setCompatibleParamSignatures(String[] compatibleParamSignatures) {
-        this.compatibleParamSignatures = compatibleParamSignatures;
     }
 
     public void setAttachments(Map<String, Object> attachments) {

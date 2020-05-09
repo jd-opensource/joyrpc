@@ -27,6 +27,7 @@ import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
+import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.codec.Codec;
@@ -189,11 +190,12 @@ public abstract class DubboAbstractProtocol extends AbstractProtocol {
      */
     protected Object inputResponse(final ResponseMessage message) {
         if (message.getHeader() instanceof DubboMessageHeader
-                && message.getPayLoad() instanceof ResponsePayload) {
+                && message.getPayLoad() instanceof DubboResponseErrorPayload) {
             DubboMessageHeader header = (DubboMessageHeader) message.getHeader();
+            DubboResponseErrorPayload payload = (DubboResponseErrorPayload) message.getPayLoad();
             byte status = header.getStatus();
-            Throwable err = DubboStatus.getThrowable(status, null);
-            ((ResponsePayload) message.getPayLoad()).setException(err);
+            Throwable err = DubboStatus.getThrowable(status, payload.getExceptionMessage());
+            payload.setException(err);
         }
         return message;
     }

@@ -450,7 +450,7 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         Compression compression = COMPRESSION_SELECTOR.select(header.getCompression());
         InputStream inputStream = buffer.inputStream();
         inputStream = compression == null ? inputStream : compression.decompress(inputStream);
-        Class payloadClass = getPayloadClass(msgType);
+        Class payloadClass = getPayloadClass(msgHeader);
 
         Object payload = payloadClass == null ? null : deserialize(serialization, inputStream, payloadClass, msgHeader, context);
         if (msgType.isRequest()) {
@@ -487,6 +487,16 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
      */
     protected void adjustDecode(final Message message, final Serialization serialization) {
 
+    }
+
+    /**
+     * 获取消息体的类型
+     *
+     * @param header 消息头
+     * @return 包体类
+     */
+    protected Class getPayloadClass(final MessageHeader header) {
+        return getPayloadClass(MsgType.valueOf(header.getMsgType()));
     }
 
     /**

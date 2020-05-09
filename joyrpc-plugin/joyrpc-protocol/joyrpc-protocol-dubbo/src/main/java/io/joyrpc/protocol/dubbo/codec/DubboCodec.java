@@ -26,14 +26,18 @@ import io.joyrpc.exception.CodecException;
 import io.joyrpc.protocol.AbstractCodec;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
+import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
+import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
+import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 
+import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
 
 /**
@@ -138,16 +142,21 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected Class getPayloadClass(final MsgType type) {
+    protected Class getPayloadClass(final MessageHeader header) {
+        MsgType type = MsgType.valueOf(header.getMsgType());
         switch (type) {
             case BizReq:
                 return DubboInvocation.class;
             case BizResp:
+                if (header instanceof DubboMessageHeader && ((DubboMessageHeader) header).getStatus() != OK) {
+                    return DubboResponseErrorPayload.class;
+                }
                 return DubboResponsePayload.class;
             default:
                 return type.getPayloadClz();
         }
     }
+
 
     @Override
     protected void adjustDecode(Message message, Serialization serialization) {

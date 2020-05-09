@@ -20,11 +20,12 @@ package io.joyrpc.protocol.dubbo;
  * #L%
  */
 
-import io.joyrpc.exception.OverloadException;
-import io.joyrpc.exception.ProtocolException;
-import io.joyrpc.exception.TransportException;
+import io.joyrpc.exception.*;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Header;
+
+import java.util.concurrent.TimeoutException;
 
 /**
  * 状态
@@ -64,17 +65,29 @@ public class DubboStatus {
         return SERVICE_ERROR;
     }
 
-    public static Throwable getThrowable(byte status, String errMsg){
-        switch (status){
+    public static Throwable getThrowable(byte status, String errMsg) {
+        switch (status) {
             case OK:
                 return null;
             case SERVER_TIMEOUT:
-                return null;
+            case CLIENT_TIMEOUT:
+                return new TimeoutException(errMsg);
+            case BAD_REQUEST:
+            case BAD_RESPONSE:
+                return new CodecException(errMsg);
+            case SERVER_THREADPOOL_EXHAUSTED_ERROR:
+                return new OverloadException(errMsg);
+            case CHANNEL_INACTIVE:
+                return new ConnectionException(errMsg);
+            case SERVICE_NOT_FOUND:
+            case SERVICE_ERROR:
+            case SERVER_ERROR:
+            case CLIENT_ERROR:
+                return new LafException(errMsg);
             default:
                 return null;
         }
     }
-
 
 
 }

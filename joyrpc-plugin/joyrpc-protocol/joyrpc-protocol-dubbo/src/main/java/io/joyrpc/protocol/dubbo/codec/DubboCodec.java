@@ -29,14 +29,12 @@ import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
-import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
-import static io.joyrpc.protocol.dubbo.message.DubboMessageHeader.HEAD_STATUS;
 
 /**
  * Dubbo编解码
@@ -60,7 +58,7 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected int encodeHeader(ChannelBuffer buffer, Header header) {
+    protected int encodeHeader(final ChannelBuffer buffer, final Header header) {
         int start = buffer.writerIndex();
         byte flag;
         MsgType msgType = MsgType.valueOf(header.getMsgType());
@@ -94,11 +92,14 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected void encodePayload(EncodeContext context, ChannelBuffer buffer, Message message, int compress) throws Exception {
+    protected void encodePayload(final EncodeContext context, final ChannelBuffer buffer, final Message message, final int compress) throws Exception {
         //编码response消息，需要设置header的status
-        if (!message.isRequest() && message.getPayLoad() instanceof DubboResponsePayload) {
-            byte status = ((DubboResponsePayload) message.getPayLoad()).getStatus();
-            buffer.setByte(buffer.writerIndex() - 13, status);
+        if (!message.isRequest()) {
+            Object payLoad = message.getPayLoad();
+            if (payLoad instanceof DubboResponsePayload) {
+                byte status = ((DubboResponsePayload) payLoad).getStatus();
+                buffer.setByte(buffer.writerIndex() - 13, status);
+            }
         }
         super.encodePayload(context, buffer, message, compress);
     }

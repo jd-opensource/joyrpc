@@ -54,7 +54,6 @@ public class DubboMessageHeader extends MessageHeader {
         this.status = status;
     }
 
-
     public boolean isTwoWay() {
         return twoWay;
     }
@@ -72,18 +71,11 @@ public class DubboMessageHeader extends MessageHeader {
     }
 
     @Override
-    public MessageHeader response(byte msgType, byte compression, Map<Byte, Object> attributes) {
-        DubboMessageHeader result = new DubboMessageHeader();
-        result.msgId = msgId;
+    public MessageHeader response(final byte msgType, final byte compression, final Map<Byte, Object> attributes) {
+        DubboMessageHeader result = clone();
         result.msgType = msgType;
-        result.serialization = serialization;
-        result.protocolType = protocolType;
         result.compression = compression;
-        result.sessionId = sessionId;
         result.attributes = attributes;
-        result.dubboVersion = dubboVersion;
-        result.twoWay = twoWay;
-        result.status = status;
         return result;
     }
 

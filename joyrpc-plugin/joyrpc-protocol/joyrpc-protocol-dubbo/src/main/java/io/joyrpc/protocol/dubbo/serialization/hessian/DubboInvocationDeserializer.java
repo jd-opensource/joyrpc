@@ -22,7 +22,6 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
 
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianInput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
-import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.util.ClassUtils;
 import org.apache.dubbo.common.utils.ReflectUtils;
@@ -42,11 +41,6 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
     @Override
     public Class<?> getType() {
         return DubboInvocation.class;
-    }
-
-    @Override
-    public boolean isReadResolve() {
-        return false;
     }
 
     @Override
@@ -118,40 +112,5 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
         invocation.setMethod(method);
 
         return invocation;
-    }
-
-    @Override
-    public Object readList(AbstractHessianInput in, int length) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object readLengthList(AbstractHessianInput in, int length) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object readMap(AbstractHessianInput in) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object[] createFields(int len) {
-        return new Object[0];
-    }
-
-    @Override
-    public Object createField(String name) {
-        return null;
-    }
-
-    @Override
-    public Object readObject(AbstractHessianInput in, Object[] fields) throws IOException {
-        return null;
-    }
-
-    @Override
-    public Object readObject(AbstractHessianInput in, String[] fieldNames) throws IOException {
-        return null;
     }
 }

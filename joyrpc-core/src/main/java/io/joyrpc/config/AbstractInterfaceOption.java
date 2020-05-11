@@ -436,7 +436,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final String token,
                                  final boolean async,
                                  final CallbackMethod callback) {
-            this.method = grpcMethod.getMethod();
+            this.method = grpcMethod == null ? null : grpcMethod.getMethod();
             Class<?>[] types = method == null ? null : method.getParameterTypes();
             //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
             this.argType = method == null ? null : new ArgType(types, getCanonicalNames(types), grpcMethod.getSupplier());

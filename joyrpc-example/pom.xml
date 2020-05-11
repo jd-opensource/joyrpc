@@ -17,6 +17,7 @@
         <module>joyrpc-example-api</module>
         <module>joyrpc-example-interface</module>
         <module>joyrpc-example-boot</module>
+        <module>joyrpc-example-dubbo</module>
     </modules>
 
     <build>

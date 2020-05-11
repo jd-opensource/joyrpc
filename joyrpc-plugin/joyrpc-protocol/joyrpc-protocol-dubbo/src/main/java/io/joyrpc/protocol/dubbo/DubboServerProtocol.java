@@ -31,7 +31,7 @@ import static io.joyrpc.protocol.Protocol.DUBBO_ORDER;
  */
 @Extension(value = "dubbo", order = DUBBO_ORDER)
 @ConditionalOnClass("org.apache.dubbo.rpc.Protocol")
-public class DubboServerProtocol extends DubboAbstractProtocol implements ServerProtocol {
+public class DubboServerProtocol extends AbstractDubboProtocol implements ServerProtocol {
 
 
 }

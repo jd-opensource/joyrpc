@@ -20,13 +20,13 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.hessian2.Hessian2Writer;
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianOutput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectSerializer;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
+import io.joyrpc.protocol.dubbo.serialization.DubboInvocationWriter;
 
 import java.io.IOException;
-
-import static io.joyrpc.protocol.dubbo.DubboAbstractProtocol.DEFALUT_DUBBO_VERSION;
 
 /**
  * DubboInvocation序列化
@@ -39,36 +39,7 @@ public class DubboInvocationSerializer implements AutowiredObjectSerializer {
     }
 
     @Override
-    public void writeObject(Object obj, AbstractHessianOutput out) throws IOException {
-        if (!(obj instanceof DubboInvocation)) {
-            throw new IOException("Write dubbo invocation data failed, because invocation class is error,  invocation class is "
-                    + obj.getClass());
-        }
-        DubboInvocation invocation = (DubboInvocation) obj;
-        //心跳响应，直接写null
-        if (invocation.isHeartbeat()) {
-            out.writeNull();
-            return;
-        }
-        //写dubboversion
-        out.writeString(DEFALUT_DUBBO_VERSION);
-        //写接口名
-        out.writeString(invocation.getClassName());
-        //写服务版本
-        out.writeString(invocation.getVersion());
-        //写方法名
-        out.writeString(invocation.getMethodName());
-        //写参数描述
-        out.writeString(invocation.getParameterTypesDesc());
-        //写参数
-        Object[] args = invocation.getArgs();
-        if (args != null) {
-            for (int i = 0; i < args.length; i++) {
-                //TODO callback处理
-                out.writeObject(args[i]);
-            }
-        }
-        //写attachments
-        out.writeObject(invocation.getAttachments());
+    public void writeObject(final Object obj, final AbstractHessianOutput out) throws IOException {
+        new DubboInvocationWriter(new Hessian2Writer(out)).write((DubboInvocation) obj);
     }
 }

@@ -20,18 +20,14 @@ package io.joyrpc.protocol.dubbo.serialization.hessian;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.hessian2.Hessian2Reader;
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianInput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
+import io.joyrpc.com.caucho.hessian.io.Hessian2Input;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
-import io.joyrpc.util.ClassUtils;
-import org.apache.dubbo.common.utils.ReflectUtils;
+import io.joyrpc.protocol.dubbo.serialization.DubboInvocationReader;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.Map;
-
-import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_GROUP_KEY;
-import static io.joyrpc.protocol.dubbo.message.DubboInvocation.DUBBO_VERSION_KEY;
 
 /**
  * DubboInvocation反序列化
@@ -45,72 +41,6 @@ public class DubboInvocationDeserializer implements AutowiredObjectDeserializer 
 
     @Override
     public Object readObject(AbstractHessianInput in) throws IOException {
-
-        String dubboVersion = in.readString();
-        String className = in.readString();
-        String version = in.readString();
-        String methodName = in.readString();
-        String desc = in.readString();
-
-        Object[] args;
-        Class<?>[] pts;
-        Method method = null;
-
-        try {
-            if (!methodName.equals("$invoke") && !methodName.equals("$invokeAsync")) {
-                method = ClassUtils.getPublicMethod(className, methodName);
-                pts = method.getParameterTypes();
-            } else {
-                methodName = null;
-                pts = ReflectUtils.desc2classArray(desc);
-            }
-            if (pts.length == 0) {
-                args = new Object[0];
-            } else {
-                args = new Object[pts.length];
-                for (int i = 0; i < args.length; i++) {
-                    args[i] = in.readObject(pts[i]);
-                }
-            }
-        } catch (Exception e) {
-            throw new IOException("Read dubbo invocation data failed.", e);
-        }
-
-        //获取传参信息
-        Map<String, Object> attachments = (Map<String, Object>) in.readObject(Map.class);
-        //设置 dubboVersion
-        attachments.put(DUBBO_VERSION_KEY, dubboVersion);
-        //获取别名
-        String alias = (String) attachments.get(DUBBO_GROUP_KEY);
-        //创建DubboInvocation对象
-        DubboInvocation invocation = new DubboInvocation();
-        invocation.setClassName(className);
-        invocation.setAlias(alias);
-        invocation.setAttachments(attachments);
-        invocation.setArgs(args);
-        invocation.setVersion(version);
-        invocation.setParameterTypesDesc(desc);
-        if (invocation.isGeneric()) {
-            methodName = (String) args[0];
-            try {
-                method = ClassUtils.getPublicMethod(className, methodName);
-            } catch (Exception e) {
-                throw new IOException("Read dubbo invocation data failed.", e);
-            }
-            String[] ptNames = new String[pts.length];
-            if (pts.length > 0) {
-                for (int i = 0; i < ptNames.length; i++) {
-                    ptNames[i] = pts[i].getName();
-                }
-            }
-            invocation.setArgsType(ptNames);
-        } else {
-            invocation.setArgsType(pts);
-        }
-
-        invocation.setMethodName(methodName);
-        invocation.setMethod(method);
-
-        return invocation;
+        return new DubboInvocationReader(new Hessian2Reader((Hessian2Input) in)).read();
     }
 }

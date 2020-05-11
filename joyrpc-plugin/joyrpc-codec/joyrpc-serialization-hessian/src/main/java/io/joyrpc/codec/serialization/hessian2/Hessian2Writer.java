@@ -45,6 +45,11 @@ public class Hessian2Writer implements ObjectWriter {
     }
 
     @Override
+    public void writeNull() throws IOException {
+        hessian2Output.writeNull();
+    }
+
+    @Override
     public void write(final byte[] b, final int off, final int len) throws IOException {
         hessian2Output.writeBytes(b, off, len);
     }

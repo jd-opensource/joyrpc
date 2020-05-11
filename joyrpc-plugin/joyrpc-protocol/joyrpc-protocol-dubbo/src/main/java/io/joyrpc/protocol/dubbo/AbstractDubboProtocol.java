@@ -44,7 +44,7 @@ import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 /**
  * Dubbo协议
  */
-public abstract class DubboAbstractProtocol extends AbstractProtocol {
+public abstract class AbstractDubboProtocol extends AbstractProtocol {
 
     /**
      * Dubbo的MagicCode

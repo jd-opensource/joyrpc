@@ -23,7 +23,6 @@ package io.joyrpc.protocol.dubbo.serialization;
 import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.util.ClassUtils;
-import org.apache.dubbo.common.utils.ReflectUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -66,17 +65,24 @@ public class DubboInvocationReader {
             if (!methodName.equals("$invoke") && !methodName.equals("$invokeAsync")) {
                 method = ClassUtils.getPublicMethod(className, methodName);
                 pts = method.getParameterTypes();
-            } else {
-                methodName = null;
-                pts = ReflectUtils.desc2classArray(desc);
-            }
-            if (pts.length == 0) {
-                args = new Object[0];
-            } else {
                 args = new Object[pts.length];
-                for (int i = 0; i < args.length; i++) {
-                    args[i] = reader.readObject(pts[i]);
+                if (args.length > 0) {
+                    for (int i = 0; i < args.length; i++) {
+                        args[i] = reader.readObject(pts[i]);
+                    }
                 }
+            } else {
+                args = new Object[3];
+                args[0] = reader.readString();
+                args[1] = reader.readObject(String[].class);
+                args[2] = reader.readObject(Object[].class);
+                methodName = (String) args[0];
+                try {
+                    method = ClassUtils.getPublicMethod(className, methodName);
+                } catch (Exception e) {
+                    throw new IOException("Read dubbo invocation data failed.", e);
+                }
+                pts = method.getParameterTypes();
             }
         } catch (Exception e) {
             throw new IOException("Read dubbo invocation data failed.", e);
@@ -91,30 +97,13 @@ public class DubboInvocationReader {
         //创建DubboInvocation对象
         invocation.setClassName(className);
         invocation.setAlias(alias);
-        invocation.setAttachments(attachments);
+        invocation.setMethodName(methodName);
+        invocation.setMethod(method);
+        invocation.setArgsType(pts);
         invocation.setArgs(args);
         invocation.setVersion(version);
         invocation.setParameterTypesDesc(desc);
-        if (invocation.isGeneric()) {
-            methodName = (String) args[0];
-            try {
-                method = ClassUtils.getPublicMethod(className, methodName);
-            } catch (Exception e) {
-                throw new IOException("Read dubbo invocation data failed.", e);
-            }
-            String[] ptNames = new String[pts.length];
-            if (pts.length > 0) {
-                for (int i = 0; i < ptNames.length; i++) {
-                    ptNames[i] = pts[i].getName();
-                }
-            }
-            invocation.setArgsType(ptNames);
-        } else {
-            invocation.setArgsType(pts);
-        }
-
-        invocation.setMethodName(methodName);
-        invocation.setMethod(method);
+        invocation.setAttachments(attachments);
     }
 
     /**

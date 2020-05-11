@@ -165,26 +165,26 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
     protected Object outputRequest(final RequestMessage<Invocation> message) {
         Invocation payLoad = message.getPayLoad();
         if (payLoad != null && message.getMsgType() != MsgType.HbReq.getType()) {
-            DubboInvocation dubboInvocation = new DubboInvocation();
-            dubboInvocation.setClassName(payLoad.getClassName());
-            dubboInvocation.setMethodName(payLoad.isGeneric() ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
-            dubboInvocation.setAlias(payLoad.getAlias());
-            dubboInvocation.setParameterTypesDesc(payLoad.isGeneric() ? GENERIC_INVOKE_PARAM_TYPES_DESC
-                    : message.getOption().getDescription());
-            dubboInvocation.setArgs(payLoad.getArgs());
-            dubboInvocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
-            dubboInvocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
-            dubboInvocation.addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias());
-            dubboInvocation.addAttachment(DUBBO_SERVICE_VERSION_KEY, dubboInvocation.getVersion());
-            dubboInvocation.addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()));
+            boolean generic = payLoad.isGeneric();
+            DubboInvocation invocation = new DubboInvocation();
+            invocation.setClassName(payLoad.getClassName());
+            invocation.setMethodName(generic ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
+            invocation.setAlias(payLoad.getAlias());
+            invocation.setParameterTypesDesc(generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : message.getOption().getDescription());
+            invocation.setArgs(payLoad.getArgs());
+            invocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
+            invocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
+            invocation.addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias());
+            invocation.addAttachment(DUBBO_SERVICE_VERSION_KEY, invocation.getVersion());
+            invocation.addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()));
             String appName = GlobalContext.getString(KEY_APPNAME);
             if (appName != null && !appName.isEmpty()) {
-                dubboInvocation.addAttachment(DUBBO_APPLICATION_KEY, String.valueOf(message.getTimeout()));
+                invocation.addAttachment(DUBBO_APPLICATION_KEY, String.valueOf(message.getTimeout()));
             }
-            if (payLoad.isGeneric()) {
-                dubboInvocation.addAttachment(DUBBO_GENERIC_KEY, "true");
+            if (generic) {
+                invocation.addAttachment(DUBBO_GENERIC_KEY, "true");
             }
-            message.setPayLoad(dubboInvocation);
+            message.setPayLoad(invocation);
         }
         return message;
     }
@@ -202,7 +202,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
         }
         //转换payload
         Object payload = message.getPayLoad();
-        ResponsePayload responsePayload = payload != null && payload instanceof ResponsePayload ? (ResponsePayload) message.getPayLoad() : null;
+        ResponsePayload responsePayload = payload instanceof ResponsePayload ? (ResponsePayload) message.getPayLoad() : null;
         //获取dubbo版本，设置status
         String dubboVersion = DEFALUT_DUBBO_VERSION;
         if (message.getHeader() instanceof DubboMessageHeader) {

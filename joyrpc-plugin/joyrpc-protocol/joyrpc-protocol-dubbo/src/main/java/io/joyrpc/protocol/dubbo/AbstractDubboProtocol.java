@@ -55,6 +55,11 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
      */
     public static final String DEFALUT_DUBBO_VERSION = "2.0.2";
 
+    private static final String GENERIC_INVOKE_PARAM_TYPES_DESC = "Ljava/lang/String;[Ljava/lang/String;[Ljava/lang/Object;";
+
+    private static final String GENERIC_INVOKE_METHOD = "$invoke";
+
+
     /**
      * Dubbo序列化标识
      */
@@ -162,9 +167,10 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
         if (payLoad != null && message.getMsgType() != MsgType.HbReq.getType()) {
             DubboInvocation dubboInvocation = new DubboInvocation();
             dubboInvocation.setClassName(payLoad.getClassName());
-            dubboInvocation.setMethodName(payLoad.getMethodName());
+            dubboInvocation.setMethodName(payLoad.isGeneric() ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
             dubboInvocation.setAlias(payLoad.getAlias());
-            dubboInvocation.setParameterTypesDesc(message.getOption().getDescription());
+            dubboInvocation.setParameterTypesDesc(payLoad.isGeneric() ? GENERIC_INVOKE_PARAM_TYPES_DESC
+                    : message.getOption().getDescription());
             dubboInvocation.setArgs(payLoad.getArgs());
             dubboInvocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
             dubboInvocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
@@ -174,6 +180,9 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             String appName = GlobalContext.getString(KEY_APPNAME);
             if (appName != null && !appName.isEmpty()) {
                 dubboInvocation.addAttachment(DUBBO_APPLICATION_KEY, String.valueOf(message.getTimeout()));
+            }
+            if (payLoad.isGeneric()) {
+                dubboInvocation.addAttachment(DUBBO_GENERIC_KEY, "true");
             }
             message.setPayLoad(dubboInvocation);
         }

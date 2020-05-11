@@ -20,12 +20,17 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.ObjectInputReader;
+import io.joyrpc.codec.serialization.ObjectOutputWriter;
+import io.joyrpc.protocol.dubbo.serialization.DubboInvocationReader;
+import io.joyrpc.protocol.dubbo.serialization.DubboInvocationWriter;
 import io.joyrpc.protocol.message.Invocation;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
-
-import static io.joyrpc.constants.Constants.GENERIC_OPTION;
 
 /**
  * Dubbo调用
@@ -107,4 +112,26 @@ public class DubboInvocation extends Invocation {
         }
         return generic;
     }
+
+    /**
+     * java序列化
+     *
+     * @param out
+     * @throws IOException
+     */
+    private void writeObject(final ObjectOutputStream out) throws IOException {
+        new DubboInvocationWriter(new ObjectOutputWriter(out)).write(this);
+    }
+
+    /**
+     * java反序列化
+     *
+     * @param in
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+        new DubboInvocationReader(new ObjectInputReader(in)).read(this);
+    }
+
 }

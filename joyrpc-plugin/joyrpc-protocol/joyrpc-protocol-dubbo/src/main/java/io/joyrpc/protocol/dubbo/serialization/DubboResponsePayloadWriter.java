@@ -38,7 +38,7 @@ public class DubboResponsePayloadWriter {
      */
     protected ObjectWriter writer;
 
-    public DubboResponsePayloadWriter(ObjectWriter reader) {
+    public DubboResponsePayloadWriter(ObjectWriter writer) {
         this.writer = writer;
     }
 

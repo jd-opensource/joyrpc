@@ -36,7 +36,7 @@ public class DubboInvocationWriter {
      */
     protected ObjectWriter writer;
 
-    public DubboInvocationWriter(ObjectWriter reader) {
+    public DubboInvocationWriter(ObjectWriter writer) {
         this.writer = writer;
     }
 

@@ -20,8 +20,15 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.ObjectInputReader;
+import io.joyrpc.codec.serialization.ObjectOutputWriter;
+import io.joyrpc.protocol.dubbo.serialization.DubboResponsePayloadReader;
+import io.joyrpc.protocol.dubbo.serialization.DubboResponsePayloadWriter;
 import io.joyrpc.protocol.message.ResponsePayload;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -110,6 +117,27 @@ public class DubboResponsePayload extends ResponsePayload {
         }
 
         return iVersion >= LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT;
+    }
+
+    /**
+     * java序列化
+     *
+     * @param out
+     * @throws IOException
+     */
+    private void writeObject(final ObjectOutputStream out) throws IOException {
+        new DubboResponsePayloadWriter(new ObjectOutputWriter(out)).write(this);
+    }
+
+    /**
+     * java反序列化
+     *
+     * @param in
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+        new DubboResponsePayloadReader(new ObjectInputReader(in)).read(this);
     }
 
 }

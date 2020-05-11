@@ -20,6 +20,12 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.ObjectInputReader;
+import io.joyrpc.protocol.dubbo.serialization.DubboResponseErrorPayloadReader;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+
 /**
  * Dubbo异常应答消息
  */
@@ -42,5 +48,17 @@ public class DubboResponseErrorPayload extends DubboResponsePayload {
 
     public void setExceptionMessage(String exceptionMessage) {
         this.exceptionMessage = exceptionMessage;
+    }
+
+
+    /**
+     * java反序列化
+     *
+     * @param in
+     * @throws IOException
+     * @throws ClassNotFoundException
+     */
+    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
+        new DubboResponseErrorPayloadReader(new ObjectInputReader(in)).read(this);
     }
 }

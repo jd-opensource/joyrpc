@@ -34,6 +34,12 @@
             <version>${project.version}</version>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-protostuff</artifactId>
+            <version>${project.version}</version>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
 </project>

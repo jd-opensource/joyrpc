@@ -33,7 +33,7 @@ import java.io.IOException;
 /**
  * DubboResponseErrorPayload反序列化
  */
-public class DubboResponseErrorPayloadDeserializer implements AutowiredObjectSerializer {
+public class DubboResponseErrorPayloadSerializer implements AutowiredObjectSerializer {
 
     @Override
     public Class<?> getType() {

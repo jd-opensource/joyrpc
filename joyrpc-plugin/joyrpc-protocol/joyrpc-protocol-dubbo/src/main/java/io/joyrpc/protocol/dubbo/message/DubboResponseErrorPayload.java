@@ -21,7 +21,7 @@ package io.joyrpc.protocol.dubbo.message;
  */
 
 import io.joyrpc.codec.serialization.ObjectInputReader;
-import io.joyrpc.protocol.dubbo.serialization.DubboResponseErrorPayloadReader;
+import io.joyrpc.codec.serialization.ObjectReader;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -59,6 +59,17 @@ public class DubboResponseErrorPayload extends DubboResponsePayload {
      * @throws ClassNotFoundException
      */
     private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-        new DubboResponseErrorPayloadReader(new ObjectInputReader(in)).read(this);
+        read(new ObjectInputReader(in));
+    }
+
+    /**
+     * 读取调用
+     *
+     * @param reader 读取器
+     * @throws IOException
+     */
+    public DubboResponseErrorPayload read(final ObjectReader reader) throws IOException {
+        this.exceptionMessage = reader.readString();
+        return this;
     }
 }

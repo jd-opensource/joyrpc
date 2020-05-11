@@ -24,7 +24,6 @@ import io.joyrpc.codec.serialization.hessian2.Hessian2Writer;
 import io.joyrpc.com.caucho.hessian.io.AbstractHessianOutput;
 import io.joyrpc.com.caucho.hessian.io.AutowiredObjectSerializer;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
-import io.joyrpc.protocol.dubbo.serialization.DubboResponsePayloadWriter;
 
 import java.io.IOException;
 
@@ -40,6 +39,6 @@ public class DubboResponsePayloadSerializer implements AutowiredObjectSerializer
 
     @Override
     public void writeObject(Object obj, AbstractHessianOutput out) throws IOException {
-        new DubboResponsePayloadWriter(new Hessian2Writer(out)).write((DubboResponsePayload) obj);
+        ((DubboResponsePayload) obj).write(new Hessian2Writer(out));
     }
 }

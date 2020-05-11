@@ -22,8 +22,9 @@ package io.joyrpc.protocol.dubbo.message;
 
 import io.joyrpc.codec.serialization.ObjectInputReader;
 import io.joyrpc.codec.serialization.ObjectOutputWriter;
-import io.joyrpc.protocol.dubbo.serialization.DubboResponsePayloadReader;
-import io.joyrpc.protocol.dubbo.serialization.DubboResponsePayloadWriter;
+import io.joyrpc.codec.serialization.ObjectReader;
+import io.joyrpc.codec.serialization.ObjectWriter;
+import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.ResponsePayload;
 
 import java.io.IOException;
@@ -32,6 +33,7 @@ import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
 import static io.joyrpc.protocol.dubbo.DubboVersion.LOWEST_VERSION_FOR_RESPONSE_ATTACHMENT;
 import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
 
@@ -46,6 +48,7 @@ public class DubboResponsePayload extends ResponsePayload {
     public static final byte RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS = 3;
     public static final byte RESPONSE_VALUE_WITH_ATTACHMENTS = 4;
     public static final byte RESPONSE_NULL_VALUE_WITH_ATTACHMENTS = 5;
+    protected static final Map<Object, Object> EMPTY_ATTACHMENTS = new HashMap<>(0);
 
     /**
      * dubbo版本
@@ -58,7 +61,7 @@ public class DubboResponsePayload extends ResponsePayload {
     /**
      * 扩展属性
      */
-    protected Map<String, Object> attachments = new HashMap<>();
+    protected Map<String, Object> attachments;
 
     public DubboResponsePayload() {
     }
@@ -126,7 +129,7 @@ public class DubboResponsePayload extends ResponsePayload {
      * @throws IOException
      */
     private void writeObject(final ObjectOutputStream out) throws IOException {
-        new DubboResponsePayloadWriter(new ObjectOutputWriter(out)).write(this);
+        write(new ObjectOutputWriter(out));
     }
 
     /**
@@ -137,7 +140,78 @@ public class DubboResponsePayload extends ResponsePayload {
      * @throws ClassNotFoundException
      */
     private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-        new DubboResponsePayloadReader(new ObjectInputReader(in)).read(this);
+        read(new ObjectInputReader(in));
+    }
+
+    /**
+     * 读取应答载体
+     *
+     * @param reader 读取器
+     * @throws IOException
+     */
+    public DubboResponsePayload read(final ObjectReader reader) throws IOException {
+        int respFlag = reader.readInt();
+        switch (respFlag) {
+            case RESPONSE_NULL_VALUE:
+                break;
+            case RESPONSE_VALUE:
+                response = reader.readObject();
+                break;
+            case RESPONSE_WITH_EXCEPTION:
+                exception = (Throwable) reader.readObject();
+                break;
+            case RESPONSE_NULL_VALUE_WITH_ATTACHMENTS:
+                attachments = (Map<String, Object>) reader.readObject();
+                break;
+            case RESPONSE_VALUE_WITH_ATTACHMENTS:
+                response = reader.readObject();
+                attachments = (Map<String, Object>) reader.readObject();
+                break;
+            case RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS:
+                exception = (Throwable) reader.readObject();
+                attachments = (Map<String, Object>) reader.readObject();
+                break;
+            default:
+                throw new IOException("Unknown result flag, expect '0' '1' '2' '3' '4' '5', but received: " + respFlag);
+        }
+        return this;
+    }
+
+    /**
+     * 写应答载体
+     *
+     * @param writer 写入器
+     * @throws IOException
+     */
+    public void write(final ObjectWriter writer) throws IOException {
+        //心跳响应，直接写null
+        if (isHeartbeat()) {
+            writer.writeNull();
+            return;
+        }
+        //序列化payload
+        if (DubboStatus.getStatus(exception) == OK) {
+            boolean attach = isSupportResponseAttachment();
+            Throwable th = exception;
+            if (th == null) {
+                if (response == null) {
+                    writer.writeInt(attach ? RESPONSE_NULL_VALUE_WITH_ATTACHMENTS : RESPONSE_NULL_VALUE);
+                } else {
+                    writer.writeInt(attach ? RESPONSE_VALUE_WITH_ATTACHMENTS : RESPONSE_VALUE);
+                    writer.writeObject(response);
+                }
+            } else {
+                writer.writeInt(attach ? RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS : RESPONSE_WITH_EXCEPTION);
+                writer.writeObject(th);
+            }
+
+            if (attach) {
+                // returns current version of Response to consumer side.
+                writer.writeObject(attachments == null ? EMPTY_ATTACHMENTS : attachments);
+            }
+        } else {
+            writer.writeString(exception.getMessage());
+        }
     }
 
 }

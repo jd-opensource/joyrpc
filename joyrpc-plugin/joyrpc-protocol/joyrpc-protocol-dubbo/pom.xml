@@ -13,10 +13,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.dubbo</groupId>
-            <artifactId>dubbo</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-hessian</artifactId>
             <version>${project.version}</version>

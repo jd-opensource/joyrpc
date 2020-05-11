@@ -22,6 +22,7 @@ package io.joyrpc.protocol.dubbo.message;
 
 import io.joyrpc.codec.serialization.ObjectInputReader;
 import io.joyrpc.codec.serialization.ObjectReader;
+import io.joyrpc.codec.serialization.ObjectWriter;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -71,5 +72,15 @@ public class DubboResponseErrorPayload extends DubboResponsePayload {
     public DubboResponseErrorPayload read(final ObjectReader reader) throws IOException {
         this.exceptionMessage = reader.readString();
         return this;
+    }
+
+    /**
+     * 读取调用
+     *
+     * @param writer 写入器
+     * @throws IOException
+     */
+    public void write(final ObjectWriter writer) throws IOException {
+        writer.writeString(exceptionMessage);
     }
 }

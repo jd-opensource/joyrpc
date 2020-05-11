@@ -1,0 +1,3 @@
+io.joyrpc.protocol.dubbo.serialization.kryo.DubboInvocationSerializer
+io.joyrpc.protocol.dubbo.serialization.kryo.DubboResponseErrorPayloadSerializer
+io.joyrpc.protocol.dubbo.serialization.kryo.DubboResponsePayloadSerializer

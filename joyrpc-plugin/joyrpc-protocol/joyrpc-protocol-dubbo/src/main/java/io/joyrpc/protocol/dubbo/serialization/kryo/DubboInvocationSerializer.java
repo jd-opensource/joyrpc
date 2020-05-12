@@ -27,6 +27,7 @@ import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import io.joyrpc.codec.serialization.kryo.KryoReader;
 import io.joyrpc.codec.serialization.kryo.KryoWriter;
+import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 
 import java.io.IOException;
@@ -34,6 +35,7 @@ import java.io.IOException;
 /**
  * DubboInvocation序列化
  */
+@ConditionalOnClass("com.esotericsoftware.kryo.Kryo")
 public class DubboInvocationSerializer extends AutowiredObjectSerializer {
 
     @Override

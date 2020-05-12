@@ -21,13 +21,13 @@ package io.joyrpc.codec.serialization;
  */
 
 import io.joyrpc.exception.SerializerException;
+import io.joyrpc.extension.spi.SpiLoader;
 import io.joyrpc.util.ClassUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
-import java.util.ServiceLoader;
 import java.util.function.Consumer;
 
 /**
@@ -99,14 +99,8 @@ public abstract class AbstractSerializer implements Serializer {
      * @param <T>
      */
     protected static <T> void register(Class<T> clazz, Consumer<T> consumer) {
-        //注册插件，便于第三方协议注册序列化实现
-        final ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        for (Object o : ServiceLoader.load(clazz, classLoader)) {
-            if (!clazz.isInstance(o)) {
-                continue;
-            }
-            consumer.accept((T) o);
-        }
+        //注册插件，便于第三方协议注册序列化实现，插件都要求单例
+        SpiLoader.INSTANCE.load(clazz).forEach(plugin -> consumer.accept(plugin.getTarget()));
     }
 }
 

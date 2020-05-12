@@ -65,7 +65,11 @@ public interface Serialization extends CodecType {
 
     int XML_ID = 100;
 
+    int DUBBO_PROTOSTUFF_ID = 18;
+
     int ORDER_PROTOSTUFF = 100;
+
+    int ORDER_DUBBO_PROTOSTUFF = ORDER_PROTOSTUFF + 1;
 
     int ORDER_HESSIAN_LITE = ORDER_PROTOSTUFF + 10;
 

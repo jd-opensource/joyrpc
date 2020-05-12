@@ -76,12 +76,12 @@ public class FSTSerialization implements Serialization {
 
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) throws IOException {
-            return new ObjectOutputWriter(fst.getObjectOutput(os));
+            return new FSTObjectWriter(fst.getObjectOutput(os));
         }
 
         @Override
         protected ObjectReader createReader(final InputStream is, final Class clazz) throws IOException {
-            return new ObjectInputReader(fst.getObjectInput(is));
+            return new FSTObjectReader(fst, is);
         }
 
     }

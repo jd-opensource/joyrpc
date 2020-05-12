@@ -21,7 +21,7 @@ package io.joyrpc.protocol.dubbo.serialization.fst;
  */
 
 import io.joyrpc.codec.serialization.ObjectInputReader;
-import io.joyrpc.codec.serialization.ObjectOutputWriter;
+import io.joyrpc.codec.serialization.fst.FSTObjectWriter;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import org.nustaq.serialization.AutowiredObjectSerializer;
@@ -48,7 +48,7 @@ public class DubboInvocationSerializer implements AutowiredObjectSerializer {
                             final FSTClazzInfo clzInfo,
                             final FSTClazzInfo.FSTFieldInfo referencedBy,
                             final int streamPosition) throws IOException {
-        ((DubboInvocation) toWrite).write(new ObjectOutputWriter(out));
+        ((DubboInvocation) toWrite).write(new FSTObjectWriter(out));
     }
 
     @Override
@@ -61,7 +61,7 @@ public class DubboInvocationSerializer implements AutowiredObjectSerializer {
 
     @Override
     public boolean willHandleClass(final Class cl) {
-        return false;
+        return cl == DubboInvocation.class;
     }
 
     @Override

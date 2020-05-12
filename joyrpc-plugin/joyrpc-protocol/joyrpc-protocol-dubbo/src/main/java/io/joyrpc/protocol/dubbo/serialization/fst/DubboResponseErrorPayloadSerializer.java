@@ -61,7 +61,7 @@ public class DubboResponseErrorPayloadSerializer implements AutowiredObjectSeria
 
     @Override
     public boolean willHandleClass(final Class cl) {
-        return false;
+        return cl == DubboResponseErrorPayload.class;
     }
 
     @Override

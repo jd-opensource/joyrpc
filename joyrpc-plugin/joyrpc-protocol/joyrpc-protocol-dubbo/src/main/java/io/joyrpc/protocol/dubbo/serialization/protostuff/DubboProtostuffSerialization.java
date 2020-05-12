@@ -20,15 +20,18 @@ package io.joyrpc.protocol.dubbo.serialization.protostuff;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.ObjectReader;
-import io.joyrpc.codec.serialization.ObjectWriter;
-import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.codec.serialization.Serializer;
+import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.protostuff.ProtostuffSerialization;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.protostuff.AutowiredObjectSerializer;
 import io.protostuff.LinkedBuffer;
+import io.protostuff.runtime.DefaultIdStrategy;
+import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
+import org.apache.dubbo.common.serialize.protostuff.delegate.SqlDateDelegate;
+import org.apache.dubbo.common.serialize.protostuff.delegate.TimeDelegate;
+import org.apache.dubbo.common.serialize.protostuff.delegate.TimestampDelegate;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -52,19 +55,32 @@ public class DubboProtostuffSerialization extends ProtostuffSerialization {
     }
 
     /**
-     * Protostuff序列化和反序列化实现
+     * DubboProtostuff序列化和反序列化实现
      */
-    protected static class DubboProtostuffSerializer extends ProtostuffSerialization.ProtostuffSerializer {
+    protected static class DubboProtostuffSerializer extends AbstractSerializer {
 
         protected static final DubboProtostuffSerializer INSTANCE = new DubboProtostuffSerializer();
+
+        protected static final DefaultIdStrategy STRATEGY = new DefaultIdStrategy(IdStrategy.DEFAULT_FLAGS |
+                IdStrategy.ALLOW_NULL_ARRAY_ELEMENT);
+
+        static {
+            STRATEGY.registerDelegate(new TimeDelegate());
+            STRATEGY.registerDelegate(new TimestampDelegate());
+            STRATEGY.registerDelegate(new SqlDateDelegate());
+            //ID_STRATEGY.ARRAY_SCHEMA
+            //注册插件，便于第三方协议注册序列化实现
+            register(AutowiredObjectSerializer.class, o -> STRATEGY.registerPojo(o.getType(), o));
+        }
+
+        protected ThreadLocal<LinkedBuffer> local = ThreadLocal.withInitial(() -> LinkedBuffer.allocate(1024));
 
         protected DubboProtostuffSerializer() {
         }
 
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) throws IOException {
-            LinkedBuffer buffer = local.get();
-            return new DubboProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), os, buffer);
+            return new DubboProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), os, local.get());
         }
 
         @Override

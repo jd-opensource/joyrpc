@@ -2,6 +2,8 @@ package io.joyrpc.example.dubbo.consumer;
 
 import io.joyrpc.example.service.DemoService;
 import org.apache.dubbo.config.annotation.Reference;
+import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
+import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -19,7 +19,7 @@ public class DubboGeneric {
     @Reference(
             version = "0.0.0",
             group = "2.0-Boot",
-            url = "127.0.0.1:22000",
+            url = "10.0.16.232:22000",
             interfaceName = "io.joyrpc.example.service.DemoService",
             generic = true)
     private GenericService genericService;
@@ -31,8 +31,9 @@ public class DubboGeneric {
     public static void main(String[] args) {
         System.setProperty("spring.profiles.active", "generic");
 
-        ConfigurableApplicationContext run = SpringApplication.run(DubboClient.class, args);
-        GenericService consumer = run.getBean(DubboGeneric.class).getGenericService();
+        ConfigurableApplicationContext run = SpringApplication.run(DubboGeneric.class, args);
+        DubboGeneric application = run.getBean(DubboGeneric.class);
+        GenericService consumer = application.getGenericService();
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {

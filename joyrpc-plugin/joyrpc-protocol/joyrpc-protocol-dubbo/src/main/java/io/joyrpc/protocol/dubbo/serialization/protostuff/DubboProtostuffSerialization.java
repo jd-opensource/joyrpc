@@ -24,14 +24,14 @@ import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.protostuff.ProtostuffSerialization;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.protocol.dubbo.serialization.protostuff.delegate.SqlDateDelegate;
+import io.joyrpc.protocol.dubbo.serialization.protostuff.delegate.TimeDelegate;
+import io.joyrpc.protocol.dubbo.serialization.protostuff.delegate.TimestampDelegate;
 import io.protostuff.AutowiredObjectSerializer;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.runtime.DefaultIdStrategy;
 import io.protostuff.runtime.IdStrategy;
 import io.protostuff.runtime.RuntimeSchema;
-import org.apache.dubbo.common.serialize.protostuff.delegate.SqlDateDelegate;
-import org.apache.dubbo.common.serialize.protostuff.delegate.TimeDelegate;
-import org.apache.dubbo.common.serialize.protostuff.delegate.TimestampDelegate;
 
 import java.io.IOException;
 import java.io.InputStream;

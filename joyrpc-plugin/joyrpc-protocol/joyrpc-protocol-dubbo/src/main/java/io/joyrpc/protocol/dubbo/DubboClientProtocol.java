@@ -45,7 +45,6 @@ import static io.joyrpc.constants.Constants.ALIAS_OPTION;
  * Dubbo客户端协议
  */
 @Extension("dubbo")
-@ConditionalOnClass("org.apache.dubbo.rpc.Protocol")
 public class DubboClientProtocol extends AbstractDubboProtocol implements ClientProtocol {
 
     /**

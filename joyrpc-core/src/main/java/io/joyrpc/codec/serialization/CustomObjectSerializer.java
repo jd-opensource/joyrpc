@@ -21,7 +21,7 @@ package io.joyrpc.codec.serialization;
  */
 
 /**
- * 自定义序列化
+ * 自定义序列化，用于某些序列化插件的自定义对象序列化
  */
 public interface CustomObjectSerializer {
 }

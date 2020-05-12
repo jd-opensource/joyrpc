@@ -38,7 +38,7 @@ import java.io.OutputStream;
  * Protostuff
  */
 @Extension(value = "protostuff", provider = "dubbo", order = Serialization.ORDER_DUBBO_PROTOSTUFF)
-@ConditionalOnClass({"io.protostuff.runtime.RuntimeSchema", "org.apache.dubbo.rpc.Protocol"})
+@ConditionalOnClass("io.protostuff.runtime.RuntimeSchema")
 public class DubboProtostuffSerialization extends ProtostuffSerialization {
 
     @Override

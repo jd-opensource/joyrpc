@@ -21,15 +21,15 @@ package io.joyrpc.codec.serialization.fst;
  */
 
 import io.joyrpc.codec.serialization.ObjectOutputWriter;
-
-import java.io.ObjectOutput;
+import org.nustaq.serialization.FSTObjectOutput;
 
 /**
  * FST对象写入器
  */
 public class FSTObjectWriter extends ObjectOutputWriter {
 
-    public FSTObjectWriter(ObjectOutput output) {
+    public FSTObjectWriter(FSTObjectOutput output) {
         super(output);
     }
+
 }

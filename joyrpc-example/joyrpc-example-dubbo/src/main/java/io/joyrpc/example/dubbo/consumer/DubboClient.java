@@ -2,6 +2,7 @@ package io.joyrpc.example.dubbo.consumer;
 
 import io.joyrpc.example.service.DemoService;
 import org.apache.dubbo.config.annotation.Reference;
+import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -11,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootApplication
 @EnableDubboConfig
+@DubboComponentScan(basePackages="io.joyrpc.example.dubbo.consumer")
 public class DubboClient {
 
     @Reference(version = "0.0.0", group = "2.0-Boot", url = "127.0.0.1:22000")
@@ -20,7 +22,8 @@ public class DubboClient {
         System.setProperty("spring.profiles.active", "client");
 
         ConfigurableApplicationContext run = SpringApplication.run(DubboClient.class, args);
-        DemoService consumer = run.getBean(DemoService.class);
+        DubboClient application = run.getBean(DubboClient.class);
+        DemoService consumer = application.getDemoService();
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
@@ -37,5 +40,13 @@ public class DubboClient {
                 }
             }
         }
+    }
+
+    public DemoService getDemoService() {
+        return demoService;
+    }
+
+    public void setDemoService(DemoService demoService) {
+        this.demoService = demoService;
     }
 }

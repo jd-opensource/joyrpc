@@ -26,54 +26,80 @@ import io.protostuff.Input;
 import io.protostuff.Output;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * DubboInvocation序列化
  */
-public class DubboInvocationSerializer implements AutowiredObjectSerializer {
+public class DubboInvocationSerializer implements AutowiredObjectSerializer<DubboInvocation> {
+
+    protected static final String[] FIELDS = new String[]{
+            "targetServiceUniqueName", "methodName", "serviceName", "parameterTypesDesc",
+            "compatibleParamSignatures", "arguments", "attachments"
+    };
+
+    protected static final Map<String, Integer> FIELD_NUMBERS = new HashMap<>(10);
+
+
+    static {
+        FIELD_NUMBERS.put("targetServiceUniqueName", 1);
+        FIELD_NUMBERS.put("methodName", 2);
+        FIELD_NUMBERS.put("serviceName", 3);
+        FIELD_NUMBERS.put("parameterTypesDesc", 4);
+        FIELD_NUMBERS.put("compatibleParamSignatures", 5);
+        FIELD_NUMBERS.put("arguments", 6);
+        FIELD_NUMBERS.put("attachments", 7);
+    }
 
     @Override
-    public Class<?> typeClass() {
+    public Class<DubboInvocation> typeClass() {
         return DubboInvocation.class;
     }
 
     @Override
-    public String getFieldName(int i) {
-        return null;
+    public String getFieldName(int number) {
+        return FIELDS[number];
     }
 
     @Override
-    public int getFieldNumber(String s) {
-        return 0;
+    public int getFieldNumber(String name) {
+        return FIELD_NUMBERS.get(name);
     }
 
     @Override
-    public boolean isInitialized(Object o) {
+    public boolean isInitialized(DubboInvocation message) {
         return false;
     }
 
     @Override
-    public Object newMessage() {
-        return null;
+    public DubboInvocation newMessage() {
+        return new DubboInvocation();
     }
 
     @Override
     public String messageName() {
-        return null;
+        return DubboInvocation.class.getSimpleName();
     }
 
     @Override
     public String messageFullName() {
-        return null;
+        return DubboInvocation.class.getName();
     }
 
     @Override
-    public void mergeFrom(Input input, Object o) throws IOException {
+    public void mergeFrom(Input input, DubboInvocation message) throws IOException {
     }
 
     @Override
-    public void writeTo(Output output, Object o) throws IOException {
-
+    public void writeTo(final Output output, final DubboInvocation message) throws IOException {
+//        output.writeString(1, message.gett, false);
+//        output.writeString(2, message.gett, false);
+//        output.writeString(3, message.gett, false);
+//        output.writeString(4, message.gett, false);
+//        output.writeString(5, message., false);
+//        output.writeObject(6, message.getArgs(), false);
+//        output.writeObject(7, message.getAttachments(), false);
     }
 
 }

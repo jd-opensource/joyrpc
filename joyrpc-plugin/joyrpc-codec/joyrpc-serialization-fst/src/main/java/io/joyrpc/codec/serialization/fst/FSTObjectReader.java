@@ -27,7 +27,6 @@ import org.nustaq.serialization.FSTObjectInput;
 import org.nustaq.serialization.FSTObjectSerializer;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * FST对象读取器
@@ -35,16 +34,10 @@ import java.io.InputStream;
 public class FSTObjectReader extends ObjectInputReader {
 
     protected FSTConfiguration fst;
-    protected InputStream is;
 
     public FSTObjectReader(FSTObjectInput input) {
         super(input);
-    }
-
-    public FSTObjectReader(FSTConfiguration fst, InputStream is) {
-        super(fst.getObjectInput(is));
-        this.fst = fst;
-        this.is = is;
+        this.fst = input.getConf();
     }
 
     @Override

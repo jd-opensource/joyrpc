@@ -81,7 +81,7 @@ public class FSTSerialization implements Serialization {
 
         @Override
         protected ObjectReader createReader(final InputStream is, final Class clazz) throws IOException {
-            return new FSTObjectReader(fst, is);
+            return new FSTObjectReader(fst.getObjectInput(is));
         }
 
     }

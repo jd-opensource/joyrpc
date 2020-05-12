@@ -20,10 +20,7 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.ObjectInputReader;
-import io.joyrpc.codec.serialization.ObjectOutputWriter;
-import io.joyrpc.codec.serialization.ObjectReader;
-import io.joyrpc.codec.serialization.ObjectWriter;
+import io.joyrpc.codec.serialization.*;
 import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.ResponsePayload;
 
@@ -40,7 +37,7 @@ import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
 /**
  * Dubbo应答消息
  */
-public class DubboResponsePayload extends ResponsePayload {
+public class DubboResponsePayload extends ResponsePayload implements CustomObjectSerializer {
 
     public static final byte RESPONSE_WITH_EXCEPTION = 0;
     public static final byte RESPONSE_VALUE = 1;

@@ -20,10 +20,7 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.ObjectInputReader;
-import io.joyrpc.codec.serialization.ObjectOutputWriter;
-import io.joyrpc.codec.serialization.ObjectReader;
-import io.joyrpc.codec.serialization.ObjectWriter;
+import io.joyrpc.codec.serialization.*;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.util.ClassUtils;
 
@@ -39,7 +36,7 @@ import static io.joyrpc.protocol.dubbo.AbstractDubboProtocol.DEFALUT_DUBBO_VERSI
 /**
  * Dubbo调用
  */
-public class DubboInvocation extends Invocation {
+public class DubboInvocation extends Invocation implements CustomObjectSerializer {
 
     protected static final Map<Object, Object> EMPTY_ATTACHMENTS = new HashMap<>(0);
     public static String DUBBO_VERSION_KEY = "dubbo";

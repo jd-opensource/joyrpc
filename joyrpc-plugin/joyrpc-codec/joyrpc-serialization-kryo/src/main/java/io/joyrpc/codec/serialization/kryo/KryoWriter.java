@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.kryo;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,10 @@ package io.joyrpc.codec.serialization.kryo;
  */
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.Registration;
+import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Output;
+import io.joyrpc.codec.serialization.CustomObjectSerializer;
 import io.joyrpc.codec.serialization.ObjectWriter;
 
 import java.io.IOException;
@@ -42,7 +45,17 @@ public class KryoWriter implements ObjectWriter {
 
     @Override
     public void writeObject(final Object obj) throws IOException {
-        kryo.writeClassAndObject(output, obj);
+        if (obj instanceof CustomObjectSerializer) {
+            Registration registration = kryo.getRegistration(obj.getClass());
+            Serializer serializer = registration != null ? registration.getSerializer() : null;
+            if (serializer != null) {
+                serializer.write(kryo, output, obj);
+            } else {
+                kryo.writeClassAndObject(output, obj);
+            }
+        } else {
+            kryo.writeClassAndObject(output, obj);
+        }
     }
 
     @Override

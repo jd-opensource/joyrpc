@@ -20,6 +20,7 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.CustomObjectSerializer;
 import io.joyrpc.codec.serialization.ObjectInputReader;
 import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
@@ -30,7 +31,7 @@ import java.io.ObjectInputStream;
 /**
  * Dubbo异常应答消息
  */
-public class DubboResponseErrorPayload extends DubboResponsePayload {
+public class DubboResponseErrorPayload extends DubboResponsePayload implements CustomObjectSerializer {
     /**
      * 异常信息
      */

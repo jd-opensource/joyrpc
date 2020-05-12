@@ -20,11 +20,11 @@ package io.joyrpc.codec.serialization.kryo;
  * #L%
  */
 
-import com.esotericsoftware.kryo.AutowiredObjectSerializer;
 import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.Registration;
 import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
+import io.joyrpc.codec.serialization.CustomObjectSerializer;
 import io.joyrpc.codec.serialization.ObjectReader;
 
 import java.io.IOException;
@@ -46,9 +46,13 @@ public class KryoReader implements ObjectReader {
 
     @Override
     public <T> T readObject(final Class<T> clazz) throws IOException {
-        Registration registration = kryo.getRegistration(clazz);
-        Serializer serializer = registration != null ? registration.getSerializer() : null;
-        return serializer instanceof AutowiredObjectSerializer ? (T) serializer.read(kryo, input, clazz) : (T) kryo.readClassAndObject(input);
+        if (CustomObjectSerializer.class.isAssignableFrom(clazz)) {
+            Registration registration = kryo.getRegistration(clazz);
+            Serializer serializer = registration != null ? registration.getSerializer() : null;
+            return serializer != null ? (T) serializer.read(kryo, input, clazz) : (T) kryo.readClassAndObject(input);
+        } else {
+            return (T) kryo.readClassAndObject(input);
+        }
     }
 
     @Override

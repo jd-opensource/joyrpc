@@ -30,6 +30,8 @@
 
 - 网络异常消息配置改成小写，因为内部使用小写判断
 
+- 修复protostuff&protobuf的序列化没有使用上自定义schema和protobuf反序列化异常
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

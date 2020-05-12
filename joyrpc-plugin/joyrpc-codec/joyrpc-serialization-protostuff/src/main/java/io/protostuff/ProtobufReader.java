@@ -20,22 +20,22 @@ package io.protostuff;
  * #L%
  */
 
-import java.io.OutputStream;
+import java.io.InputStream;
 
 /**
- * Protostuff写入器
+ * Protobuf读入器
  */
-public class ProtostuffWriter extends AbstractProtostuffWriter {
+public class ProtobufReader extends AbstractProtostuffReader {
 
     /**
      * 构造函数
      *
      * @param schema
-     * @param output
-     * @param outputStream
+     * @param inputStream
+     * @param buffer
      */
-    public ProtostuffWriter(Schema schema, ProtostuffOutput output, OutputStream outputStream) {
-        super(schema, output, output, outputStream);
+    public ProtobufReader(Schema schema, InputStream inputStream, LinkedBuffer buffer) {
+        super(schema, inputStream, new CodedInput(inputStream, buffer.buffer, false));
     }
 
 }

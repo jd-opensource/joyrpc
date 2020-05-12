@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.protostuff.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,8 +37,6 @@ public class LocaleSchema extends AbstractJava8Schema<Locale> {
     public static final LocaleSchema INSTANCE = new LocaleSchema();
     public static final String LOCALE = "locale";
 
-    protected static final String[] FIELD_NAMES = new String[]{LOCALE};
-
     protected static final Map<String, Integer> FIELD_MAP = new HashMap(3);
 
     protected static Field FIELD_BASE_LOCALE = getWriteableField(Locale.class, "baseLocale");
@@ -54,7 +52,12 @@ public class LocaleSchema extends AbstractJava8Schema<Locale> {
 
     @Override
     public String getFieldName(int number) {
-        return FIELD_NAMES[number];
+        switch (number) {
+            case 1:
+                return LOCALE;
+            default:
+                return null;
+        }
     }
 
     @Override

@@ -71,27 +71,27 @@ public class ProtostuffSerialization implements Serialization {
                 IdStrategy.ALLOW_NULL_ARRAY_ELEMENT);
 
         static {
-            RuntimeSchema.register(Duration.class, DurationSchema.INSTANCE);
-            RuntimeSchema.register(Instant.class, InstantSchema.INSTANCE);
-            RuntimeSchema.register(LocalDate.class, LocalDateSchema.INSTANCE);
-            RuntimeSchema.register(LocalTime.class, LocalTimeSchema.INSTANCE);
-            RuntimeSchema.register(LocalDateTime.class, LocalDateTimeSchema.INSTANCE);
-            RuntimeSchema.register(MonthDay.class, MonthDaySchema.INSTANCE);
-            RuntimeSchema.register(OffsetDateTime.class, OffsetDateTimeSchema.INSTANCE);
-            RuntimeSchema.register(OffsetTime.class, OffsetTimeSchema.INSTANCE);
-            RuntimeSchema.register(Period.class, PeriodSchema.INSTANCE);
-            RuntimeSchema.register(YearMonth.class, YearMonthSchema.INSTANCE);
-            RuntimeSchema.register(Year.class, YearSchema.INSTANCE);
-            RuntimeSchema.register(ZoneId.class, ZoneIdSchema.INSTANCE);
-            RuntimeSchema.register(ZoneOffset.class, ZoneOffsetSchema.INSTANCE);
-            RuntimeSchema.register(ZonedDateTime.class, ZonedDateTimeSchema.INSTANCE);
-            RuntimeSchema.register(Date.class, SqlDateSchema.INSTANCE);
-            RuntimeSchema.register(Time.class, SqlTimeSchema.INSTANCE);
-            RuntimeSchema.register(Timestamp.class, SqlTimestampSchema.INSTANCE);
-            RuntimeSchema.register(Locale.class, LocaleSchema.INSTANCE);
+            STRATEGY.registerPojo(Duration.class, DurationSchema.INSTANCE);
+            STRATEGY.registerPojo(Instant.class, InstantSchema.INSTANCE);
+            STRATEGY.registerPojo(LocalDate.class, LocalDateSchema.INSTANCE);
+            STRATEGY.registerPojo(LocalTime.class, LocalTimeSchema.INSTANCE);
+            STRATEGY.registerPojo(LocalDateTime.class, LocalDateTimeSchema.INSTANCE);
+            STRATEGY.registerPojo(MonthDay.class, MonthDaySchema.INSTANCE);
+            STRATEGY.registerPojo(OffsetDateTime.class, OffsetDateTimeSchema.INSTANCE);
+            STRATEGY.registerPojo(OffsetTime.class, OffsetTimeSchema.INSTANCE);
+            STRATEGY.registerPojo(Period.class, PeriodSchema.INSTANCE);
+            STRATEGY.registerPojo(YearMonth.class, YearMonthSchema.INSTANCE);
+            STRATEGY.registerPojo(Year.class, YearSchema.INSTANCE);
+            STRATEGY.registerPojo(ZoneId.class, ZoneIdSchema.INSTANCE);
+            STRATEGY.registerPojo(ZoneOffset.class, ZoneOffsetSchema.INSTANCE);
+            STRATEGY.registerPojo(ZonedDateTime.class, ZonedDateTimeSchema.INSTANCE);
+            STRATEGY.registerPojo(Date.class, SqlDateSchema.INSTANCE);
+            STRATEGY.registerPojo(Time.class, SqlTimeSchema.INSTANCE);
+            STRATEGY.registerPojo(Timestamp.class, SqlTimestampSchema.INSTANCE);
+            STRATEGY.registerPojo(Locale.class, LocaleSchema.INSTANCE);
             //ID_STRATEGY.ARRAY_SCHEMA
             //注册插件，便于第三方协议注册序列化实现
-            register(AutowiredObjectSerializer.class, o -> RuntimeSchema.register(o.getType(), o));
+            register(AutowiredObjectSerializer.class, o -> STRATEGY.registerPojo(o.getType(), o));
         }
 
         protected ThreadLocal<LinkedBuffer> local = ThreadLocal.withInitial(() -> LinkedBuffer.allocate(1024));
@@ -102,12 +102,12 @@ public class ProtostuffSerialization implements Serialization {
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) throws IOException {
             LinkedBuffer buffer = local.get();
-            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), buffer, new ProtostuffOutput(buffer, os), os);
+            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), new ProtostuffOutput(buffer, os), os);
         }
 
         @Override
         protected ObjectReader createReader(final InputStream is, final Class clazz) throws IOException {
-            return new ProtostuffReader(RuntimeSchema.getSchema(clazz, STRATEGY), local.get(), is);
+            return new ProtostuffReader(RuntimeSchema.getSchema(clazz, STRATEGY), is, local.get());
         }
     }
 

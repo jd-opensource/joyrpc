@@ -23,9 +23,9 @@ package io.protostuff;
 import java.io.OutputStream;
 
 /**
- * Protostuff写入器
+ * Protobuf写入器
  */
-public class ProtostuffWriter extends AbstractProtostuffWriter {
+public class ProtobufWriter extends AbstractProtostuffWriter {
 
     /**
      * 构造函数
@@ -34,7 +34,7 @@ public class ProtostuffWriter extends AbstractProtostuffWriter {
      * @param output
      * @param outputStream
      */
-    public ProtostuffWriter(Schema schema, ProtostuffOutput output, OutputStream outputStream) {
+    public ProtobufWriter(Schema schema, ProtobufOutput output, OutputStream outputStream) {
         super(schema, output, output, outputStream);
     }
 

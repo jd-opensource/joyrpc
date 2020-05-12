@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.protostuff.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,8 +37,6 @@ public class OffsetDateTimeSchema extends AbstractJava8Schema<OffsetDateTime> {
     public static final String DATE_TIME = "dateTime";
     public static final String OFFSET = "offset";
 
-    protected static final String[] FIELD_NAMES = new String[]{DATE_TIME, OFFSET};
-
     protected static final Map<String, Integer> FIELD_MAP = new HashMap(2);
 
     protected static Field FIELD_DATE_TIME = getWriteableField(OffsetDateTime.class, DATE_TIME);
@@ -55,7 +53,14 @@ public class OffsetDateTimeSchema extends AbstractJava8Schema<OffsetDateTime> {
 
     @Override
     public String getFieldName(int number) {
-        return FIELD_NAMES[number];
+        switch (number) {
+            case 1:
+                return DATE_TIME;
+            case 2:
+                return OFFSET;
+            default:
+                return null;
+        }
     }
 
     @Override

@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @EnableDubboConfig
 public class DubboClient {
 
-    @Reference(version = "0.0.0", group = "2.0-Boot", url = "10.0.16.232:20880")
+    @Reference(version = "0.0.0", group = "2.0-Boot", url = "127.0.0.1:22000")
     private DemoService demoService;
 
     public static void main(String[] args) {

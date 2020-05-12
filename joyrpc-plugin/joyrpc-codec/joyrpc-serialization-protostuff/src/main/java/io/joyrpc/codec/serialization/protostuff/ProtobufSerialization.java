@@ -20,17 +20,19 @@ package io.joyrpc.codec.serialization.protostuff;
  * #L%
  */
 
+import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.codec.serialization.Serializer;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-import io.protostuff.LinkedBuffer;
 import io.protostuff.ProtobufOutput;
-import io.protostuff.ProtostuffWriter;
+import io.protostuff.ProtobufReader;
+import io.protostuff.ProtobufWriter;
 import io.protostuff.runtime.RuntimeSchema;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
@@ -64,10 +66,13 @@ public class ProtobufSerialization implements Serialization {
 
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) throws IOException {
-            LinkedBuffer buffer = local.get();
-            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), buffer, new ProtobufOutput(buffer), os);
+            return new ProtobufWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), new ProtobufOutput(local.get()), os);
         }
 
+        @Override
+        protected ObjectReader createReader(final InputStream is, final Class clazz) throws IOException {
+            return new ProtobufReader(RuntimeSchema.getSchema(clazz, STRATEGY), is, local.get());
+        }
     }
 
 }

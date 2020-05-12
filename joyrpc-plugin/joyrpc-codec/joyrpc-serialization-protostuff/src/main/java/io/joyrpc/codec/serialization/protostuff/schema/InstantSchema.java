@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.protostuff.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,8 +35,6 @@ public class InstantSchema extends AbstractJava8Schema<Instant> {
     public static final String SECONDS = "seconds";
     public static final String NANOS = "nanos";
 
-    protected static final String[] FIELD_NAMES = new String[]{SECONDS, NANOS};
-
     protected static final Map<String, Integer> FIELD_MAP = new HashMap(2);
 
     protected static Field FIELD_SECONDS = getWriteableField(Instant.class, SECONDS);
@@ -54,7 +52,14 @@ public class InstantSchema extends AbstractJava8Schema<Instant> {
 
     @Override
     public String getFieldName(int number) {
-        return FIELD_NAMES[number];
+        switch (number) {
+            case 1:
+                return SECONDS;
+            case 2:
+                return NANOS;
+            default:
+                return null;
+        }
     }
 
     @Override

@@ -15,7 +15,6 @@ public class DubboServer {
 
     private static final Logger logger = LoggerFactory.getLogger(DubboServer.class);
 
-
     public static void main(String[] args) throws InterruptedException {
 
         System.setProperty("spring.profiles.active", "server");

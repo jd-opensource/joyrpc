@@ -42,8 +42,6 @@ import java.util.Properties;
 
 /**
  * The runtime environment.
- * <p>
- * modified loadClass to improve performance.
  *
  * @author David Yu
  * @created Jul 8, 2011
@@ -248,7 +246,6 @@ public final class RuntimeEnv {
 
     @SuppressWarnings("unchecked")
     static <T> Class<T> loadClass(String className) {
-
         try {
             return (Class<T>) ClassUtils.forName(className);
         } catch (ClassNotFoundException e) {

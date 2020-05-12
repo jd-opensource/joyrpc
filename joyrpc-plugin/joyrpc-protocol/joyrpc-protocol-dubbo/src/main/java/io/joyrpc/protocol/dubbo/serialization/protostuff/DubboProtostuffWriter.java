@@ -67,6 +67,11 @@ public class DubboProtostuffWriter implements ObjectWriter {
     }
 
     @Override
+    public void release() {
+        buffer.clear();
+    }
+
+    @Override
     public void close() throws IOException {
         dos.close();
         buffer.clear();

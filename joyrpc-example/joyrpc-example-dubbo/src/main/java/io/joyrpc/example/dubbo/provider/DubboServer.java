@@ -1,5 +1,7 @@
-package io.joyrpc.example.dubbo;
+package io.joyrpc.example.dubbo.provider;
 
+import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
+import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
@@ -7,6 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
+@EnableDubbo
 public class DubboServer {
 
     private static final Logger logger = LoggerFactory.getLogger(DubboServer.class);

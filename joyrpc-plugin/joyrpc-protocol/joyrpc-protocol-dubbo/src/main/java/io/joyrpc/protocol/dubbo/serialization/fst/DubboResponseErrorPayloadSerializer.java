@@ -20,8 +20,8 @@ package io.joyrpc.protocol.dubbo.serialization.fst;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.ObjectInputReader;
-import io.joyrpc.codec.serialization.ObjectOutputWriter;
+import io.joyrpc.codec.serialization.fst.FSTObjectReader;
+import io.joyrpc.codec.serialization.fst.FSTObjectWriter;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import org.nustaq.serialization.AutowiredObjectSerializer;
@@ -48,7 +48,7 @@ public class DubboResponseErrorPayloadSerializer implements AutowiredObjectSeria
                             final FSTClazzInfo clzInfo,
                             final FSTClazzInfo.FSTFieldInfo referencedBy,
                             final int streamPosition) throws IOException {
-        ((DubboResponseErrorPayload) toWrite).write(new ObjectOutputWriter(out));
+        ((DubboResponseErrorPayload) toWrite).write(new FSTObjectWriter(out));
     }
 
     @Override
@@ -56,7 +56,7 @@ public class DubboResponseErrorPayloadSerializer implements AutowiredObjectSeria
                            final Object toRead,
                            final FSTClazzInfo clzInfo,
                            final FSTClazzInfo.FSTFieldInfo referencedBy) throws Exception {
-        ((DubboResponseErrorPayload) toRead).read(new ObjectInputReader(in));
+        ((DubboResponseErrorPayload) toRead).read(new FSTObjectReader(in));
     }
 
     @Override

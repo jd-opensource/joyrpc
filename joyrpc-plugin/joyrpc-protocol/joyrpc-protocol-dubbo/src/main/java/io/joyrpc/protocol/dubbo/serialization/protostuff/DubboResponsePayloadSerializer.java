@@ -37,7 +37,6 @@ public class DubboResponsePayloadSerializer  implements AutowiredObjectSerialize
         return DubboResponsePayload.class;
     }
 
-
     @Override
     public String getFieldName(int i) {
         return null;

@@ -30,13 +30,12 @@ import java.io.IOException;
 /**
  * DubboInvocation序列化
  */
-public class DubboInvocationSerializer  implements AutowiredObjectSerializer {
+public class DubboInvocationSerializer implements AutowiredObjectSerializer {
 
     @Override
     public Class<?> typeClass() {
         return DubboInvocation.class;
     }
-
 
     @Override
     public String getFieldName(int i) {

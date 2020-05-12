@@ -1,7 +1,8 @@
-package io.joyrpc.example.dubbo;
+package io.joyrpc.example.dubbo.consumer;
 
-import io.joyrpc.example.dubbo.service.DubboDemoService;
-import io.joyrpc.exception.NoAliveProviderException;
+import io.joyrpc.example.service.DemoService;
+import org.apache.dubbo.config.annotation.Reference;
+import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -9,12 +10,17 @@ import org.springframework.context.ConfigurableApplicationContext;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootApplication
+@EnableDubboConfig
 public class DubboClient {
+
+    @Reference(version = "0.0.0", group = "2.0-Boot", url = "10.0.16.232:20880")
+    private DemoService demoService;
 
     public static void main(String[] args) {
         System.setProperty("spring.profiles.active", "client");
+
         ConfigurableApplicationContext run = SpringApplication.run(DubboClient.class, args);
-        DubboDemoService consumer = run.getBean(DubboDemoService.class);
+        DemoService consumer = run.getBean(DemoService.class);
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
@@ -24,14 +30,10 @@ public class DubboClient {
             } catch (InterruptedException e) {
                 break;
             } catch (Throwable e) {
+                e.printStackTrace();
                 try {
                     Thread.sleep(1000L);
                 } catch (InterruptedException ex) {
-                }
-                if (e instanceof NoAliveProviderException) {
-                    System.out.println(e.getMessage());
-                } else {
-                    e.printStackTrace();
                 }
             }
         }

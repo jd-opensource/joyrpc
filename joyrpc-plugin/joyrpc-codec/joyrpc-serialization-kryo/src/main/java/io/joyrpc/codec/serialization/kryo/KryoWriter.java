@@ -42,7 +42,7 @@ public class KryoWriter implements ObjectWriter {
 
     @Override
     public void writeObject(final Object obj) throws IOException {
-        kryo.writeObject(output, obj);
+        kryo.writeClassAndObject(output, obj);
     }
 
     @Override

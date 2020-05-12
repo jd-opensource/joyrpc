@@ -145,11 +145,11 @@ public class DubboInvocation extends Invocation {
      * @throws IOException
      */
     public DubboInvocation read(final ObjectReader reader) throws IOException {
-        String dubboVersion = reader.readString();
-        String className = reader.readString();
-        String version = reader.readString();
-        String methodName = reader.readString();
-        String desc = reader.readString();
+        String dubboVersion = reader.readUTF();
+        String className = reader.readUTF();
+        String version = reader.readUTF();
+        String methodName = reader.readUTF();
+        String desc = reader.readUTF();
 
         Object[] args;
         Class<?>[] pts;
@@ -231,15 +231,15 @@ public class DubboInvocation extends Invocation {
             return;
         }
         //写dubboversion
-        writer.writeString(DEFALUT_DUBBO_VERSION);
+        writer.writeUTF(DEFALUT_DUBBO_VERSION);
         //写接口名
-        writer.writeString(className);
+        writer.writeUTF(className);
         //写服务版本
-        writer.writeString(version);
+        writer.writeUTF(version);
         //写方法名
-        writer.writeString(methodName);
+        writer.writeUTF(methodName);
         //写参数描述
-        writer.writeString(parameterTypesDesc);
+        writer.writeUTF(parameterTypesDesc);
         //写参数
         Object[] args = getArgs();
         if (args != null) {

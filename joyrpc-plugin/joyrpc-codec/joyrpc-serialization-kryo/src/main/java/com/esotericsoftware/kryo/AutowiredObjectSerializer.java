@@ -21,7 +21,7 @@ package com.esotericsoftware.kryo;
  */
 
 /**
- * 自动注册序列化
+ * 自动注册自定义序列化
  *
  * @param <T>
  */

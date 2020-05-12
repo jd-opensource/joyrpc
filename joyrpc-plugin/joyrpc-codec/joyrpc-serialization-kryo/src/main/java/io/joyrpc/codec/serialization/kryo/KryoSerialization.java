@@ -44,6 +44,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
+import static io.joyrpc.util.ClassUtils.getDefaultConstructor;
+import static io.joyrpc.util.ClassUtils.isJavaClass;
+
 /**
  * kryo
  */
@@ -74,7 +77,7 @@ public class KryoSerialization implements Serialization {
          * 绑定在线程变量里面
          */
         protected static final ThreadLocal<Kryo> local = ThreadLocal.withInitial(() -> {
-            final Kryo kryo = new Kryo();
+            final Kryo kryo = new CompatibleKryo();
             kryo.addDefaultSerializer(Throwable.class, new JavaSerializer());
             kryo.register(Arrays.asList("").getClass(), new ArraysAsListSerializer());
             kryo.register(GregorianCalendar.class, new GregorianCalendarSerializer());
@@ -133,5 +136,31 @@ public class KryoSerialization implements Serialization {
             return new KryoReader(local.get(), new Input(is));
         }
 
+    }
+
+    /**
+     * 兼容Kryo
+     */
+    protected static class CompatibleKryo extends Kryo {
+        @Override
+        public com.esotericsoftware.kryo.Serializer getDefaultSerializer(Class type) {
+            if (type == null) {
+                throw new IllegalArgumentException("type cannot be null.");
+            }
+
+            /**
+             * Kryo requires every class to provide a zero argument constructor. For any class does not match this condition, kryo have two ways:
+             * 1. Use JavaSerializer,
+             * 2. Set 'kryo.setInstantiatorStrategy(new DefaultInstantiatorStrategy(new StdInstantiatorStrategy()));', StdInstantiatorStrategy can generate an instance bypassing the constructor.
+             *
+             * In practice, it's not possible for users to register kryo Serializer for every customized class. So in most cases, customized classes with/without zero argument constructor will
+             * default to the default serializer.
+             * It is the responsibility of kryo to handle with every standard jdk classes, so we will just escape these classes.
+             */
+            if (!isJavaClass(type) && !type.isArray() && !type.isEnum() && getDefaultConstructor(type) == null) {
+                return new JavaSerializer();
+            }
+            return super.getDefaultSerializer(type);
+        }
     }
 }

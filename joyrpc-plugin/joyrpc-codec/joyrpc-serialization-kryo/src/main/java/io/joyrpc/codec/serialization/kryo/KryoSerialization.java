@@ -48,7 +48,7 @@ import java.util.regex.Pattern;
  * kryo
  */
 @Extension(value = "kryo", provider = "esotericsoftware", order = Serialization.ORDER_KRYO)
-@ConditionalOnClass("com.esotericsoftware.kryo.Kryo")
+@ConditionalOnClass({"com.esotericsoftware.kryo.Kryo", "de.javakaffee.kryoserializers.JdkProxySerializer"})
 public class KryoSerialization implements Serialization {
 
     @Override

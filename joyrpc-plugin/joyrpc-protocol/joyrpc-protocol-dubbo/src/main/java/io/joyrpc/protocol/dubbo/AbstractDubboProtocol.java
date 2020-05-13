@@ -40,6 +40,7 @@ import java.util.function.Function;
 import static io.joyrpc.constants.Constants.KEY_APPNAME;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
+import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
 
 /**
  * Dubbo协议
@@ -89,13 +90,13 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
     protected static final byte[] SERIALIZATIONS_TO_DUBBO = new byte[127];
 
     static {
-        SERIALIZATIONS_TO_JOY[HESSIAN2_SERIALIZATION_ID] = (byte) Serialization.HESSIAN_ID;
+        SERIALIZATIONS_TO_JOY[HESSIAN2_SERIALIZATION_ID] = DUBBO_HESSIAN_ID;
         SERIALIZATIONS_TO_JOY[KRYO_SERIALIZATION_ID] = (byte) Serialization.KRYO_ID;
         SERIALIZATIONS_TO_JOY[PROTOSTUFF_SERIALIZATION_ID] = (byte) Serialization.DUBBO_PROTOSTUFF_ID;
         SERIALIZATIONS_TO_JOY[FST_SERIALIZATION_ID] = (byte) Serialization.FST_ID;
         SERIALIZATIONS_TO_JOY[JAVA_SERIALIZATION_ID] = (byte) Serialization.JAVA_ID;
         SERIALIZATIONS_TO_JOY[FASTJSON_SERIALIZATION_ID] = (byte) Serialization.JSON_ID;
-        SERIALIZATIONS_TO_DUBBO[(byte) Serialization.HESSIAN_ID] = HESSIAN2_SERIALIZATION_ID;
+        SERIALIZATIONS_TO_DUBBO[DUBBO_HESSIAN_ID] = HESSIAN2_SERIALIZATION_ID;
         SERIALIZATIONS_TO_DUBBO[(byte) Serialization.KRYO_ID] = KRYO_SERIALIZATION_ID;
         SERIALIZATIONS_TO_DUBBO[(byte) Serialization.DUBBO_PROTOSTUFF_ID] = PROTOSTUFF_SERIALIZATION_ID;
         SERIALIZATIONS_TO_DUBBO[(byte) Serialization.FST_ID] = FST_SERIALIZATION_ID;

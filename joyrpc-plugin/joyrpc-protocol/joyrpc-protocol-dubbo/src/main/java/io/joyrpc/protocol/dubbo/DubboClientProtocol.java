@@ -49,12 +49,12 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
     /**
      * 默认序列化参数
      */
-    protected static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", "hessian");
+    protected static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", "hessian@dubbo");
 
     /**
      * 序列化列表，优先级排序
      */
-    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian", "fst", "protostuff@dubbo", "kryo", "java");
+    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian@dubbo", "fst", "protostuff@dubbo", "kryo", "java");
 
     @Override
     public Message negotiate(final URL clusterUrl, final Client client) {
@@ -63,6 +63,10 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
         //设置可用的序列化插件
         response.setSerializations(SERIALIZATION.available(SERIALIZATIONS));
         //设置优先序列化方式
+        String serialization = clusterUrl.getString(SERIALIZATION_OPTION);
+        if (serialization.equals("hessian")) {
+            serialization = "hessian@dubbo";
+        }
         response.setSerialization(clusterUrl.getString(SERIALIZATION_OPTION));
         //添加扩展属性信息
         response.addAttribute(CONFIG_KEY_INTERFACE, clusterUrl.getPath());

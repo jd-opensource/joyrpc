@@ -67,6 +67,8 @@ public interface Serialization extends CodecType {
 
     int DUBBO_PROTOSTUFF_ID = 18;
 
+    int DUBBO_HESSIAN_ID = 19;
+
     int ORDER_PROTOSTUFF = 100;
 
     int ORDER_DUBBO_PROTOSTUFF = ORDER_PROTOSTUFF + 1;
@@ -74,6 +76,8 @@ public interface Serialization extends CodecType {
     int ORDER_HESSIAN_LITE = ORDER_PROTOSTUFF + 10;
 
     int ORDER_HESSIAN = ORDER_HESSIAN_LITE + 10;
+
+    int ORDER_DUBBO_HESSIAN = ORDER_HESSIAN + 1;
 
     int ORDER_DSLJSON = ORDER_HESSIAN + 10;
 

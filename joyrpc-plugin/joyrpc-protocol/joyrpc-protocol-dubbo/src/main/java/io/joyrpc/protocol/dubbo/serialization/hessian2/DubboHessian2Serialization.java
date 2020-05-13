@@ -20,10 +20,13 @@ package io.joyrpc.protocol.dubbo.serialization.hessian2;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.AbstractSerializer;
 import io.joyrpc.codec.serialization.Serializer;
-import io.joyrpc.codec.serialization.hessian2.*;
+import io.joyrpc.codec.serialization.*;
+import io.joyrpc.codec.serialization.hessian2.Hessian2BWLInput;
+import io.joyrpc.codec.serialization.hessian2.Hessian2Reader;
+import io.joyrpc.codec.serialization.hessian2.Hessian2Serialization;
+import io.joyrpc.codec.serialization.hessian2.Hessian2Writer;
 import io.joyrpc.com.caucho.hessian.io.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.permission.BlackList;
@@ -32,10 +35,8 @@ import io.joyrpc.util.ClassUtils;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-@Extension(value = "hessian", provider = "dubbo", order = Serialization.ORDER_HESSIAN)
+@Extension(value = "hessian", provider = "dubbo", order = Serialization.ORDER_DUBBO_HESSIAN)
 public class DubboHessian2Serialization extends Hessian2Serialization {
-
-    public static byte DUBBO_HESSIAN_ID = 30;
 
     @Override
     public byte getTypeId() {

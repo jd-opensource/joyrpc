@@ -1,2 +1,1 @@
 io.joyrpc.protocol.dubbo.serialization.protostuff.DubboProtostuffSerialization
-io.joyrpc.protocol.dubbo.serialization.java.DubboJavaSerialization

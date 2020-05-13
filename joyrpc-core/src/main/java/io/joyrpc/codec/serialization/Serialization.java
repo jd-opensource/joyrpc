@@ -67,8 +67,6 @@ public interface Serialization extends CodecType {
 
     int DUBBO_PROTOSTUFF_ID = 18;
 
-    int DUBBO_JAVA_ID = 19;
-
     int ORDER_PROTOSTUFF = 100;
 
     int ORDER_DUBBO_PROTOSTUFF = ORDER_PROTOSTUFF + 1;
@@ -84,8 +82,6 @@ public interface Serialization extends CodecType {
     int ORDER_JACKSON = ORDER_FASTJSON + 10;
 
     int ORDER_JAVA = ORDER_JACKSON + 10;
-
-    int ORDER_DUBBO_JAVA = ORDER_JAVA + 1;
 
     int ORDER_FST = ORDER_JAVA + 10;
 

@@ -100,7 +100,10 @@ public class ObjectInputReader implements ObjectReader {
 
     @Override
     public String readUTF() throws IOException {
-        //保持和原有一样
+        int len = input.readInt();
+        if (len < 0) {
+            return null;
+        }
         return input.readUTF();
     }
 
@@ -120,6 +123,10 @@ public class ObjectInputReader implements ObjectReader {
     @Override
     public Object readObject() throws IOException {
         try {
+            byte b = input.readByte();
+            if (b == 0) {
+                return null;
+            }
             return input.readObject();
         } catch (ClassNotFoundException e) {
             return new IOException(e.getMessage(), e);

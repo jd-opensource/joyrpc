@@ -54,7 +54,7 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
     /**
      * 序列化列表，优先级排序
      */
-    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian", "fst", "protostuff@dubbo", "kryo", "java@dubbo");
+    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian", "fst", "protostuff@dubbo", "kryo", "java");
 
     @Override
     public Message negotiate(final URL clusterUrl, final Client client) {

@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,7 +39,12 @@ public class ObjectOutputWriter implements ObjectWriter {
     @Override
     public void writeObject(final Object v) throws IOException {
         //保持和原有一样
-        output.writeObject(v);
+        if (v == null) {
+            output.writeByte(0);
+        } else {
+            output.writeByte(1);
+            output.writeObject(v);
+        }
     }
 
     @Override
@@ -109,7 +114,12 @@ public class ObjectOutputWriter implements ObjectWriter {
     @Override
     public void writeUTF(final String s) throws IOException {
         //保持和原有一样
-        output.writeUTF(s);
+        if (s == null) {
+            output.writeInt(-1);
+        } else {
+            output.writeInt(s.length());
+            output.writeUTF(s);
+        }
     }
 
     @Override

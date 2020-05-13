@@ -30,6 +30,6 @@ public interface HelloService {
      *
      * @return the string
      */
-    String sayHello(String hello);
+    String[][] sayHello(String hello);
 
 }

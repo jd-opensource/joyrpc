@@ -79,6 +79,12 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
         }
         if (clazz == void.class) {
             return null;
+        } else if (clazz.isPrimitive()) {
+            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+        } else if (clazz.isEnum()) {
+            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+        } else if (clazz.isArray()) {
+            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
         } else if (isPojo(clazz)) {
             return new ClassWrapper(clazz, false);
         } else {

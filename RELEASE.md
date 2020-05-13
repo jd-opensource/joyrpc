@@ -32,6 +32,8 @@
 
 - 修复protostuff&protobuf的序列化没有使用上自定义schema和protobuf反序列化异常
 
+- 修复grpcFactory没有对枚举和数组生成包装器的问题
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

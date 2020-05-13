@@ -94,7 +94,7 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         ctClass.addMethod(CtNewMethod.getter((boolean.class == type ? "is" : "get") + upperField, ctField));
         ctClass.addMethod(CtNewMethod.setter("set" + upperField, ctField));
         ctClass.addMethod(CtMethod.make("public Object[] toArgs(){\n\treturn new Object[]{" + field + "};\n};", ctClass));
-        ctClass.addMethod(CtMethod.make("public void toFields(Object[] args){\n\t" + field + "=(java.lang.String)args[0];\n};", ctClass));
+        ctClass.addMethod(CtMethod.make("public void toFields(Object[] args){\n\t" + field + "=(" + typeName + ")args[0];\n};", ctClass));
         return ctClass.toClass();
     }
 

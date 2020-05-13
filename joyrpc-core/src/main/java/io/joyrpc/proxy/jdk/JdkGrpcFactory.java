@@ -30,7 +30,6 @@ import io.joyrpc.util.GrpcType;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
 
 /**
  * JDK的GrpcType工厂
@@ -81,33 +80,34 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
                 append("package ").append(clz.getPackage().getName()).append(";\n").
                 append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n");
         //添加字段
-        for (Parameter parameter : method.getParameters()) {
-            builder.append("\t").append("private ").append(parameter.getParameterizedType().getTypeName()).append(' ').append(parameter.getName()).append(";\n");
+        Parameter[] parameters = method.getParameters();
+        String[] typeNames = new String[parameters.length];
+        int i = 0;
+        for (Parameter parameter : parameters) {
+            typeNames[i] = parameter.getParameterizedType().getTypeName();
+            builder.append("\t").append("private ").append(typeNames[i]).append(' ').append(parameter.getName()).append(";\n");
+            i++;
         }
         //添加Getter&Setter
-        Type type;
         String name;
         String upperName;
-        String typeName;
         StringBuilder toFields = new StringBuilder(200);
         StringBuilder toArgs = new StringBuilder(100);
-        int i = 0;
-        for (Parameter parameter : method.getParameters()) {
-            type = parameter.getParameterizedType();
+        i = 0;
+        for (Parameter parameter : parameters) {
             name = parameter.getName();
             upperName = name.substring(0, 1).toUpperCase() + name.substring(1);
-            typeName = type.getTypeName();
-            builder.append("\t").append("public ").append(typeName).append(" get").append(upperName).append("(){\n").
+            builder.append("\t").append("public ").append(typeNames[i]).append(" get").append(upperName).append("(){\n").
                     append("\t\t").append("return ").append(name).append(";\n").
                     append("\t}\n").
-                    append("\t").append("public void set").append(upperName).append("(").append(typeName).append(" ").append(name).append("){\n").
+                    append("\t").append("public void set").append(upperName).append("(").append(typeNames[i]).append(" ").append(name).append("){\n").
                     append("\t\t").append("this.").append(name).append("=").append(name).append(";\n").
                     append("\t}\n");
             if (i > 0) {
                 toArgs.append(',');
             }
             toArgs.append(parameter.getName());
-            toFields.append("\t\t").append(name).append("=(").append(typeName).append(")args[").append(i).append("];\n");
+            toFields.append("\t\t").append(name).append("=(").append(typeNames[i]).append(")args[").append(i).append("];\n");
             i++;
         }
         //添加toArgs方法

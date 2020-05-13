@@ -67,7 +67,7 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
         if (serialization.equals("hessian")) {
             serialization = "hessian@dubbo";
         }
-        response.setSerialization(clusterUrl.getString(SERIALIZATION_OPTION));
+        response.setSerialization(serialization);
         //添加扩展属性信息
         response.addAttribute(CONFIG_KEY_INTERFACE, clusterUrl.getPath());
         response.addAttribute(ALIAS_OPTION.getName(), clusterUrl.getString(ALIAS_OPTION));

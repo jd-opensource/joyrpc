@@ -45,7 +45,7 @@ public class DubboObjectInputReader extends ObjectInputReader {
         if (b == 0) {
             return null;
         }
-        return readObject();
+        return super.readObject();
     }
 
     @Override

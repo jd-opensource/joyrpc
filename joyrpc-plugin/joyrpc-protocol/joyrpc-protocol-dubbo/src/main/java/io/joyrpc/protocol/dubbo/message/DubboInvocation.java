@@ -23,6 +23,7 @@ package io.joyrpc.protocol.dubbo.message;
 import io.joyrpc.codec.serialization.Codec;
 import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
+import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.util.ClassUtils;
 
@@ -202,7 +203,7 @@ public class DubboInvocation extends Invocation implements Codec {
     public void encode(final ObjectWriter writer) throws IOException {
         //心跳响应，直接写null
         if (isHeartbeat()) {
-            writer.writeObject(null);
+            writer.writeObject(DubboStatus.HEARTBEAT_EVENT);
             return;
         }
         //写dubboversion

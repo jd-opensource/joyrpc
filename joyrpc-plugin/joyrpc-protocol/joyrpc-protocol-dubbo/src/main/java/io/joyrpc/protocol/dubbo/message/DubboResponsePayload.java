@@ -161,7 +161,7 @@ public class DubboResponsePayload extends ResponsePayload implements Codec {
     public void encode(final ObjectWriter writer) throws IOException {
         //心跳响应，直接写null
         if (isHeartbeat()) {
-            writer.writeObject(null);
+            writer.writeObject(DubboStatus.HEARTBEAT_EVENT);
             return;
         }
         //序列化payload

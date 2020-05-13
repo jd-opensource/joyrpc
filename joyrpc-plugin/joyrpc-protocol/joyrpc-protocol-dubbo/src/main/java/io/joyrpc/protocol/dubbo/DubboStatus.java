@@ -42,6 +42,7 @@ public class DubboStatus {
     public static final byte SERVER_ERROR = 80;
     public static final byte CLIENT_ERROR = 90;
     public static final byte SERVER_THREADPOOL_EXHAUSTED_ERROR = 100;
+    public static final String HEARTBEAT_EVENT = null;
 
     /**
      * 获取状态

@@ -1,2 +1,0 @@
-io.joyrpc.protocol.dubbo.serialization.hessian.DubboInvocationSerializer
-io.joyrpc.protocol.dubbo.serialization.hessian.DubboResponsePayloadSerializer

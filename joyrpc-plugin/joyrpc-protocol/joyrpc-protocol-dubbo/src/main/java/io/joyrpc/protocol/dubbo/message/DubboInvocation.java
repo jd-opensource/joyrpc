@@ -20,13 +20,13 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.*;
+import io.joyrpc.codec.serialization.Codec;
+import io.joyrpc.codec.serialization.ObjectReader;
+import io.joyrpc.codec.serialization.ObjectWriter;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.util.ClassUtils;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,7 +36,7 @@ import static io.joyrpc.protocol.dubbo.AbstractDubboProtocol.DEFALUT_DUBBO_VERSI
 /**
  * Dubbo调用
  */
-public class DubboInvocation extends Invocation implements CustomObjectSerializer {
+public class DubboInvocation extends Invocation implements Codec {
 
     protected static final Map<Object, Object> EMPTY_ATTACHMENTS = new HashMap<>(0);
     public static String DUBBO_VERSION_KEY = "dubbo";
@@ -116,32 +116,11 @@ public class DubboInvocation extends Invocation implements CustomObjectSerialize
     }
 
     /**
-     * java序列化
-     *
-     * @param out
-     * @throws IOException
-     */
-    private void writeObject(final ObjectOutputStream out) throws IOException {
-        write(new ObjectOutputWriter(out));
-    }
-
-    /**
-     * java反序列化
-     *
-     * @param in
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-        read(new ObjectInputReader(in));
-    }
-
-    /**
      * 读取调用
      *
      * @throws IOException
      */
-    public DubboInvocation read(final ObjectReader reader) throws IOException {
+    public void decode(final ObjectReader reader) throws IOException {
         String dubboVersion = reader.readUTF();
         String className = reader.readUTF();
         String version = reader.readUTF();
@@ -212,7 +191,6 @@ public class DubboInvocation extends Invocation implements CustomObjectSerialize
         }
         this.methodName = methodName;
         this.method = method;
-        return this;
     }
 
     /**
@@ -221,10 +199,10 @@ public class DubboInvocation extends Invocation implements CustomObjectSerialize
      * @param writer 写
      * @throws IOException
      */
-    public void write(final ObjectWriter writer) throws IOException {
+    public void encode(final ObjectWriter writer) throws IOException {
         //心跳响应，直接写null
         if (isHeartbeat()) {
-            writer.writeNull();
+            writer.writeObject(null);
             return;
         }
         //写dubboversion

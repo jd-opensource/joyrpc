@@ -21,10 +21,7 @@ package io.joyrpc.codec.serialization.kryo;
  */
 
 import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.Registration;
-import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Output;
-import io.joyrpc.codec.serialization.CustomObjectSerializer;
 import io.joyrpc.codec.serialization.ObjectWriter;
 
 import java.io.IOException;
@@ -45,17 +42,7 @@ public class KryoWriter implements ObjectWriter {
 
     @Override
     public void writeObject(final Object obj) throws IOException {
-        if (obj instanceof CustomObjectSerializer) {
-            Registration registration = kryo.getRegistration(obj.getClass());
-            Serializer serializer = registration != null ? registration.getSerializer() : null;
-            if (serializer != null) {
-                serializer.write(kryo, output, obj);
-            } else {
-                kryo.writeClassAndObject(output, obj);
-            }
-        } else {
-            kryo.writeClassAndObject(output, obj);
-        }
+        kryo.writeClassAndObject(output, obj);
     }
 
     @Override

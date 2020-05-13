@@ -20,18 +20,16 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.CustomObjectSerializer;
-import io.joyrpc.codec.serialization.ObjectInputReader;
+import io.joyrpc.codec.serialization.Codec;
 import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 
 /**
  * Dubbo异常应答消息
  */
-public class DubboResponseErrorPayload extends DubboResponsePayload implements CustomObjectSerializer {
+public class DubboResponseErrorPayload extends DubboResponsePayload implements Codec {
     /**
      * 异常信息
      */
@@ -52,27 +50,14 @@ public class DubboResponseErrorPayload extends DubboResponsePayload implements C
         this.exceptionMessage = exceptionMessage;
     }
 
-
-    /**
-     * java反序列化
-     *
-     * @param in
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-        read(new ObjectInputReader(in));
-    }
-
     /**
      * 读取调用
      *
      * @param reader 读取器
      * @throws IOException
      */
-    public DubboResponseErrorPayload read(final ObjectReader reader) throws IOException {
+    public void decode(final ObjectReader reader) throws IOException {
         this.exceptionMessage = reader.readString();
-        return this;
     }
 
     /**
@@ -81,7 +66,7 @@ public class DubboResponseErrorPayload extends DubboResponsePayload implements C
      * @param writer 写入器
      * @throws IOException
      */
-    public void write(final ObjectWriter writer) throws IOException {
+    public void encode(final ObjectWriter writer) throws IOException {
         writer.writeString(exceptionMessage);
     }
 }

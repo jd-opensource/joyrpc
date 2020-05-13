@@ -20,43 +20,15 @@ package io.joyrpc.codec.serialization.fst;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.CustomObjectSerializer;
 import io.joyrpc.codec.serialization.ObjectOutputWriter;
-import org.nustaq.serialization.FSTConfiguration;
 import org.nustaq.serialization.FSTObjectOutput;
-import org.nustaq.serialization.FSTObjectSerializer;
-
-import java.io.IOException;
 
 /**
  * FST对象写入器
  */
 public class FSTObjectWriter extends ObjectOutputWriter {
 
-    protected FSTConfiguration fst;
-
     public FSTObjectWriter(FSTObjectOutput output) {
         super(output);
-        fst = output.getConf();
-    }
-
-    @Override
-    public void writeObject(final Object v) throws IOException {
-        try {
-            if (v instanceof CustomObjectSerializer) {
-                FSTObjectSerializer serializer = fst.getCLInfoRegistry().getSerializerRegistry().getSerializer(v.getClass());
-                if (serializer != null) {
-                    serializer.writeObject((FSTObjectOutput) output, v, null, null, 0);
-                } else {
-                    output.writeObject(v);
-                }
-            } else {
-                output.writeObject(v);
-            }
-        } catch (IOException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IOException(e.getMessage(), e);
-        }
     }
 }

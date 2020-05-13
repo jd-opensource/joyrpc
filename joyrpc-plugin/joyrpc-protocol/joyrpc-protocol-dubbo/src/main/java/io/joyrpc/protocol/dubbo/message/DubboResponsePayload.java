@@ -20,13 +20,13 @@ package io.joyrpc.protocol.dubbo.message;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.*;
+import io.joyrpc.codec.serialization.Codec;
+import io.joyrpc.codec.serialization.ObjectReader;
+import io.joyrpc.codec.serialization.ObjectWriter;
 import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.ResponsePayload;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,7 +37,7 @@ import static io.joyrpc.protocol.dubbo.DubboVersion.getIntVersion;
 /**
  * Dubbo应答消息
  */
-public class DubboResponsePayload extends ResponsePayload implements CustomObjectSerializer {
+public class DubboResponsePayload extends ResponsePayload implements Codec {
 
     public static final byte RESPONSE_WITH_EXCEPTION = 0;
     public static final byte RESPONSE_VALUE = 1;
@@ -120,33 +120,12 @@ public class DubboResponsePayload extends ResponsePayload implements CustomObjec
     }
 
     /**
-     * java序列化
-     *
-     * @param out
-     * @throws IOException
-     */
-    private void writeObject(final ObjectOutputStream out) throws IOException {
-        write(new ObjectOutputWriter(out));
-    }
-
-    /**
-     * java反序列化
-     *
-     * @param in
-     * @throws IOException
-     * @throws ClassNotFoundException
-     */
-    private void readObject(final ObjectInputStream in) throws IOException, ClassNotFoundException {
-        read(new ObjectInputReader(in));
-    }
-
-    /**
      * 读取应答载体
      *
      * @param reader 读取器
      * @throws IOException
      */
-    public DubboResponsePayload read(final ObjectReader reader) throws IOException {
+    public void decode(final ObjectReader reader) throws IOException {
         int respFlag = reader.readInt();
         switch (respFlag) {
             case RESPONSE_NULL_VALUE:
@@ -171,7 +150,6 @@ public class DubboResponsePayload extends ResponsePayload implements CustomObjec
             default:
                 throw new IOException("Unknown result flag, expect '0' '1' '2' '3' '4' '5', but received: " + respFlag);
         }
-        return this;
     }
 
     /**
@@ -180,10 +158,10 @@ public class DubboResponsePayload extends ResponsePayload implements CustomObjec
      * @param writer 写入器
      * @throws IOException
      */
-    public void write(final ObjectWriter writer) throws IOException {
+    public void encode(final ObjectWriter writer) throws IOException {
         //心跳响应，直接写null
         if (isHeartbeat()) {
-            writer.writeNull();
+            writer.writeObject(null);
             return;
         }
         //序列化payload
@@ -192,16 +170,15 @@ public class DubboResponsePayload extends ResponsePayload implements CustomObjec
             Throwable th = exception;
             if (th == null) {
                 if (response == null) {
-                    writer.writeInt(attach ? RESPONSE_NULL_VALUE_WITH_ATTACHMENTS : RESPONSE_NULL_VALUE);
+                    writer.writeByte(attach ? RESPONSE_NULL_VALUE_WITH_ATTACHMENTS : RESPONSE_NULL_VALUE);
                 } else {
-                    writer.writeInt(attach ? RESPONSE_VALUE_WITH_ATTACHMENTS : RESPONSE_VALUE);
+                    writer.writeByte(attach ? RESPONSE_VALUE_WITH_ATTACHMENTS : RESPONSE_VALUE);
                     writer.writeObject(response);
                 }
             } else {
-                writer.writeInt(attach ? RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS : RESPONSE_WITH_EXCEPTION);
+                writer.writeByte(attach ? RESPONSE_WITH_EXCEPTION_WITH_ATTACHMENTS : RESPONSE_WITH_EXCEPTION);
                 writer.writeObject(th);
             }
-
             if (attach) {
                 // returns current version of Response to consumer side.
                 writer.writeObject(attachments == null ? EMPTY_ATTACHMENTS : attachments);

@@ -1,3 +1,0 @@
-io.joyrpc.protocol.dubbo.serialization.fst.DubboInvocationSerializer
-io.joyrpc.protocol.dubbo.serialization.fst.DubboResponseErrorPayloadSerializer
-io.joyrpc.protocol.dubbo.serialization.fst.DubboResponsePayloadSerializer

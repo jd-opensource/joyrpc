@@ -62,14 +62,6 @@ public interface ObjectWriter extends ObjectOutput {
     }
 
     /**
-     * 写Null对象
-     *
-     * @throws IOException
-     */
-    default void writeNull() throws IOException {
-    }
-
-    /**
      * 写字符串
      *
      * @param v

@@ -20,45 +20,15 @@ package io.joyrpc.codec.serialization.fst;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.CustomObjectSerializer;
 import io.joyrpc.codec.serialization.ObjectInputReader;
-import org.nustaq.serialization.FSTConfiguration;
 import org.nustaq.serialization.FSTObjectInput;
-import org.nustaq.serialization.FSTObjectSerializer;
-
-import java.io.IOException;
 
 /**
  * FST对象读取器
  */
 public class FSTObjectReader extends ObjectInputReader {
 
-    protected FSTConfiguration fst;
-
     public FSTObjectReader(FSTObjectInput input) {
         super(input);
-        this.fst = input.getConf();
-    }
-
-    @Override
-    public <T> T readObject(Class<T> clazz) throws IOException {
-        try {
-            if (CustomObjectSerializer.class.isAssignableFrom(clazz)) {
-                FSTObjectSerializer serializer = fst.getCLInfoRegistry().getSerializerRegistry().getSerializer(clazz);
-                if (serializer != null) {
-                    Object instantiate = serializer.instantiate(clazz, (FSTObjectInput) input, null, null, 0);
-                    serializer.readObject((FSTObjectInput) input, instantiate, null, null);
-                    return (T) instantiate;
-                } else {
-                    return (T) ((FSTObjectInput) input).readObject(clazz);
-                }
-            } else {
-                return (T) ((FSTObjectInput) input).readObject(clazz);
-            }
-        } catch (IOException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IOException(e.getMessage(), e);
-        }
     }
 }

@@ -126,7 +126,7 @@ public class DubboResponsePayload extends ResponsePayload implements Codec {
      * @throws IOException
      */
     public void decode(final ObjectReader reader) throws IOException {
-        int respFlag = reader.readInt();
+        int respFlag = reader.readByte();
         switch (respFlag) {
             case RESPONSE_NULL_VALUE:
                 break;

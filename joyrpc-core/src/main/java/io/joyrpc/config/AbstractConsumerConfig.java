@@ -748,8 +748,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 proxyClass = config.getProxyClass();
                 interfaceClazz = getPseudonym(config.getInterfaceClass(), config.getInterfaceClazz());
                 registry = (config.url != null && !config.url.isEmpty()) ?
-                        new RegistryConfig(Constants.FIX_REGISTRY, config.url)
-                        : config.registry != null ? config.registry : RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get();
+                        new RegistryConfig(Constants.FIX_REGISTRY, config.url) :
+                        (config.registry != null ? config.registry : RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get());
                 //注册中心地址
                 registryUrl = parse(registry);
                 String host = getLocalHost(registryUrl.getString(Constants.ADDRESS_OPTION));

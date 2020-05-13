@@ -20,6 +20,8 @@ package io.joyrpc.example.service;
  * #L%
  */
 
+import io.joyrpc.example.service.vo.Java8TimeObj;
+
 import javax.validation.constraints.NotNull;
 
 /**
@@ -35,6 +37,10 @@ public interface DemoService {
 
     default String echo(String str) throws Throwable {
         return sayHello(str);
+    }
+
+    default Java8TimeObj echoJava8TimeObj(Java8TimeObj timeObj) {
+        return timeObj;
     }
 
     static String hello(String v) {

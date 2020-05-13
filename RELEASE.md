@@ -18,7 +18,7 @@
 
 - 客户端增加TCP_NODELAY设置
 
-- 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。
+- 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。暂时不支持回调参数。
 
 - Dependency
 

@@ -24,12 +24,16 @@ import io.joyrpc.codec.serialization.ObjectWriter;
 import io.protostuff.GraphIOUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.Schema;
+import io.protostuff.runtime.RuntimeSchema;
+import org.apache.dubbo.common.serialize.protostuff.Wrapper;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+
+import static io.protostuff.runtime.RuntimeSchema.getSchema;
 
 /**
  * DubboProtostuff序列化
@@ -48,8 +52,23 @@ public class DubboProtostuffWriter implements ObjectWriter {
 
     @Override
     public void writeObject(final Object obj) throws IOException {
-        byte[] classNameBytes = obj.getClass().getName().getBytes();
-        byte[] bytes = GraphIOUtil.toByteArray(obj, schema, buffer);
+        byte[] bytes;
+        byte[] classNameBytes;
+        Schema mySchema;
+        try {
+            if (obj == null || Wrapper.needWrapper(obj)) {
+                mySchema = getSchema(Wrapper.class);
+                classNameBytes = Wrapper.CLASS_NAMES;
+                bytes = GraphIOUtil.toByteArray(new Wrapper(obj), mySchema, buffer);
+            } else {
+                Class<?> objClass = obj.getClass();
+                mySchema = objClass == schema.typeClass() ? schema : getSchema(objClass);
+                classNameBytes = objClass.getName().getBytes();
+                bytes = GraphIOUtil.toByteArray(obj, mySchema, buffer);
+            }
+        } finally {
+            buffer.clear();
+        }
         dos.writeInt(classNameBytes.length);
         dos.writeInt(bytes.length);
         dos.write(classNameBytes);

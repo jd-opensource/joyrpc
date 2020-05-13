@@ -21,16 +21,18 @@ package io.joyrpc.protocol.dubbo.serialization.protostuff;
  */
 
 import io.joyrpc.codec.serialization.ObjectReader;
-import io.joyrpc.util.ClassUtils;
 import io.protostuff.GraphIOUtil;
 import io.protostuff.Schema;
-import io.protostuff.runtime.RuntimeSchema;
+import org.apache.dubbo.common.serialize.protostuff.Wrapper;
 
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+
+import static io.joyrpc.util.ClassUtils.forName;
+import static io.protostuff.runtime.RuntimeSchema.getSchema;
 
 /**
  * Dubbo protostuff 反序列化
@@ -65,9 +67,13 @@ public class DubboProtostuffReader implements ObjectReader {
 
         Object result;
         try {
-            Schema schema = RuntimeSchema.getSchema(ClassUtils.forName(new String(classNameBytes)));
-            result = schema.newMessage();
-            GraphIOUtil.mergeFrom(bytes, result, schema);
+            String className = new String(classNameBytes);
+            Schema mySchema = className.equals(schema.typeClass().getName()) ? schema : getSchema(forName(className));
+            result = mySchema.newMessage();
+            GraphIOUtil.mergeFrom(bytes, result, mySchema);
+            if (result instanceof Wrapper) {
+                result = ((Wrapper) result).getData();
+            }
         } catch (ClassNotFoundException e) {
             throw new IOException(e.getMessage(), e);
         }

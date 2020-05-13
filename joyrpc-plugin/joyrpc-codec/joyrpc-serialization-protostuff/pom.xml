@@ -11,20 +11,14 @@
 
     <artifactId>joyrpc-serialization-protostuff</artifactId>
 
-    <properties>
-        <protostuff.version>1.6.2</protostuff.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-core</artifactId>
-            <version>${protostuff.version}</version>
         </dependency>
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-runtime</artifactId>
-            <version>${protostuff.version}</version>
         </dependency>
     </dependencies>
 

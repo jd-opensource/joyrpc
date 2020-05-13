@@ -23,7 +23,6 @@ package io.joyrpc.protocol.dubbo;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
-import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.message.DubboInvocation;
@@ -38,8 +37,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static io.joyrpc.Plugin.SERIALIZATION;
-import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.Constants.ALIAS_OPTION;
+import static io.joyrpc.constants.Constants.CONFIG_KEY_INTERFACE;
 
 /**
  * Dubbo客户端协议
@@ -55,7 +54,7 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
     /**
      * 序列化列表，优先级排序
      */
-    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian", "fst", "protostuff@dubbo", "kryo");
+    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian", "fst", "protostuff@dubbo", "kryo", "java@dubbo");
 
     @Override
     public Message negotiate(final URL clusterUrl, final Client client) {

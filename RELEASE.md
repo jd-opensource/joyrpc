@@ -16,9 +16,9 @@
 
 - 优化GRPC获取GrpcType和构建方法参数的性能
 
-- kryo、protostuff、protobuff、hessian和fst增加自动注册序列化插件
-
 - 客户端增加TCP_NODELAY设置
+
+- 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java序列化协议。
 
 - Dependency
 

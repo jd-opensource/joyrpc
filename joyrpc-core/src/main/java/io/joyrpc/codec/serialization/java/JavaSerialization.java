@@ -59,7 +59,7 @@ public class JavaSerialization implements Serialization, BlackList.BlackListAwar
     /**
      * Java序列化和反序列化实现
      */
-    protected static final class JavaSerializer extends AbstractSerializer {
+    protected static class JavaSerializer extends AbstractSerializer {
 
         protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/java.blacklist",
                 "META-INF/permission/java.blacklist").load();

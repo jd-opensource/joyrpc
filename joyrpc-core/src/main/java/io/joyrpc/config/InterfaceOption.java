@@ -150,6 +150,12 @@ public interface InterfaceOption {
          */
         String getDescription();
 
+        /**
+         * 是否开启跟踪
+         *
+         * @return 开启跟踪标识
+         */
+        boolean isTrace();
     }
 
     /**

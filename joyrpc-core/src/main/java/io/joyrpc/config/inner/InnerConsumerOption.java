@@ -252,6 +252,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
+                parametric.getBoolean(TRACE_OPEN, trace),
                 getCallback(method),
                 parametric.getInteger(FORKS_OPTION.getName(), forks),
                 () -> selector,
@@ -402,12 +403,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
         public InnerConsumerMethodOption(final GrpcMethod method, final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final boolean async, final CallbackMethod callback, final int forks,
+                                         final String token, final boolean async, final boolean trace,
+                                         final CallbackMethod callback, final int forks,
                                          final Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector,
                                          final Router router, final FailoverPolicy failoverPolicy,
                                          final MethodAdaptiveConfig adaptiveConfig,
                                          final Map<String, Object> mock) {
-            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
+            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
             this.forks = forks;
             this.selector = selector;
             this.router = router;

@@ -4,6 +4,9 @@
 #注册中心
 [registry.protocol]
 [registry.address]
+#分布式跟踪
+[trace.open]
+[trace.url]
 #java启动属性
 [user.language]
 [user.name]

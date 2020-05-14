@@ -117,6 +117,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      */
     protected boolean validation;
     /**
+     * 全局开启跟踪标识
+     */
+    protected boolean trace;
+    /**
      * 验证器
      */
     protected Validator validator;
@@ -186,6 +190,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         this.cacheFactory = CACHE.get(cacheProvider);
         //默认是否认证
         this.validation = url.getBoolean(VALIDATION_OPTION);
+        this.trace = url.getBoolean(TRACE_OPEN_OPTION);
         if (!generic) {
             this.validator = Validation.buildDefaultValidatorFactory().getValidator();
             if (validator != null) {
@@ -400,12 +405,14 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 令牌
          */
         protected String token;
-
         /**
          * 是否异步调用
          */
         protected boolean async;
-
+        /**
+         * 是否开启跟踪
+         */
+        protected transient boolean trace;
         /**
          * 回调方法
          */
@@ -435,6 +442,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final Validator validator,
                                  final String token,
                                  final boolean async,
+                                 final boolean trace,
                                  final CallbackMethod callback) {
             this.method = grpcMethod == null ? null : grpcMethod.getMethod();
             Class<?>[] types = method == null ? null : method.getParameterTypes();
@@ -447,6 +455,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.validator = validator;
             this.token = token;
             this.async = async;
+            this.trace = trace;
             this.callback = callback;
             this.description = getDesc(types);
         }
@@ -499,6 +508,15 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public boolean isAsync() {
             return async;
+        }
+
+        @Override
+        public boolean isTrace() {
+            return trace;
+        }
+
+        public void setTrace(boolean trace) {
+            this.trace = trace;
         }
 
         @Override

@@ -129,6 +129,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
+                parametric.getBoolean(TRACE_OPEN, trace),
                 getCallback(method),
                 methodBlackWhiteList,
                 ipPermissions,
@@ -220,12 +221,12 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         public InnerProviderMethodOption(final GrpcMethod method,
                                          final Map<String, ?> implicits, final int timeout,
                                          final Concurrency concurrency, final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final boolean async, final CallbackMethod callback,
+                                         final String token, final boolean async, final boolean trace, final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter,
                                          final MethodCaller caller) {
-            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, callback);
+            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;

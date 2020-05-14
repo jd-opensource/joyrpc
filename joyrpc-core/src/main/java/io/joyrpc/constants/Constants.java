@@ -143,7 +143,16 @@ public class Constants {
     public final static String AND_SEPARATOR = "&";
     public final static String GENERIC_CLASS = "genericClass";
 
-    /*======================= Registration center configuration information item name =======================*/
+    public static final String TRACE_OPEN = "trace.open";
+    /**
+     * 开启跟踪选项
+     */
+    public final static URLOption<Boolean> TRACE_OPEN_OPTION = new URLOption<>(TRACE_OPEN, false);
+    /**
+     * 分布式跟踪URL
+     */
+    public final static String TRACE_URL_KEY = "trace.url";
+
     /**
      * 全局配置的key
      */

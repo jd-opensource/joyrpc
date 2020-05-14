@@ -34,7 +34,9 @@ import io.joyrpc.transport.Client;
 import io.joyrpc.transport.message.Message;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static io.joyrpc.Plugin.SERIALIZATION;
 import static io.joyrpc.constants.Constants.ALIAS_OPTION;
@@ -50,24 +52,35 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
      * 默认序列化参数
      */
     protected static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", "hessian@dubbo");
-
     /**
      * 序列化列表，优先级排序
      */
-    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian@dubbo", "fst", "protostuff@dubbo", "kryo", "java");
+    protected static final List<String> SERIALIZATIONS = Arrays.asList("hessian@dubbo", "fst", "protostuff@dubbo", "kryo", "java@advance");
+
+    protected static final Map<String, String> SERIALIZATION_MAPPING = new HashMap<>();
+
+    static {
+        SERIALIZATION_MAPPING.put("hessian", "hessian@dubbo");
+        SERIALIZATION_MAPPING.put("hessian@dubbo", "hessian@dubbo");
+        SERIALIZATION_MAPPING.put("fst", "fst");
+        SERIALIZATION_MAPPING.put("protostuff", "protostuff@dubbo");
+        SERIALIZATION_MAPPING.put("protostuff@dubbo", "protostuff@dubbo");
+        SERIALIZATION_MAPPING.put("kryo", "kryo");
+        SERIALIZATION_MAPPING.put("java", "java@advance");
+        SERIALIZATION_MAPPING.put("java@advance", "java@advance");
+    }
 
     @Override
     public Message negotiate(final URL clusterUrl, final Client client) {
         //拿到服务端的版本
         NegotiationResponse response = new NegotiationResponse();
         //设置可用的序列化插件
-        response.setSerializations(SERIALIZATION.available(SERIALIZATIONS));
+        List<String> availables = SERIALIZATION.available(SERIALIZATIONS);
+        response.setSerializations(availables);
         //设置优先序列化方式
-        String serialization = clusterUrl.getString(SERIALIZATION_OPTION);
-        if (serialization.equals("hessian")) {
-            serialization = "hessian@dubbo";
-        } else if (serialization.equals("protostuff")) {
-            serialization = "protostuff@dubbo";
+        String serialization = SERIALIZATION_MAPPING.get(clusterUrl.getString(SERIALIZATION_OPTION));
+        if (serialization == null || !availables.contains(serialization)) {
+            serialization = availables.get(0);
         }
         response.setSerialization(serialization);
         //添加扩展属性信息

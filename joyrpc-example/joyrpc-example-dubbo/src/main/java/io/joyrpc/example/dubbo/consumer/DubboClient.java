@@ -36,7 +36,7 @@ public class DubboClient {
                 Java8TimeObj java8TimeObj = Java8TimeObj.newJava8TimeObj();
                 Java8TimeObj java8TimeObjRes = consumer.echoJava8TimeObj(java8TimeObj);
                 Assert.assertEquals(java8TimeObj, java8TimeObjRes);
-                Thread.sleep(100000L);
+                Thread.sleep(1000L);
             } catch (InterruptedException e) {
                 break;
             } catch (Throwable e) {

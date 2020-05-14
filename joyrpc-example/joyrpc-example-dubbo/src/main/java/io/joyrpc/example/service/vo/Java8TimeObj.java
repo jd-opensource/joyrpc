@@ -156,6 +156,82 @@ public class Java8TimeObj implements Serializable {
         this.timeZone = timeZone;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        Java8TimeObj that = (Java8TimeObj) o;
+
+        if (localTime != null ? !localTime.equals(that.localTime) : that.localTime != null) {
+            return false;
+        }
+        if (localDate != null ? !localDate.equals(that.localDate) : that.localDate != null) {
+            return false;
+        }
+        if (localDateTime != null ? !localDateTime.equals(that.localDateTime) : that.localDateTime != null) {
+            return false;
+        }
+        if (instant != null ? !instant.equals(that.instant) : that.instant != null) {
+            return false;
+        }
+        if (duration != null ? !duration.equals(that.duration) : that.duration != null) {
+            return false;
+        }
+        if (period != null ? !period.equals(that.period) : that.period != null) {
+            return false;
+        }
+        if (year != null ? !year.equals(that.year) : that.year != null) {
+            return false;
+        }
+        if (yearMonth != null ? !yearMonth.equals(that.yearMonth) : that.yearMonth != null) {
+            return false;
+        }
+        if (monthDay != null ? !monthDay.equals(that.monthDay) : that.monthDay != null) {
+            return false;
+        }
+        if (offsetTime != null ? !offsetTime.equals(that.offsetTime) : that.offsetTime != null) {
+            return false;
+        }
+        if (zoneOffset != null ? !zoneOffset.equals(that.zoneOffset) : that.zoneOffset != null) {
+            return false;
+        }
+        if (offsetDateTime != null ? !offsetDateTime.equals(that.offsetDateTime) : that.offsetDateTime != null) {
+            return false;
+        }
+        if (zonedDateTime != null ? !zonedDateTime.equals(that.zonedDateTime) : that.zonedDateTime != null) {
+            return false;
+        }
+        if (zoneId != null ? !zoneId.equals(that.zoneId) : that.zoneId != null) {
+            return false;
+        }
+        return timeZone != null ? timeZone.equals(that.timeZone) : that.timeZone == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = localTime != null ? localTime.hashCode() : 0;
+        result = 31 * result + (localDate != null ? localDate.hashCode() : 0);
+        result = 31 * result + (localDateTime != null ? localDateTime.hashCode() : 0);
+        result = 31 * result + (instant != null ? instant.hashCode() : 0);
+        result = 31 * result + (duration != null ? duration.hashCode() : 0);
+        result = 31 * result + (period != null ? period.hashCode() : 0);
+        result = 31 * result + (year != null ? year.hashCode() : 0);
+        result = 31 * result + (yearMonth != null ? yearMonth.hashCode() : 0);
+        result = 31 * result + (monthDay != null ? monthDay.hashCode() : 0);
+        result = 31 * result + (offsetTime != null ? offsetTime.hashCode() : 0);
+        result = 31 * result + (zoneOffset != null ? zoneOffset.hashCode() : 0);
+        result = 31 * result + (offsetDateTime != null ? offsetDateTime.hashCode() : 0);
+        result = 31 * result + (zonedDateTime != null ? zonedDateTime.hashCode() : 0);
+        result = 31 * result + (zoneId != null ? zoneId.hashCode() : 0);
+        result = 31 * result + (timeZone != null ? timeZone.hashCode() : 0);
+        return result;
+    }
+
     public static Java8TimeObj newJava8TimeObj() {
         Java8TimeObj timeObj = new Java8TimeObj();
         timeObj.setLocalTime(LocalTime.now());

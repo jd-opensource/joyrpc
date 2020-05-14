@@ -23,6 +23,7 @@ package io.joyrpc.protocol.dubbo.message;
 import io.joyrpc.codec.serialization.Codec;
 import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.util.ClassUtils;
@@ -166,6 +167,10 @@ public class DubboInvocation extends Invocation implements Codec {
         attachments.put(DUBBO_VERSION_KEY, dubboVersion);
         //获取别名
         String alias = (String) attachments.get(DUBBO_GROUP_KEY);
+        String appName = (String) attachments.get(DUBBO_APPLICATION_KEY);
+        if (appName != null) {
+            attachments.put(Constants.HIDDEN_KEY_APPNAME, appName);
+        }
         //创建DubboInvocation对象
         this.className = className;
         this.alias = alias;
@@ -173,6 +178,7 @@ public class DubboInvocation extends Invocation implements Codec {
         this.args = args;
         this.version = version;
         this.parameterTypesDesc = desc;
+
         if (isGeneric()) {
             methodName = (String) args[0];
             try {

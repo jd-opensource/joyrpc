@@ -178,7 +178,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             invocation.addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()));
             String appName = GlobalContext.getString(KEY_APPNAME);
             if (appName != null && !appName.isEmpty()) {
-                invocation.addAttachment(DUBBO_APPLICATION_KEY, String.valueOf(message.getTimeout()));
+                invocation.addAttachment(DUBBO_APPLICATION_KEY, appName);
             }
             if (generic) {
                 invocation.addAttachment(DUBBO_GENERIC_KEY, "true");

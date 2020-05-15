@@ -178,24 +178,7 @@ public class DubboInvocation extends Invocation implements Codec {
         this.args = args;
         this.version = version;
         this.parameterTypesDesc = desc;
-
-        if (isGeneric()) {
-            methodName = (String) args[0];
-            try {
-                method = ClassUtils.getPublicMethod(className, methodName);
-            } catch (Exception e) {
-                throw new IOException("Read dubbo invocation data failed.", e);
-            }
-            String[] ptNames = new String[pts.length];
-            if (pts.length > 0) {
-                for (int i = 0; i < ptNames.length; i++) {
-                    ptNames[i] = pts[i].getName();
-                }
-            }
-            setArgsType(ptNames);
-        } else {
-            setArgsType(pts);
-        }
+        this.setArgsType(pts);
         this.methodName = methodName;
         this.method = method;
     }

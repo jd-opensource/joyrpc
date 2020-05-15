@@ -31,9 +31,12 @@ import io.joyrpc.util.ClassUtils;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import static io.joyrpc.protocol.dubbo.AbstractDubboProtocol.DEFALUT_DUBBO_VERSION;
+import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
  * Dubbo调用
@@ -49,6 +52,7 @@ public class DubboInvocation extends Invocation implements Codec {
     public static String DUBBO_SERVICE_VERSION_KEY = "version";
     public static String DUBBO_TIMEOUT_KEY = "timeout";
     public static String DUBBO_GENERIC_KEY = "generic";
+    protected static Set<String> GENERIC_METHODS = new HashSet<>();
 
     private String parameterTypesDesc;
 
@@ -60,6 +64,12 @@ public class DubboInvocation extends Invocation implements Codec {
      * 心跳标识
      */
     protected transient boolean heartbeat = false;
+
+    static {
+        GENERIC_METHODS.add("$invoke");
+        GENERIC_METHODS.add("$invokeAsync");
+        GENERIC_METHODS.add("$async");
+    }
 
     public DubboInvocation() {
     }
@@ -134,8 +144,8 @@ public class DubboInvocation extends Invocation implements Codec {
         Method method = null;
 
         try {
-            if (!methodName.equals("$invoke") && !methodName.equals("$invokeAsync") && !methodName.equals("$async")) {
-                method = ClassUtils.getPublicMethod(className, methodName);
+            if (!GENERIC_METHODS.contains(methodName)) {
+                method = getPublicMethod(className, methodName);
                 pts = method.getParameterTypes();
                 args = new Object[pts.length];
                 if (args.length > 0) {
@@ -150,7 +160,7 @@ public class DubboInvocation extends Invocation implements Codec {
                 args[2] = reader.readObject(Object[].class);
                 methodName = (String) args[0];
                 try {
-                    method = ClassUtils.getPublicMethod(className, methodName);
+                    method = getPublicMethod(className, methodName);
                 } catch (Exception e) {
                     throw new IOException("Read dubbo invocation data failed.", e);
                 }

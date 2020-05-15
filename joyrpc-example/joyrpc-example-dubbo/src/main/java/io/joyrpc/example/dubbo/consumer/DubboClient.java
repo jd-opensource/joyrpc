@@ -26,23 +26,23 @@ public class DubboClient {
         ConfigurableApplicationContext run = SpringApplication.run(DubboClient.class, args);
         DubboClient application = run.getBean(DubboClient.class);
         DemoService consumer = application.getDemoService();
+        // 验证java8 时间对象
+        Java8TimeObj java8TimeObj = Java8TimeObj.newJava8TimeObj();
+        Java8TimeObj java8TimeObjRes = consumer.echoJava8TimeObj(java8TimeObj);
+        Assert.assertEquals(java8TimeObj, java8TimeObjRes);
+        //调用
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
-                //调用
-                /*String hello = consumer.sayHello("dubbo-" + String.valueOf(counter.incrementAndGet()));
-                System.out.println(hello);*/
-                // 验证java8 时间对象
-                Java8TimeObj java8TimeObj = Java8TimeObj.newJava8TimeObj();
-                Java8TimeObj java8TimeObjRes = consumer.echoJava8TimeObj(java8TimeObj);
-                Assert.assertEquals(java8TimeObj, java8TimeObjRes);
+                String hello = consumer.sayHello("dubbo-" + String.valueOf(counter.incrementAndGet()));
+                System.out.println(hello);
                 Thread.sleep(1000L);
             } catch (InterruptedException e) {
                 break;
             } catch (Throwable e) {
                 e.printStackTrace();
                 try {
-                    Thread.sleep(100000L);
+                    Thread.sleep(1000L);
                 } catch (InterruptedException ex) {
                 }
             }

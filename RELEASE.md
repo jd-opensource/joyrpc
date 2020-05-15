@@ -34,6 +34,8 @@
 
 - 修复grpcFactory没有对枚举和数组生成包装器的问题
 
+- 修复Bytebudy代理不能正确包装父接口的方法问题
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

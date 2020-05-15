@@ -2,6 +2,7 @@ package io.joyrpc.example.service.vo;
 
 import java.io.Serializable;
 import java.time.*;
+import java.util.Objects;
 import java.util.TimeZone;
 
 public class Java8TimeObj implements Serializable {
@@ -154,6 +155,34 @@ public class Java8TimeObj implements Serializable {
 
     public void setTimeZone(TimeZone timeZone) {
         this.timeZone = timeZone;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Java8TimeObj that = (Java8TimeObj) o;
+        return Objects.equals(localTime, that.localTime) &&
+                Objects.equals(localDate, that.localDate) &&
+                Objects.equals(localDateTime, that.localDateTime) &&
+                Objects.equals(instant, that.instant) &&
+                Objects.equals(duration, that.duration) &&
+                Objects.equals(period, that.period) &&
+                Objects.equals(year, that.year) &&
+                Objects.equals(yearMonth, that.yearMonth) &&
+                Objects.equals(monthDay, that.monthDay) &&
+                Objects.equals(offsetTime, that.offsetTime) &&
+                Objects.equals(zoneOffset, that.zoneOffset) &&
+                Objects.equals(offsetDateTime, that.offsetDateTime) &&
+                Objects.equals(zonedDateTime, that.zonedDateTime) &&
+                Objects.equals(zoneId, that.zoneId) &&
+                Objects.equals(timeZone, that.timeZone);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(localTime, localDate, localDateTime, instant, duration, period, year, yearMonth, monthDay, offsetTime, zoneOffset, offsetDateTime, zonedDateTime, zoneId, timeZone);
     }
 
     public static Java8TimeObj newJava8TimeObj() {

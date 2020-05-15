@@ -134,7 +134,7 @@ public class DubboInvocation extends Invocation implements Codec {
         Method method = null;
 
         try {
-            if (!methodName.equals("$invoke") && !methodName.equals("$invokeAsync")) {
+            if (!methodName.equals("$invoke") && !methodName.equals("$invokeAsync") && !methodName.equals("$async")) {
                 method = ClassUtils.getPublicMethod(className, methodName);
                 pts = method.getParameterTypes();
                 args = new Object[pts.length];

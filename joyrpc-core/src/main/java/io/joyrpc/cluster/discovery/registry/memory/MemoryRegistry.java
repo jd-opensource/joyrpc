@@ -111,7 +111,8 @@ public class MemoryRegistry extends AbstractRegistry {
         if (url == null) {
             return;
         }
-        update(getConfigKey(url), values);
+        URLKey key=new URLKey.ConfigKey(url);
+        update(key.getKey(), values);
     }
 
     /**

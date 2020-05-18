@@ -97,15 +97,15 @@ public class ZKRegistry extends AbstractRegistry {
     /**
      * 服务的路径函数 /根路径/service/接口/别名/consumer|provider/ip:port
      */
-    protected Function<URL, String> serviceFunction;
+    protected Function<URLKey, String> serviceFunction;
     /**
      * 集群的路径函数 /根路径/service/接口/别名/provider
      */
-    protected Function<URL, String> clusterFunction;
+    protected Function<URLKey, String> clusterFunction;
     /**
      * 接口配置路径函数(接口级全局配置) /根路径/config/接口/consumer|provider
      */
-    protected Function<URL, String> configFunction;
+    protected Function<URLKey, String> configFunction;
 
     /**
      * 构造函数
@@ -126,10 +126,11 @@ public class ZKRegistry extends AbstractRegistry {
         if (root.charAt(root.length() - 1) == '/') {
             root = root.substring(0, root.length() - 1);
         }
-        this.serviceFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
-        this.clusterFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
+        this.serviceFunction = u -> root + "/service/" + u.getService() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
+        this.clusterFunction = u -> root + "/service/" + u.getService() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
         String appName = GlobalContext.getString(KEY_APPNAME);
-        this.configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
+        //配置按照接口级别
+        this.configFunction = u -> root + "/config/" + u.getInterface() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
     }
 
     @Override
@@ -138,8 +139,8 @@ public class ZKRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new Registion(url, key, serviceFunction.apply(url));
+    protected Registion createRegistion(final URLKey key) {
+        return new Registion(key, serviceFunction.apply(key));
     }
 
     /**
@@ -163,12 +164,12 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key.getUrl()));
+            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key.getUrl()));
+            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key));
         }
 
         @Override

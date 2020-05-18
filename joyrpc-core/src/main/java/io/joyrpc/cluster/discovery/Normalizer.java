@@ -4,6 +4,7 @@ import io.joyrpc.cluster.Region;
 import io.joyrpc.constants.Version;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
+import io.joyrpc.util.Maps;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,22 +22,23 @@ public interface Normalizer {
      */
     Function<URL, URL> NORMALIZE_FUNCTION = url -> {
         Map<String, String> params = new HashMap<>();
-        params.put(ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
-        params.put(BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
-        params.put(VERSION_KEY, GlobalContext.getString(PROTOCOL_VERSION_KEY));
-        params.put(KEY_APPAPTH, GlobalContext.getString(KEY_APPAPTH));
-        params.put(KEY_APPID, GlobalContext.getString(KEY_APPID));
-        params.put(KEY_APPNAME, GlobalContext.getString(KEY_APPNAME));
-        params.put(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
-        params.put(Region.REGION, GlobalContext.getString(Region.REGION));
-        params.put(Region.DATA_CENTER, GlobalContext.getString(Region.DATA_CENTER));
+        Maps.put(params, ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
+        Maps.put(params, BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
+        Maps.put(params, VERSION_KEY, GlobalContext.getString(PROTOCOL_VERSION_KEY));
+        Maps.put(params, KEY_APPAPTH, GlobalContext.getString(KEY_APPAPTH));
+        Maps.put(params, KEY_APPID, GlobalContext.getString(KEY_APPID));
+        Maps.put(params, KEY_APPNAME, GlobalContext.getString(KEY_APPNAME));
+        Maps.put(params, KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
+        Maps.put(params, Region.REGION, GlobalContext.getString(Region.REGION));
+        Maps.put(params, Region.DATA_CENTER, GlobalContext.getString(Region.DATA_CENTER));
         //保留和原有的代码兼容
-        params.put(JAVA_VERSION_KEY, GlobalContext.getString(KEY_JAVA_VERSION));
-        params.put(ROLE_OPTION.getName(), url.getString(ROLE_OPTION));
-        params.put(SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
-        params.put(TIMEOUT_OPTION.getName(), url.getString(TIMEOUT_OPTION.getName()));
-        params.put(WEIGHT_OPTION.getName(), url.getString(WEIGHT_OPTION.getName()));
-        params.put(DYNAMIC_OPTION.getName(), url.getString(DYNAMIC_OPTION.getName()));
+        Maps.put(params, JAVA_VERSION_KEY, GlobalContext.getString(KEY_JAVA_VERSION));
+        Maps.put(params, ROLE_OPTION.getName(), url.getString(ROLE_OPTION));
+        Maps.put(params, SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
+        Maps.put(params, TIMEOUT_OPTION.getName(), url.getString(TIMEOUT_OPTION.getName()));
+        Maps.put(params, WEIGHT_OPTION.getName(), url.getString(WEIGHT_OPTION.getName()));
+        Maps.put(params, DYNAMIC_OPTION.getName(), url.getString(DYNAMIC_OPTION.getName()));
+        Maps.put(params, SERVICE_NAME_KEY, url.getString(SERVICE_NAME_KEY));
         if (url.getBoolean(SSL_ENABLE)) {
             //ssl标识
             params.put(SSL_ENABLE.getName(), "true");

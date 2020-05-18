@@ -98,15 +98,15 @@ public class EtcdRegistry extends AbstractRegistry {
     /**
      * 服务的路径函数 /根路径/service/接口/别名/consumer|provider/ip:port
      */
-    protected Function<URL, String> serviceFunction;
+    protected Function<URLKey, String> serviceFunction;
     /**
      * 集群的路径函数 /根路径/service/接口/别名/provider
      */
-    protected Function<URL, String> clusterFunction;
+    protected Function<URLKey, String> clusterFunction;
     /**
      * 接口配置路径函数(接口级全局配置) /根路径/config/接口/consumer|provider/应用key
      */
-    protected Function<URL, String> configFunction;
+    protected Function<URLKey, String> configFunction;
     /**
      * 注册provider的过期时间
      */
@@ -132,10 +132,11 @@ public class EtcdRegistry extends AbstractRegistry {
             root = root.substring(0, root.length() - 1);
         }
 
-        serviceFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
-        clusterFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
+        serviceFunction = u -> root + "/service/" + u.getService() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
+        clusterFunction = u -> root + "/service/" + u.getService() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
         String appName = GlobalContext.getString(KEY_APPNAME);
-        configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
+        //配置按照接口级别
+        configFunction = u -> root + "/config/" + u.getInterface() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
     }
 
     @Override
@@ -144,8 +145,8 @@ public class EtcdRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new Registion(url, key, serviceFunction.apply(url));
+    protected Registion createRegistion(final URLKey key) {
+        return new Registion(key, serviceFunction.apply(key));
     }
 
     /**
@@ -188,12 +189,12 @@ public class EtcdRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key.getUrl()));
+            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key.getUrl()));
+            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key));
         }
 
         @Override
@@ -263,7 +264,7 @@ public class EtcdRegistry extends AbstractRegistry {
             if (leaseId <= 0) {
                 //没有租约
                 future.completeExceptionally(new IllegalStateException(
-                        String.format("Error occurs while register provider of %s, caused by no leaseId. retry....", registion.getPath())));
+                        String.format("Error occurs while register provider of %s, caused by no leaseId. retry....", registion.getService())));
             } else {
                 //有租约
                 PutOption putOption = PutOption.newBuilder().withLeaseId(leaseId).build();
@@ -312,7 +313,7 @@ public class EtcdRegistry extends AbstractRegistry {
                 if (!isOpen()) {
                     future.completeExceptionally(new IllegalStateException("controller is closed."));
                 } else if (err != null) {
-                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), err.getMessage()), err);
+                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getService(), err.getMessage()), err);
                     future.completeExceptionally(err);
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
@@ -325,7 +326,7 @@ public class EtcdRegistry extends AbstractRegistry {
                         etcdBooking.setWatcher(watcher);
                         future.complete(null);
                     } catch (Exception e) {
-                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), e.getMessage()), e);
+                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getService(), e.getMessage()), e);
                         future.completeExceptionally(e);
                     }
                 }
@@ -355,7 +356,7 @@ public class EtcdRegistry extends AbstractRegistry {
                 if (!isOpen()) {
                     future.completeExceptionally(new IllegalStateException("controller is closed."));
                 } else if (err != null) {
-                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), err.getMessage()), err);
+                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getInterface(), err.getMessage()), err);
                     future.completeExceptionally(err);
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
@@ -368,7 +369,7 @@ public class EtcdRegistry extends AbstractRegistry {
                         etcdBooking.setWatcher(watcher);
                         future.complete(null);
                     } catch (Exception e) {
-                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), e.getMessage()), e);
+                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getInterface(), e.getMessage()), e);
                         future.completeExceptionally(e);
                     }
                 }

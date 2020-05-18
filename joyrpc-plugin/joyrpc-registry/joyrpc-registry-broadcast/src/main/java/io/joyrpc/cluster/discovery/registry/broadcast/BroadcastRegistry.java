@@ -113,19 +113,19 @@ public class BroadcastRegistry extends AbstractRegistry {
     /**
      * 存储provider的Map的路径函数
      */
-    protected Function<URL, String> providersRootKeyFunc;
+    protected Function<URLKey, String> providersRootKeyFunc;
     /**
      * 存在provider或者consumer的Map的路径函数
      */
-    protected Function<URL, String> serviceRootKeyFunc;
+    protected Function<URLKey, String> serviceRootKeyFunc;
     /**
      * provider或consumer在存储map中的key值的函数
      */
-    protected Function<URL, String> serviceNodeKeyFunc;
+    protected Function<URLKey, String> serviceNodeKeyFunc;
     /**
      * 存储接口配置的Map的路径函数
      */
-    protected Function<URL, String> configRootKeyFunc;
+    protected Function<URLKey, String> configRootKeyFunc;
 
     /**
      * 构造函数
@@ -163,16 +163,16 @@ public class BroadcastRegistry extends AbstractRegistry {
         if (root.charAt(root.length() - 1) == '/') {
             root = root.substring(0, root.length() - 1);
         }
-        this.providersRootKeyFunc = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
-        this.serviceRootKeyFunc = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION);
+        this.providersRootKeyFunc = u -> root + "/service/" + u.getService() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
+        this.serviceRootKeyFunc = u -> root + "/service/" + u.getService() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION);
         this.serviceNodeKeyFunc = u -> u.getProtocol() + "://" + u.getHost() + ":" + u.getPort();
         String appName = GlobalContext.getString(KEY_APPNAME);
-        this.configRootKeyFunc = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
+        this.configRootKeyFunc = u -> root + "/config/" + u.getInterface() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new BroadcastRegistion(url, key, serviceRootKeyFunc.apply(url), serviceNodeKeyFunc.apply(url));
+    protected Registion createRegistion(final URLKey key) {
+        return new BroadcastRegistion(key, serviceRootKeyFunc.apply(key), serviceNodeKeyFunc.apply(key));
     }
 
     @Override
@@ -210,12 +210,12 @@ public class BroadcastRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new BroadcastClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.providersRootKeyFunc.apply(key.getUrl()));
+            return new BroadcastClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.providersRootKeyFunc.apply(key));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new BroadcastConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configRootKeyFunc.apply(key.getUrl()));
+            return new BroadcastConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configRootKeyFunc.apply(key));
         }
 
         @Override
@@ -311,8 +311,8 @@ public class BroadcastRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doDeregister(final Registion registion) {
             return Futures.call(future -> {
-                String name = registry.serviceRootKeyFunc.apply(registion.getUrl());
-                String key = registry.serviceNodeKeyFunc.apply(registion.getUrl());
+                String name = registry.serviceRootKeyFunc.apply(registion);
+                String key = registry.serviceNodeKeyFunc.apply(registion);
                 IMap<String, URL> iMap = instance.getMap(name);
                 iMap.removeAsync(key).andThen(new ExecutionCallback<URL>() {
                     @Override
@@ -422,8 +422,8 @@ public class BroadcastRegistry extends AbstractRegistry {
          */
         protected String node;
 
-        public BroadcastRegistion(final URL url, final String key, final String path, final String node) {
-            super(url, key, path);
+        public BroadcastRegistion(final URLKey key, final String path, final String node) {
+            super(key, path);
             this.node = node;
         }
 

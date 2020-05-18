@@ -29,6 +29,7 @@ import io.joyrpc.util.GrpcType;
 
 import java.lang.reflect.Method;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.Plugin.GRPC_FACTORY;
@@ -423,6 +424,14 @@ public class Constants {
      * grpc header 异常消息key
      */
     public static final String GRPC_MESSAGE_KEY = "grpc-message";
+    public static final String SERVICE_NAME_KEY = "serviceName";
+    public static final String ROLE_KEY = "side";
+    /**
+     * 分组
+     */
+    public static final String ALIAS_KEY = "alias";
+
+    public static final String TYPE_KEY = "type";
 
     /**
      * eventbus 默认常量
@@ -437,10 +446,9 @@ public class Constants {
      */
     public static final BiFunction<String, String, String> METHOD_KEY_FUNC = (method, key) -> key == null ? null : new StringBuilder(60).append(URL_METHOD_PREX).append(method).append(".").append(key).toString();
 
-    /*------------------------ 通用配置 ------------------------*/
     public static final URLOption<String> FILTER_OPTION = new URLOption<>("filter", "");
     public static final URLOption<String> ADDRESS_OPTION = new URLOption<>("address", "");
-    public static final URLOption<String> ALIAS_OPTION = new URLOption<>("alias", "");
+    public static final URLOption<String> ALIAS_OPTION = new URLOption<>(ALIAS_KEY, "");
     public static final URLOption<Long> START_TIME_OPTION = new URLOption<>("startTime", 0L); //provider启动时间戳
     public static final URLOption<Boolean> SERVICE_MESH_OPTION = new URLOption<>(SERVICE_MESH_KEY, false);
     public static final URLOption<String> FILTER_CHAIN_FACTORY_OPTION = new URLOption<>("filterChainFactory", "default");
@@ -451,16 +459,21 @@ public class Constants {
     public static final URLOption<Integer> TIMEOUT_OPTION = new URLOption<>("timeout", DEFAULT_TIMEOUT);
     public static final URLOption<Boolean> REGISTER_OPTION = new URLOption<>("register", true);
     public static final URLOption<Boolean> SUBSCRIBE_OPTION = new URLOption<>("subscribe", true);
-    public static final URLOption<String> SERVICE_NAME_OPTION = new URLOption<>("serviceName", "");
+    public static final URLOption<String> SERVICE_NAME_OPTION = new URLOption<>(SERVICE_NAME_KEY, "");
     public static final URLOption<String> INTERFACE_CLAZZ_OPTION = new URLOption<>("interfaceClazz", "");
     public static final URLOption<String> URL_OPTION = new URLOption<>("url", "");
     public static final URLOption<String> INSTANCE_KEY_OPTION = new URLOption<>("insKey", "");
-    public static final URLOption<String> ROLE_OPTION = new URLOption<>("side", SIDE_CONSUMER);
+
+    public static final URLOption<String> ROLE_OPTION = new URLOption<>(ROLE_KEY, SIDE_CONSUMER);
     public static final URLOption<Boolean> ENABLE_VALIDATOR_OPTION = new URLOption<>("enableValidator", true);
     public static final URLOption<String> INTERFACE_VALIDATOR_OPTION = new URLOption<>("interfaceValidator", "standard");
     public static final URLOption<Boolean> GENERIC_OPTION = new URLOption<>("generic", false);
     public static final URLOption<Boolean> SYSTEM_OPTION = new URLOption<>("system.service", false);
     public static final URLOption<Boolean> ASYNC_OPTION = new URLOption<>("async", false);
+    /**
+     * 获取服务名称
+     */
+    public static final Function<URL, String> SERVICE_NAME_FUNCTION = u -> u.getString(SERVICE_NAME_KEY, u.getPath());
     /**
      * 默认分发算法
      */

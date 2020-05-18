@@ -512,6 +512,11 @@
                         <xsd:documentation><![CDATA[ Spring的BeanId ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
+                <xsd:attribute name="serviceName" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 服务名称 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
                 <xsd:attribute name="interface" type="xsd:string" use="required">
                     <xsd:annotation>
                         <xsd:documentation><![CDATA[ 接口名称 ]]></xsd:documentation>
@@ -519,7 +524,7 @@
                 </xsd:attribute>
                 <xsd:attribute name="alias" type="xsd:string" use="required">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 服务别名分组信息 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 服务分组 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
             </xsd:extension>

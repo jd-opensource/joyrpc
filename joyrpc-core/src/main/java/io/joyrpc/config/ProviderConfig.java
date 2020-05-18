@@ -592,6 +592,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                     map.put(BIND_IP_KEY, address.bindIp);
                 }
                 //原始URL
+                //TODO 服务名称
                 url = new URL(GlobalContext.getString(PROTOCOL_KEY), address.host, address.port, config.interfaceClazz, map);
                 //加上动态配置的服务URL
                 serviceUrl = configure(null);

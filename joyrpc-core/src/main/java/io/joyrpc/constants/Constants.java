@@ -451,14 +451,13 @@ public class Constants {
     public static final URLOption<Integer> TIMEOUT_OPTION = new URLOption<>("timeout", DEFAULT_TIMEOUT);
     public static final URLOption<Boolean> REGISTER_OPTION = new URLOption<>("register", true);
     public static final URLOption<Boolean> SUBSCRIBE_OPTION = new URLOption<>("subscribe", true);
+    public static final URLOption<String> SERVICE_NAME_OPTION = new URLOption<>("serviceName", "");
     public static final URLOption<String> INTERFACE_CLAZZ_OPTION = new URLOption<>("interfaceClazz", "");
     public static final URLOption<String> URL_OPTION = new URLOption<>("url", "");
     public static final URLOption<String> INSTANCE_KEY_OPTION = new URLOption<>("insKey", "");
     public static final URLOption<String> ROLE_OPTION = new URLOption<>("side", SIDE_CONSUMER);
     public static final URLOption<Boolean> ENABLE_VALIDATOR_OPTION = new URLOption<>("enableValidator", true);
     public static final URLOption<String> INTERFACE_VALIDATOR_OPTION = new URLOption<>("interfaceValidator", "standard");
-
-    /*------------------------ consumer配置 ------------------------*/
     public static final URLOption<Boolean> GENERIC_OPTION = new URLOption<>("generic", false);
     public static final URLOption<Boolean> SYSTEM_OPTION = new URLOption<>("system.service", false);
     public static final URLOption<Boolean> ASYNC_OPTION = new URLOption<>("async", false);

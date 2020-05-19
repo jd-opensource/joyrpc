@@ -135,6 +135,15 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected transient volatile Status status = Status.CLOSED;
 
     @Override
+    public String getAlias() {
+        if (alias == null || alias.isEmpty()) {
+            //服务提供者如果没有设置别名，则可以采用应用分组
+            alias = GlobalContext.getString(Constants.KEY_APPGROUP);
+        }
+        return alias;
+    }
+
+    @Override
     public void validate() {
         registry = registry != null && !registry.isEmpty() ? registry : Arrays.asList(RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get());
         super.validate();

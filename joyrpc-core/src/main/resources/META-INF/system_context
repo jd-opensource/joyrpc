@@ -1,6 +1,8 @@
 #系统内置的上下文
 #支持引用外部环境变量，或进行重命名。如[key]=[value],表示从环境变量获取"value"的值
 #
+#分组验证正则表达式
+[alias.pattern]
 #注册中心
 [registry.protocol]
 [registry.address]

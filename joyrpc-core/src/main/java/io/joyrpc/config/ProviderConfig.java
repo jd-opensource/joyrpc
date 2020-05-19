@@ -97,7 +97,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      */
     protected String exclude;
     /**
-     * 是否动态注册，默认为true，配置为false代表不主动发布，需要到管理端进行上线操作
+     * 注册中心收到注册后主动发布服务
      */
     protected Boolean dynamic;
     /**

@@ -53,12 +53,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.CONFIGURATOR;
 import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Configurator.CONFIG_ALLOWED;
 import static io.joyrpc.context.Configurator.GLOBAL_ALLOWED;
+import static io.joyrpc.util.StringUtils.isEmpty;
 import static io.joyrpc.util.StringUtils.isNotEmpty;
 import static io.joyrpc.util.Timer.timer;
 
@@ -237,18 +239,35 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      * @return 服务名称
      */
     public String getServiceName() {
+        return getServiceName(null);
+    }
+
+    /**
+     * 获取服务名称
+     *
+     * @param supplier 额外的提供者
+     * @return 服务名称
+     */
+    protected String getServiceName(final Supplier<String> supplier) {
         String result = serviceName;
-        if (result == null || result.isEmpty()) {
+        if (isEmpty(result)) {
             Class<?> clazz = getInterfaceClass();
-            result = getInterfaceClazz();
             if (clazz != null) {
                 ServiceName service = clazz.getAnnotation(ServiceName.class);
                 if (service != null && !service.name().isEmpty()) {
                     //判断服务名
                     result = service.name();
-                    serviceName = result;
                 }
             }
+            if (isEmpty(result)) {
+                if (supplier != null) {
+                    result = supplier.get();
+                }
+                if (isEmpty(result)) {
+                    result = getInterfaceClazz();
+                }
+            }
+            serviceName = result;
         }
         return result;
     }

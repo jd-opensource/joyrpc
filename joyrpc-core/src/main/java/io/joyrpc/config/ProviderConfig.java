@@ -63,6 +63,15 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected static final AtomicReferenceFieldUpdater<ProviderConfig, Status> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(ProviderConfig.class, Status.class, "status");
     private static final Logger logger = LoggerFactory.getLogger(ProviderConfig.class);
+    /**
+     * 全局的应用服务名称提供者
+     */
+    protected static final Supplier<String> APP_SERVICE_SUPPLIER = () -> GlobalContext.getString(KEY_APPSERVICE);
+
+    /**
+     * 全局的应用分组提供者
+     */
+    protected static final Supplier<String> APP_GROUP_SUPPLIER = () -> GlobalContext.getString(KEY_APPGROUP);
 
     /**
      * 注册中心配置，可配置多个
@@ -138,9 +147,14 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     public String getAlias() {
         if (alias == null || alias.isEmpty()) {
             //服务提供者如果没有设置别名，则可以采用应用分组
-            alias = GlobalContext.getString(Constants.KEY_APPGROUP);
+            alias = APP_GROUP_SUPPLIER.get();
         }
         return alias;
+    }
+
+    @Override
+    public String getServiceName() {
+        return getServiceName(APP_SERVICE_SUPPLIER);
     }
 
     @Override

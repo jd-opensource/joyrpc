@@ -319,6 +319,10 @@ public class Constants {
      */
     public final static String KEY_APPGROUP = "appGroup";
     /**
+     * 服务名称
+     */
+    public final static String KEY_APPSERVICE = "appService";
+    /**
      * 应用实例ID
      */
     public final static String KEY_APPINSID = "appInsId";

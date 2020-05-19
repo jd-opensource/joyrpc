@@ -22,9 +22,10 @@ package io.joyrpc.spring.schema;
 
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
+import org.springframework.beans.factory.config.RuntimeBeanNameReference;
 import org.springframework.beans.factory.support.ManagedList;
-import org.springframework.beans.factory.support.ManagedMap;
 import org.springframework.beans.factory.xml.ParserContext;
+import org.springframework.util.StringUtils;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -76,6 +77,30 @@ public class AbstractInterfaceBeanDefinitionParser extends AbstractBeanDefinitio
                 if (!methods.isEmpty()) {
                     definition.getPropertyValues().addPropertyValue(name, methods);
                 }
+            }
+        }
+    }
+
+    /**
+     * 引用解析器
+     */
+    protected static class ReferenceParser implements CustomParser {
+
+        protected String property;
+
+        public ReferenceParser() {
+        }
+
+        public ReferenceParser(String property) {
+            this.property = property;
+        }
+
+        @Override
+        public void parse(final BeanDefinition definition, final String id, final Element element, final String name,
+                          final ParserContext context) {
+            String beanId = element.getAttribute(name);
+            if (!StringUtils.isEmpty(beanId)) {
+                definition.getPropertyValues().addPropertyValue(property == null ? name : property, new RuntimeBeanNameReference(beanId));
             }
         }
     }

@@ -207,6 +207,12 @@ public class SerializationTest {
     }
 
     @Test
+    public void testOverrideField() {
+        MyEmployee person = new MyEmployee(0, "china", 20, 161, 65);
+        serializeAndDeserialize("hessian", person);
+    }
+
+    @Test
     public void testTps() throws ExecutionException, InterruptedException {
 
         Employee person = new Employee(0, "china", 20, 161, 65);

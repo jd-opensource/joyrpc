@@ -56,6 +56,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.WeakHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -142,6 +143,8 @@ public class JavaSerializer extends AbstractSerializer {
         ArrayList<Field> fields = new ArrayList<Field>();
         fields.addAll(primitiveFields);
         fields.addAll(compoundFields);
+        //处理子类重新定义父类的字段问题，保持和dubbo兼容
+        Collections.reverse(fields);
 
         _fields = new Field[fields.size()];
         fields.toArray(_fields);

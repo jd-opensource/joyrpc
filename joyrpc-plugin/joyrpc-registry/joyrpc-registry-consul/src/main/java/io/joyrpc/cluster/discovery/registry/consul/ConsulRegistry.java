@@ -144,7 +144,7 @@ public class ConsulRegistry extends AbstractRegistry {
     /**
      * Consul控制器
      */
-    protected static class ConsulRegistryController extends RegistryController<ConsulRegistry> {
+    protected static class ConsulRegistryController<T extends ConsulRegistry> extends RegistryController<T> {
         /**
          * Consul可贺的
          */
@@ -154,7 +154,7 @@ public class ConsulRegistry extends AbstractRegistry {
          */
         protected String appPath;
 
-        public ConsulRegistryController(ConsulRegistry registry) {
+        public ConsulRegistryController(T registry) {
             super(registry);
             String appName = GlobalContext.getString(KEY_APPNAME);
             if (appName == null || appName.isEmpty()) {
@@ -220,8 +220,8 @@ public class ConsulRegistry extends AbstractRegistry {
             //注册，服务状态异常后自动注销的最小时间是1分钟
             ServiceOptions opts = new ServiceOptions()
                     .setName(url.getPath())
-                    .setId(cr.uuid)
-                    .setTags(Collections.singletonList(url.getString(ALIAS_OPTION)))
+                    .setId(cr.getInsId())
+                    .setTags(getTags(url))
                     .setMeta(getMeta(url))
                     .setCheckOptions(new CheckOptions().setTtl(registry.ttl + "ms").setStatus(CheckStatus.PASSING).setDeregisterAfter("1m"))
                     .setAddress(url.getHost())
@@ -244,7 +244,7 @@ public class ConsulRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doDeregister(final Registion registion) {
             CompletableFuture<Void> result = new CompletableFuture<>();
-            client.deregisterService(((ConsulRegistion) registion).uuid, r -> result.complete(null));
+            client.deregisterService(((ConsulRegistion) registion).getInsId(), r -> result.complete(null));
             return result;
         }
 
@@ -336,7 +336,7 @@ public class ConsulRegistry extends AbstractRegistry {
          * @param registion
          */
         protected void doLease(final ConsulRegistion registion) {
-            String serviceId = "service:" + registion.uuid;
+            String serviceId = "service:" + registion.getInsId();
             client.passCheck(serviceId, r -> {
                 if (r.succeeded()) {
                     registion.expireTime = SystemClock.now() + registry.ttl;
@@ -477,6 +477,16 @@ public class ConsulRegistry extends AbstractRegistry {
             return result;
         }
 
+        /**
+         * 获取标签信息
+         *
+         * @param url
+         * @return
+         */
+        protected List<String> getTags(URL url) {
+            return Collections.singletonList(url.getString(ALIAS_OPTION));
+        }
+
     }
 
     /**
@@ -490,7 +500,7 @@ public class ConsulRegistry extends AbstractRegistry {
         /**
          * 唯一ID
          */
-        protected String uuid;
+        protected String insId;
         /**
          * 连续网络异常
          */
@@ -498,7 +508,7 @@ public class ConsulRegistry extends AbstractRegistry {
 
         public ConsulRegistion(URL url, String key) {
             super(url, key);
-            uuid = UUID.randomUUID().toString();
+            insId = UUID.randomUUID().toString();
         }
 
         /**
@@ -508,6 +518,15 @@ public class ConsulRegistry extends AbstractRegistry {
          */
         public boolean isExpire() {
             return expireTime <= SystemClock.now();
+        }
+
+        /**
+         * 获取唯一ID
+         *
+         * @return
+         */
+        public String getInsId() {
+            return insId;
         }
     }
 

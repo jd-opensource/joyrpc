@@ -134,6 +134,7 @@ public class NacosRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doSubscribe(ClusterBooking booking) {
             return Futures.call(future -> {
+                //TODO 此处应该定时lookup
                 doUpdate(booking);
                 future.complete(null);
             });
@@ -147,6 +148,7 @@ public class NacosRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doSubscribe(ConfigBooking booking) {
             return Futures.call(future -> {
+                //TODO 暂时没有实现 配置订阅
                 booking.handle(new ConfigEvent(registry, null, 0, new HashMap<>()));
             });
         }

@@ -111,6 +111,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * 实际的方法名称，对泛化进行处理
      */
     protected transient String methodName;
+    /**
+     * 是否消费端
+     */
+    protected transient boolean consumer;
 
     /**
      * 构造函数
@@ -351,6 +355,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setMethodName(String methodName) {
         this.methodName = methodName;
+    }
+
+    public boolean isConsumer() {
+        return consumer;
+    }
+
+    public void setConsumer(boolean consumer) {
+        this.consumer = consumer;
     }
 
     /**

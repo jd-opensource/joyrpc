@@ -8,3 +8,4 @@ io.joyrpc.filter.provider.MethodBlackWhiteListFilter
 io.joyrpc.filter.provider.AuthorizationFilter
 io.joyrpc.filter.provider.TimeoutFilter
 io.joyrpc.filter.provider.ValidationFilter
+io.joyrpc.filter.provider.TraceFilter

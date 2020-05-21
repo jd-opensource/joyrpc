@@ -42,10 +42,10 @@ public class TraceFilter extends AbstractTraceFilter implements ProviderFilter {
         super.createTags(request, tags);
         Invocation invocation = request.getPayLoad();
         tags.put(COMPONENT_TAG, component);
-        tags.put(SPAN_KIND_TAG, "provider");
-        tags.put(CONSUMER_ALIAS_TAG, invocation.getAlias());
-        tags.put(CONSUMER_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
-        tags.put(CONSUMER_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
-        tags.put(PROVIDER_ADDRESS_TAG, Ipv4.toAddress(request.getLocalAddress()));
+        tags.put(SPAN_KIND_TAG, "server");
+        tags.put(CLIENT_ALIAS_TAG, invocation.getAlias());
+        tags.put(CLIENT_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
+        tags.put(CLIENT_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
+        tags.put(SERVER_ADDRESS_TAG, Ipv4.toAddress(request.getLocalAddress()));
     }
 }

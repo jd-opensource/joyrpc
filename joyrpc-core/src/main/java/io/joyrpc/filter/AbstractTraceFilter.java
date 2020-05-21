@@ -25,6 +25,7 @@ import io.joyrpc.Result;
 import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -36,24 +37,26 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.TRACE_FACTORY;
-import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
-import static io.joyrpc.constants.Constants.TRACE_OPEN;
+import static io.joyrpc.constants.Constants.*;
 
 /**
- * 抽象的跟踪插件
+ * 抽象的跟踪插件,标签的名称和业界通用叫法一致
  */
 public abstract class AbstractTraceFilter extends AbstractFilter {
 
-    protected static final String CONSUMER_ALIAS_TAG = "consumer.alias";
-    protected static final String CONSUMER_NAME_TAG = "consumer.name";
-    protected static final String CONSUMER_ADDRESS_TAG = "consumer.address";
-    protected static final String PROVIDER_ADDRESS_TAG = "provider.address";
+    protected static final String CLIENT_ALIAS_TAG = "client.alias";
+    protected static final String CLIENT_NAME_TAG = "client.name";
+    protected static final String CLIENT_ADDRESS_TAG = "client.address";
+    protected static final String SERVER_ADDRESS_TAG = "server.address";
     protected static final String SPAN_KIND_TAG = "span.kind";
     protected static final String COMPONENT_TAG = "component";
     /**
      * 组件名称
      */
     protected String component;
+    /**
+     * 跟踪工厂类
+     */
     protected TraceFactory factory;
     /**
      * 接口开启注解
@@ -66,10 +69,11 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
 
     @Override
     public void setup() {
-        factory = TRACE_FACTORY.get();
-        component = GlobalContext.getString(PROTOCOL_KEY);
+        MapParametric parametric = new MapParametric(GlobalContext.getContext());
+        factory = TRACE_FACTORY.getOrDefault(parametric.getString(TRACE_TYPE));
+        component = parametric.getString(PROTOCOL_KEY);
         enableTrace = (EnableTrace) clazz.getAnnotation(EnableTrace.class);
-        enable = GlobalContext.getBoolean(TRACE_OPEN, Boolean.FALSE);
+        enable = parametric.getBoolean(TRACE_OPEN, Boolean.FALSE);
     }
 
     @Override

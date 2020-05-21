@@ -144,6 +144,8 @@ public class Constants {
     public final static String GENERIC_CLASS = "genericClass";
 
     public static final String TRACE_OPEN = "trace.open";
+    public static final String TRACE_TYPE = "trace.type";
+
     /**
      * 开启跟踪选项
      */

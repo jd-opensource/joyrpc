@@ -3,21 +3,21 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc-plugin</artifactId>
+        <artifactId>joyrpc-registry</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.0.6-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>joyrpc-registry</artifactId>
-    <packaging>pom</packaging>
+    <artifactId>joyrpc-registry-nacos</artifactId>
 
-    <modules>
-        <module>joyrpc-registry-etcd</module>
-        <module>joyrpc-registry-zk</module>
-        <module>joyrpc-registry-broadcast</module>
-        <module>joyrpc-registry-consul</module>
-        <module>joyrpc-registry-nacos</module>
-    </modules>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.alibaba.nacos</groupId>
+            <artifactId>nacos-client</artifactId>
+            <version>${nacos.version}</version>
+        </dependency>
+    </dependencies>
 
 </project>

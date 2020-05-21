@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc</artifactId>
+        <artifactId>joyrpc-trace</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.0.6-SNAPSHOT</version>
     </parent>
@@ -21,18 +21,12 @@
             <artifactId>apm-agent-core</artifactId>
             <version>${skywalking.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.skywalking</groupId>
-            <artifactId>apm-util</artifactId>
-            <version>${skywalking.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
-            <version>${project.version}</version>
-            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.bytebuddy</groupId>
+                    <artifactId>byte-buddy</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

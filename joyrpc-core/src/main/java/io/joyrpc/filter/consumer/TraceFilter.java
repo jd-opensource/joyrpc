@@ -40,6 +40,8 @@ public class TraceFilter extends AbstractTraceFilter implements ConsumerFilter {
     protected void createTags(final RequestMessage<Invocation> request, final Map<String, String> tags) {
         super.createTags(request, tags);
         Invocation invocation = request.getPayLoad();
+        tags.put(COMPONENT_TAG, component);
+        tags.put(SPAN_KIND_TAG, "consumer");
         tags.put(CONSUMER_ALIAS_TAG, invocation.getAlias());
         tags.put(CONSUMER_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
         tags.put(CONSUMER_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));

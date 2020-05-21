@@ -156,6 +156,14 @@ public interface InterfaceOption {
          * @return 开启跟踪标识
          */
         boolean isTrace();
+
+        /**
+         * 获取跟踪的span名称
+         *
+         * @param invocation 调用
+         * @return
+         */
+        String getTraceSpanId(Invocation invocation);
     }
 
     /**

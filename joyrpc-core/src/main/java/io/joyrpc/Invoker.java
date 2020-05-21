@@ -46,6 +46,15 @@ public interface Invoker {
     CompletableFuture<Result> invoke(RequestMessage<Invocation> request);
 
     /**
+     * 初始化请求
+     *
+     * @param request 请求
+     */
+    default void setup(final RequestMessage<Invocation> request) {
+
+    }
+
+    /**
      * 关闭
      *
      * @return

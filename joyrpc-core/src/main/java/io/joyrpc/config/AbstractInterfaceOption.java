@@ -355,6 +355,16 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     }
 
     /**
+     * 获取跟踪ID
+     *
+     * @param method 方法
+     * @return
+     */
+    protected String getSpanId(final Method method) {
+        return method == null ? null : interfaceName + "." + method.getName();
+    }
+
+    /**
      * 获取方法选项
      *
      * @param methodName 方法名称
@@ -414,6 +424,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          */
         protected transient boolean trace;
         /**
+         * 跟踪的span名称
+         */
+        protected String traceSpanId;
+        /**
          * 回调方法
          */
         protected CallbackMethod callback;
@@ -444,6 +458,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final boolean async,
                                  final boolean trace,
                                  final CallbackMethod callback) {
+            //只有泛化调用的时候没有设置grpMethod
             this.method = grpcMethod == null ? null : grpcMethod.getMethod();
             Class<?>[] types = method == null ? null : method.getParameterTypes();
             //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
@@ -456,6 +471,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.token = token;
             this.async = async;
             this.trace = trace;
+            this.traceSpanId = method == null ? null : getTraceSpanId(grpcMethod.getClazz().getName(), method.getName());
             this.callback = callback;
             this.description = getDesc(types);
         }
@@ -517,6 +533,26 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
 
         public void setTrace(boolean trace) {
             this.trace = trace;
+        }
+
+        /**
+         * 获取跟踪ID
+         *
+         * @param className  类
+         * @param methodName 方法
+         * @return 跟踪ID
+         */
+        protected String getTraceSpanId(final String className, final String methodName) {
+            return className + "." + methodName;
+        }
+
+        @Override
+        public String getTraceSpanId(final Invocation invocation) {
+            if (traceSpanId != null) {
+                return traceSpanId;
+            }
+            //泛化调用
+            return getTraceSpanId(invocation.getClassName(), invocation.getArgs()[0].toString());
         }
 
         @Override

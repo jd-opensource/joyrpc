@@ -205,7 +205,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         checkInterfaceId(invocation, className);
         //恢复上下文
         transmits.forEach(o -> o.restoreOnReceive(request, session));
-
         //直接使用会话上的Exporter，加快性能
         if (exporter == null) {
             exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
@@ -214,6 +213,8 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                 throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
             }
         }
+        //构建请求
+        exporter.setup(request);
         //对应服务端协议，设置认证信息
         if (exporter.getAuthentication() != null) {
             ServerProtocol protocol = null;
@@ -227,7 +228,6 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                 request.setAuthenticated(protocol::authenticate);
             }
         }
-
         return exporter;
     }
 

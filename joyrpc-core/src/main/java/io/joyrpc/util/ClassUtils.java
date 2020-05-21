@@ -1646,7 +1646,7 @@ public class ClassUtils {
                 throw new NoSuchMethodException(String.format("Method is not found. %s", name));
             }
             MethodInfo info = method.get();
-            return new GrpcMethod(method.getMethod(), () -> info.getGrpcType(function));
+            return new GrpcMethod(type, method.getMethod(), () -> info.getGrpcType(function));
         }
 
         /**

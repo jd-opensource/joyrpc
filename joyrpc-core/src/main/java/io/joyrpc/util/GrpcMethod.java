@@ -28,6 +28,10 @@ import java.util.function.Supplier;
  */
 public class GrpcMethod {
     /**
+     * 类型
+     */
+    protected Class<?> clazz;
+    /**
      * 方法
      */
     protected Method method;
@@ -39,6 +43,16 @@ public class GrpcMethod {
     public GrpcMethod(Method method, Supplier<GrpcType> supplier) {
         this.method = method;
         this.supplier = supplier;
+    }
+
+    public GrpcMethod(Class<?> clazz, Method method, Supplier<GrpcType> supplier) {
+        this.clazz = clazz;
+        this.method = method;
+        this.supplier = supplier;
+    }
+
+    public Class<?> getClazz() {
+        return clazz;
     }
 
     public Method getMethod() {

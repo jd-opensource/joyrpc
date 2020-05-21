@@ -35,9 +35,9 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
  */
 public class MyInstrumentation extends ClassInstanceMethodsEnhancePluginDefine {
 
-    private static final String ENHANCE_CLASS = "io.joyrpc.config.AbstractConsumerConfig.ConsumerInvokeHandler";
+    private static final String ENHANCE_CLASS = "io.joyrpc.invoker.Refer";
 
-    private static final String INTERCEPT_CLASS = "io.joyrpc.trace.skywalking.MyInterceptor";
+    private static final String INTERCEPT_CLASS = "io.joyrpc.trace.skywalking.MyReferInterceptor";
 
     @Override
     protected ClassMatch enhanceClass() {

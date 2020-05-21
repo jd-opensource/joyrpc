@@ -1,16 +1,15 @@
 package io.joyrpc.trace.skywalking;
 
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.URL;
-import io.joyrpc.invoker.AbstractInvoker;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import org.apache.skywalking.apm.agent.core.context.CarrierItem;
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
 import org.apache.skywalking.apm.agent.core.context.ContextSnapshot;
-import org.apache.skywalking.apm.agent.core.context.tag.Tags;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
 import org.apache.skywalking.apm.agent.core.plugin.interceptor.enhance.EnhancedInstance;
@@ -26,7 +25,7 @@ import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
 /**
  * 拦截器
  */
-public class MyConsumerInterceptor implements InstanceMethodsAroundInterceptor {
+public class MyReferInterceptor implements InstanceMethodsAroundInterceptor {
 
     public static final int ID = 2000;
 
@@ -42,18 +41,13 @@ public class MyConsumerInterceptor implements InstanceMethodsAroundInterceptor {
     @Override
     public void beforeMethod(EnhancedInstance objInst, Method method, Object[] allArguments, Class<?>[] argumentsTypes,
                              MethodInterceptResult result) throws Throwable {
-        AbstractInvoker invoker = (AbstractInvoker) allArguments[0];
-        RequestMessage<Invocation> request = (RequestMessage<Invocation>) allArguments[1];
-        Invocation invocation = (Invocation) allArguments[1];
+        RequestMessage<Invocation> request = (RequestMessage<Invocation>) allArguments[0];
+        InterfaceOption.MethodOption option = request.getOption();
+        Invocation invocation = request.getPayLoad();
         RequestContext rpcContext = RequestContext.getContext();
-        URL url = invoker.getUrl();
-
-        String protocol = getProtocol();
-        final String host = url.getHost();
-        final int port = url.getPort();
         final ContextCarrier contextCarrier = new ContextCarrier();
-        String operationName = generateOperationName(invocation);
-        AbstractSpan span = ContextManager.createExitSpan(operationName, contextCarrier, host + ":" + port);
+        String operationName = option.getTraceSpanId(invocation);
+        AbstractSpan span = ContextManager.createExitSpan(operationName, contextCarrier, null);
         CarrierItem next = contextCarrier.items();
         while (next.hasNext()) {
             next = next.next();
@@ -63,9 +57,9 @@ public class MyConsumerInterceptor implements InstanceMethodsAroundInterceptor {
             }
         }
 
-        Tags.URL.set(span, generateRequestURL(url, operationName));
+        //Tags.URL.set(span, generateRequestURL(url, operationName));
 
-        span.setComponent(new OfficialComponent(ID, protocol));
+        span.setComponent(new OfficialComponent(ID, getProtocol()));
         SpanLayer.asRPCFramework(span);
     }
 
@@ -105,42 +99,6 @@ public class MyConsumerInterceptor implements InstanceMethodsAroundInterceptor {
         AbstractSpan span = ContextManager.activeSpan();
         span.errorOccurred();
         span.log(throwable);
-    }
-
-    protected String generateOperationName(Invocation invocation) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(invocation.getClassName()).append('.');
-        if (!invocation.isGeneric()) {
-            //不是泛化调用
-            builder.append(invocation.getMethodName()).append('(');
-            int i = 0;
-            for (Class<?> classes : invocation.getArgClasses()) {
-                if (i++ > 0) {
-                    builder.append(',');
-                }
-                builder.append(classes.getSimpleName());
-            }
-            builder.append(")");
-        } else {
-            //泛化调用
-            Object[] args = invocation.getArgs();
-            builder.append(args[0]);
-            String[] types = (String[]) args[1];
-            if (types != null && types.length > 0) {
-                builder.append('(');
-                int i = 0;
-                int pos;
-                for (String type : types) {
-                    if (i++ > 0) {
-                        builder.append(',');
-                    }
-                    pos = type.lastIndexOf('.');
-                    builder.append(pos >= 0 ? type.substring(pos + 1) : type);
-                }
-                builder.append(')');
-            }
-        }
-        return builder.toString();
     }
 
     /**

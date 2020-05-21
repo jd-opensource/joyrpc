@@ -115,10 +115,6 @@ public class Refer extends AbstractInvoker {
      */
     protected NodeSelector nodeSelector;
     /**
-     * 过滤链
-     */
-    protected Invoker chain;
-    /**
      * 回调容器
      */
     protected CallbackContainer container;
@@ -134,10 +130,6 @@ public class Refer extends AbstractInvoker {
      * 本地服务的名称
      */
     protected String exporterName;
-    /**
-     * 方法选项
-     */
-    protected InterfaceOption options;
     /**
      * 透传插件
      */
@@ -399,7 +391,7 @@ public class Refer extends AbstractInvoker {
     }
 
     @Override
-    protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
+    public void setup(final RequestMessage<Invocation> request) {
         //实际的方法名称，泛型调用进行了处理
         ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(request.getMethodName());
         option.setAutoScore(true);
@@ -408,7 +400,6 @@ public class Refer extends AbstractInvoker {
         if (request.getCreateTime() <= 0) {
             request.setCreateTime(SystemClock.now());
         }
-
         //用缓存的信息设置参数类型，加快性能
         InterfaceOption.ArgType argType = option.getArgType();
         //已经设置了class和method对象
@@ -433,8 +424,6 @@ public class Refer extends AbstractInvoker {
             request.setTimeout(timeout);
             request.getHeader().setTimeout(timeout);
         }
-        //执行调用链
-        return chain.invoke(request);
     }
 
     /**

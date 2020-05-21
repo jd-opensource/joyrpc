@@ -936,6 +936,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             request.setThread(Thread.currentThread());
             //当前线程上下文
             request.setContext(context);
+            //初始化请求，绑定方法选项
+            invoker.setup(request);
             //实际的方法名称
             if (generic) {
                 request.setMethodName(param[0] == null ? null : param[0].toString());

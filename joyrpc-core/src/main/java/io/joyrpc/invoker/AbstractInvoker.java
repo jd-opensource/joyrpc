@@ -24,6 +24,7 @@ import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.Configure;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -79,6 +80,14 @@ public abstract class AbstractInvoker implements Invoker {
      * 订阅的URL
      */
     protected URL subscribeUrl;
+    /**
+     * 方法选项
+     */
+    protected InterfaceOption options;
+    /**
+     * 调用链
+     */
+    protected Invoker chain;
     /**
      * 调用计数器
      */
@@ -163,12 +172,15 @@ public abstract class AbstractInvoker implements Invoker {
     }
 
     /**
-     * 执行调用
+     * 执行调用，可以用于跟踪拦截
      *
      * @param request 请求
      * @return CompletableFuture
      */
-    protected abstract CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request);
+    protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
+        //执行调用链
+        return chain.invoke(request);
+    }
 
     /**
      * 异步打开

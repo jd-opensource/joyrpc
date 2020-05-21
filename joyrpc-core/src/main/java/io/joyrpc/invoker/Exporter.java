@@ -20,7 +20,6 @@ package io.joyrpc.invoker;
  * #L%
  */
 
-import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
@@ -103,10 +102,7 @@ public class Exporter extends AbstractInvoker {
      * 实现对象
      */
     protected Object ref;
-    /**
-     * 调用链
-     */
-    protected Invoker chain;
+
     /**
      * 注册中心
      */
@@ -135,10 +131,7 @@ public class Exporter extends AbstractInvoker {
      * 事件通知器
      */
     protected Publisher<ExporterEvent> publisher;
-    /**
-     * 方法选项
-     */
-    protected InterfaceOption options;
+
 
     /**
      * 构造函数
@@ -305,7 +298,7 @@ public class Exporter extends AbstractInvoker {
     }
 
     @Override
-    protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
+    public void setup(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
         MethodOption option = options.getOption(invocation.getMethodName());
         //类名，如果不存在则从会话里面获取
@@ -329,9 +322,6 @@ public class Exporter extends AbstractInvoker {
         if (option.getCallback() != null) {
             container.addCallback(request, request.getTransport());
         }
-
-        //执行调用链
-        return chain.invoke(request);
     }
 
     /**

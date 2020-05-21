@@ -16,6 +16,7 @@ import io.joyrpc.invoker.Refer;
 import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.util.Futures;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -153,7 +154,12 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
 
         @Override
         public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
-            return filter.invoke(next, request);
+            try {
+                return filter.invoke(next, request);
+            } catch (Throwable e) {
+                //防止出异常
+                return Futures.completeExceptionally(e);
+            }
         }
 
         @Override

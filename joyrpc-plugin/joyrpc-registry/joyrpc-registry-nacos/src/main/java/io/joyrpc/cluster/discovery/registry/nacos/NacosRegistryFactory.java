@@ -25,8 +25,10 @@ import io.joyrpc.cluster.discovery.registry.AbstractRegistryFactory;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.condition.ConditionalOnClass;
 
 @Extension(value = "nacos")
+@ConditionalOnClass("com.alibaba.nacos.api.naming.NamingService")
 public class NacosRegistryFactory extends AbstractRegistryFactory {
 
     @Override

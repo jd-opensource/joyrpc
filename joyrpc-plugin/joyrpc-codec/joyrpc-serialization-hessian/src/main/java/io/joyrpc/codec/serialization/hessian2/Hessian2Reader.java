@@ -21,10 +21,8 @@ package io.joyrpc.codec.serialization.hessian2;
  */
 
 import io.joyrpc.codec.serialization.ObjectReader;
-import io.joyrpc.com.caucho.hessian.io.Hessian2Input;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 
 /**
@@ -32,16 +30,10 @@ import java.nio.charset.Charset;
  */
 public class Hessian2Reader implements ObjectReader {
 
-    protected final Hessian2Input hessian2Input;
-    protected final InputStream inputStream;
+    protected final Hessian2BWLInput hessian2Input;
 
-    public Hessian2Reader(Hessian2Input hessian2Input) {
-        this(hessian2Input, null);
-    }
-
-    public Hessian2Reader(Hessian2Input hessian2Input, InputStream inputStream) {
+    public Hessian2Reader(Hessian2BWLInput hessian2Input) {
         this.hessian2Input = hessian2Input;
-        this.inputStream = inputStream;
     }
 
     @Override
@@ -76,7 +68,7 @@ public class Hessian2Reader implements ObjectReader {
 
     @Override
     public int available() throws IOException {
-        return inputStream.available();
+        return hessian2Input.available();
     }
 
     @Override

@@ -20,6 +20,8 @@
 
 - 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。暂时不支持回调参数。
 
+- 使用线程变量优化Hessian性能
+
 - Dependency
 
   - 升级caffeine为2.8.2版本

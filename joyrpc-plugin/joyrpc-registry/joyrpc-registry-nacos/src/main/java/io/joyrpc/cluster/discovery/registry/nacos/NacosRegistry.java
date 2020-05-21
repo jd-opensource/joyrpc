@@ -23,6 +23,7 @@ package io.joyrpc.cluster.discovery.registry.nacos;
 import com.alibaba.nacos.api.NacosFactory;
 import com.alibaba.nacos.api.exception.NacosException;
 import com.alibaba.nacos.api.naming.NamingService;
+import com.alibaba.nacos.api.naming.listener.EventListener;
 import com.alibaba.nacos.api.naming.listener.NamingEvent;
 import com.alibaba.nacos.api.naming.pojo.Instance;
 import io.joyrpc.cluster.Shard;
@@ -64,7 +65,12 @@ public class NacosRegistry extends AbstractRegistry {
     private NamingService namingService;
 
     /**
-     * 服务分组
+     * namingService的初始化配置
+     */
+    private Properties properties;
+
+    /**
+     * 服务分组 //TODO 暂时没用
      */
     private String group;
 
@@ -79,6 +85,19 @@ public class NacosRegistry extends AbstractRegistry {
     public NacosRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.group = url.getString(NACOS_GROUP_OPTION);
+        this.properties = initProperties(url);
+    }
+
+    /**
+     * 初始化namingService配置
+     *
+     * @param url
+     * @return
+     */
+    protected Properties initProperties(URL url) {
+        Properties properties = new Properties();
+        properties.put(SERVER_ADDR, url.getString(Constants.ADDRESS_OPTION));
+        return properties;
     }
 
     /**
@@ -94,11 +113,8 @@ public class NacosRegistry extends AbstractRegistry {
 
     @Override
     protected void doOpen() {
-        //TODO 与nacos连接的参数配置
-        Properties nacosProperties = new Properties();
-        nacosProperties.put(SERVER_ADDR, url.getString(Constants.ADDRESS_OPTION));
         try {
-            namingService = NacosFactory.createNamingService(nacosProperties);
+            namingService = NacosFactory.createNamingService(properties);
         } catch (NacosException e) {
             if (logger.isErrorEnabled()) {
                 logger.error(e.getErrMsg(), e);
@@ -176,7 +192,14 @@ public class NacosRegistry extends AbstractRegistry {
 
         @Override
         protected CompletableFuture<Void> doUnsubscribe(ClusterBooking booking) {
-            return super.doUnsubscribe(booking);
+            return Futures.call(future -> {
+                NacosClusterBooking ncBooking = (NacosClusterBooking) booking;
+                EventListener listener = ncBooking.removeListener();
+                if (listener != null) {
+                    registry.namingService.unsubscribe(ncBooking.getServiceName(), listener);
+                }
+                future.complete(null);
+            });
         }
 
         @Override
@@ -202,13 +225,16 @@ public class NacosRegistry extends AbstractRegistry {
             List<Instance> instances = registry.namingService.getAllInstances(ncBooking.getServiceName());
             //触发集群事件
             doUpdate(ncBooking, instances);
-            //订阅
-            registry.namingService.subscribe(ncBooking.getServiceName(), event -> {
+            //创建listener
+            EventListener listener = event -> {
                 if (event instanceof NamingEvent) {
                     NamingEvent e = (NamingEvent) event;
                     doUpdate(ncBooking, e.getInstances());
                 }
-            });
+            };
+            ncBooking.setListener(listener);
+            //订阅
+            registry.namingService.subscribe(ncBooking.getServiceName(), listener);
         }
 
         /**
@@ -241,6 +267,10 @@ public class NacosRegistry extends AbstractRegistry {
          * 服务名称
          */
         protected String serviceName;
+        /**
+         * 订阅listener
+         */
+        protected EventListener listener;
 
         /**
          * 构造方法
@@ -291,6 +321,21 @@ public class NacosRegistry extends AbstractRegistry {
          */
         public String getServiceName() {
             return serviceName;
+        }
+
+
+        public EventListener getListener() {
+            return listener;
+        }
+
+        public void setListener(EventListener listener) {
+            this.listener = listener;
+        }
+
+        public EventListener removeListener() {
+            EventListener res = listener;
+            this.listener = null;
+            return res;
         }
 
 

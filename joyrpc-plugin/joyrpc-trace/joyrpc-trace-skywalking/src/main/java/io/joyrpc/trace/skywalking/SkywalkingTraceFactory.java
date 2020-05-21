@@ -25,8 +25,8 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.trace.Trace;
 import io.joyrpc.trace.TraceFactory;
+import io.joyrpc.trace.Tracer;
 import org.apache.skywalking.apm.agent.core.context.CarrierItem;
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
@@ -46,20 +46,20 @@ import java.util.Map;
 public class SkywalkingTraceFactory implements TraceFactory {
 
     @Override
-    public Trace create(final RequestMessage<Invocation> request) {
-        return request.isConsumer() ? new ConsumerTrace(request) : new ProviderTrace(request);
+    public Tracer create(final RequestMessage<Invocation> request) {
+        return request.isConsumer() ? new ConsumerTracer(request) : new ProviderTracer(request);
     }
 
     /**
      * 抽象的跟踪
      */
-    protected static abstract class AbstractTrace implements Trace {
+    protected static abstract class AbstractTracer implements Tracer {
         protected RequestMessage<Invocation> request;
         protected Invocation invocation;
         protected ContextSnapshot snapshot;
         protected AbstractSpan span;
 
-        public AbstractTrace(RequestMessage<Invocation> request) {
+        public AbstractTracer(RequestMessage<Invocation> request) {
             this.request = request;
             this.invocation = request.getPayLoad();
         }
@@ -72,13 +72,6 @@ public class SkywalkingTraceFactory implements TraceFactory {
         @Override
         public void restore() {
             ContextManager.continued(snapshot);
-        }
-
-        @Override
-        public void onException(final Throwable throwable) {
-            AbstractSpan activeSpan = ContextManager.activeSpan();
-            activeSpan.errorOccurred();
-            activeSpan.log(throwable);
         }
 
         /**
@@ -96,7 +89,12 @@ public class SkywalkingTraceFactory implements TraceFactory {
         }
 
         @Override
-        public void end() {
+        public void end(final Throwable throwable) {
+            if (throwable != null) {
+                AbstractSpan activeSpan = ContextManager.activeSpan();
+                activeSpan.errorOccurred();
+                activeSpan.log(throwable);
+            }
             ContextManager.stopSpan();
         }
     }
@@ -104,9 +102,9 @@ public class SkywalkingTraceFactory implements TraceFactory {
     /**
      * 消费者跟踪
      */
-    protected static class ConsumerTrace extends AbstractTrace {
+    protected static class ConsumerTracer extends AbstractTracer {
 
-        public ConsumerTrace(RequestMessage<Invocation> request) {
+        public ConsumerTracer(RequestMessage<Invocation> request) {
             super(request);
         }
 
@@ -128,9 +126,9 @@ public class SkywalkingTraceFactory implements TraceFactory {
     /**
      * 生产者跟踪
      */
-    protected static class ProviderTrace extends AbstractTrace {
+    protected static class ProviderTracer extends AbstractTracer {
 
-        public ProviderTrace(RequestMessage<Invocation> request) {
+        public ProviderTracer(RequestMessage<Invocation> request) {
             super(request);
         }
 

@@ -28,7 +28,7 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.trace.Trace;
+import io.joyrpc.trace.Tracer;
 import io.joyrpc.trace.TraceFactory;
 
 import java.util.HashMap;
@@ -78,7 +78,7 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
         InterfaceOption.MethodOption option = request.getOption();
         Map<String, String> tags = new HashMap<>();
         createTags(request, tags);
-        Trace trace = factory.create(request);
+        Tracer trace = factory.create(request);
         trace.begin(option.getTraceSpanId(invocation), component, tags);
         trace.snapshot();
         CompletableFuture<Result> future = invoker.invoke(request);

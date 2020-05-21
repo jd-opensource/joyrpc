@@ -39,6 +39,6 @@ public interface TraceFactory {
      * @param request
      * @return
      */
-    Trace create(RequestMessage<Invocation> request);
+    Tracer create(RequestMessage<Invocation> request);
 
 }

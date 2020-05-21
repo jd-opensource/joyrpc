@@ -25,7 +25,7 @@ import java.util.Map;
 /**
  * 跟踪会话
  */
-public interface Trace {
+public interface Tracer {
     /**
      * 开始
      *
@@ -46,14 +46,9 @@ public interface Trace {
     void restore();
 
     /**
-     * 异常
-     *
-     * @param throwable
-     */
-    void onException(Throwable throwable);
-
-    /**
      * 结束
+     *
+     * @param throwable 异常
      */
-    void end();
+    void end(Throwable throwable);
 }

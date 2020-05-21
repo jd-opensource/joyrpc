@@ -144,6 +144,11 @@
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-registry-nacos</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-transport-netty4</artifactId>
             <version>${project.version}</version>
         </dependency>

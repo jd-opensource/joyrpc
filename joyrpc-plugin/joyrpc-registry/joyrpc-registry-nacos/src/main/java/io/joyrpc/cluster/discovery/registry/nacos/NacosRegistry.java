@@ -28,10 +28,12 @@ import com.alibaba.nacos.api.naming.pojo.Instance;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
+import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
@@ -45,7 +47,6 @@ import java.util.concurrent.CompletableFuture;
 import static com.alibaba.nacos.api.PropertyKeyConst.SERVER_ADDR;
 import static com.alibaba.nacos.api.common.Constants.DEFAULT_GROUP;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
 
 /**
@@ -80,6 +81,17 @@ public class NacosRegistry extends AbstractRegistry {
         this.group = url.getString(NACOS_GROUP_OPTION);
     }
 
+    /**
+     * 标准化
+     *
+     * @param url
+     * @return
+     */
+    public URL normalize(URL url) {
+        URL resUrl = super.normalize(url);
+        return resUrl == null ? null : resUrl.add(SERVICE_VERSION_OPTION.getName(), url.getString(SERVICE_VERSION_OPTION));
+    }
+
     @Override
     protected void doOpen() {
         //TODO 与nacos连接的参数配置
@@ -111,6 +123,10 @@ public class NacosRegistry extends AbstractRegistry {
         return new NacosRegistion(url, key);
     }
 
+
+    /**
+     * nacos控制器
+     */
     protected static class NacosRegistryController extends RegistryController<NacosRegistry> {
 
         /**
@@ -120,6 +136,11 @@ public class NacosRegistry extends AbstractRegistry {
          */
         public NacosRegistryController(NacosRegistry registry) {
             super(registry);
+        }
+
+        @Override
+        protected ClusterBooking createClusterBooking(final URLKey key) {
+            return new NacosClusterBooking(key, this::dirty, getPublisher(key.getKey()));
         }
 
         @Override
@@ -148,7 +169,7 @@ public class NacosRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(ClusterBooking booking) {
             return Futures.call(future -> {
                 //TODO 此处应该定时lookup
-                doUpdate(booking);
+                doUpdate((NacosClusterBooking) booking);
                 future.complete(null);
             });
         }
@@ -174,24 +195,18 @@ public class NacosRegistry extends AbstractRegistry {
         /**
          * 更新集群
          *
-         * @param booking 订阅
+         * @param ncBooking 订阅
          */
-        protected void doUpdate(final ClusterBooking booking) throws NacosException {
-            //获取要订阅的serviceName
-            URL url = booking.getUrl();
-            String interfaceName = url.getPath();
-            String version = url.getString(SERVICE_VERSION_OPTION);
-            String group = url.getString(ALIAS_OPTION);
-            String serviceName = "providers:" + interfaceName + ":" + version + ":" + group;
+        protected void doUpdate(final NacosClusterBooking ncBooking) throws NacosException {
             //查询所有实例
-            List<Instance> instances = registry.namingService.getAllInstances(serviceName);
+            List<Instance> instances = registry.namingService.getAllInstances(ncBooking.getServiceName());
             //触发集群事件
-            doUpdate(booking, instances);
+            doUpdate(ncBooking, instances);
             //订阅
-            registry.namingService.subscribe(serviceName, event -> {
+            registry.namingService.subscribe(ncBooking.getServiceName(), event -> {
                 if (event instanceof NamingEvent) {
                     NamingEvent e = (NamingEvent) event;
-                    doUpdate(booking, e.getInstances());
+                    doUpdate(ncBooking, e.getInstances());
                 }
             });
         }
@@ -199,24 +214,85 @@ public class NacosRegistry extends AbstractRegistry {
         /**
          * 更新集群
          *
-         * @param booking   订阅
+         * @param ncBooking 订阅
          * @param instances 实例
          */
-        protected void doUpdate(final ClusterBooking booking, List<Instance> instances) {
+        protected void doUpdate(final NacosClusterBooking ncBooking, List<Instance> instances) {
             String defProtocol = GlobalContext.getString(Constants.PROTOCOL_KEY);
             List<ClusterEvent.ShardEvent> shards = new LinkedList<>();
             for (Instance ins : instances) {
-                if (!ins.isEnabled()) {
-                    continue;
+                URL shardUrl = ncBooking.createShardUrl(defProtocol, ins);
+                if (shardUrl != null) {
+                    shards.add(new ClusterEvent.ShardEvent(new Shard.DefaultShard(shardUrl), ClusterEvent.ShardEventType.UPDATE));
                 }
-                Map<String, String> meta = ins.getMetadata();
-                String protocol = meta == null ? null : meta.remove(Constants.PROTOCOL_KEY);
-                protocol = protocol == null || protocol.isEmpty() ? defProtocol : protocol;
-                URL providerUrl = new URL(protocol, ins.getIp(), ins.getPort(), booking.getUrl().getPath(), meta);
-                shards.add(new ClusterEvent.ShardEvent(new Shard.DefaultShard(providerUrl), ClusterEvent.ShardEventType.UPDATE));
             }
-            booking.handle(new ClusterEvent(registry, null, UpdateEvent.UpdateType.FULL, booking.getVersion() + 1, shards));
+            ncBooking.handle(new ClusterEvent(registry, null, UpdateEvent.UpdateType.FULL, ncBooking.getVersion() + 1, shards));
         }
+
+
+    }
+
+    /**
+     * nacos内部集群订阅
+     */
+    protected static class NacosClusterBooking extends ClusterBooking {
+
+        /**
+         * 服务名称
+         */
+        protected String serviceName;
+
+        /**
+         * 构造方法
+         *
+         * @param key
+         * @param dirty
+         * @param publisher
+         */
+        public NacosClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher) {
+            super(key, dirty, publisher);
+            this.serviceName = createServiceName(this.getUrl());
+        }
+
+        /**
+         * 生成服务名称
+         *
+         * @param url
+         * @return
+         */
+        protected String createServiceName(URL url) {
+            String interfaceName = url.getPath();
+            String version = url.getString(SERVICE_VERSION_OPTION);
+            String group = url.getString(ALIAS_OPTION);
+            return "providers:" + interfaceName + ":" + version + ":" + group;
+        }
+
+        /**
+         * 生成分片URL
+         *
+         * @param defProtocol
+         * @param instance
+         * @return
+         */
+        protected URL createShardUrl(String defProtocol, Instance instance) {
+            Map<String, String> meta = instance.getMetadata();
+            if (!instance.isEnabled() || !url.getString(ALIAS_OPTION).equals(meta.get(ALIAS_OPTION.getName()))) {
+                return null;
+            }
+            String protocol = meta.remove(Constants.PROTOCOL_KEY);
+            protocol = protocol == null || protocol.isEmpty() ? defProtocol : protocol;
+            return new URL(protocol, instance.getIp(), instance.getPort(), this.getPath(), meta);
+        }
+
+        /**
+         * 获取服务名称
+         *
+         * @return
+         */
+        public String getServiceName() {
+            return serviceName;
+        }
+
 
     }
 

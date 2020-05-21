@@ -28,8 +28,8 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.trace.Tracer;
 import io.joyrpc.trace.TraceFactory;
+import io.joyrpc.trace.Tracer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -84,11 +84,7 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
         CompletableFuture<Result> future = invoker.invoke(request);
         future.whenComplete((result, throwable) -> {
             trace.restore();
-            Throwable error = throwable == null ? result.getException() : throwable;
-            if (error != null) {
-                trace.onException(throwable);
-            }
-            trace.end();
+            trace.end(throwable == null ? result.getException() : throwable);
         });
         return future;
     }

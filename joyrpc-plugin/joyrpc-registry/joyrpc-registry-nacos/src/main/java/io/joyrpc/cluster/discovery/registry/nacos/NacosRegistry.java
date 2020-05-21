@@ -57,11 +57,24 @@ public class NacosRegistry extends AbstractRegistry {
 
     public static final URLOption<String> NACOS_GROUP_OPTION = new URLOption<>("nacos.group", DEFAULT_GROUP);
 
+    /**
+     * nacos的服务注册服务
+     */
     private NamingService namingService;
 
+    /**
+     * 服务分组
+     */
     private String group;
 
 
+    /**
+     * 构造方法
+     *
+     * @param name
+     * @param url
+     * @param backup
+     */
     public NacosRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
         this.group = url.getString(NACOS_GROUP_OPTION);
@@ -207,10 +220,18 @@ public class NacosRegistry extends AbstractRegistry {
 
     }
 
+    /**
+     * 注册信息
+     */
     protected static class NacosRegistion extends Registion {
 
+        /**
+         * 服务名称
+         */
         protected String serviceName;
-
+        /**
+         * nacos的instance对象
+         */
         protected Instance instance;
 
         public NacosRegistion(URL url, String key) {
@@ -219,6 +240,12 @@ public class NacosRegistry extends AbstractRegistry {
             this.instance = createInstance(url);
         }
 
+        /**
+         * 生成服务名称
+         *
+         * @param url
+         * @return
+         */
         protected String createServiceName(URL url) {
             String interfaceName = url.getPath();
             String version = url.getString(SERVICE_VERSION_OPTION);
@@ -227,6 +254,12 @@ public class NacosRegistry extends AbstractRegistry {
             return pre + interfaceName + ":" + version + ":" + group;
         }
 
+        /**
+         * 生成实例对象
+         *
+         * @param url
+         * @return
+         */
         protected Instance createInstance(URL url) {
             Instance instance = new Instance();
             instance.setIp(url.getHost());
@@ -235,10 +268,20 @@ public class NacosRegistry extends AbstractRegistry {
             return instance;
         }
 
+        /**
+         * 获取实例对象
+         *
+         * @return
+         */
         public Instance getInstance() {
             return instance;
         }
 
+        /**
+         * 获取服务名称
+         *
+         * @return
+         */
         public String getServiceName() {
             return serviceName;
         }

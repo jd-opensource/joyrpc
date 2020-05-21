@@ -68,7 +68,8 @@ public class DubboNacosRegistry extends NacosRegistry {
     private final static String DUBBO_RELEASE_VALUE = "2.7.5";
     private final static String DUBBO_PROTOCOL_VALUE = "dubbo";
     private final static String DUBBO_PROTOCOL_VERSION_VALUE = "2.0.2";
-    private final static String DUBBO_CATEGORY_VALUE = "providers";
+    private final static String DUBBO_CATEGORY_PROVIDERS = "providers";
+    private final static String DUBBO_CATEGORY_CONSUMERS = "consumers";
 
 
     public DubboNacosRegistry(String name, URL url, Backup backup) {
@@ -161,7 +162,8 @@ public class DubboNacosRegistry extends NacosRegistry {
             Parametric context = new MapParametric(GlobalContext.getContext());
             //metadata
             Map<String, String> meta = new HashMap<>();
-            meta.put(ROLE_OPTION.getName(), url.getString(ROLE_OPTION));
+            String side = url.getString(ROLE_OPTION);
+            meta.put(ROLE_OPTION.getName(), side);
             meta.put(DUBBO_RELEASE_KEY, DUBBO_RELEASE_VALUE);
             meta.put(DUBBO_PROTOCOL_VERSION_KEY, DUBBO_PROTOCOL_VERSION_VALUE);
             meta.put(DUBBO_PID_KEY, context.getString(KEY_PID));
@@ -174,7 +176,7 @@ public class DubboNacosRegistry extends NacosRegistry {
             meta.put(DUBBO_PROTOCOL_KEY, DUBBO_PROTOCOL_VALUE);
             meta.put(DUBBO_APPLICATION_KEY, context.getString(KEY_APPNAME));
             meta.put(DUBBO_DYNAMIC_KEY, String.valueOf(url.getBoolean(DYNAMIC_OPTION)));
-            meta.put(DUBBO_CATEGORY_KEY, DUBBO_CATEGORY_VALUE);
+            meta.put(DUBBO_CATEGORY_KEY, SIDE_PROVIDER.equals(side) ? DUBBO_CATEGORY_PROVIDERS : DUBBO_CATEGORY_CONSUMERS);
             meta.put(DUBBO_ANYHOST_KEY, "true");
             meta.put(DUBBO_GROUP_KEY, url.getString(ALIAS_OPTION));
             meta.put(DUBBO_TIMESTAMP_KEY, String.valueOf(SystemClock.now()));

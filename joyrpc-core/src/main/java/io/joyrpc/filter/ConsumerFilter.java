@@ -28,12 +28,6 @@ import io.joyrpc.extension.Extensible;
 @Extensible("consumerFilter")
 @FunctionalInterface
 public interface ConsumerFilter extends Filter {
-
-    /**
-     * 跟踪顺序
-     */
-    int TRACE_ORDER = -110;
-
     /**
      * 参数验证顺序，泛型调用不会进行验证
      */

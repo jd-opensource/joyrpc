@@ -57,6 +57,11 @@ public interface Filter extends InvokerAware, Prototype {
     int INNER = 7;
 
     /**
+     * 跟踪顺序
+     */
+    int TRACE_ORDER = -65535;
+
+    /**
      * 调用过滤链，返回值对Result，便于线程变量切换恢复
      *
      * @param invoker 调用器

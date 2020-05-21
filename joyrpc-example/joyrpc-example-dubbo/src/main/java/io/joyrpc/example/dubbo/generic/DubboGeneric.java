@@ -9,6 +9,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootApplication
@@ -34,7 +36,28 @@ public class DubboGeneric {
         ConfigurableApplicationContext run = SpringApplication.run(DubboGeneric.class, args);
         DubboGeneric application = run.getBean(DubboGeneric.class);
         GenericService consumer = application.getGenericService();
-        AtomicLong counter = new AtomicLong(0);
+
+        Map<String, Object> param = new HashMap<>();
+        //header
+        Map<String, Object> header = new HashMap<>();
+        Map<String, Object> headerAttrs = new HashMap<>();
+        headerAttrs.put("type", "generic");
+        headerAttrs.put("bodyType", "EchoData");
+        header.put("attrs", headerAttrs);
+        //body
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", 1);
+        body.put("message", "this is body");
+        //param
+        param.put("header", header);
+        param.put("body", body);
+
+
+        Object res1 = consumer.$invoke("echoRequest", null, new Object[]{param});
+
+        System.out.println("res:"+res1);
+
+        /*AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
                 Object res = consumer.$invoke(
@@ -52,7 +75,7 @@ public class DubboGeneric {
                 } catch (InterruptedException ex) {
                 }
             }
-        }
+        }*/
     }
 
 }

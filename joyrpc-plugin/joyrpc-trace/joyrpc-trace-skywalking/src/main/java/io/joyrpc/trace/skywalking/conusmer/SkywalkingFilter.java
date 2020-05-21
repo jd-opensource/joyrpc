@@ -1,6 +1,7 @@
 package io.joyrpc.trace.skywalking.conusmer;
 
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.filter.ConsumerFilter;
@@ -33,7 +34,8 @@ public class SkywalkingFilter extends AbstractSkywalkingFilter implements Consum
             invocation.addAttachment(next.getHeadKey(), next.getHeadValue());
         }
         //Tags.URL.set(span, generateRequestURL(requestURL, invocation));
-        ALIAS_TAG.set(span, invocation.getAlias());
+        CONSUMER_ALIAS_TAG.set(span, invocation.getAlias());
+        CONSUMER_NAME_TAG.set(span, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
         span.setComponent(component);
         SpanLayer.asRPCFramework(span);
     }

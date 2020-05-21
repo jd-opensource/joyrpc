@@ -1,12 +1,14 @@
 package io.joyrpc.trace.skywalking.provider;
 
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.skywalking.AbstractSkywalkingFilter;
+import io.joyrpc.util.network.Ipv4;
 import org.apache.skywalking.apm.agent.core.context.CarrierItem;
 import org.apache.skywalking.apm.agent.core.context.ContextCarrier;
 import org.apache.skywalking.apm.agent.core.context.ContextManager;
@@ -33,7 +35,9 @@ public class SkywalkingFilter extends AbstractSkywalkingFilter implements Provid
         }
 
         AbstractSpan span = ContextManager.createEntrySpan(option.getTraceSpanId(invocation), contextCarrier);
-        ALIAS_TAG.set(span, invocation.getAlias());
+        CONSUMER_ALIAS_TAG.set(span, invocation.getAlias());
+        CONSUMER_NAME_TAG.set(span, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
+        CONSUMER_ADDRESS_TAG.set(span, Ipv4.toAddress(request.getRemoteAddress()));
         //Tags.URL.set(span, generateRequestURL(requestURL, invocation));
         span.setPeer(request.getRemoteAddress().toString());
         span.setComponent(component);

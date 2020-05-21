@@ -22,7 +22,9 @@ import static io.joyrpc.constants.Constants.*;
  */
 public abstract class AbstractSkywalkingFilter extends AbstractFilter {
 
-    protected static StringTag ALIAS_TAG=new StringTag("alias");
+    protected static StringTag CONSUMER_ALIAS_TAG = new StringTag("consumer.alias");
+    protected static StringTag CONSUMER_NAME_TAG = new StringTag("consumer.name");
+    protected static StringTag CONSUMER_ADDRESS_TAG = new StringTag("consumer.address");
 
     protected String component;
 

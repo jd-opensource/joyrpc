@@ -28,6 +28,11 @@ import io.joyrpc.protocol.message.RequestMessage;
  */
 public interface TraceFactory {
 
+    int ORDER_SKYWALKING = 100;
+    int ORDER_PINPOINT = ORDER_SKYWALKING + 1;
+    int ORDER_JAEGER = ORDER_PINPOINT + 1;
+    int ORDER_ZIPKIN = ORDER_JAEGER + 1;
+
     /**
      * 构造跟踪会话
      *

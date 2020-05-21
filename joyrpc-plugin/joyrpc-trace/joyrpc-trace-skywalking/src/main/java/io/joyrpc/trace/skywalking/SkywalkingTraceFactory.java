@@ -1,7 +1,28 @@
 package io.joyrpc.trace.skywalking;
 
+/*-
+ * #%L
+ * joyrpc
+ * %%
+ * Copyright (C) 2019 joyrpc.io
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.Trace;
@@ -19,7 +40,8 @@ import java.util.Map;
 /**
  * skywalking跟踪工厂
  */
-@Extension(value = "skywalking", order = 100)
+@Extension(value = "skywalking", order = TraceFactory.ORDER_SKYWALKING)
+@ConditionalOnProperty(value = "skywalking.enable", matchIfMissing = true)
 @ConditionalOnClass("org.apache.skywalking.apm.agent.core.context.ContextManager")
 public class SkywalkingTraceFactory implements TraceFactory {
 
@@ -31,13 +53,13 @@ public class SkywalkingTraceFactory implements TraceFactory {
     /**
      * 抽象的跟踪
      */
-    protected static abstract class AbstracetTrace implements Trace {
+    protected static abstract class AbstractTrace implements Trace {
         protected RequestMessage<Invocation> request;
         protected Invocation invocation;
         protected ContextSnapshot snapshot;
         protected AbstractSpan span;
 
-        public AbstracetTrace(RequestMessage<Invocation> request) {
+        public AbstractTrace(RequestMessage<Invocation> request) {
             this.request = request;
             this.invocation = request.getPayLoad();
         }
@@ -82,7 +104,7 @@ public class SkywalkingTraceFactory implements TraceFactory {
     /**
      * 消费者跟踪
      */
-    protected static class ConsumerTrace extends AbstracetTrace {
+    protected static class ConsumerTrace extends AbstractTrace {
 
         public ConsumerTrace(RequestMessage<Invocation> request) {
             super(request);
@@ -106,7 +128,7 @@ public class SkywalkingTraceFactory implements TraceFactory {
     /**
      * 生产者跟踪
      */
-    protected static class ProviderTrace extends AbstracetTrace {
+    protected static class ProviderTrace extends AbstractTrace {
 
         public ProviderTrace(RequestMessage<Invocation> request) {
             super(request);

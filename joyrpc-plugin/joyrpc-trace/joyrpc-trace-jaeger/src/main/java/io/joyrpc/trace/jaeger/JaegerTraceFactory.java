@@ -65,7 +65,7 @@ public class JaegerTraceFactory implements TraceFactory {
         context.putAll(ENVIRONMENT.get().env());
         context.putAll(GlobalContext.getContext());
         MapParametric parametric = new MapParametric(context);
-        Configuration configuration = new Configuration(parametric.getString("serviceName", Constants.KEY_APPNAME, ""));
+        Configuration configuration = new Configuration(parametric.getString("appService", Constants.KEY_APPNAME, "unknown"));
         configuration.withSampler(buildSamplerConfiguration(parametric));
         configuration.withReporter(buildReporterConfiguration(parametric));
         tracer = configuration.getTracer();

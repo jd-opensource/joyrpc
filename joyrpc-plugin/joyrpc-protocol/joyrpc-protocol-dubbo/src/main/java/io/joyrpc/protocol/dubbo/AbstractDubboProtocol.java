@@ -34,10 +34,12 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.transport.session.Session;
 
 import java.util.function.Function;
 
 import static io.joyrpc.constants.Constants.KEY_APPNAME;
+import static io.joyrpc.constants.Constants.SERVICE_VERSION_OPTION;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
@@ -171,6 +173,11 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             invocation.setAlias(payLoad.getAlias());
             invocation.setParameterTypesDesc(generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : message.getOption().getDescription());
             invocation.setArgs(payLoad.getArgs());
+            Session session = message.getSession();
+            if (session != null && session.getAttributes() != null) {
+                String serviceVersion = session.getOrDefault(SERVICE_VERSION_OPTION.getName(), "");
+                invocation.setVersion(serviceVersion);
+            }
             invocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
             invocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
             invocation.addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias());

@@ -58,7 +58,7 @@ public class DubboInvocation extends Invocation implements Codec {
 
     private Map<Object, Object> attributes = new HashMap<>();
 
-    private transient String version = "0.0.0";
+    private transient String version = "";
 
     /**
      * 心跳标识

@@ -23,6 +23,7 @@ package io.joyrpc.spring.schema;
 import io.joyrpc.spring.GlobalParameterBean;
 import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
@@ -45,12 +46,19 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
 
         String key = element.getAttribute("key");
         String value = element.getAttribute("value");
+        String ref = element.getAttribute("ref");
         String hide = element.getAttribute("hide");
 
         MutablePropertyValues values = definition.getPropertyValues();
         values.addPropertyValue("key", key);
-        values.addPropertyValue("value", value);
-        values.addPropertyValue("hide", hide);
+        if (value != null && !value.isEmpty()) {
+            values.addPropertyValue("value", value);
+        } else if (ref != null && !ref.isEmpty()) {
+            values.addPropertyValue("value", new RuntimeBeanReference(ref));
+        }
+        if (hide != null && !hide.isEmpty()) {
+            values.addPropertyValue("hide", hide);
+        }
 
         String beanName = "global-parameter-" + COUNTER.getAndIncrement();
         parserContext.getRegistry().registerBeanDefinition(beanName, definition);

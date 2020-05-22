@@ -20,7 +20,7 @@ package io.joyrpc.spring;
  * #L%
  */
 
-import io.joyrpc.config.ParameterConfig;
+import io.joyrpc.config.AbstractConfig;
 import io.joyrpc.context.GlobalContext;
 import org.springframework.beans.factory.InitializingBean;
 
@@ -31,7 +31,45 @@ import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
  *
  * @description:
  */
-public class GlobalParameterBean extends ParameterConfig implements InitializingBean {
+public class GlobalParameterBean extends AbstractConfig implements InitializingBean {
+
+    /**
+     * 关键字
+     */
+    protected String key;
+
+    /**
+     * 值
+     */
+    protected Object value;
+    /**
+     * 是否隐藏（是的话，业务代码不能获取到）
+     */
+    protected boolean hide = false;
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
+
+    public boolean isHide() {
+        return hide;
+    }
+
+    public void setHide(boolean hide) {
+        this.hide = hide;
+    }
 
     @Override
     public void afterPropertiesSet() {

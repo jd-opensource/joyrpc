@@ -170,8 +170,8 @@ public class DubboNacosRegistry extends NacosRegistry {
             meta.put(DUBBO_INTERFACE_KEY, url.getPath());
             String serviceVersion = url.getString(SERVICE_VERSION_OPTION);
             if (serviceVersion != null && !serviceVersion.isEmpty()) {
-                meta.put(DUBBO_SERVICE_VERSION_KEY, url.getString(SERVICE_VERSION_OPTION));
-                meta.put(DUBBO_SERVICE_REVERSION_KEY, url.getString(SERVICE_VERSION_OPTION));
+                meta.put(DUBBO_SERVICE_VERSION_KEY, serviceVersion);
+                meta.put(DUBBO_SERVICE_REVERSION_KEY, serviceVersion);
             }
             meta.put(DUBBO_GENERIC_KEY, String.valueOf(url.getBoolean(GENERIC_OPTION)));
             meta.put(DUBBO_PATH_KEY, url.getPath());

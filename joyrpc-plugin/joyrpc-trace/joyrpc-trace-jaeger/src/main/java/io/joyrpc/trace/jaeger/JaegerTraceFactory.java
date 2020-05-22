@@ -53,6 +53,7 @@ public class JaegerTraceFactory implements TraceFactory {
      * 隐藏属性的key：分布式跟踪 数据KEY
      */
     public static final String HIDDEN_KEY_TRACE_JAEGER = ".traceJaeger";
+    public static final String TRACE_JAEGER = "jaeger";
     public static final String TRACE_ID_HIGH = "traceIdHigh";
     public static final String TRACE_ID_LOW = "traceIdLow";
     public static final String SPAN_ID = "spanId";
@@ -61,14 +62,21 @@ public class JaegerTraceFactory implements TraceFactory {
     protected JaegerTracer tracer;
 
     public JaegerTraceFactory() {
-        Map<String, Object> context = new HashMap<>();
-        context.putAll(ENVIRONMENT.get().env());
-        context.putAll(GlobalContext.getContext());
-        MapParametric parametric = new MapParametric(context);
-        Configuration configuration = new Configuration(parametric.getString("appService", Constants.KEY_APPNAME, "unknown"));
-        configuration.withSampler(buildSamplerConfiguration(parametric));
-        configuration.withReporter(buildReporterConfiguration(parametric));
-        tracer = configuration.getTracer();
+        Map<String, Object> global = GlobalContext.getContext();
+        Object obj = global.get(TRACE_JAEGER);
+        if (obj instanceof JaegerTracer) {
+            //判断是否有全局的变量
+            tracer = (JaegerTracer) obj;
+        } else {
+            Map<String, Object> context = new HashMap<>();
+            context.putAll(ENVIRONMENT.get().env());
+            context.putAll(global);
+            MapParametric parametric = new MapParametric(context);
+            Configuration configuration = new Configuration(parametric.getString("appService", Constants.KEY_APPNAME, "unknown"));
+            configuration.withSampler(buildSamplerConfiguration(parametric));
+            configuration.withReporter(buildReporterConfiguration(parametric));
+            tracer = configuration.getTracer();
+        }
     }
 
     /**

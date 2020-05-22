@@ -31,7 +31,6 @@ import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.config.validator.*;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.context.Configurator;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
@@ -56,8 +55,7 @@ import java.util.function.Consumer;
 import static io.joyrpc.Plugin.CONFIGURATOR;
 import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.Configurator.CONFIG_ALLOWED;
-import static io.joyrpc.context.Configurator.GLOBAL_ALLOWED;
+import static io.joyrpc.context.Configurator.*;
 import static io.joyrpc.util.StringUtils.isNotEmpty;
 import static io.joyrpc.util.Timer.timer;
 
@@ -547,7 +545,8 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     protected static URL parse(final RegistryConfig config) {
         Map<String, String> parameters = new HashMap<>();
         //带上全局参数
-        GlobalContext.getContext().forEach((key, value) -> parameters.put(key, value.toString()));
+        copy(GlobalContext.getContext(), parameters, null, URL_VALUE_ALLOWED);
+
         if (isNotEmpty(config.getId())) {
             parameters.put(REGISTRY_NAME_KEY, config.getId());
         }
@@ -912,20 +911,20 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             //真实配置的接口名称
             String path = url.getPath();
             //本地全局静态配置
-            Configurator.update(GlobalContext.getContext(), result, GLOBAL_ALLOWED);
+            copy(GlobalContext.getContext(), result, GLOBAL_ALLOWED, URL_VALUE_ALLOWED);
             //注册中心下发的全局动态配置，主要是一些开关
-            Configurator.update(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), result, GLOBAL_ALLOWED);
+            copy(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING), result, GLOBAL_ALLOWED, null);
             //本地接口静态配置,数据中心和区域在注册中心里面会动态更新到全局上下文里面
             Map<String, String> parameters = url.getParameters();
             parameters.remove(Region.DATA_CENTER);
             parameters.remove(Region.REGION);
             result.putAll(parameters);
             //注册中心下发的接口动态配置
-            Configurator.update(GlobalContext.getInterfaceConfig(path), result, GLOBAL_ALLOWED);
+            copy(GlobalContext.getInterfaceConfig(path), result, GLOBAL_ALLOWED, null);
             //调用插件
-            CONFIGURATOR.extensions().forEach(o -> Configurator.update(o.configure(path), result, CONFIG_ALLOWED));
+            CONFIGURATOR.extensions().forEach(o -> copy(o.configure(path), result, CONFIG_ALLOWED, null));
             //动态配置
-            Configurator.update(updates, result, CONFIG_ALLOWED);
+            copy(updates, result, CONFIG_ALLOWED, null);
 
             return new URL(url.getProtocol(), url.getUser(), url.getPassword(), url.getHost(), url.getPort(), path, result);
         }

@@ -40,6 +40,11 @@ public interface Configurator {
     Predicate<String> GLOBAL_ALLOWED = new ExcludeAttrPredicate();
 
     /**
+     * 验证值的合法性
+     */
+    Predicate<Object> URL_VALUE_ALLOWED = new URLValuePredicate();
+
+    /**
      * 服务提供者和消费者过滤掉的属性
      */
     Predicate<String> CONFIG_ALLOWED = new ExcludeAttrPredicate(new HashSet<>(Arrays.asList(
@@ -54,18 +59,21 @@ public interface Configurator {
     Map<String, String> configure(String interfaceClazz);
 
     /**
-     * 更新数据
+     * 复制数据
      *
-     * @param from
-     * @param to
-     * @param predicate
+     * @param from           原始散列
+     * @param to             目标散列
+     * @param keyPredicate   键断言
+     * @param valuePredicate 值断言
      * @param <T>
      */
-    static <T> void update(final Map<String, T> from, final Map<String, String> to, final Predicate<String> predicate) {
+    static <T> void copy(final Map<String, T> from, final Map<String, String> to,
+                         final Predicate<String> keyPredicate,
+                         final Predicate<T> valuePredicate) {
         if (from != null && to != null) {
             from.forEach((k, v) -> {
-                if (v instanceof String && (predicate == null || predicate.test(k))) {
-                    to.put(k, (String) v);
+                if ((valuePredicate == null || valuePredicate.test(v)) && (keyPredicate == null || keyPredicate.test(k))) {
+                    to.put(k, v.toString());
                 }
             });
         }
@@ -111,6 +119,26 @@ public interface Configurator {
             }
 
             return !excludes.contains(name);
+        }
+    }
+
+    /**
+     * URL值验证
+     */
+    class URLValuePredicate implements Predicate<Object> {
+
+        @Override
+        public boolean test(final Object o) {
+            if (o instanceof CharSequence) {
+                return true;
+            } else if (o instanceof Number) {
+                return true;
+            } else if (o instanceof Boolean) {
+                return true;
+            } else if (o != null && o.getClass().isEnum()) {
+                return true;
+            }
+            return false;
         }
     }
 }

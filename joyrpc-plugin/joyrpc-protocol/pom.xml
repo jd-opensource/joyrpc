@@ -15,6 +15,7 @@
         <module>joyrpc-protocol-telnet</module>
         <module>joyrpc-protocol-http</module>
         <module>joyrpc-protocol-grpc</module>
+        <module>joyrpc-protocol-dubbo</module>
     </modules>
 
 

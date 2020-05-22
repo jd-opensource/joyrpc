@@ -191,13 +191,13 @@ public class JaegerTraceFactory implements TraceFactory {
             super.begin(name, component, tags);
             span = tracer.buildSpan(name).withStartTimestamp(SystemClock.now()).start();
             JaegerSpanContext jsc = span.context();
-            Map<String, Object> context = new HashMap<>(10);
-            context.put(TRACE_ID_HIGH, jsc.getTraceIdHigh());
-            context.put(TRACE_ID_LOW, jsc.getTraceIdLow());
-            context.put(SPAN_ID, jsc.getSpanId());
-            context.put(PARENT_ID, jsc.getParentId());
-            context.put(FLAGS, jsc.getFlags());
-            invocation.addAttachment(HIDDEN_KEY_TRACE_JAEGER, context);
+            Map<String, Object> ctx = new HashMap<>(5);
+            ctx.put(TRACE_ID_HIGH, jsc.getTraceIdHigh());
+            ctx.put(TRACE_ID_LOW, jsc.getTraceIdLow());
+            ctx.put(SPAN_ID, jsc.getSpanId());
+            ctx.put(PARENT_ID, jsc.getParentId());
+            ctx.put(FLAGS, jsc.getFlags());
+            invocation.addAttachment(HIDDEN_KEY_TRACE_JAEGER, ctx);
             tag(tags);
         }
     }
@@ -215,13 +215,13 @@ public class JaegerTraceFactory implements TraceFactory {
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
-            Map<String, Object> context = (Map<String, Object>) invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER);
-            JaegerSpanContext jsc = context == null ? null : new JaegerSpanContext(
-                    (Long) context.get(TRACE_ID_HIGH),
-                    (Long) context.get(TRACE_ID_LOW),
-                    (Long) context.get(SPAN_ID),
-                    (Long) context.get(TRACE_ID_HIGH),
-                    (Byte) context.get(PARENT_ID));
+            Map<String, Object> ctx = (Map<String, Object>) invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER);
+            JaegerSpanContext jsc = ctx == null ? null : new JaegerSpanContext(
+                    (Long) ctx.get(TRACE_ID_HIGH),
+                    (Long) ctx.get(TRACE_ID_LOW),
+                    (Long) ctx.get(SPAN_ID),
+                    (Long) ctx.get(TRACE_ID_HIGH),
+                    (Byte) ctx.get(PARENT_ID));
             span = tracer.buildSpan(name).withStartTimestamp(SystemClock.now()).asChildOf(jsc).start();
             tag(tags);
         }

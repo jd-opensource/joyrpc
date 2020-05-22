@@ -12,5 +12,10 @@
     <artifactId>joyrpc-trace</artifactId>
     <packaging>pom</packaging>
 
-
+    <modules>
+        <module>joyrpc-trace-skywalking</module>
+        <module>joyrpc-trace-jaeger</module>
+        <module>joyrpc-trace-pinpoint</module>
+        <module>joyrpc-trace-zipkin</module>
+    </modules>
 </project>

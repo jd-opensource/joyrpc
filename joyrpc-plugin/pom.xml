@@ -19,6 +19,7 @@
         <module>joyrpc-registry</module>
         <module>joyrpc-expression</module>
         <module>joyrpc-transport</module>
+        <module>joyrpc-trace</module>
     </modules>
 
     <dependencies>

@@ -18,11 +18,6 @@
         <module>joyrpc-example</module>
         <module>joyrpc-all</module>
         <module>joyrpc-plugin/joyrpc-protocol/joyrpc-protocol-dubbo</module>
-        <module>joyrpc-plugin/joyrpc-trace</module>
-        <module>joyrpc-plugin/joyrpc-trace/joyrpc-trace-skywalking</module>
-        <module>joyrpc-plugin/joyrpc-trace/joyrpc-trace-pinpoint</module>
-        <module>joyrpc-plugin/joyrpc-trace/joyrpc-trace-jaeger</module>
-        <module>joyrpc-plugin/joyrpc-trace/joyrpc-trace-zipkin</module>
     </modules>
     <name>joyrpc</name>
     <properties>

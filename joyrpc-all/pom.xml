@@ -154,6 +154,16 @@
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-trace-skywalking</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-trace-jaeger</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-spring</artifactId>
             <version>${project.version}</version>
         </dependency>

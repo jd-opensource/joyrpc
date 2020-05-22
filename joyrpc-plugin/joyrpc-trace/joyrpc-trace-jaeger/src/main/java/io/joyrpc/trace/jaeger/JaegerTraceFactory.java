@@ -27,6 +27,7 @@ import io.jaegertracing.internal.JaegerSpan;
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
 import io.jaegertracing.internal.reporters.RemoteReporter;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
@@ -57,16 +58,17 @@ public class JaegerTraceFactory implements TraceFactory {
     public static final String SPAN_ID = "spanId";
     public static final String PARENT_ID = "parentId";
     public static final String FLAGS = "flags";
-    protected ReporterConfiguration reporterCfg;
-    protected SamplerConfiguration samplerCfg;
+    protected JaegerTracer tracer;
 
     public JaegerTraceFactory() {
         Map<String, Object> context = new HashMap<>();
         context.putAll(ENVIRONMENT.get().env());
         context.putAll(GlobalContext.getContext());
         MapParametric parametric = new MapParametric(context);
-        reporterCfg = buildReporterConfiguration(parametric);
-        samplerCfg = buildSamplerConfiguration(parametric);
+        Configuration configuration = new Configuration(parametric.getString("serviceName", Constants.KEY_APPNAME, ""));
+        configuration.withSampler(buildSamplerConfiguration(parametric));
+        configuration.withReporter(buildReporterConfiguration(parametric));
+        tracer = configuration.getTracer();
     }
 
     /**
@@ -114,36 +116,24 @@ public class JaegerTraceFactory implements TraceFactory {
 
     @Override
     public Tracer create(final RequestMessage<Invocation> request) {
-        return request.isConsumer() ? new ConsumerTracer(reporterCfg, samplerCfg, request) :
-                new ProviderTracer(reporterCfg, samplerCfg, request);
+        return request.isConsumer() ? new ConsumerTracer(tracer, request) :
+                new ProviderTracer(tracer, request);
     }
 
     /**
      * 抽象的跟踪
      */
     protected static abstract class AbstractTracer implements Tracer {
-        protected ReporterConfiguration reporterCfg;
-        protected SamplerConfiguration samplerCfg;
+        protected JaegerTracer tracer;
         protected RequestMessage<Invocation> request;
         protected Invocation invocation;
-        protected JaegerTracer tracer;
         protected JaegerSpan span;
 
-        public AbstractTracer(final ReporterConfiguration reporterCfg,
-                              final SamplerConfiguration samplerCfg,
+        public AbstractTracer(final JaegerTracer tracer,
                               final RequestMessage<Invocation> request) {
-            this.reporterCfg = reporterCfg;
-            this.samplerCfg = samplerCfg;
+            this.tracer = tracer;
             this.request = request;
             this.invocation = request.getPayLoad();
-        }
-
-        @Override
-        public void begin(final String name, final String component, final Map<String, String> tags) {
-            Configuration configuration = new Configuration(invocation.getClassName());
-            configuration.withSampler(samplerCfg);
-            configuration.withReporter(reporterCfg);
-            tracer = configuration.getTracer();
         }
 
         @Override
@@ -180,15 +170,13 @@ public class JaegerTraceFactory implements TraceFactory {
      */
     protected static class ConsumerTracer extends AbstractTracer {
 
-        public ConsumerTracer(final ReporterConfiguration reporterCfg,
-                              final SamplerConfiguration samplerCfg,
+        public ConsumerTracer(final JaegerTracer tracer,
                               final RequestMessage<Invocation> request) {
-            super(reporterCfg, samplerCfg, request);
+            super(tracer, request);
         }
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
-            super.begin(name, component, tags);
             span = tracer.buildSpan(name).withStartTimestamp(SystemClock.now()).start();
             JaegerSpanContext jsc = span.context();
             Map<String, Object> ctx = new HashMap<>(5);
@@ -207,10 +195,9 @@ public class JaegerTraceFactory implements TraceFactory {
      */
     protected static class ProviderTracer extends AbstractTracer {
 
-        public ProviderTracer(final ReporterConfiguration reporterCfg,
-                              final SamplerConfiguration samplerCfg,
+        public ProviderTracer(final JaegerTracer tracer,
                               final RequestMessage<Invocation> request) {
-            super(reporterCfg, samplerCfg, request);
+            super(tracer, request);
         }
 
         @Override

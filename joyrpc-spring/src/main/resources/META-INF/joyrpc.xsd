@@ -11,7 +11,7 @@
         </xsd:annotation>
         <xsd:complexType>
             <xsd:sequence minOccurs="0" maxOccurs="unbounded">
-                <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
             </xsd:sequence>
             <xsd:attribute name="id" type="xsd:ID" use="required">
                 <xsd:annotation>
@@ -72,7 +72,7 @@
         </xsd:annotation>
         <xsd:complexType>
             <xsd:sequence minOccurs="0" maxOccurs="unbounded">
-                <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
             </xsd:sequence>
             <xsd:attribute name="id" type="xsd:ID" use="required">
                 <xsd:annotation>
@@ -168,9 +168,14 @@
                     <xsd:documentation><![CDATA[ 参数配置关键字 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="value" type="xsd:string" use="required">
+            <xsd:attribute name="value" type="xsd:string" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 参数配置值 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="ref" type="xsd:string" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 参数配置值引用 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="hide" type="xsd:boolean" use="optional" default="false">
@@ -180,6 +185,28 @@
             </xsd:attribute>
         </xsd:complexType>
     </xsd:element>
+
+    <!-- 参数配置 -->
+    <xsd:complexType name="parameterType">
+        <xsd:annotation>
+            <xsd:documentation><![CDATA[ 参数配置，可作为二级三级元素 ]]></xsd:documentation>
+        </xsd:annotation>
+        <xsd:attribute name="key" type="xsd:string" use="required">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 参数配置关键字 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="value" type="xsd:string" use="required">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 参数配置值 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="hide" type="xsd:boolean" use="optional" default="false">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 是否为隐藏配置 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+    </xsd:complexType>
 
     <!-- AbstractInterfaceConfig -->
     <xsd:complexType name="interfaceShared">
@@ -366,7 +393,7 @@
         <xsd:complexContent>
             <xsd:extension base="methodShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
             </xsd:extension>
         </xsd:complexContent>
@@ -378,7 +405,7 @@
         <xsd:complexContent>
             <xsd:extension base="methodShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
                 <xsd:attribute name="dstParam" type="xsd:string" use="optional">
                     <xsd:annotation>
@@ -505,7 +532,7 @@
             <xsd:extension base="consumerShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
                     <xsd:element name="method" type="joyrpc:method" minOccurs="0" maxOccurs="unbounded"/>
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
                 <xsd:attribute name="id" type="xsd:ID" use="required">
                     <xsd:annotation>
@@ -530,7 +557,7 @@
             <xsd:extension base="consumerShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
                     <xsd:element name="method" type="joyrpc:method" minOccurs="0" maxOccurs="unbounded"/>
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
                 <xsd:attribute name="alias" type="xsd:string" use="required">
                     <xsd:annotation>
@@ -557,7 +584,7 @@
                     <xsd:choice minOccurs="0" maxOccurs="unbounded">
                         <xsd:element name="consumer" type="joyrpc:nodeConsumer" minOccurs="0" maxOccurs="unbounded"/>
                         <xsd:element name="method" type="joyrpc:nodeMethod" minOccurs="0" maxOccurs="unbounded"/>
-                        <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                        <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                     </xsd:choice>
                     <xsd:attribute name="groupRouter" type="xsd:string" use="optional">
                         <xsd:annotation>
@@ -583,7 +610,7 @@
                 <xsd:extension base="interfaceShared">
                     <xsd:choice minOccurs="0" maxOccurs="unbounded">
                         <xsd:element name="method" type="joyrpc:method" minOccurs="0" maxOccurs="unbounded"/>
-                        <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                        <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                     </xsd:choice>
                     <xsd:attribute name="id" type="xsd:ID" use="required">
                         <xsd:annotation>

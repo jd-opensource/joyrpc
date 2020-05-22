@@ -11,5 +11,12 @@
 
     <artifactId>joyrpc-trace-jaeger</artifactId>
 
-
+    <dependencies>
+        <dependency>
+            <groupId>io.jaegertracing</groupId>
+            <artifactId>jaeger-client</artifactId>
+            <version>${jaeger.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
 </project>

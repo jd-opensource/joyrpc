@@ -11,10 +11,6 @@
 
     <artifactId>joyrpc-trace-skywalking</artifactId>
 
-    <properties>
-        <skywalking.version>7.0.0</skywalking.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.skywalking</groupId>

@@ -27,7 +27,7 @@ import io.jaegertracing.internal.JaegerSpan;
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
 import io.jaegertracing.internal.reporters.RemoteReporter;
-import io.joyrpc.constants.Constants;
+import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
+import static io.joyrpc.constants.Constants.KEY_APPNAME;
 
 /**
  * jaeger跟踪工厂
@@ -68,11 +69,14 @@ public class JaegerTraceFactory implements TraceFactory {
             //判断是否有全局的变量
             tracer = (JaegerTracer) obj;
         } else {
+            Environment environment = ENVIRONMENT.get();
             Map<String, Object> context = new HashMap<>();
-            context.putAll(ENVIRONMENT.get().env());
+            if (environment != null) {
+                context.putAll(environment.env());
+            }
             context.putAll(global);
             MapParametric parametric = new MapParametric(context);
-            Configuration configuration = new Configuration(parametric.getString("appService", Constants.KEY_APPNAME, "unknown"));
+            Configuration configuration = new Configuration(parametric.getString("appService", KEY_APPNAME, "unknown"));
             configuration.withSampler(buildSamplerConfiguration(parametric));
             configuration.withReporter(buildReporterConfiguration(parametric));
             tracer = configuration.getTracer();
@@ -187,6 +191,16 @@ public class JaegerTraceFactory implements TraceFactory {
         public void begin(final String name, final String component, final Map<String, String> tags) {
             span = tracer.buildSpan(name).withStartTimestamp(SystemClock.now()).start();
             JaegerSpanContext jsc = span.context();
+            inject(jsc);
+            tag(tags);
+        }
+
+        /**
+         * 注入分布式跟踪
+         *
+         * @param jsc 跟踪上下文
+         */
+        protected void inject(final JaegerSpanContext jsc) {
             Map<String, Object> ctx = new HashMap<>(5);
             ctx.put(TRACE_ID_HIGH, jsc.getTraceIdHigh());
             ctx.put(TRACE_ID_LOW, jsc.getTraceIdLow());
@@ -194,7 +208,6 @@ public class JaegerTraceFactory implements TraceFactory {
             ctx.put(PARENT_ID, jsc.getParentId());
             ctx.put(FLAGS, jsc.getFlags());
             invocation.addAttachment(HIDDEN_KEY_TRACE_JAEGER, ctx);
-            tag(tags);
         }
     }
 
@@ -210,15 +223,24 @@ public class JaegerTraceFactory implements TraceFactory {
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
+            JaegerSpanContext jsc = reject();
+            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.now()).asChildOf(jsc).start();
+            tag(tags);
+        }
+
+        /**
+         * 解析跟踪上下文
+         *
+         * @return 跟踪上下文
+         */
+        protected JaegerSpanContext reject() {
             Map<String, Object> ctx = (Map<String, Object>) invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER);
-            JaegerSpanContext jsc = ctx == null ? null : new JaegerSpanContext(
+            return ctx == null ? null : new JaegerSpanContext(
                     (Long) ctx.get(TRACE_ID_HIGH),
                     (Long) ctx.get(TRACE_ID_LOW),
                     (Long) ctx.get(SPAN_ID),
                     (Long) ctx.get(TRACE_ID_HIGH),
                     (Byte) ctx.get(PARENT_ID));
-            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.now()).asChildOf(jsc).start();
-            tag(tags);
         }
     }
 }

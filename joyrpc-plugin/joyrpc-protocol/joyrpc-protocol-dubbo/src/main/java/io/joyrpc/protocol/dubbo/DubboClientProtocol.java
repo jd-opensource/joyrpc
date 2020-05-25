@@ -39,8 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.joyrpc.Plugin.SERIALIZATION;
-import static io.joyrpc.constants.Constants.ALIAS_OPTION;
-import static io.joyrpc.constants.Constants.CONFIG_KEY_INTERFACE;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * Dubbo客户端协议
@@ -86,6 +85,7 @@ public class DubboClientProtocol extends AbstractDubboProtocol implements Client
         //添加扩展属性信息
         response.addAttribute(CONFIG_KEY_INTERFACE, clusterUrl.getPath());
         response.addAttribute(ALIAS_OPTION.getName(), clusterUrl.getString(ALIAS_OPTION));
+        response.addAttribute(SERVICE_VERSION_OPTION.getName(), clusterUrl.getString(SERVICE_VERSION_OPTION));
         // 构造协商响应消息
         return new ResponseMessage<>(new MessageHeader(MsgType.NegotiationResp.getType()), response);
     }

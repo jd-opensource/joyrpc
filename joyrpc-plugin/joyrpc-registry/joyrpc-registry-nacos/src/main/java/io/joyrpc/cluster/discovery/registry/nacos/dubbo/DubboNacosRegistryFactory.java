@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.discovery.registry.nacos;
+package io.joyrpc.cluster.discovery.registry.nacos.dubbo;
 
 /*-
  * #%L
@@ -27,12 +27,12 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 
-@Extension(value = "nacos")
+@Extension(value = "nacos", provider = "dubbo")
 @ConditionalOnClass("com.alibaba.nacos.api.naming.NamingService")
-public class NacosRegistryFactory extends AbstractRegistryFactory {
+public class DubboNacosRegistryFactory extends AbstractRegistryFactory {
 
     @Override
     protected Registry createRegistry(String name, URL url, Backup backup) {
-        return new NacosRegistry(name, url, backup);
+        return new DubboNacosRegistry(name, url, backup);
     }
 }

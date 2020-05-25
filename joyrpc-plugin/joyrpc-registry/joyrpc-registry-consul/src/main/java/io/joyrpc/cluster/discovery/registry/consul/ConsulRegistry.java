@@ -138,7 +138,7 @@ public class ConsulRegistry extends AbstractRegistry {
 
     @Override
     protected Registion createRegistion(final URL url, final String key) {
-        return new ConsulRegistion(url, key);
+        return new ConsulRegistion(url, key, url.getPath());
     }
 
     /**
@@ -219,7 +219,7 @@ public class ConsulRegistry extends AbstractRegistry {
             cr.transportErrors.set(0);
             //注册，服务状态异常后自动注销的最小时间是1分钟
             ServiceOptions opts = new ServiceOptions()
-                    .setName(url.getPath())
+                    .setName(cr.getPath())
                     .setId(cr.getInsId())
                     .setTags(getTags(url))
                     .setMeta(getMeta(url))
@@ -506,8 +506,8 @@ public class ConsulRegistry extends AbstractRegistry {
          */
         protected AtomicInteger transportErrors = new AtomicInteger();
 
-        public ConsulRegistion(URL url, String key) {
-            super(url, key);
+        public ConsulRegistion(URL url, String key, String path) {
+            super(url, key, path);
             insId = UUID.randomUUID().toString();
         }
 

@@ -938,8 +938,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             request.setContext(context);
             //消费端
             request.setConsumer(true);
-            //初始化请求，绑定方法选项
-            invoker.setup(request);
             //实际的方法名称
             if (generic) {
                 request.setMethodName(param[0] == null ? null : param[0].toString());
@@ -950,6 +948,9 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             } else {
                 request.setMethodName(method.getName());
             }
+            //初始化请求，绑定方法选项
+            invoker.setup(request);
+            //调用
             Object response = doInvoke(invoker, request, isAsync);
             if (isAsync) {
                 if (isReturnFuture) {

@@ -3,6 +3,22 @@
 
 内置了分布式跟踪过滤器，目前集成了skywalking和jaeger的插件实现
 
+全局参数
+
+| 参数 | 名称 | 类型 | 默认值 | 说明 |
+| :--- | :---- | :---- |:---- |:---- |
+| trace.open | 启用标识 |  boolean | false |   |
+| trace.type | 跟踪实现类型 | String |  | 会根据当前环境选择分布式跟踪环境实现<br/>如果当前环境能找到skywalking则优先启用<br/>否则如果当前环境能找到jaeger则启用<br/>当存在多种分布式跟踪实现的时候可以手动指定  |
+
+配置样例如下
+
+  ```xml
+  <beans>
+    <joyrpc:parameter key="trace.open" value="true" />
+    <joyrpc:parameter key="trace.type" value="jaeger" />
+  </beans>
+  ```
+
 ## Skywalking
 
 ## Jaeger

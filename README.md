@@ -25,6 +25,9 @@ JOYRPC
 ## 配置参考手册
 查看[配置参考手册](./docs/cn/config.md)。
 
+## 分布式跟踪
+查看[分布式跟踪](./docs/cn/trace.md)。
+
 ## 使用示例
 查看[使用示例](./docs/cn/example.md)。
 

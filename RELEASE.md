@@ -20,6 +20,12 @@
 
 - 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。暂时不支持回调参数。
 
+- 增加nacos注册中心集成
+
+- 增加分布式跟踪过滤器，并集成了jaeger和skywalking的实现
+
+- Spring配置中对全局参数通过"ref"属性增加对象引用配置
+
 - 使用线程变量优化Hessian性能
 
 - Dependency

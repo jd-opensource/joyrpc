@@ -252,8 +252,8 @@ public class JaegerTraceFactory implements TraceFactory {
                     (Long) ctx.get(TRACE_ID_HIGH),
                     (Long) ctx.get(TRACE_ID_LOW),
                     (Long) ctx.get(SPAN_ID),
-                    (Long) ctx.get(TRACE_ID_HIGH),
-                    (Byte) ctx.get(PARENT_ID));
+                    (Long) ctx.get(PARENT_ID),
+                    (Byte) ctx.get(FLAGS));
         }
     }
 }

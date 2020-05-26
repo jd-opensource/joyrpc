@@ -6,7 +6,7 @@
 [registry.address]
 #分布式跟踪
 [trace.open]
-[trace.url]
+[trace.type]
 #java启动属性
 [user.language]
 [user.name]

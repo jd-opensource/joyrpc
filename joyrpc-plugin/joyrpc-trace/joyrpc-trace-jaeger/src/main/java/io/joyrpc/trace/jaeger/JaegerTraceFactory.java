@@ -31,11 +31,13 @@ import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.TraceFactory;
 import io.joyrpc.trace.Tracer;
+import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 
 import java.util.HashMap;
@@ -104,10 +106,21 @@ public class JaegerTraceFactory implements TraceFactory {
      * @return 发送配置
      */
     protected Configuration.SenderConfiguration buildSenderConfiguration(final MapParametric parametric) {
+        String endpoint = parametric.getString("JAEGER_ENDPOINT");
+        if (!StringUtils.isEmpty(endpoint)) {
+            try {
+                URL url = URL.valueOf(endpoint, "http");
+                if (StringUtils.isEmpty(url.getPath())) {
+                    url = url.setPath("/api/traces");
+                }
+                endpoint = url.toString();
+            } catch (Throwable e) {
+            }
+        }
         return new Configuration.SenderConfiguration()
                 .withAgentHost(parametric.getString("JAEGER_AGENT_HOST"))
                 .withAgentPort(parametric.getInteger("JAEGER_AGENT_PORT"))
-                .withEndpoint(parametric.getString("JAEGER_ENDPOINT"))
+                .withEndpoint(endpoint)
                 .withAuthUsername(parametric.getString("JAEGER_USER"))
                 .withAuthPassword(parametric.getString("JAEGER_PASSWORD"))
                 .withAuthToken(parametric.getString("JAEGER_AUTH_TOKEN"));

@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.limiter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,12 +24,16 @@ import java.io.Serializable;
 
 /**
  * 限流配置
- *
+ * <p>
  * 2019年4月2日 下午9:22:23
  */
 public class RateLimiterConfig implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    /**
+     * 默认限流周期
+     */
+    public static final int ONE_SECOND = 1000 * 1000 * 1000;
     /**
      * 类型
      */
@@ -57,7 +61,8 @@ public class RateLimiterConfig implements Serializable {
      */
     public RateLimiterConfig(final String type, final long limitPeriodNanos, final long waitTimeoutNanos, final int limitCount) {
         this.type = type;
-        this.limitPeriodNanos = limitPeriodNanos > 0 ? limitPeriodNanos : 1000 * 1000 * 1000;
+        //默认一秒
+        this.limitPeriodNanos = limitPeriodNanos > 0 ? limitPeriodNanos : ONE_SECOND;
         this.waitTimeoutNanos = waitTimeoutNanos > 0 ? waitTimeoutNanos : 0;
         this.limitCount = limitCount > 0 ? limitCount : 20000;
     }

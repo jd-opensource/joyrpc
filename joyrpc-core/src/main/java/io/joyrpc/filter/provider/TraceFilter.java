@@ -31,6 +31,8 @@ import io.joyrpc.util.network.Ipv4;
 
 import java.util.Map;
 
+import static io.joyrpc.util.Maps.put;
+
 /**
  * 服务提供者APM过滤器
  */
@@ -41,11 +43,11 @@ public class TraceFilter extends AbstractTraceFilter implements ProviderFilter {
     protected void createTags(final RequestMessage<Invocation> request, final Map<String, String> tags) {
         super.createTags(request, tags);
         Invocation invocation = request.getPayLoad();
-        tags.put(COMPONENT_TAG, component);
-        tags.put(SPAN_KIND_TAG, "server");
-        tags.put(CLIENT_ALIAS_TAG, invocation.getAlias());
-        tags.put(CLIENT_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
-        tags.put(CLIENT_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
-        tags.put(SERVER_ADDRESS_TAG, Ipv4.toAddress(request.getLocalAddress()));
+        put(tags, COMPONENT_TAG, component);
+        put(tags, SPAN_KIND_TAG, "server");
+        put(tags, CLIENT_ALIAS_TAG, invocation.getAlias());
+        put(tags, CLIENT_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
+        put(tags, CLIENT_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
+        put(tags, SERVER_ADDRESS_TAG, Ipv4.toAddress(request.getLocalAddress()));
     }
 }

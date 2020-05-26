@@ -30,6 +30,8 @@ import io.joyrpc.util.network.Ipv4;
 
 import java.util.Map;
 
+import static io.joyrpc.util.Maps.put;
+
 /**
  * 消费者APM过滤器
  */
@@ -40,10 +42,10 @@ public class TraceFilter extends AbstractTraceFilter implements ConsumerFilter {
     protected void createTags(final RequestMessage<Invocation> request, final Map<String, String> tags) {
         super.createTags(request, tags);
         Invocation invocation = request.getPayLoad();
-        tags.put(COMPONENT_TAG, component);
-        tags.put(SPAN_KIND_TAG, "client");
-        tags.put(CLIENT_ALIAS_TAG, invocation.getAlias());
-        tags.put(CLIENT_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
-        tags.put(CLIENT_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
+        put(tags, COMPONENT_TAG, component);
+        put(tags, SPAN_KIND_TAG, "client");
+        put(tags, CLIENT_ALIAS_TAG, invocation.getAlias());
+        put(tags, CLIENT_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
+        put(tags, SERVER_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
     }
 }

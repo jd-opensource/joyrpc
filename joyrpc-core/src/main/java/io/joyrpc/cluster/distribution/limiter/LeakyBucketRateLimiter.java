@@ -172,7 +172,7 @@ public class LeakyBucketRateLimiter implements RateLimiter {
             //配置没有发生变化
             return true;
         }
-        if (sync) {
+        if (startTimeNanos > 0 && sync) {
             syncPermission();
         }
         this.maxPermissions = config.getLimitCount();

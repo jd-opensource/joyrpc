@@ -23,6 +23,7 @@ package io.joyrpc.config;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.Shard;
+import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
 import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
@@ -204,6 +205,13 @@ public interface InterfaceOption {
          * @return 自适应负载均衡配置
          */
         AdaptivePolicy getAdaptivePolicy();
+
+        /**
+         * 获取熔断器
+         *
+         * @return
+         */
+        CircuitBreaker getCircuitBreaker();
 
         /**
          * 返回方法的Mock数据

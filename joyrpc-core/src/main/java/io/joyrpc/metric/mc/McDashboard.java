@@ -22,6 +22,7 @@ package io.joyrpc.metric.mc;
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.cluster.event.MetricEvent;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.Clock;
 import io.joyrpc.metric.Dashboard;
@@ -36,7 +37,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
 
 import static io.joyrpc.constants.Constants.METRIC_WINDOWS_TIME_OPTION;
 
@@ -57,10 +57,6 @@ public class McDashboard implements Dashboard {
      */
     protected Map<String, TPWindow> methods = new ConcurrentHashMap<>();
     /**
-     * 熔断消费者
-     */
-    protected BiFunction<String, String, CircuitBreaker> breakerFunction;
-    /**
      * 类型
      */
     protected Dashboard.DashboardType type;
@@ -74,13 +70,10 @@ public class McDashboard implements Dashboard {
      *
      * @param url
      * @param type
-     * @param breakerFunction
      */
-    public McDashboard(final URL url, final DashboardType type,
-                       final BiFunction<String, String, CircuitBreaker> breakerFunction) {
+    public McDashboard(final URL url, final DashboardType type) {
         this.url = url;
         this.type = type;
-        this.breakerFunction = breakerFunction;
         this.interval = url.getPositiveLong(METRIC_WINDOWS_TIME_OPTION);
         this.window = new McTPWindow(interval, Clock.MILLI);
     }
@@ -114,10 +107,10 @@ public class McDashboard implements Dashboard {
     public void handle(final MetricEvent event) {
         Message message = event.getRequest();
         if (message instanceof RequestMessage) {
-            RequestMessage requestMessage = (RequestMessage) message;
-            Object payload = requestMessage.getPayLoad();
+            RequestMessage request = (RequestMessage) message;
+            Object payload = request.getPayLoad();
             if (payload instanceof Invocation) {
-                onInvocation(event, (Invocation) payload);
+                onInvocation(event, request);
             }
         }
     }
@@ -125,21 +118,23 @@ public class McDashboard implements Dashboard {
     /**
      * 方法调用
      *
-     * @param event
-     * @param invocation
+     * @param event   事件
+     * @param request 请求
      */
-    protected void onInvocation(final MetricEvent event, final Invocation invocation) {
+    protected void onInvocation(final MetricEvent event, final RequestMessage<Invocation> request) {
+        Invocation invocation = request.getPayLoad();
+        ConsumerMethodOption option = (ConsumerMethodOption) request.getOption();
         //方法的指标
         TPWindow method = getMethod(invocation.getMethodName());
         Throwable throwable = getThrowable(event);
         if (throwable != null) {
             //如果有异常，进行异常统计
             if (type == DashboardType.Node) {
-                CircuitBreaker breaker = breakerFunction == null ? null : breakerFunction.apply(invocation.getClassName(), invocation.getMethodName());
                 //只有节点才触发熔断逻辑，集群也会收到相同的事件不进行处理
                 //判断熔断支持的异常才统计数据
                 method.failure();
                 window.failure();
+                CircuitBreaker breaker = option.getCircuitBreaker();
                 if (breaker != null && breaker.support(throwable)) {
                     //触发熔断
                     breaker.apply(throwable, method);

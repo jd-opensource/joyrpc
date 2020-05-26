@@ -28,6 +28,8 @@
 
 - 使用线程变量优化Hessian性能
 
+- 优化获取方法熔断器的性能
+
 - Dependency
 
   - 升级caffeine为2.8.2版本

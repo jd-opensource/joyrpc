@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,8 +72,8 @@ public class McCircuitBreaker implements CircuitBreaker {
         this.period = config.period != null && config.period > 0 ? config.period : DEFAULT_BROKEN_PERIOD;
         this.decubation = config.decubation != null && config.decubation > 0 ? config.decubation : DEFAULT_DECUBATION;
         this.successiveFailures = config.successiveFailures != null && config.successiveFailures > 0 ? config.successiveFailures : 0;
-        //如果启用了连续失败次数，则禁用可用率
-        this.availability = successiveFailures > 0 ? 0 : (config.availability != null && config.availability > 0 ? config.availability : 0);
+        //连续失败次数和可用率可以并存
+        this.availability = config.availability != null && config.availability > 0 ? config.availability : 0;
         this.blackWhiteList = new ExceptionBlackWhiteList(config.whites, config.blacks, true);
     }
 

@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.limiter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,15 +31,25 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class LeakyBucketRateLimiter implements RateLimiter {
 
-    //最开始时间
-    protected final long startTimeNanos = System.nanoTime();
-    //每秒最大允许次数
+    /**
+     * 启动时间=限流器生效时间-限流周期
+     */
+    protected long startTimeNanos;
+    /**
+     * 限流周期内的最大允许次数
+     */
     protected int maxPermissions;
-    //限流周期，单位：纳秒
+    /**
+     * 限流周期，单位：纳秒
+     */
     protected long limitPeriodNanos;
-    //每次许可微妙
+    /**
+     * 产生一个许可的微妙数
+     */
     protected double oncePermissionMicros;
-    //当前时间，及许可次数
+    /**
+     * 当前时间，及许可次数
+     */
     protected final AtomicReference<Cycle> curCycle = new AtomicReference<>(new Cycle(0.0d, 0L, true));
 
     @Override
@@ -168,6 +178,10 @@ public class LeakyBucketRateLimiter implements RateLimiter {
         this.maxPermissions = config.getLimitCount();
         this.limitPeriodNanos = config.getLimitPeriodNanos();
         this.oncePermissionMicros = TimeUnit.NANOSECONDS.toMicros(limitPeriodNanos) / (double) maxPermissions;
+        //初始化启动时间，确保刚创建的时候就有maxPermissions个许可
+        if (startTimeNanos == 0) {
+            startTimeNanos = System.nanoTime() - limitPeriodNanos;
+        }
         return true;
     }
 

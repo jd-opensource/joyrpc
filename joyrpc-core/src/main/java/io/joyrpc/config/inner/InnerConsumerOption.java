@@ -294,7 +294,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                         FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
                 scorer == null ? null : new MethodAdaptiveConfig(intfConfig, new AdaptiveConfig(parametric), dynamicConfig.get(), judges),
                 new McMethodBreakerConfig(parametric.getName(), breakerConfig, new McCircuitBreakerConfig(parametric)),
-                icbCfg.getConfig(parametric.getName()),
+                icbCfg == null ? null : icbCfg.getConfig(parametric.getName()),
                 methodMocks == null ? null : methodMocks.get(parametric.getName()));
     }
 

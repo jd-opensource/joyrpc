@@ -20,12 +20,14 @@ package io.joyrpc.trace;
  * #L%
  */
 
+import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 /**
  * 跟踪工厂
  */
+@Extensible("TraceFactory")
 public interface TraceFactory {
 
     int ORDER_SKYWALKING = 100;

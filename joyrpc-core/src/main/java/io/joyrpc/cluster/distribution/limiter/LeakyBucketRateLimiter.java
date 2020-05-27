@@ -88,8 +88,7 @@ public class LeakyBucketRateLimiter implements RateLimiter {
                 curPermissions = Math.min(config.limitCount, curPermissions + newPermissions);
                 lastPermissionMicros = curMicros;
             }
-
-            if (curPermissions > 1) {
+            if (curPermissions >= 1) {
                 permitted = true;
                 curPermissions--;
             } else {

@@ -473,7 +473,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
             McCircuitBreakerConfig cfg = dynamicConfig == null ? staticBreakerConfig.compute(null) : dynamicConfig.compute(staticBreakerConfig);
             if (!cfg.equals(breakerConfig)) {
                 breakerConfig = cfg;
-                circuitBreaker = cfg.getEnabled() == null || cfg.getEnabled() ? new McCircuitBreaker(cfg) : null;
+                circuitBreaker = cfg.getEnabled() != null && cfg.getEnabled() ? new McCircuitBreaker(cfg) : null;
             }
         }
 

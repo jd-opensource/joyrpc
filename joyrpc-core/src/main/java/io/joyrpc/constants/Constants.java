@@ -147,6 +147,11 @@ public class Constants {
     public static final String TRACE_TYPE = "trace.type";
 
     /**
+     * 熔断异常
+     */
+    public static final String CIRCUIT_BREAKER_EXCEPTION = "circuitBreaker.exception";
+
+    /**
      * 开启跟踪选项
      */
     public final static URLOption<Boolean> TRACE_OPEN_OPTION = new URLOption<>(TRACE_OPEN, false);

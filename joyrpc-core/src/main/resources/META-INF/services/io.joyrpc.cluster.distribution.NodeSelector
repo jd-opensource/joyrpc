@@ -1,1 +1,2 @@
 io.joyrpc.cluster.distribution.selector.method.MethodSelector
+io.joyrpc.cluster.distribution.selector.tag.TagSelector

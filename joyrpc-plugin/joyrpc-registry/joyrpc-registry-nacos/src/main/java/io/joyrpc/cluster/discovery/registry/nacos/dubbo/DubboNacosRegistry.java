@@ -71,6 +71,8 @@ public class DubboNacosRegistry extends NacosRegistry {
     private final static String DUBBO_CATEGORY_PROVIDERS = "providers";
     private final static String DUBBO_CATEGORY_CONSUMERS = "consumers";
 
+    private final static String DUBBO_TAG_KEY = "dubbo.tag";
+
 
     public DubboNacosRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
@@ -135,7 +137,7 @@ public class DubboNacosRegistry extends NacosRegistry {
             String serviceVersion = meta.remove(DUBBO_SERVICE_VERSION_KEY);
             //重置alias
             meta.put(ALIAS_OPTION.getName(), alias);
-            //重置service.version
+            //重置serviceVersion
             meta.put(SERVICE_VERSION_OPTION.getName(), serviceVersion);
             //创建URL
             return new URL(protocol, instance.getIp(), instance.getPort(), ifaceName, meta);
@@ -183,6 +185,10 @@ public class DubboNacosRegistry extends NacosRegistry {
             meta.put(DUBBO_ANYHOST_KEY, "true");
             meta.put(DUBBO_GROUP_KEY, url.getString(ALIAS_OPTION));
             meta.put(DUBBO_TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
+            String tag = url.getString(DUBBO_TAG_KEY);
+            if (tag != null && !tag.isEmpty()) {
+                meta.put(DUBBO_TAG_KEY, tag);
+            }
             //创建instace
             Instance instance = new Instance();
             instance.setIp(url.getHost());

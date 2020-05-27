@@ -55,6 +55,10 @@ public class TagSelector implements NodeSelector {
     @Override
     public void setUrl(final URL url) {
         this.url = url;
+    }
+
+    @Override
+    public void setup() {
         this.tagKey = url.getString(TAG_KEY_OPTION);
         this.tagValue = url.getString(tagKey);
     }

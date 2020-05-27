@@ -150,6 +150,11 @@ public class Constants {
      * 熔断异常
      */
     public static final String CIRCUIT_BREAKER_EXCEPTION = "circuitBreaker.exception";
+    public static final String CIRCUIT_BREAKER_ENABLED = "circuitBreaker.enabled";
+    public static final String CIRCUIT_BREAKER_PERIOD = "circuitBreaker.period";
+    public static final String CIRCUIT_BREAKER_DECUBATION = "circuitBreaker.decubation";
+    public static final String CIRCUIT_BREAKER_SUCCESSIVE_FAILURES = "circuitBreaker.successiveFailures";
+    public static final String CIRCUIT_BREAKER_AVAILABILITY = "circuitBreaker.availability";
 
     /**
      * 开启跟踪选项

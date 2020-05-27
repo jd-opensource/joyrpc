@@ -23,14 +23,18 @@ package io.joyrpc.config.inner;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
+import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreaker;
+import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreakerConfig;
+import io.joyrpc.cluster.distribution.circuitbreaker.McIntfCircuitBreakerConfig;
+import io.joyrpc.cluster.distribution.circuitbreaker.McMethodBreakerConfig;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Judge;
 import io.joyrpc.config.AbstractInterfaceOption;
 import io.joyrpc.context.IntfConfiguration;
 import io.joyrpc.context.circuitbreaker.BreakerConfiguration;
-import io.joyrpc.context.circuitbreaker.BreakerConfiguration.MethodBreaker;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.exception.OverloadException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
@@ -55,6 +59,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -140,9 +145,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
      */
     protected IntfConfiguration<String, BiPredicate<Shard, RequestMessage<Invocation>>> selectorConfig;
     /**
-     * 接口熔断配置
+     * 接口熔断静态配置
      */
-    protected IntfConfiguration<String, MethodBreaker> breakerConfig;
+    protected McCircuitBreakerConfig breakerConfig;
+    /**
+     * 接口熔断动态配置
+     */
+    protected IntfConfiguration<String, McIntfCircuitBreakerConfig> breakerConfigs;
     /**
      * MOCK数据
      */
@@ -181,6 +190,10 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         //需要放在failoverPredication后面，里面加载配置文件的时候需要判断failoverPredication
         this.failoverBlackWhiteList = buildFailoverBlackWhiteList();
         this.forks = url.getInteger(FORKS_OPTION);
+        //构建接口熔断配置
+        this.breakerConfig = new McCircuitBreakerConfig(url);
+        breakerConfig.addWhite(OverloadException.class);
+        breakerConfig.addWhite(TimeoutException.class);
         //Mock配置监听器
         this.mockConfig = new IntfConfiguration<>(MOCK, interfaceName, config -> {
             if (options != null) {
@@ -191,11 +204,13 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
             }
         });
         //熔断器配置监听器
-        this.breakerConfig = new IntfConfiguration<>(BreakerConfiguration.BREAKER, interfaceName, methodBreaker -> {
+        this.breakerConfigs = new IntfConfiguration<>(BreakerConfiguration.BREAKER, interfaceName, config -> {
             if (options != null) {
+                //接口动态配置
                 options.forEach((method, mo) -> {
                     InnerConsumerMethodOption cmo = ((InnerConsumerMethodOption) mo);
-                    cmo.circuitBreaker = methodBreaker == null ? null : methodBreaker.getBreaker(method);
+                    //方法动态配置
+                    cmo.update(config == null ? null : config.getConfig(method));
                 });
             }
         });
@@ -210,12 +225,11 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
             this.judges = new LinkedList<>();
             JUDGE.extensions().forEach(judges::add);
             //最后监听自适应负载均衡变化
-            this.dynamicConfig = new IntfConfiguration<>(ADAPTIVE, interfaceName,
-                    config -> {
-                        if (options != null) {
-                            options.forEach((method, op) -> ((InnerConsumerMethodOption) op).adaptiveConfig.setDynamicIntfConfig(config));
-                        }
-                    });
+            this.dynamicConfig = new IntfConfiguration<>(ADAPTIVE, interfaceName, config -> {
+                if (options != null) {
+                    options.forEach((method, op) -> ((InnerConsumerMethodOption) op).adaptiveConfig.setDynamicIntfConfig(config));
+                }
+            });
             //定时计算评分阈值
             timer().add(new Scorer("scorer-" + interfaceName,
                     () -> {
@@ -257,7 +271,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         GrpcMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         Map<String, Map<String, Object>> methodMocks = mockConfig.get();
-        MethodBreaker methodBreakers = breakerConfig.get();
+        McIntfCircuitBreakerConfig icbCfg = breakerConfigs.get();
         return new InnerConsumerMethodOption(
                 grpcMethod,
                 getImplicits(parametric.getName()),
@@ -279,7 +293,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                         new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
                         FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
                 scorer == null ? null : new MethodAdaptiveConfig(intfConfig, new AdaptiveConfig(parametric), dynamicConfig.get(), judges),
-                methodBreakers == null ? null : methodBreakers.getBreaker(parametric.getName()),
+                new McMethodBreakerConfig(parametric.getName(), breakerConfig, new McCircuitBreakerConfig(parametric)),
+                icbCfg.getConfig(parametric.getName()),
                 methodMocks == null ? null : methodMocks.get(parametric.getName()));
     }
 
@@ -408,6 +423,18 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected MethodAdaptiveConfig adaptiveConfig;
         /**
+         * 方法熔断静态配置
+         */
+        protected McMethodBreakerConfig staticBreakerConfig;
+        /**
+         * 方法熔断动态配置
+         */
+        protected McMethodBreakerConfig dynamicBreakerConfig;
+        /**
+         * 方法熔断合并后的配置
+         */
+        protected McCircuitBreakerConfig breakerConfig;
+        /**
          * 熔断器提供者
          */
         protected volatile CircuitBreaker circuitBreaker;
@@ -427,7 +454,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                                          final Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector,
                                          final Router router, final FailoverPolicy failoverPolicy,
                                          final MethodAdaptiveConfig adaptiveConfig,
-                                         final CircuitBreaker circuitBreaker,
+                                         final McMethodBreakerConfig staticBreakerConfig,
+                                         final McMethodBreakerConfig dynamicBreakerConfig,
                                          final Map<String, Object> mock) {
             super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
             this.forks = forks;
@@ -435,8 +463,18 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
             this.router = router;
             this.failoverPolicy = failoverPolicy;
             this.adaptiveConfig = adaptiveConfig;
-            this.circuitBreaker = circuitBreaker;
+            this.staticBreakerConfig = staticBreakerConfig;
+            update(dynamicBreakerConfig);
             this.mock = mock;
+        }
+
+        protected void update(McMethodBreakerConfig dynamicConfig) {
+            this.dynamicBreakerConfig = dynamicConfig;
+            McCircuitBreakerConfig cfg = dynamicConfig == null ? staticBreakerConfig.compute(null) : dynamicConfig.compute(staticBreakerConfig);
+            if (!cfg.equals(breakerConfig)) {
+                breakerConfig = cfg;
+                circuitBreaker = cfg.getEnabled() == null || cfg.getEnabled() ? new McCircuitBreaker(cfg) : null;
+            }
         }
 
         @Override

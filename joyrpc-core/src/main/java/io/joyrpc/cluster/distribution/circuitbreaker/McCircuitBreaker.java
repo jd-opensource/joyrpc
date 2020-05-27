@@ -40,7 +40,7 @@ import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
 
 /**
- * 内置熔断器
+ * 熔断器
  */
 public class McCircuitBreaker implements CircuitBreaker {
     /**
@@ -75,7 +75,7 @@ public class McCircuitBreaker implements CircuitBreaker {
      */
     public McCircuitBreaker(final McCircuitBreakerConfig config) {
         Objects.requireNonNull(config, "config can not be null.");
-        this.enabled = config.enabled;
+        this.enabled = config.enabled == null ? Boolean.FALSE : config.enabled;
         this.period = config.period != null && config.period > 0 ? config.period : DEFAULT_BROKEN_PERIOD;
         this.decubation = config.decubation != null && config.decubation > 0 ? config.decubation : DEFAULT_DECUBATION;
         this.successiveFailures = config.successiveFailures != null && config.successiveFailures > 0 ? config.successiveFailures : 0;

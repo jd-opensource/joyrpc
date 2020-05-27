@@ -20,12 +20,21 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  * #L%
  */
 
+import io.joyrpc.extension.Parametric;
+import io.joyrpc.extension.WrapperParametric;
+
+import java.util.HashSet;
 import java.util.Set;
 
+import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.ClassUtils.forName;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
+
 /**
- * 熔断配置
+ * 方法熔断配置
  */
-public class McCircuitBreakerConfig {
+public class McCircuitBreakerConfig implements Cloneable {
 
     /**
      * 名称
@@ -35,7 +44,7 @@ public class McCircuitBreakerConfig {
     /**
      * 是否启用
      */
-    protected boolean enabled;
+    protected Boolean enabled;
     /**
      * 熔断周期，默认10秒
      */
@@ -61,7 +70,11 @@ public class McCircuitBreakerConfig {
      */
     protected Set<Class<? extends Throwable>> blacks;
 
-    public McCircuitBreakerConfig(String name, boolean enabled,
+    public McCircuitBreakerConfig(String name) {
+        this.name = name;
+    }
+
+    public McCircuitBreakerConfig(String name, Boolean enabled,
                                   Long period, Long decubation,
                                   Integer successiveFailures, Integer availability,
                                   Set<Class<? extends Throwable>> whites,
@@ -76,6 +89,29 @@ public class McCircuitBreakerConfig {
         this.blacks = blacks;
     }
 
+    public McCircuitBreakerConfig(final Parametric parametric) {
+        this.name = parametric instanceof WrapperParametric ? ((WrapperParametric) parametric).getName() : "*";
+        this.enabled = parametric.getBoolean(CIRCUIT_BREAKER_ENABLED);
+        this.period = parametric.getPositive(CIRCUIT_BREAKER_PERIOD, (Long) null);
+        this.decubation = parametric.getPositive(CIRCUIT_BREAKER_DECUBATION, (Long) null);
+        this.successiveFailures = parametric.getPositive(CIRCUIT_BREAKER_SUCCESSIVE_FAILURES, (Integer) null);
+        this.availability = parametric.getPositive(CIRCUIT_BREAKER_AVAILABILITY, (Integer) null);
+        String value = parametric.getString(CIRCUIT_BREAKER_EXCEPTION);
+        String[] parts = split(value, SEMICOLON_COMMA_WHITESPACE);
+        if (parts != null) {
+            this.whites = new HashSet<>(parts.length);
+            for (String part : parts) {
+                try {
+                    Class<?> aClass = forName(part);
+                    if (Throwable.class.isAssignableFrom(aClass)) {
+                        whites.add((Class<? extends Throwable>) aClass);
+                    }
+                } catch (ClassNotFoundException e) {
+                }
+            }
+        }
+    }
+
     public String getName() {
         return name;
     }
@@ -84,7 +120,7 @@ public class McCircuitBreakerConfig {
         this.name = name;
     }
 
-    public boolean isEnabled() {
+    public Boolean getEnabled() {
         return enabled;
     }
 
@@ -140,14 +176,35 @@ public class McCircuitBreakerConfig {
         this.blacks = blacks;
     }
 
+    public void addWhite(Class<? extends Throwable> clazz) {
+        if (clazz != null) {
+            if (whites == null) {
+                whites = new HashSet<>();
+            }
+            whites.add(clazz);
+        }
+    }
+
+    @Override
+    public McCircuitBreakerConfig clone() {
+        try {
+            return (McCircuitBreakerConfig) super.clone();
+        } catch (CloneNotSupportedException ignored) {
+            return null;
+        }
+    }
+
     /**
      * 合并
      *
      * @param source
      */
-    public void merge(final McCircuitBreakerConfig source) {
-        if (source == null) {
-            return;
+    public McCircuitBreakerConfig merge(final McCircuitBreakerConfig source) {
+        if (source == null || source == this) {
+            return this;
+        }
+        if (enabled == null) {
+            enabled = source.enabled;
         }
         if (period == null) {
             period = source.period;
@@ -161,11 +218,66 @@ public class McCircuitBreakerConfig {
         if (availability == null) {
             availability = source.availability;
         }
+        //合并白名单
         if (whites == null || whites.isEmpty()) {
             whites = source.whites;
+        } else if (source.whites != null) {
+            whites.addAll(source.whites);
         }
+        //合并黑名单
         if (blacks == null || blacks.isEmpty()) {
             blacks = source.blacks;
+        } else if (source.blacks != null) {
+            blacks.addAll(source.blacks);
         }
+        return this;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
+        McCircuitBreakerConfig that = (McCircuitBreakerConfig) o;
+
+        if (name != null ? !name.equals(that.name) : that.name != null) {
+            return false;
+        }
+        if (enabled != null ? !enabled.equals(that.enabled) : that.enabled != null) {
+            return false;
+        }
+        if (period != null ? !period.equals(that.period) : that.period != null) {
+            return false;
+        }
+        if (decubation != null ? !decubation.equals(that.decubation) : that.decubation != null) {
+            return false;
+        }
+        if (successiveFailures != null ? !successiveFailures.equals(that.successiveFailures) : that.successiveFailures != null) {
+            return false;
+        }
+        if (availability != null ? !availability.equals(that.availability) : that.availability != null) {
+            return false;
+        }
+        if (whites != null ? !whites.equals(that.whites) : that.whites != null) {
+            return false;
+        }
+        return blacks != null ? blacks.equals(that.blacks) : that.blacks == null;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name != null ? name.hashCode() : 0;
+        result = 31 * result + (enabled != null ? enabled.hashCode() : 0);
+        result = 31 * result + (period != null ? period.hashCode() : 0);
+        result = 31 * result + (decubation != null ? decubation.hashCode() : 0);
+        result = 31 * result + (successiveFailures != null ? successiveFailures.hashCode() : 0);
+        result = 31 * result + (availability != null ? availability.hashCode() : 0);
+        result = 31 * result + (whites != null ? whites.hashCode() : 0);
+        result = 31 * result + (blacks != null ? blacks.hashCode() : 0);
+        return result;
     }
 }

@@ -21,6 +21,7 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  */
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.metric.TPMetric;
 import io.joyrpc.metric.TPWindow;
@@ -33,8 +34,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
-import static io.joyrpc.constants.Constants.DEFAULT_BROKEN_PERIOD;
-import static io.joyrpc.constants.Constants.DEFAULT_DECUBATION;
+import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.ClassUtils.forName;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * 内置熔断器
@@ -80,10 +83,34 @@ public class McCircuitBreaker implements CircuitBreaker {
         this.availability = config.availability != null && config.availability > 0 ? config.availability : 0;
         //默认加上服务端过载和超时异常，避免对所有异常进行熔断
         Set<Class<? extends Throwable>> whites = config.whites == null ? new HashSet<>() : config.whites;
+        Set<Class<? extends Throwable>> blacks = config.blacks;
+        addWhites(whites);
+        this.blackWhiteList = new ExceptionBlackWhiteList(whites.isEmpty() ? null : whites, blacks, true);
+    }
+
+    /**
+     * 添加白名单
+     *
+     * @param whites 白名单
+     */
+    protected void addWhites(final Set<Class<? extends Throwable>> whites) {
+        //增加异常白名单
         whites.add(OverloadException.class);
         whites.add(TimeoutException.class);
-        Set<Class<? extends Throwable>> blacks = config.blacks;
-        this.blackWhiteList = new ExceptionBlackWhiteList(whites, blacks, true);
+        //从全局配置里面添加熔断异常
+        String value = GlobalContext.getString(CIRCUIT_BREAKER_EXCEPTION);
+        String[] parts = split(value, SEMICOLON_COMMA_WHITESPACE);
+        if (parts != null) {
+            for (String part : parts) {
+                try {
+                    Class<?> aClass = forName(part);
+                    if (Throwable.class.isAssignableFrom(aClass)) {
+                        whites.add((Class<? extends Throwable>) aClass);
+                    }
+                } catch (ClassNotFoundException e) {
+                }
+            }
+        }
     }
 
     @Override

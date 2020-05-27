@@ -111,6 +111,7 @@ public class NacosRegistry extends AbstractRegistry {
         String tagKey = url.getString(TAG_KEY_OPTION);
         return resUrl == null ? null : resUrl
                 .add(SERVICE_VERSION_OPTION.getName(), url.getString(SERVICE_VERSION_OPTION))
+                .add(TAG_KEY_OPTION.getName(), tagKey)
                 .add(tagKey, url.getString(tagKey));
     }
 

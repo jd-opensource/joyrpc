@@ -21,13 +21,17 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  */
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
+import io.joyrpc.exception.OverloadException;
 import io.joyrpc.metric.TPMetric;
 import io.joyrpc.metric.TPWindow;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.util.MilliPeriod;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
 import static io.joyrpc.constants.Constants.DEFAULT_BROKEN_PERIOD;
 import static io.joyrpc.constants.Constants.DEFAULT_DECUBATION;
@@ -74,7 +78,12 @@ public class McCircuitBreaker implements CircuitBreaker {
         this.successiveFailures = config.successiveFailures != null && config.successiveFailures > 0 ? config.successiveFailures : 0;
         //连续失败次数和可用率可以并存
         this.availability = config.availability != null && config.availability > 0 ? config.availability : 0;
-        this.blackWhiteList = new ExceptionBlackWhiteList(config.whites, config.blacks, true);
+        //默认加上服务端过载和超时异常，避免对所有异常进行熔断
+        Set<Class<? extends Throwable>> whites = config.whites == null ? new HashSet<>() : config.whites;
+        whites.add(OverloadException.class);
+        whites.add(TimeoutException.class);
+        Set<Class<? extends Throwable>> blacks = config.blacks;
+        this.blackWhiteList = new ExceptionBlackWhiteList(whites, blacks, true);
     }
 
     @Override

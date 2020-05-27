@@ -185,9 +185,10 @@ public class DubboNacosRegistry extends NacosRegistry {
             meta.put(DUBBO_ANYHOST_KEY, "true");
             meta.put(DUBBO_GROUP_KEY, url.getString(ALIAS_OPTION));
             meta.put(DUBBO_TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
-            String tag = url.getString(DUBBO_TAG_KEY);
+            String tagKey = url.getString(TAG_KEY_OPTION);
+            String tag = url.getString(tagKey);
             if (tag != null && !tag.isEmpty()) {
-                meta.put(DUBBO_TAG_KEY, tag);
+                meta.put(tagKey, tag);
             }
             //创建instace
             Instance instance = new Instance();

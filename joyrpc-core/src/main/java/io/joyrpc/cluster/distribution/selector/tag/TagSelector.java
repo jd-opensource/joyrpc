@@ -62,11 +62,16 @@ public class TagSelector implements NodeSelector {
     @Override
     public List<Node> select(Candidate candidate, RequestMessage<Invocation> request) {
         String tag = request.getPayLoad().getAttachment(tagKey, tagValue);
+        if (tag == null || tag.isEmpty()) {
+            return candidate.getNodes();
+        }
         List<Node> result = new LinkedList<>();
         List<Node> nodes = candidate.getNodes();
+        URL url;
         //先遍历服务列表
         for (Node node : nodes) {
-            String nodeTag = node.getUrl() == null ? null : node.getUrl().getString(tagKey);
+            url = node.getUrl();
+            String nodeTag = url == null ? null : url.getString(tagKey);
             if (Objects.equals(tag, nodeTag)) {
                 result.add(node);
             }

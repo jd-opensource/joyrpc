@@ -51,20 +51,29 @@ public class RateLimiterConfig implements Serializable {
      */
     protected int limitCount;
 
-    /**
-     * 构造函数
-     *
-     * @param type
-     * @param limitPeriodNanos
-     * @param waitTimeoutNanos
-     * @param limitCount
-     */
     public RateLimiterConfig(final String type, final long limitPeriodNanos, final long waitTimeoutNanos, final int limitCount) {
         this.type = type;
         //默认一秒
         this.limitPeriodNanos = limitPeriodNanos > 0 ? limitPeriodNanos : ONE_SECOND;
         this.waitTimeoutNanos = waitTimeoutNanos > 0 ? waitTimeoutNanos : 0;
+        //限流数
         this.limitCount = limitCount > 0 ? limitCount : 20000;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public long getLimitPeriodNanos() {
+        return limitPeriodNanos;
+    }
+
+    public long getWaitTimeoutNanos() {
+        return waitTimeoutNanos;
+    }
+
+    public int getLimitCount() {
+        return limitCount;
     }
 
     /**
@@ -86,27 +95,10 @@ public class RateLimiterConfig implements Serializable {
         return new Builder(config);
     }
 
-    public String getType() {
-        return type;
-    }
-
-    public long getLimitPeriodNanos() {
-        return limitPeriodNanos;
-    }
-
-    public long getWaitTimeoutNanos() {
-        return waitTimeoutNanos;
-    }
-
-    public int getLimitCount() {
-        return limitCount;
-    }
-
     /**
      * 构造器
      */
     public static class Builder {
-
         /**
          * 类型
          */

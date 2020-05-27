@@ -456,7 +456,7 @@ public class Constants {
     public static final URLOption<Long> START_TIME_OPTION = new URLOption<>("startTime", 0L); //provider启动时间戳
     public static final URLOption<Boolean> SERVICE_MESH_OPTION = new URLOption<>(SERVICE_MESH_KEY, false);
     public static final URLOption<String> FILTER_CHAIN_FACTORY_OPTION = new URLOption<>("filterChainFactory", "default");
-    public static final URLOption<String> SERVICE_VERSION_OPTION = new URLOption<>("service.version", "");
+    public static final URLOption<String> SERVICE_VERSION_OPTION = new URLOption<>("serviceVersion", "");
 
     /**
      * 消费者调用超时时间
@@ -487,6 +487,7 @@ public class Constants {
     public static final URLOption<String> FAILOVER_WHEN_THROWABLE_OPTION = new URLOption<>("failoverWhenThrowable", "");
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
+    public static final URLOption<String> TAG_KEY_OPTION = new URLOption<>("tagKey", "serviceTag");
     /**
      * 默认连接工厂
      */

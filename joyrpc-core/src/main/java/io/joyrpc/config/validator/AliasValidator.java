@@ -50,6 +50,10 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
         if (alias == null || alias.isEmpty()) {
             MapParametric parametric = new MapParametric(value.getParameters());
             if (parametric.getBoolean(EMPTY_ALIAS_OPTION)) {
+                if (alias == null) {
+                    //设置为空字符串，防止空指针异常
+                    value.setAlias("");
+                }
                 return true;
             }
             message = "alias can not be empty.";

@@ -71,9 +71,6 @@ public class DubboNacosRegistry extends NacosRegistry {
     private final static String DUBBO_CATEGORY_PROVIDERS = "providers";
     private final static String DUBBO_CATEGORY_CONSUMERS = "consumers";
 
-    private final static String DUBBO_TAG_KEY = "dubbo.tag";
-
-
     public DubboNacosRegistry(String name, URL url, Backup backup) {
         super(name, url, backup);
     }
@@ -128,6 +125,7 @@ public class DubboNacosRegistry extends NacosRegistry {
         protected URL createShardUrl(String defProtocol, Instance instance) {
             Map<String, String> meta = instance.getMetadata();
             String alias = meta.remove(DUBBO_GROUP_KEY);
+            alias = alias == null ? ALIAS_OPTION.getValue() : alias;
             if (!instance.isEnabled() || !url.getString(ALIAS_OPTION).equals(alias)) {
                 return null;
             }

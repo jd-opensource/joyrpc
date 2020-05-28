@@ -24,10 +24,13 @@ import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
 import io.joyrpc.config.ProviderConfig;
+import io.joyrpc.context.GlobalContext;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
+
+import static io.joyrpc.constants.Constants.EMPTY_ALIAS_OPTION;
 
 /**
  * 插件验证
@@ -45,6 +48,9 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
         String alias = value.getAlias();
         String message = null;
         if (alias == null || alias.isEmpty()) {
+            if (Boolean.parseBoolean(value.getParameter(EMPTY_ALIAS_OPTION.getName()))) {
+                return true;
+            }
             message = "alias can not be empty.";
         } else if (value instanceof ConsumerGroupConfig) {
             if (!NORMAL_COMMA_COLON.matcher(alias).matches()) {

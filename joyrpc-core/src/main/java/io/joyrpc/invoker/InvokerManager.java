@@ -87,7 +87,7 @@ public class InvokerManager {
     /**
      * 名称函数
      */
-    public static final BiFunction<String, String, String> NAME = (className, alias) -> className + "/" + alias;
+    public static final BiFunction<String, String, String> NAME = (className, alias) -> className + "/" + (alias == null ? "" : alias);
     protected static final String EVENT_PUBLISHER_GROUP = "event.invoker";
     protected static final String EVENT_PUBLISHER_NAME = "default";
     protected static final PublisherConfig EVENT_PUBLISHER_CONF = PublisherConfig.builder().timeout(1000).build();

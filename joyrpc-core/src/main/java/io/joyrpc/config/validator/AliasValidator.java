@@ -29,6 +29,8 @@ import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
 
+import static io.joyrpc.constants.Constants.EMPTY_ALIAS_OPTION;
+
 /**
  * 插件验证
  */
@@ -45,6 +47,9 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
         String alias = value.getAlias();
         String message = null;
         if (alias == null || alias.isEmpty()) {
+            if (canEmptyAlias(value)) {
+                return true;
+            }
             message = "alias can not be empty.";
         } else if (value instanceof ConsumerGroupConfig) {
             if (!NORMAL_COMMA_COLON.matcher(alias).matches()) {
@@ -65,6 +70,17 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
             return false;
         }
         return true;
+    }
+
+    protected boolean canEmptyAlias(final AbstractInterfaceConfig value) {
+        String emptyAliasVal = value.getParameter(EMPTY_ALIAS_OPTION.getName());
+        if (emptyAliasVal != null && !emptyAliasVal.isEmpty()) {
+            try {
+                return Boolean.parseBoolean(emptyAliasVal);
+            } catch (Exception e) {
+            }
+        }
+        return EMPTY_ALIAS_OPTION.getValue();
     }
 
     @Override

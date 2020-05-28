@@ -38,15 +38,15 @@ public class Counter {
     /**
      * 上下文Bean数量
      */
-    public static final AtomicInteger CONTEXT_BEANS = new AtomicInteger();
+    protected static final AtomicInteger CONTEXT_BEANS = new AtomicInteger();
     /**
      * 消费者计数器
      */
-    public static final AtomicInteger CONSUMER_BEANS = new AtomicInteger(0);
+    protected static final AtomicInteger CONSUMER_BEANS = new AtomicInteger(0);
     /**
      * 服务提供者计数器
      */
-    public static final AtomicInteger PROVIDER_BEANS = new AtomicInteger(0);
+    protected static final AtomicInteger PROVIDER_BEANS = new AtomicInteger(0);
     /**
      * 启动的计数器
      */
@@ -54,23 +54,41 @@ public class Counter {
     /**
      * 未启动成功计数器
      */
-    public static final AtomicInteger UNSUCCESS_BEANS = new AtomicInteger(0);
+    protected static final AtomicInteger UNSUCCESS_BEANS = new AtomicInteger(0);
     /**
      * 未启动成功的上下文计数器
      */
-    public static final AtomicInteger UNSUCCESS_CONTEXT_BEANS = new AtomicInteger(0);
+    protected static final AtomicInteger UNSUCCESS_CONTEXT_BEANS = new AtomicInteger(0);
     /**
      * 未启动成功的消费者计数器
      */
-    public static final AtomicInteger UNSUCCESS_CONSUMER_BEANS = new AtomicInteger(0);
+    protected static final AtomicInteger UNSUCCESS_CONSUMER_BEANS = new AtomicInteger(0);
     /**
      * 未启动成功的服务提供者计数器
      */
-    public static final AtomicInteger UNSUCCESS_PROVIDER_BEANS = new AtomicInteger(0);
+    protected static final AtomicInteger UNSUCCESS_PROVIDER_BEANS = new AtomicInteger(0);
     /**
      * 等待所有启动成功
      */
     protected static final CountDownLatch LATCH = new CountDownLatch(1);
+
+    /**
+     * 是否有消费者
+     *
+     * @return 消费者标识
+     */
+    public static boolean hasConsumer() {
+        return CONSUMER_BEANS.get() > 0;
+    }
+
+    /**
+     * 是否有上下文
+     *
+     * @return 上下文标识
+     */
+    public static boolean hasContext() {
+        return CONTEXT_BEANS.get() > 0;
+    }
 
     /**
      * 启动

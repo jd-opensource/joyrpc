@@ -115,13 +115,13 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
         //等待上下文初始化
-        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && CONTEXT_BEANS.get() == 0)) {
+        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
             //先输出服务，并没有打开，服务不可用
             if (steps.compareAndSet(0, 1)) {
                 exportFuture = export();
             }
         }
-        if (event instanceof ConsumerDoneEvent || (event instanceof ContextRefreshedEvent && CONSUMER_BEANS.get() == 0)) {
+        if (event instanceof ConsumerDoneEvent || (event instanceof ContextRefreshedEvent && !hasConsumer())) {
             //需要先判断条件，再打开
             if (steps.compareAndSet(1, 2)) {
                 exportFuture.whenComplete((v, t) -> {

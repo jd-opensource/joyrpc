@@ -165,7 +165,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && CONTEXT_BEANS.get() == 0)) {
+        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
             //刷新事件会多次，防止重入
             if (steps.compareAndSet(0, 1)) {
                 //生成代理，并创建引用

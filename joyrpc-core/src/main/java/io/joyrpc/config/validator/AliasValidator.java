@@ -24,6 +24,7 @@ import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
 import io.joyrpc.config.ProviderConfig;
+import io.joyrpc.extension.MapParametric;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
@@ -47,7 +48,8 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
         String alias = value.getAlias();
         String message = null;
         if (alias == null || alias.isEmpty()) {
-            if (canEmptyAlias(value)) {
+            MapParametric parametric = new MapParametric(value.getParameters());
+            if (parametric.getBoolean(EMPTY_ALIAS_OPTION)) {
                 return true;
             }
             message = "alias can not be empty.";
@@ -70,17 +72,6 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
             return false;
         }
         return true;
-    }
-
-    protected boolean canEmptyAlias(final AbstractInterfaceConfig value) {
-        String emptyAliasVal = value.getParameter(EMPTY_ALIAS_OPTION.getName());
-        if (emptyAliasVal != null && !emptyAliasVal.isEmpty()) {
-            try {
-                return Boolean.parseBoolean(emptyAliasVal);
-            } catch (Exception e) {
-            }
-        }
-        return EMPTY_ALIAS_OPTION.getValue();
     }
 
     @Override

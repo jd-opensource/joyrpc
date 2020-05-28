@@ -21,47 +21,66 @@ package io.joyrpc.spring.schema;
  */
 
 import io.joyrpc.spring.GlobalParameterBean;
-import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
-import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.w3c.dom.Element;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import static io.joyrpc.spring.Counter.incContext;
+import static io.joyrpc.spring.GlobalParameterBean.*;
+import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 
 /**
  * 全局解析
  */
 public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
 
-    private static final AtomicInteger COUNTER = new AtomicInteger();
+    /**
+     * 注册全局参数
+     *
+     * @param registry 注册表
+     * @param key      键
+     * @param value    值
+     */
+    public static BeanDefinition register(final BeanDefinitionRegistry registry, final String key, final Object value) {
+        return register(registry, key, value, null, null);
+    }
 
-    @Override
-    public BeanDefinition parse(Element element, ParserContext parserContext) {
-        RootBeanDefinition definition = new RootBeanDefinition();
-        definition.setBeanClass(GlobalParameterBean.class);
-        definition.setLazyInit(false);
-
-        String key = element.getAttribute("key");
-        String value = element.getAttribute("value");
-        String ref = element.getAttribute("ref");
-        String hide = element.getAttribute("hide");
-
-        MutablePropertyValues values = definition.getPropertyValues();
-        values.addPropertyValue("key", key);
-        if (value != null && !value.isEmpty()) {
-            values.addPropertyValue("value", value);
+    /**
+     * 注册全局参数
+     *
+     * @param registry 注册表
+     * @param key      键
+     * @param value    值
+     * @param ref      引用
+     * @param hide     是否隐藏
+     */
+    public static BeanDefinition register(final BeanDefinitionRegistry registry, final String key, final Object value,
+                                          final String ref, final String hide) {
+        BeanDefinitionBuilder builder = rootBeanDefinition(GlobalParameterBean.class).setLazyInit(false);
+        builder.addPropertyValue(KEY, key);
+        if (value != null) {
+            builder.addPropertyValue(VALUE, value);
         } else if (ref != null && !ref.isEmpty()) {
-            values.addPropertyValue("value", new RuntimeBeanReference(ref));
+            builder.addPropertyValue(VALUE, new RuntimeBeanReference(ref));
         }
         if (hide != null && !hide.isEmpty()) {
-            values.addPropertyValue("hide", hide);
+            builder.addPropertyValue(HIDE, hide);
         }
-
-        String beanName = "global-parameter-" + COUNTER.getAndIncrement();
-        parserContext.getRegistry().registerBeanDefinition(beanName, definition);
+        AbstractBeanDefinition definition = builder.getBeanDefinition();
+        registry.registerBeanDefinition("global-parameter-" + incContext(), definition);
         return definition;
+    }
+
+    @Override
+    public BeanDefinition parse(final Element element, final ParserContext parserContext) {
+        return register(parserContext.getRegistry(), element.getAttribute(KEY),
+                element.getAttribute(VALUE),
+                element.getAttribute(REF),
+                element.getAttribute(HIDE));
     }
 }

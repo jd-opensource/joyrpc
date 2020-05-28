@@ -91,7 +91,7 @@ public class McCircuitBreakerConfig implements Cloneable {
 
     public McCircuitBreakerConfig(final Parametric parametric) {
         this.name = parametric instanceof WrapperParametric ? ((WrapperParametric) parametric).getName() : "*";
-        this.enabled = parametric.getBoolean(CIRCUIT_BREAKER_ENABLED);
+        this.enabled = parametric.getBoolean(CIRCUIT_BREAKER_ENABLE);
         this.period = parametric.getPositive(CIRCUIT_BREAKER_PERIOD, (Long) null);
         this.decubation = parametric.getPositive(CIRCUIT_BREAKER_DECUBATION, (Long) null);
         this.successiveFailures = parametric.getPositive(CIRCUIT_BREAKER_SUCCESSIVE_FAILURES, (Integer) null);

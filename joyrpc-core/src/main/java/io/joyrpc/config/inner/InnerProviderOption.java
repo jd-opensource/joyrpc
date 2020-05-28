@@ -159,6 +159,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 append("\t").append("public ").append(simpleName).append("(").append(interfaceClass.getCanonicalName()).append(" ref").append(')').append("{\n").
                 append("\t\t").append("this.ref=ref;").append("\n").
                 append("\t}\n").
+                append("\t@SuppressWarnings(\"unchecked\")\n").
                 append("\t").append("public Object invoke(Object[] args) throws java.lang.reflect.InvocationTargetException").append("{\n").
                 append("\t\ttry{\n").
                 append("\t\t\t").append(!isVoid ? "return " : "").

@@ -23,10 +23,10 @@ package io.joyrpc.spring;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.*;
-import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.spring.event.ConsumerDoneEvent;
+import io.joyrpc.spring.event.ContextDoneEvent;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -44,10 +44,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static io.joyrpc.spring.ConsumerSpring.REFERS;
+import static io.joyrpc.spring.Counter.*;
 
 /**
  * 服务提供者
@@ -70,10 +71,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     protected CompletableFuture<Void> exportFuture;
     /**
-     * 开关
-     */
-    protected Switcher switcher = new Switcher();
-    /**
      * registryConfig 引用列表
      */
     protected transient List<String> registryNames;
@@ -89,6 +86,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      * 预热引用
      */
     protected transient String warmupName;
+    /**
+     * 启动步骤
+     */
+    protected transient AtomicInteger steps = new AtomicInteger(0);
     /**
      * 配置中心名称
      */
@@ -113,9 +114,16 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof ConsumerReferDoneEvent || (event instanceof ContextRefreshedEvent && REFERS.get() == 0)) {
+        //等待上下文初始化
+        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && CONTEXT_BEANS.get() == 0)) {
+            //先输出服务，并没有打开，服务不可用
+            if (steps.compareAndSet(0, 1)) {
+                exportFuture = export();
+            }
+        }
+        if (event instanceof ConsumerDoneEvent || (event instanceof ContextRefreshedEvent && CONSUMER_BEANS.get() == 0)) {
             //需要先判断条件，再打开
-            switcher.open(() -> {
+            if (steps.compareAndSet(1, 2)) {
                 exportFuture.whenComplete((v, t) -> {
                     if (t != null) {
                         logger.error(String.format("Error occurs while export provider %s", id), t);
@@ -127,11 +135,14 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                                 logger.error(String.format("Error occurs while open provider %s", id), t);
                                 //open异常
                                 System.exit(1);
+                            } else {
+                                successProvider(null);
                             }
                         });
                     }
                 });
-            });
+                startBean();
+            }
         }
     }
 
@@ -143,8 +154,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         setupRef();
         setupWarmup();
         validate();
-        //先输出服务，并没有打开，服务不可用
-        exportFuture = export();
+        incProvider();
     }
 
     /**

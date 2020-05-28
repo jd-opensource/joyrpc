@@ -29,7 +29,6 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.*;
-import org.springframework.context.event.ContextRefreshedEvent;
 
 import java.util.List;
 
@@ -37,7 +36,7 @@ import java.util.List;
  * 消费者
  */
 public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, ApplicationEventPublisherAware {
 
     /**
      * 参数配置
@@ -92,8 +91,8 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
-        spring.onApplicationEvent(contextRefreshedEvent);
+    public synchronized void onApplicationEvent(final ApplicationEvent event) {
+        spring.onApplicationEvent(event);
     }
 
     @Override

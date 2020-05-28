@@ -3,7 +3,8 @@ package io.joyrpc.spring;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.spring.event.ConsumerDoneEvent;
+import io.joyrpc.spring.event.ContextDoneEvent;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,9 +17,10 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.util.StringUtils;
 
 import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.joyrpc.spring.Counter.*;
 
 /**
  * 消费者
@@ -26,16 +28,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @param <T>
  */
 public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, ApplicationEventPublisherAware {
 
     /**
      * slf4j logger for this class
      */
-    private final static Logger logger = LoggerFactory.getLogger(ConsumerSpring.class);
-    /**
-     * consumer bean 计数
-     */
-    public transient static final AtomicInteger REFERS = new AtomicInteger(0);
+    private static final Logger logger = LoggerFactory.getLogger(ConsumerSpring.class);
     /**
      * 抽象消费者类
      */
@@ -59,18 +57,9 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
      */
     protected transient ApplicationEventPublisher applicationEventPublisher;
     /**
-     * 等待完成
-     */
-    protected transient CountDownLatch latch = new CountDownLatch(1);
-    /**
-     * 初始化的Future
-     */
-    protected transient Throwable referThrowable;
-
-    /**
      * 开关
      */
-    protected transient AtomicBoolean started = new AtomicBoolean(false);
+    protected transient AtomicInteger steps = new AtomicInteger(0);
 
     /**
      * 构造函数
@@ -160,17 +149,9 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                 }
             }
         }
-        //记录消费者的数量
-        REFERS.incrementAndGet();
         config.validate();
-        //生成代理，并创建引用
-        config.refer().whenComplete((v, t) -> {
-            if (t != null) {
-                //出了异常
-                referThrowable = t;
-            }
-            latch.countDown();
-        });
+        //记录消费者的数量
+        incConsumer();
     }
 
 
@@ -181,21 +162,29 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         }
     }
 
+
     @Override
-    public void onApplicationEvent(ContextRefreshedEvent event) {
-        //刷新事件会多次，防止重入
-        if (started.compareAndSet(false, true)) {
-            try {
-                latch.await();
-                if (referThrowable != null) {
-                    logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
-                            config.getInterfaceClazz(), config.getAlias(), referThrowable.getMessage()));
-                    System.exit(1);
-                } else if (REFERS.decrementAndGet() == 0) {
-                    applicationEventPublisher.publishEvent(new ConsumerReferDoneEvent(true));
-                }
-            } catch (InterruptedException e) {
+    public void onApplicationEvent(ApplicationEvent event) {
+        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && CONTEXT_BEANS.get() == 0)) {
+            //刷新事件会多次，防止重入
+            if (steps.compareAndSet(0, 1)) {
+                //生成代理，并创建引用
+                config.refer().whenComplete((v, t) -> {
+                    if (t != null) {
+                        //出了异常
+                        logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
+                                config.getInterfaceClazz(), config.getAlias(), t.getMessage()));
+                        System.exit(1);
+                    } else {
+                        //最后一个消费者会触发异步通知，防止阻塞
+                        successConsumer(() -> CompletableFuture.runAsync(
+                                () -> applicationEventPublisher.publishEvent(new ConsumerDoneEvent(this))));
+                    }
+                });
+                //启动bean，最后一个bean会挂住
+                startBean();
             }
         }
+
     }
 }

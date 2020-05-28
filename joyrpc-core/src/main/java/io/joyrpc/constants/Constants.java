@@ -150,10 +150,25 @@ public class Constants {
      * 熔断异常
      */
     public static final String CIRCUIT_BREAKER_EXCEPTION = "circuitBreaker.exception";
-    public static final String CIRCUIT_BREAKER_ENABLED = "circuitBreaker.enabled";
+    /**
+     * 熔断启用标识
+     */
+    public static final String CIRCUIT_BREAKER_ENABLE = "circuitBreaker.enable";
+    /**
+     * 熔断周期
+     */
     public static final String CIRCUIT_BREAKER_PERIOD = "circuitBreaker.period";
+    /**
+     * 熔断静默期
+     */
     public static final String CIRCUIT_BREAKER_DECUBATION = "circuitBreaker.decubation";
+    /**
+     * 触发熔断的连续失败次数阈值
+     */
     public static final String CIRCUIT_BREAKER_SUCCESSIVE_FAILURES = "circuitBreaker.successiveFailures";
+    /**
+     * 触发熔断的可用率阈值
+     */
     public static final String CIRCUIT_BREAKER_AVAILABILITY = "circuitBreaker.availability";
 
     /**

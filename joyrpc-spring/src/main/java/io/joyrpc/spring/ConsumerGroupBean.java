@@ -27,14 +27,13 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.*;
-import org.springframework.context.event.ContextRefreshedEvent;
 
 
 /**
  * 消费组
  */
 public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, ApplicationEventPublisherAware {
 
     /**
      * spring处理器
@@ -84,8 +83,8 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
-        spring.onApplicationEvent(contextRefreshedEvent);
+    public synchronized void onApplicationEvent(final ApplicationEvent event) {
+        spring.onApplicationEvent(event);
     }
 
     @Override

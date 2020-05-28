@@ -22,7 +22,13 @@ package io.joyrpc.spring;
 
 import io.joyrpc.config.AbstractConfig;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.spring.event.ContextDoneEvent;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+
+import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 
@@ -31,7 +37,13 @@ import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
  *
  * @description:
  */
-public class GlobalParameterBean extends AbstractConfig implements InitializingBean {
+public class GlobalParameterBean extends AbstractConfig implements InitializingBean, ApplicationContextAware {
+
+
+    public static final String KEY = "key";
+    public static final String VALUE = "value";
+    public static final String HIDE = "hide";
+    public static final String REF = "ref";
 
     /**
      * 关键字
@@ -46,6 +58,8 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
      * 是否隐藏（是的话，业务代码不能获取到）
      */
     protected boolean hide = false;
+
+    protected ApplicationContext applicationContext;
 
     public String getKey() {
         return key;
@@ -72,6 +86,11 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
     }
 
     @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    @Override
     public void afterPropertiesSet() {
         validate();
         if (key != null && !key.isEmpty() && value != null) {
@@ -85,5 +104,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
                 GlobalContext.putIfAbsent(key, value);
             }
         }
+        //异步通知
+        CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this)));
     }
 }

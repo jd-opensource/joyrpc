@@ -24,11 +24,11 @@ import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractIdConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ConsumerGroupBean;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.boot.annotation.AnnotationProvider;
+import io.joyrpc.spring.schema.GlobalParameterDefinitionParser;
 import io.joyrpc.util.Pair;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
@@ -316,6 +316,12 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * 注册
      */
     protected void register(final BeanDefinitionRegistry registry) {
+        //注册全局参数
+        Map<String, Object> parameters = rpcProperties.getParameters();
+        if (parameters != null) {
+            //从配置文件读取，值已经做了占位符替换
+            parameters.forEach((key, value) -> GlobalParameterDefinitionParser.register(registry, key, value));
+        }
         //注册
         String defRegName = register(registry, rpcProperties.getRegistry(), REGISTRY_NAME);
         String defServerName = register(registry, rpcProperties.getServer(), SERVER_NAME);
@@ -324,11 +330,6 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         consumers.forEach((name, c) -> register(c, registry, defRegName));
         groups.forEach((name, c) -> register(c, registry, defRegName));
         providers.forEach((name, p) -> register(p, registry, defRegName, defServerName));
-        //注册全局参数
-        if (rpcProperties.getParameters() != null) {
-            //从配置文件读取，值已经做了占位符替换
-            rpcProperties.getParameters().forEach(GlobalContext::put);
-        }
     }
 
     /**

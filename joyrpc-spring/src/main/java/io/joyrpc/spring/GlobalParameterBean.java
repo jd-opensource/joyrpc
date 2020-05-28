@@ -31,6 +31,7 @@ import org.springframework.context.ApplicationContextAware;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
+import static io.joyrpc.spring.Counter.successContext;
 
 /**
  * 全局参数
@@ -105,6 +106,6 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
             }
         }
         //异步通知
-        CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this)));
+        successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
     }
 }

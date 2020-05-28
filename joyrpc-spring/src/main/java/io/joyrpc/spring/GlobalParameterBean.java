@@ -105,7 +105,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
                 GlobalContext.putIfAbsent(key, value);
             }
         }
-        //异步通知
+        //上下文初始化完成，异步通知
         successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
     }
 }

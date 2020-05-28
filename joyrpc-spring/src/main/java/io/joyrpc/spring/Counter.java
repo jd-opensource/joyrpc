@@ -27,7 +27,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 计数器
+ * 计数器，用于保证上下文、消费者和服务提供者的启动顺序
  */
 public class Counter {
     /**

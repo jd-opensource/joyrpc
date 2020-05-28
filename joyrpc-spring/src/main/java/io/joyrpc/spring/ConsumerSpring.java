@@ -165,6 +165,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
+        //等待上下文初始化完成事件
         if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
             //刷新事件会多次，防止重入
             if (steps.compareAndSet(0, 1)) {
@@ -176,12 +177,12 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                                 config.getInterfaceClazz(), config.getAlias(), t.getMessage()));
                         System.exit(1);
                     } else {
-                        //最后一个消费者会触发异步通知，防止阻塞
+                        //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
                         successConsumer(() -> CompletableFuture.runAsync(
                                 () -> applicationEventPublisher.publishEvent(new ConsumerDoneEvent(this))));
                     }
                 });
-                //启动bean，最后一个bean会挂住
+                //启动，如果有多个消费者或服务提供者，通知到链上的最后一个bean会挂住
                 startBean();
             }
         }

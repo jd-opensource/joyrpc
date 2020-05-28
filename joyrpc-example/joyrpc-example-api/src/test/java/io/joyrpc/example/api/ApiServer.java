@@ -51,6 +51,9 @@ public class ApiServer {
                 System.exit(1);
             }
         });
+
+
+        providerConfig.setParameter("shutdownTimeout", 15000);
         System.in.read();
     }
 }

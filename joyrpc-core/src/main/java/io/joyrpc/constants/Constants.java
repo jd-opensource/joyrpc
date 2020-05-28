@@ -20,6 +20,7 @@ package io.joyrpc.constants;
  * #L%
  */
 
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.OsType;
 import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.extension.URL;
@@ -453,6 +454,7 @@ public class Constants {
     public static final URLOption<String> FILTER_OPTION = new URLOption<>("filter", "");
     public static final URLOption<String> ADDRESS_OPTION = new URLOption<>("address", "");
     public static final URLOption<String> ALIAS_OPTION = new URLOption<>("alias", "");
+    public static final URLOption<Boolean> EMPTY_ALIAS_OPTION = new URLOption<>("emptyAlias", () -> GlobalContext.getBoolean("emptyAlias", false));
     public static final URLOption<Long> START_TIME_OPTION = new URLOption<>("startTime", 0L); //provider启动时间戳
     public static final URLOption<Boolean> SERVICE_MESH_OPTION = new URLOption<>(SERVICE_MESH_KEY, false);
     public static final URLOption<String> FILTER_CHAIN_FACTORY_OPTION = new URLOption<>("filterChainFactory", "default");
@@ -487,7 +489,7 @@ public class Constants {
     public static final URLOption<String> FAILOVER_WHEN_THROWABLE_OPTION = new URLOption<>("failoverWhenThrowable", "");
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
-    public static final URLOption<String> TAG_KEY_OPTION = new URLOption<>("tagKey", "serviceTag");
+    public static final URLOption<String> TAG_KEY_OPTION = new URLOption<>("tagKey", () -> GlobalContext.getString("tagKey", "serviceTag"));
     /**
      * 默认连接工厂
      */

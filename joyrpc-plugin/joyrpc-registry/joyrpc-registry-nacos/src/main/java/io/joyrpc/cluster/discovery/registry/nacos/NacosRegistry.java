@@ -188,8 +188,18 @@ public class NacosRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doSubscribe(ClusterBooking booking) {
             return Futures.call(future -> {
+                NacosClusterBooking ncBooking = (NacosClusterBooking) booking;
+                //创建listener
+                EventListener listener = event -> {
+                    if (event instanceof NamingEvent) {
+                        NamingEvent e = (NamingEvent) event;
+                        doUpdate(ncBooking, e.getInstances());
+                    }
+                };
+                ncBooking.setListener(listener);
+                //订阅
+                registry.namingService.subscribe(ncBooking.getServiceName(), listener);
                 //TODO 此处应该定时lookup
-                doUpdate((NacosClusterBooking) booking);
                 future.complete(null);
             });
         }
@@ -217,28 +227,6 @@ public class NacosRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doUnsubscribe(ConfigBooking booking) {
             return super.doUnsubscribe(booking);
-        }
-
-        /**
-         * 更新集群
-         *
-         * @param ncBooking 订阅
-         */
-        protected void doUpdate(final NacosClusterBooking ncBooking) throws NacosException {
-            //查询所有实例
-            List<Instance> instances = registry.namingService.getAllInstances(ncBooking.getServiceName());
-            //触发集群事件
-            doUpdate(ncBooking, instances);
-            //创建listener
-            EventListener listener = event -> {
-                if (event instanceof NamingEvent) {
-                    NamingEvent e = (NamingEvent) event;
-                    doUpdate(ncBooking, e.getInstances());
-                }
-            };
-            ncBooking.setListener(listener);
-            //订阅
-            registry.namingService.subscribe(ncBooking.getServiceName(), listener);
         }
 
         /**

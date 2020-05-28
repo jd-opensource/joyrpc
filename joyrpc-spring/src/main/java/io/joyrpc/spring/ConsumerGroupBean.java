@@ -83,7 +83,7 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ApplicationEvent event) {
+    public void onApplicationEvent(final ApplicationEvent event) {
         spring.onApplicationEvent(event);
     }
 

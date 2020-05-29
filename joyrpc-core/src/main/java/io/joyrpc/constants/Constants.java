@@ -148,6 +148,10 @@ public class Constants {
     public static final String TRACE_TYPE = "trace.type";
 
     /**
+     * 统计面板启用标识
+     */
+    public static final String DASHBOARD_ENABLE = "dashboard.enable";
+    /**
      * 熔断异常
      */
     public static final String CIRCUIT_BREAKER_EXCEPTION = "circuitBreaker.exception";

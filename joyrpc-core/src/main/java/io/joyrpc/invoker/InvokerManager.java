@@ -461,7 +461,7 @@ public class InvokerManager {
             //负载均衡
             LoadBalance loadBalance = buildLoadbalance(config, url);
             //面板工厂
-            DashboardFactory dashboardFactory = buildDashboardFactory(loadBalance);
+            DashboardFactory dashboardFactory = buildDashboardFactory(url, loadBalance);
             //集群的名字是服务名称+别名+配置变更计数器，确保相同接口引用的集群名称不一样
             final Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
             final Cluster cluster = new Cluster(clusterName, url, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
@@ -476,13 +476,17 @@ public class InvokerManager {
     }
 
     /**
-     * 构建面板工厂
+     * 构建统计面板工厂
      *
-     * @param loadBalance
-     * @return
+     * @param url         url
+     * @param loadBalance 负载均衡
+     * @return 统计面板工厂
      */
-    protected DashboardFactory buildDashboardFactory(final LoadBalance loadBalance) {
-        return loadBalance instanceof DashboardAware ? DASHBOARD_FACTORY.get() : null;
+    protected DashboardFactory buildDashboardFactory(final URL url, final LoadBalance loadBalance) {
+        //自适应负载均衡、熔断都需要统计面板
+        return loadBalance instanceof DashboardAware
+                || url.getBoolean(CIRCUIT_BREAKER_ENABLE, false)
+                || url.getBoolean(DASHBOARD_ENABLE, false) ? DASHBOARD_FACTORY.get() : null;
     }
 
     /**

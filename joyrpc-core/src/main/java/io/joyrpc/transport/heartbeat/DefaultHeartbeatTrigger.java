@@ -32,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -59,10 +58,6 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
      */
     protected final Publisher<TransportEvent> publisher;
     /**
-     * 失败次数
-     */
-    protected AtomicInteger fails;
-    /**
      * 心跳应答
      */
     protected final BiConsumer<Message, Throwable> afterRun;
@@ -80,13 +75,10 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
         this.url = url;
         this.strategy = strategy;
         this.publisher = publisher;
-        this.fails = channel.getAttribute(Channel.HEARTBEAT_FAILED_COUNT, name -> new AtomicInteger(0));
         this.afterRun = (msg, err) -> {
             if (err != null) {
-                fails.incrementAndGet();
                 publisher.offer(new HeartbeatEvent(channel, url, err));
             } else {
-                fails.set(0);
                 publisher.offer(new HeartbeatEvent(msg, channel, url));
             }
         };

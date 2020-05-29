@@ -46,8 +46,6 @@ public interface Channel {
 
     String SERVER_CHANNEL = "SERVER_CHANNEL";
 
-    String HEARTBEAT_FAILED_COUNT = "heartbeat.failed.count";
-
     String CHANNEL_KEY = "CHANNEL_KEY";
 
     String PROTOCOL = "PROTOCOL";

@@ -140,10 +140,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected AtomicLong counter = new AtomicLong(0);
         /**
-         * 心跳失败次数
-         */
-        protected AtomicInteger heartbeatFails = new AtomicInteger(0);
-        /**
          * 关闭回调
          */
         protected Consumer<PoolChannel> beforeClose;
@@ -193,7 +189,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
                                 channel = r.getResult();
                                 channel.setAttribute(CHANNEL_KEY, name);
                                 channel.setAttribute(EVENT_PUBLISHER, publisher);
-                                channel.setAttribute(HEARTBEAT_FAILED_COUNT, heartbeatFails);
                                 channel.getFutureManager().open();
                                 STATE_UPDATER.set(this, OPENED);
                                 //后面添加心跳，防止心跳检查状态退出

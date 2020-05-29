@@ -53,6 +53,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ReflectionUtils;
+import org.springframework.util.StringUtils;
 
 import java.beans.Introspector;
 import java.lang.annotation.Annotation;
@@ -93,6 +94,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
     public static final String RPC_PREFIX = "rpc";
     public static final String PROVIDER_PREFIX = "provider-";
     public static final String CONSUMER_PREFIX = "consumer-";
+    public static final String REF_PREFIX = "ref:";
 
     protected final ConfigurableEnvironment environment;
 
@@ -317,10 +319,18 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      */
     protected void register(final BeanDefinitionRegistry registry) {
         //注册全局参数
-        Map<String, Object> parameters = rpcProperties.getParameters();
+        Map<String, String> parameters = rpcProperties.getParameters();
         if (parameters != null) {
             //从配置文件读取，值已经做了占位符替换
-            parameters.forEach((key, value) -> GlobalParameterDefinitionParser.register(registry, key, value));
+            parameters.forEach((key, value) -> {
+                if (value != null && value.startsWith(REF_PREFIX)) {
+                    String ref = value.substring(REF_PREFIX.length());
+                    if (!StringUtils.isEmpty(ref)) {
+                        GlobalParameterDefinitionParser.register(registry, key, null, ref, null);
+                    }
+                }
+                GlobalParameterDefinitionParser.register(registry, key, value);
+            });
         }
         //注册
         String defRegName = register(registry, rpcProperties.getRegistry(), REGISTRY_NAME);

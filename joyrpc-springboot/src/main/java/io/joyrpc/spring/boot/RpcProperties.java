@@ -62,7 +62,7 @@ public class RpcProperties {
     /**
      * 全局参数
      */
-    private Map<String, Object> parameters;
+    private Map<String, String> parameters;
 
     public List<String> getPackages() {
         return packages;
@@ -128,11 +128,11 @@ public class RpcProperties {
         this.registries = registries;
     }
 
-    public Map<String, Object> getParameters() {
+    public Map<String, String> getParameters() {
         return parameters;
     }
 
-    public void setParameters(Map<String, Object> parameters) {
+    public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
 }

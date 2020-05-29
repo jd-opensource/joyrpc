@@ -1,5 +1,0 @@
-org.apache.commons.dbcp.BasicDataSource
-com.sun.rowset.JdbcRowSetImpl
-org.apache.ibatis.datasource.jndi.JndiDataSourceFactory
-org.springframework.aop.support.DefaultBeanFactoryPointcutAdvisor
-com.sun.org.apache.xalan.internal.xsltc.trax.TemplatesImpl

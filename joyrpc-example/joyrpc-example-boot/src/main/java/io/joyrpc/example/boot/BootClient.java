@@ -42,7 +42,7 @@ public class BootClient {
                 System.out.println(hello);
                 Thread.sleep(100L);
             } catch (InterruptedException e) {
-                // break;
+                break;
             } catch (Throwable e) {
                 try {
                     Thread.sleep(1000L);

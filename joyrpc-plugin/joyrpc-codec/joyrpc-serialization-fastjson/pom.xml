@@ -11,15 +11,10 @@
 
     <artifactId>joyrpc-serialization-fastjson</artifactId>
 
-    <properties>
-        <fastjson.version>1.2.68</fastjson.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>fastjson</artifactId>
-            <version>${fastjson.version}</version>
         </dependency>
     </dependencies>
 

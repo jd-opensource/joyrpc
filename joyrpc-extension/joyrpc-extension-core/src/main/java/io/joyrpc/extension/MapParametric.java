@@ -76,7 +76,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public String getString(final URLOption<String> option) {
-        return option == null ? null : getString(option.name, option.value);
+        return option == null ? null : getString(option.getName(), option.getValue());
     }
 
     @Override
@@ -122,7 +122,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Float getFloat(final URLOption<Float> option) {
-        return option == null ? null : getFloat(option.name, option.value);
+        return option == null ? null : getFloat(option.getName(), option.getValue());
     }
 
     @Override
@@ -148,7 +148,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Double getDouble(final URLOption<Double> option) {
-        return option == null ? null : getDouble(option.name, option.value);
+        return option == null ? null : getDouble(option.getName(), option.getValue());
     }
 
     @Override
@@ -181,7 +181,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Long getLong(final URLOption<Long> option) {
-        return option == null ? null : getLong(option.name, option.value);
+        return option == null ? null : getLong(option.getName(), option.getValue());
     }
 
     @Override
@@ -207,7 +207,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Integer getInteger(final URLOption<Integer> option) {
-        return option == null ? null : getInteger(option.name, option.value);
+        return option == null ? null : getInteger(option.getName(), option.getValue());
     }
 
     @Override
@@ -233,7 +233,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Short getShort(final URLOption<Short> option) {
-        return option == null ? null : getShort(option.name, option.value);
+        return option == null ? null : getShort(option.getName(), option.getValue());
     }
 
     @Override
@@ -259,7 +259,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Byte getByte(final URLOption<Byte> option) {
-        return option == null ? null : getByte(option.name, option.value);
+        return option == null ? null : getByte(option.getName(), option.getValue());
     }
 
     @Override
@@ -285,7 +285,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Boolean getBoolean(final URLOption<Boolean> option) {
-        return option == null ? null : getBoolean(option.name, option.value);
+        return option == null ? null : getBoolean(option.getName(), option.getValue());
     }
 
     @Override
@@ -306,7 +306,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Long getNaturalLong(final URLOption<Long> option) {
-        return option == null ? null : getNatural(option.name, option.value);
+        return option == null ? null : getNatural(option.getName(), option.getValue());
     }
 
     @Override
@@ -327,7 +327,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Integer getNaturalInt(final URLOption<Integer> option) {
-        return option == null ? null : getNatural(option.name, option.value);
+        return option == null ? null : getNatural(option.getName(), option.getValue());
     }
 
     @Override
@@ -348,7 +348,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Short getNaturalShort(final URLOption<Short> option) {
-        return option == null ? null : getNatural(option.name, option.value);
+        return option == null ? null : getNatural(option.getName(), option.getValue());
     }
 
     @Override
@@ -369,7 +369,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Byte getNaturalByte(final URLOption<Byte> option) {
-        return option == null ? null : getNatural(option.name, option.value);
+        return option == null ? null : getNatural(option.getName(), option.getValue());
     }
 
     @Override
@@ -390,7 +390,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Long getPositiveLong(final URLOption<Long> option) {
-        return option == null ? null : getPositive(option.name, option.value);
+        return option == null ? null : getPositive(option.getName(), option.getValue());
     }
 
     @Override
@@ -411,7 +411,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Integer getPositiveInt(final URLOption<Integer> option) {
-        return option == null ? null : getPositive(option.name, option.value);
+        return option == null ? null : getPositive(option.getName(), option.getValue());
     }
 
     @Override
@@ -432,7 +432,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Short getPositiveShort(final URLOption<Short> option) {
-        return option == null ? null : getPositive(option.name, option.value);
+        return option == null ? null : getPositive(option.getName(), option.getValue());
     }
 
     @Override
@@ -453,7 +453,7 @@ public final class MapParametric implements Parametric {
 
     @Override
     public Byte getPositiveByte(final URLOption<Byte> option) {
-        return option == null ? null : getPositive(option.name, option.value);
+        return option == null ? null : getPositive(option.getName(), option.getValue());
     }
 
     @Override

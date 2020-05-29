@@ -164,7 +164,7 @@ public class Constants {
      */
     public static final String CIRCUIT_BREAKER_PERIOD = "circuitBreaker.period";
     /**
-     * 熔断静默期
+     * 熔断恢复期
      */
     public static final String CIRCUIT_BREAKER_DECUBATION = "circuitBreaker.decubation";
     /**

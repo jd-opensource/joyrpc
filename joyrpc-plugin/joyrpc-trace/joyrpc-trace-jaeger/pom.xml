@@ -18,5 +18,11 @@
             <version>${jaeger.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-spring</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 </project>

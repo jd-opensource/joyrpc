@@ -22,6 +22,8 @@ package io.joyrpc.spring.context;
 
 import io.joyrpc.context.EnvironmentSupplier;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.ExtensionPoint;
+import io.joyrpc.extension.ExtensionPointLazy;
 import org.springframework.core.env.ConfigurableEnvironment;
 
 import java.util.HashMap;
@@ -36,6 +38,11 @@ import static io.joyrpc.context.EnvironmentSupplier.SPRING_ORDER;
  */
 @Extension(value = "spring", order = SPRING_ORDER)
 public class SpringEnvironmentSupplier implements EnvironmentSupplier {
+
+    /**
+     * 环境插件
+     */
+    protected static final ExtensionPoint<PropertyKeysSupplier, String> KEYS_SUPPLIER = new ExtensionPointLazy<>(PropertyKeysSupplier.class);
 
     public static final String BEAN_NAME = "springEnvironmentSupplier";
     public static final String SPRING_APPLICATION_NAME = "spring.application.name";
@@ -53,8 +60,23 @@ public class SpringEnvironmentSupplier implements EnvironmentSupplier {
     @Override
     public Map<String, String> environment() {
         Map<String, String> result = new HashMap<>();
+        KEYS_SUPPLIER.extensions().forEach(supplier -> {
+            for (String propertyKey : supplier.propertyKeys()) {
+                result.put(propertyKey, environment.getProperty(propertyKey));
+
+            }
+        });
         result.put(SPRING_APPLICATION_NAME, environment.getProperty(SPRING_APPLICATION_NAME));
         result.put(SPRING_PROFILES_ACTIVE, environment.getProperty(SPRING_PROFILES_ACTIVE));
         return result;
     }
+
+    @Extension(value = "default")
+    public static class DefaultPropertyKeysSupplier implements PropertyKeysSupplier {
+        @Override
+        public String[] propertyKeys() {
+            return new String[]{SPRING_APPLICATION_NAME, SPRING_PROFILES_ACTIVE};
+        }
+    }
 }
+

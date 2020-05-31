@@ -63,7 +63,7 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
      */
     protected EnableTrace enableTrace;
     /**
-     * 全局开关
+     * 是否开启
      */
     protected boolean enable;
 
@@ -73,24 +73,27 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
         factory = TRACE_FACTORY.getOrDefault(parametric.getString(TRACE_TYPE));
         component = parametric.getString(PROTOCOL_KEY);
         enableTrace = (EnableTrace) clazz.getAnnotation(EnableTrace.class);
-        enable = parametric.getBoolean(TRACE_OPEN, Boolean.FALSE);
+        enable = factory != null && (enableTrace == null || enableTrace.value());
     }
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        Invocation invocation = request.getPayLoad();
-        InterfaceOption.MethodOption option = request.getOption();
-        Map<String, String> tags = new HashMap<>();
-        createTags(request, tags);
-        Tracer trace = factory.create(request);
-        trace.begin(option.getTraceSpanId(invocation), component, tags);
-        trace.snapshot();
-        CompletableFuture<Result> future = invoker.invoke(request);
-        future.whenComplete((result, throwable) -> {
-            trace.restore();
-            trace.end(throwable == null ? result.getException() : throwable);
-        });
-        return future;
+        if (enable) {
+            Invocation invocation = request.getPayLoad();
+            InterfaceOption.MethodOption option = request.getOption();
+            Map<String, String> tags = new HashMap<>();
+            createTags(request, tags);
+            Tracer trace = factory.create(request);
+            trace.begin(option.getTraceSpanId(invocation), component, tags);
+            trace.snapshot();
+            CompletableFuture<Result> future = invoker.invoke(request);
+            future.whenComplete((result, throwable) -> {
+                trace.restore();
+                trace.end(throwable == null ? result.getException() : throwable);
+            });
+            return future;
+        }
+        return invoker.invoke(request);
     }
 
     /**
@@ -104,13 +107,9 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        if (factory == null) {
-            return false;
-        } else if (enableTrace != null && !enableTrace.value()) {
-            //该接口声明不支持
-            return false;
-        } else if (url.getBoolean(TRACE_OPEN, enableTrace == null ? enable : true)) {
-            //接口配置
+        MapParametric parametric = new MapParametric(GlobalContext.getContext());
+        //是配置了开关
+        if (url.getBoolean(TRACE_OPEN, parametric.getBoolean(TRACE_OPEN, Boolean.FALSE))) {
             return true;
         }
         Map<String, String> tokens = url.endsWith("." + TRACE_OPEN);

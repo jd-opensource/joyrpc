@@ -4,33 +4,37 @@
 
 ### Enhancement
 
-- 消费者调用，通过缓存的参数类型，加快构造Invocation的性能
+- 性能优化
+
+  - 消费者调用，通过缓存的参数类型，加快构造Invocation的性能
+  
+  - 使用线程变量优化Hessian性能
+  
+  - 优化GRPC获取GrpcType和构建方法参数的性能
+  
+  - 过载异常和限流异常不输出堆栈，减少CPU消耗
+  
+  - 客户端增加TCP_NODELAY设置
+  
+  - 优化获取方法熔断器的性能
 
 - 增加JCompiler插件，避免系统没有tools.jar的时候编译报错
 
 - 增加Consul注册中心支持
 
-- 过载异常和限流异常不输出堆栈，减少CPU消耗
-
-- 增加JdkGrpcFactory
-
-- 优化GRPC获取GrpcType和构建方法参数的性能
-
-- 客户端增加TCP_NODELAY设置
+- 增加nacos注册中心集成
 
 - 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。暂时不支持回调参数。
 
-- 增加nacos注册中心集成
-
 - 增加分布式跟踪过滤器，并集成了jaeger和skywalking的实现
 
-- 增加以服务名称而不是接口进行发布订阅
+- 增加JdkGrpcFactory
+
+- 增加以服务名称而不是接口进行发布订阅，以便于更好的融入云原生
 
 - Spring配置中对全局参数通过"ref"属性增加对象引用配置
 
-- 使用线程变量优化Hessian性能
-
-- 优化获取方法熔断器的性能，另外熔断的判断条件，连续失败次数和可用率可以并存，默认加上服务端过载和超时异常，避免对所有异常进行熔断
+- 熔断的判断条件，连续失败次数和可用率可以并存，默认加上服务端过载和超时异常，避免对所有异常进行熔断
 
 - Fastjson默认改成SafeMode，增强安全性
 

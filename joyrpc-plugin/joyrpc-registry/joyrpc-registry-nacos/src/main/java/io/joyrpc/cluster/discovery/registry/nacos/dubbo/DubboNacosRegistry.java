@@ -24,6 +24,8 @@ import com.alibaba.nacos.api.naming.pojo.Instance;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
+import io.joyrpc.cluster.discovery.registry.URLKey.RegKey;
+import io.joyrpc.cluster.discovery.registry.URLKey.ClusterKey;
 import io.joyrpc.cluster.discovery.registry.nacos.NacosRegistry;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.context.GlobalContext;
@@ -84,6 +86,71 @@ public class DubboNacosRegistry extends NacosRegistry {
     protected Registion createRegistion(final URLKey key) {
         return new DubboNacosRegistion(key);
     }
+
+    @Override
+    protected RegKey buildRegKey(URL url) {
+        return new DubboNacosRegKey(url);
+    }
+
+    @Override
+    protected ClusterKey buildClusterKey(URL url) {
+        return new DubboNacosClusterKey(url);
+    }
+
+    /**
+     * 注册的URLKey
+     */
+    public static class DubboNacosRegKey extends RegKey {
+
+        public DubboNacosRegKey(URL url) {
+            super(url);
+        }
+
+        @Override
+        protected String buildKey() {
+            //生产者和消费者都需要注册
+            //注册:协议+服务+分组+服务版+tag+角色（消费者、提供者）
+            Map<String, String> parameters = new HashMap<>();
+            //分组
+            parameters.put(ALIAS_KEY, url.getString(ALIAS_OPTION));
+            //服务版本
+            parameters.put(SERVICE_VERSION_OPTION.getName(), url.getString(SERVICE_VERSION_OPTION));
+            //tag
+            String tagKey = url.getString(TAG_KEY_OPTION);
+            parameters.put(tagKey, url.getString(tagKey, ""));
+            //角色
+            parameters.put(ROLE_KEY, url.getString(ROLE_OPTION));
+            //生成url
+            URL u = new URL(url.getProtocol(), url.getHost(), url.getPort(), service, parameters);
+            return u.toString();
+        }
+    }
+
+    /**
+     * 订阅集群的URLKey
+     */
+    public static class DubboNacosClusterKey extends ClusterKey {
+
+        public DubboNacosClusterKey(URL url) {
+            super(url);
+        }
+
+        @Override
+        protected String buildKey() {
+            //生产者和消费者都需要注册
+            //注册:协议+服务+分组+服务版+集群类型
+            Map<String, String> parameters = new HashMap<>();
+            parameters.put(TYPE_KEY, "cluster");
+            //分组
+            parameters.put(ALIAS_KEY, url.getString(ALIAS_OPTION));
+            //服务版本
+            parameters.put(SERVICE_VERSION_OPTION.getName(), url.getString(SERVICE_VERSION_OPTION));
+            //生成url
+            URL u = new URL(url.getProtocol(), url.getHost(), url.getPort(), service, parameters);
+            return u.toString();
+        }
+    }
+
 
     /**
      * dubbo nacos控制器

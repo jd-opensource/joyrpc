@@ -196,7 +196,6 @@ public class NacosRegistry extends AbstractRegistry {
                 ncBooking.setListener(listener);
                 //订阅
                 registry.namingService.subscribe(ncBooking.getServiceName(), listener);
-                //TODO 此处应该定时lookup
                 future.complete(null);
             });
         }

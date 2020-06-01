@@ -2,7 +2,7 @@
 
 | GroupId                         | ArtifactId                      | Version                                   | Licenses                                                |
 |---------------------------------|---------------------------------|-------------------------------------------|---------------------------------------------------------|
-| com.alibaba                     | fastjson                        | 1.2.61                                    | Apache 2                                                |
+| com.alibaba                     | fastjson                        | 1.2.70                                    | Apache 2                                                |
 | com.esotericsoftware            | kryo                            | 4.0.2                                     | 3-Clause BSD License                                    |
 | com.esotericsoftware            | minlog                          | 1.3.0                                     | New BSD License                                         |
 | com.esotericsoftware            | reflectasm                      | 1.11.3                                    | New BSD License                                         |

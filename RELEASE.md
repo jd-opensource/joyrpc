@@ -32,11 +32,13 @@
 
 - 优化获取方法熔断器的性能，另外熔断的判断条件，连续失败次数和可用率可以并存，默认加上服务端过载和超时异常，避免对所有异常进行熔断
 
-- Fastjson默认改成SafeMode
+- Fastjson默认改成SafeMode，增强安全性
 
 - Dependency
 
   - 升级caffeine为2.8.2版本
+  
+  - 升级fastjson为1.2.70版本，解决安全漏洞
 
 ### Bugfixes
 

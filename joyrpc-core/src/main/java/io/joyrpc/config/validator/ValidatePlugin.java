@@ -62,6 +62,13 @@ public @interface ValidatePlugin {
     String defaultValue() default "";
 
     /**
+     * 是否可以为空
+     *
+     * @return 为空标识
+     */
+    boolean nullable() default true;
+
+    /**
      * 当配置的插件不存在时候，选择最大权重的可用插件
      *
      * @return 后续标识</ br>

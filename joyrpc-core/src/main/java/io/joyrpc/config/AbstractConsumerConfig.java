@@ -23,8 +23,6 @@ package io.joyrpc.config;
 import io.joyrpc.GenericService;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.annotation.Alias;
-import io.joyrpc.annotation.Service;
 import io.joyrpc.cluster.candidate.Candidature;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.event.NodeEvent;
@@ -45,7 +43,6 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
-import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Status;
 import io.joyrpc.util.SystemClock;
@@ -69,6 +66,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.Status.*;
 
@@ -426,7 +424,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                     genericClass = GenericService.class;
                 } else {
                     try {
-                        Class<?> clazz = ClassUtils.forName(className);
+                        Class<?> clazz = forName(className);
                         genericClass = clazz.isInterface() && GenericService.class.isAssignableFrom(clazz) ? clazz : GenericService.class;
                     } catch (ClassNotFoundException e) {
                         genericClass = GenericService.class;
@@ -709,10 +707,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          */
         protected Class<?> proxyClass;
         /**
-         * 注册和订阅的接口名称
-         */
-        protected String interfaceClazz;
-        /**
          * 调用handler
          */
         protected volatile ConsumerInvokeHandler invokeHandler;
@@ -744,17 +738,21 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         public CompletableFuture<Void> open() {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
-                config.validate();
-                proxyClass = config.getProxyClass();
-                interfaceClazz = getPseudonym(config.getInterfaceClass(), config.getInterfaceClazz());
                 registry = (config.url != null && !config.url.isEmpty()) ?
                         new RegistryConfig(Constants.FIX_REGISTRY, config.url) :
                         (config.registry != null ? config.registry : RegistryConfig.DEFAULT_REGISTRY_SUPPLIER.get());
+                config.validate();
+                if (config.registry != registry) {
+                    //做一下注册中心验证
+                    registry.validate();
+                }
+                //代理接口
+                proxyClass = config.getProxyClass();
                 //注册中心地址
                 registryUrl = parse(registry);
                 String host = getLocalHost(registryUrl.getString(Constants.ADDRESS_OPTION));
-                //构造原始URL
-                url = new URL(GlobalContext.getString(PROTOCOL_KEY), host, 0, interfaceClazz, config.addAttribute2Map());
+                //构造原始URL，调用远程的真实接口名称
+                url = new URL(GlobalContext.getString(PROTOCOL_KEY), host, 0, config.getInterfaceClazz(), config.addAttribute2Map());
                 //加上动态配置的服务URL
                 serviceUrl = configure(null);
                 doOpen().whenComplete((v, e) -> {
@@ -800,30 +798,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         @Override
         protected CompletableFuture<Void> update(final URL newUrl) {
             return CompletableFuture.completedFuture(null);
-        }
-
-        /**
-         * 获取服务的别名
-         *
-         * @param clazz        接口
-         * @param defaultValue 默认值
-         * @return
-         */
-        protected String getPseudonym(final Class<?> clazz, final String defaultValue) {
-            String result = defaultValue;
-            if (clazz != null && !GENERIC.test(clazz)) {
-                Service service = clazz.getAnnotation(Service.class);
-                if (service != null && !service.name().isEmpty()) {
-                    //判断服务名
-                    result = service.name();
-                } else {
-                    Alias alias = clazz.getAnnotation(Alias.class);
-                    if (alias != null && !alias.value().isEmpty()) {
-                        result = alias.value();
-                    }
-                }
-            }
-            return result;
         }
 
         @Override

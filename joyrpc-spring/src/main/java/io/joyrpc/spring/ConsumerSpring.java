@@ -174,7 +174,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                     if (t != null) {
                         //出了异常
                         logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
-                                config.getInterfaceClazz(), config.getAlias(), t.getMessage()));
+                                config.getServiceName(), config.getAlias(), t.getMessage()));
                         System.exit(1);
                     } else {
                         //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞

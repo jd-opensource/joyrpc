@@ -45,7 +45,7 @@ public class RegistryConfig extends AbstractIdConfig implements Serializable {
     /**
      * 注册中心实现
      */
-    @ValidatePlugin(extensible = RegistryFactory.class, name = "REGISTRY")
+    @ValidatePlugin(extensible = RegistryFactory.class, name = "REGISTRY", nullable = false)
     protected String registry;
     /**
      * 地址

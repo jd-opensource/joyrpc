@@ -48,7 +48,6 @@ import java.util.concurrent.CompletableFuture;
 import static com.alibaba.nacos.api.PropertyKeyConst.SERVER_ADDR;
 import static com.alibaba.nacos.api.common.Constants.DEFAULT_GROUP;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.StringUtils.split;
 
 /**
  * nacos注册中心
@@ -120,9 +119,7 @@ public class NacosRegistry extends AbstractRegistry {
         try {
             namingService = NacosFactory.createNamingService(properties);
         } catch (NacosException e) {
-            if (logger.isErrorEnabled()) {
-                logger.error(e.getErrMsg(), e);
-            }
+            logger.error(e.getErrMsg(), e);
             throw new IllegalStateException(e);
         }
         super.doOpen();
@@ -139,8 +136,8 @@ public class NacosRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new NacosRegistion(url, key);
+    protected Registion createRegistion(final URLKey key) {
+        return new NacosRegistion(key);
     }
 
 
@@ -347,8 +344,8 @@ public class NacosRegistry extends AbstractRegistry {
          */
         protected Instance instance;
 
-        public NacosRegistion(URL url, String key) {
-            super(url, key);
+        public NacosRegistion(URLKey key) {
+            super(key);
             this.serviceName = createServiceName(url);
             this.instance = createInstance(url);
         }

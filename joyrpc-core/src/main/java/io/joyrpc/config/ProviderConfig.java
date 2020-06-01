@@ -63,6 +63,15 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected static final AtomicReferenceFieldUpdater<ProviderConfig, Status> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(ProviderConfig.class, Status.class, "status");
     private static final Logger logger = LoggerFactory.getLogger(ProviderConfig.class);
+    /**
+     * 全局的应用服务名称提供者
+     */
+    protected static final Supplier<String> APP_SERVICE_SUPPLIER = () -> GlobalContext.getString(KEY_APPSERVICE);
+
+    /**
+     * 全局的应用分组提供者
+     */
+    protected static final Supplier<String> APP_GROUP_SUPPLIER = () -> GlobalContext.getString(KEY_APPGROUP);
 
     /**
      * 注册中心配置，可配置多个
@@ -97,7 +106,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      */
     protected String exclude;
     /**
-     * 是否动态注册，默认为true，配置为false代表不主动发布，需要到管理端进行上线操作
+     * 注册中心收到注册后主动发布服务
      */
     protected Boolean dynamic;
     /**
@@ -133,6 +142,20 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 状态
      */
     protected transient volatile Status status = Status.CLOSED;
+
+    @Override
+    public String getAlias() {
+        if (alias == null || alias.isEmpty()) {
+            //服务提供者如果没有设置别名，则可以采用应用分组
+            alias = APP_GROUP_SUPPLIER.get();
+        }
+        return alias;
+    }
+
+    @Override
+    public String getServiceName() {
+        return getServiceName(APP_SERVICE_SUPPLIER);
+    }
 
     @Override
     public void validate() {
@@ -173,7 +196,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         if (null == delay || delay <= 0) {
             future.complete(null);
         } else {
-            logger.info(String.format("Delay exporting service %s(%s) %d(ms)", getInterfaceClazz(), getAlias(), delay));
+            logger.info(String.format("Delay exporting service %s(%s) %d(ms)", getServiceName(), getAlias(), delay));
             Thread thread = new Thread(() -> {
                 try {
                     Thread.sleep(delay);

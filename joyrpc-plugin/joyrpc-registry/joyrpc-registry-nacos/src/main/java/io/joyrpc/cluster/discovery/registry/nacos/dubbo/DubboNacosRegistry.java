@@ -81,8 +81,8 @@ public class DubboNacosRegistry extends NacosRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new DubboNacosRegistion(url, key);
+    protected Registion createRegistion(final URLKey key) {
+        return new DubboNacosRegistion(key);
     }
 
     /**
@@ -150,11 +150,10 @@ public class DubboNacosRegistry extends NacosRegistry {
         /**
          * 构造方法
          *
-         * @param url
          * @param key
          */
-        public DubboNacosRegistion(URL url, String key) {
-            super(url, key);
+        public DubboNacosRegistion(URLKey key) {
+            super(key);
         }
 
         @Override

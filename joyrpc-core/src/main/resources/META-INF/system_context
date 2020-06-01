@@ -28,5 +28,9 @@
 [appName]=[appName]
 [appInsId]=[appInsId]
 [appGroup]=[appGroup]
+#全局的应用服务名称
+[appService]=[appService]
+#分组验证正则表达式
+[alias.pattern]=[alias.pattern]
 #Fastjson配置
 [fastjson.parser.safeMode]

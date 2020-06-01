@@ -27,6 +27,9 @@ import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.naming.ClusterHandler;
+import io.joyrpc.cluster.discovery.registry.URLKey.ClusterKey;
+import io.joyrpc.cluster.discovery.registry.URLKey.ConfigKey;
+import io.joyrpc.cluster.discovery.registry.URLKey.RegKey;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.context.GlobalContext;
@@ -192,16 +195,13 @@ public abstract class AbstractRegistry implements Registry, Configure {
     public CompletableFuture<URL> register(final URL url) {
         Objects.requireNonNull(url, "url can not be null.");
         //首次创建
-        AtomicBoolean first = new AtomicBoolean(false);
         //获取注册对象
-        Registion registion = registers.computeIfAbsent(getRegisterKey(url), key -> {
-            first.set(true);
-            return createRegistion(url, key);
-        });
+        URLKey key = buildRegKey(url);
+        Registion registion = registers.computeIfAbsent(key.getKey(), s -> createRegistion(key));
         //存在相同Key的URL多次注册，需要增加引用计数器，在注销的时候确保没有引用了才去注销
         registion.addRef();
         //判断是否第一次创建
-        if (first.get()) {
+        if (registion.getState().compareAndSet(false, true)) {
             //判断当前状态是否打开，如果打开则进行注册
             state.whenOpen(c -> c.register(registion));
         }
@@ -211,19 +211,19 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构建注册对象
      *
-     * @param url url
-     * @param key 键
+     * @param key 注册的URLKey
      * @return 注册对象
      */
-    protected Registion createRegistion(final URL url, final String key) {
-        return new Registion(url, key);
+    protected Registion createRegistion(final URLKey key) {
+        return new Registion(key);
     }
 
     @Override
     public CompletableFuture<URL> deregister(final URL url, final int maxRetryTimes) {
         Objects.requireNonNull(url, "url can not be null.");
         final CompletableFuture<URL>[] results = new CompletableFuture[1];
-        registers.compute(getRegisterKey(url), (key, reg) -> {
+        URLKey key = buildRegKey(url);
+        registers.compute(key.getKey(), (s, reg) -> {
             if (reg == null || reg.decRef() > 0) {
                 results[0] = CompletableFuture.completedFuture(url);
             } else {
@@ -235,6 +235,36 @@ public abstract class AbstractRegistry implements Registry, Configure {
             return null;
         });
         return results[0];
+    }
+
+    /**
+     * 构建注册的Key
+     *
+     * @param url
+     * @return
+     */
+    protected RegKey buildRegKey(final URL url) {
+        return new RegKey(url);
+    }
+
+    /**
+     * 构建集群的Key
+     *
+     * @param url
+     * @return
+     */
+    protected ClusterKey buildClusterKey(final URL url) {
+        return new ClusterKey(url);
+    }
+
+    /**
+     * 构建配置的Key
+     *
+     * @param url
+     * @return
+     */
+    protected ConfigKey buildConfigKey(final URL url) {
+        return new ConfigKey(url);
     }
 
     /**
@@ -279,28 +309,29 @@ public abstract class AbstractRegistry implements Registry, Configure {
     public boolean subscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return subscribe(clusters, new ClusterSubscription(url, getClusterKey(url), handler), RegistryController::subscribe);
+        return subscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), RegistryController::subscribe);
     }
+
 
     @Override
     public boolean unsubscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(clusters, new ClusterSubscription(url, getClusterKey(url), handler), RegistryController::unsubscribe);
+        return unsubscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), RegistryController::unsubscribe);
     }
 
     @Override
     public boolean subscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return subscribe(configs, new ConfigSubscription(url, getConfigKey(url), handler), RegistryController::subscribe);
+        return subscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), RegistryController::subscribe);
     }
 
     @Override
     public boolean unsubscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(configs, new ConfigSubscription(url, getConfigKey(url), handler), RegistryController::unsubscribe);
+        return unsubscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), RegistryController::unsubscribe);
     }
 
     @Override
@@ -319,52 +350,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 获取注册键
-     *
-     * @param url url
-     * @return 键
-     */
-    protected String getRegisterKey(final URL url) {
-        //注册:协议+接口+别名+SIDE,生产者和消费者都需要注册
-        return url.toString(false, true, ALIAS_OPTION.getName(), ROLE_OPTION.getName());
-    }
-
-    /**
-     * 获取集群键，加上类型参数避免和配置键一样
-     *
-     * @param url url
-     * @return 键
-     */
-    protected String getClusterKey(final URL url) {
-        //接口集群订阅:协议+接口+别名+集群类型
-        URL u = url.add(TYPE, "cluster");
-        return u.toString(false, true, ALIAS_OPTION.getName(), TYPE);
-    }
-
-    /**
-     * 获取配置键，加上类型参数避免和集群键一样
-     *
-     * @param url url
-     * @return 键
-     */
-    protected String getConfigKey(final URL url) {
-        //分组信息可能在参数里面，可以在子类里面覆盖
-        if (StringUtils.isEmpty(url.getPath())) {
-            //全局配置订阅
-            return GLOBAL_SETTING;
-        } else {
-            //接口配置订阅:协议+接口+别名+SIDE+配置类型
-            URL u = url.add(TYPE, "config");
-            return u.toString(false, true, ALIAS_OPTION.getName(), ROLE_OPTION.getName(), TYPE);
-        }
-    }
-
-    /**
      * 状态
      */
     protected static abstract class StateKey extends URLKey {
         /**
-         * 路径
+         * 注册中心里面的路径
          */
         protected String path;
         /**
@@ -375,25 +365,28 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url url
          * @param key 键
          */
-        public StateKey(final URL url, final String key) {
-            super(url, key);
+        public StateKey(final URLKey key) {
+            super(key);
         }
 
         /**
          * 构造函数
          *
-         * @param url  url
          * @param key  键
          * @param path 路径
          */
-        public StateKey(URL url, String key, String path) {
-            super(url, key);
+        public StateKey(final URLKey key, final String path) {
+            super(key);
             this.path = path;
         }
 
+        /**
+         * 获取注册中心里面的路径
+         *
+         * @return 注册中心里面的路径
+         */
         public String getPath() {
             return path;
         }
@@ -417,24 +410,27 @@ public abstract class AbstractRegistry implements Registry, Configure {
         protected final AtomicInteger counter = new AtomicInteger(0);
 
         /**
+         * 是否注册过
+         */
+        protected AtomicBoolean state = new AtomicBoolean(false);
+
+        /**
          * 构造函数
          *
-         * @param url URL
-         * @param key 键
+         * @param key 注册键
          */
-        public Registion(final URL url, final String key) {
-            super(url, key);
+        public Registion(final URLKey key) {
+            super(key);
         }
 
         /**
          * 构造函数
          *
-         * @param url  url
          * @param key  键
          * @param path 路径
          */
-        public Registion(final URL url, final String key, final String path) {
-            super(url, key, path);
+        public Registion(final URLKey key, final String path) {
+            super(key, path);
         }
 
         /**
@@ -453,6 +449,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
          */
         public int decRef() {
             return counter.decrementAndGet();
+        }
+
+        public AtomicBoolean getState() {
+            return state;
         }
 
         @Override
@@ -481,12 +481,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url     url
          * @param key     键
          * @param handler 参数
          */
-        public Subscription(final URL url, final String key, final EventHandler<T> handler) {
-            super(url, key);
+        public Subscription(final URLKey key, final EventHandler<T> handler) {
+            super(key);
             this.handler = handler;
         }
 
@@ -529,8 +528,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
      */
     protected static class ClusterSubscription extends Subscription<ClusterEvent> {
 
-        public ClusterSubscription(URL url, String key, ClusterHandler handler) {
-            super(url, key, handler);
+        public ClusterSubscription(final URLKey key, final ClusterHandler handler) {
+            super(key, handler);
         }
     }
 
@@ -542,12 +541,11 @@ public abstract class AbstractRegistry implements Registry, Configure {
         /**
          * 构造函数
          *
-         * @param url     url
          * @param key     键
          * @param handler 处理器
          */
-        public ConfigSubscription(URL url, String key, ConfigHandler handler) {
-            super(url, key, handler);
+        public ConfigSubscription(final URLKey key, final ConfigHandler handler) {
+            super(key, handler);
         }
     }
 
@@ -1394,7 +1392,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param path      路径
          */
         public Booking(final URLKey key, Runnable dirty, Publisher<T> publisher, String path) {
-            super(key.getUrl(), key.getKey(), path);
+            super(key, path);
             this.dirty = dirty;
             this.publisher = publisher;
             this.publisher.start();
@@ -1736,6 +1734,116 @@ public abstract class AbstractRegistry implements Registry, Configure {
             }
         }
 
+    }
+
+    /**
+     * 路径生成器
+     */
+    public interface Path extends Function<URLKey, String> {
+    }
+
+    /**
+     * 服务路径
+     */
+    public static class ServicePath implements Path {
+        /**
+         * 根路径
+         */
+        protected String root;
+        /**
+         * 是否需要解答
+         */
+        protected boolean withNode;
+
+        public ServicePath(String root) {
+            this(root, true);
+        }
+
+        public ServicePath(String root, boolean withNode) {
+            this.root = root;
+            this.withNode = withNode;
+        }
+
+        @Override
+        public String apply(final URLKey key) {
+            //消费者的端口都是临时的，改成进程号
+            String role = key.getString(ROLE_OPTION);
+            StringBuilder builder = new StringBuilder().append(root).append("/service/")
+                    .append(key.getService()).append("/")
+                    .append(key.getString(ALIAS_OPTION)).append("/")
+                    .append(role);
+            if (withNode) {
+                builder.append("/")
+                        .append(key.getProtocol()).append("_")
+                        .append(key.getHost()).append("_")
+                        .append(SIDE_PROVIDER.equals(role) ? key.getPort() : GlobalContext.getPid());
+            }
+            return builder.toString();
+        }
+    }
+
+    /**
+     * 集群路径
+     */
+    public static class ClusterPath implements Path {
+        /**
+         * 根路径
+         */
+        protected String root;
+
+        public ClusterPath(String root) {
+            this.root = root;
+        }
+
+        @Override
+        public String apply(URLKey key) {
+            return new StringBuilder().append(root)
+                    .append("/service/").append(key.getService()).append("/")
+                    .append(key.getString(ALIAS_OPTION)).append("/")
+                    .append(SIDE_PROVIDER).toString();
+        }
+    }
+
+    /**
+     * 配置路径
+     */
+    public static class ConfigPath implements Path {
+        /**
+         * 根路径
+         */
+        protected String root;
+
+        public ConfigPath(String root) {
+            this.root = root;
+        }
+
+        @Override
+        public String apply(URLKey key) {
+            String appName = GlobalContext.getString(KEY_APPNAME);
+            //配置按照接口级别
+            return new StringBuilder().append(root)
+                    .append("/config/").append(key.getInterface()).append("/")
+                    .append(key.getString(ROLE_OPTION))
+                    .append(StringUtils.isEmpty(appName) ? "" : "/" + appName).toString();
+        }
+    }
+
+    /**
+     * 根路径
+     */
+    public static class RootPath implements Function<URL, String> {
+
+        @Override
+        public String apply(final URL url) {
+            String root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
+            if (root.charAt(0) != '/') {
+                root = "/" + root;
+            }
+            if (root.charAt(root.length() - 1) == '/') {
+                root = root.substring(0, root.length() - 1);
+            }
+            return root;
+        }
     }
 
 }

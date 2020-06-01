@@ -21,6 +21,13 @@ package io.joyrpc.spring.schema;
  */
 
 import io.joyrpc.spring.ProviderBean;
+import io.joyrpc.util.StringUtils;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.beans.factory.config.BeanReference;
+import org.springframework.beans.factory.config.RuntimeBeanNameReference;
+import org.springframework.beans.factory.support.ManagedList;
+import org.springframework.beans.factory.xml.ParserContext;
+import org.w3c.dom.Element;
 
 /**
  * ProviderBean解析器
@@ -32,6 +39,33 @@ public class ProviderBeanDefinitionParser extends AbstractInterfaceBeanDefinitio
      */
     public ProviderBeanDefinitionParser() {
         super(ProviderBean.class, true);
+    }
+
+    @Override
+    protected void addCustomParser() {
+        super.addCustomParser();
+        parsers.put("registry", new RegistryParser());
+        parsers.put("server", new ReferenceParser("serverConfig"));
+    }
+
+    /**
+     * 解析注册中心引用
+     */
+    protected static class RegistryParser implements CustomParser {
+
+        @Override
+        public void parse(final BeanDefinition definition, final String id, final Element element, final String name,
+                          final ParserContext context) {
+            String value = element.getAttribute(name);
+            if (!StringUtils.isEmpty(value)) {
+                String[] beanIds = StringUtils.split(value, StringUtils.SEMICOLON_COMMA_WHITESPACE);
+                ManagedList<BeanReference> registryList = new ManagedList();
+                for (String beanId : beanIds) {
+                    registryList.add(new RuntimeBeanNameReference(beanId));
+                }
+                definition.getPropertyValues().addPropertyValue("registry", registryList);
+            }
+        }
     }
 
 }

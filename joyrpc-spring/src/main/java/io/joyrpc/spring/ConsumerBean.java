@@ -91,8 +91,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ApplicationEvent event) {
-        //必须在同步块里面
+    public void onApplicationEvent(final ApplicationEvent event) {
         spring.onApplicationEvent(event);
     }
 

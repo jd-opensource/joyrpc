@@ -29,13 +29,11 @@ import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -55,9 +53,10 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.JSON;
-import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.CONNECT_TIMEOUT_OPTION;
 import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.event.UpdateEvent.UpdateType.UPDATE;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -97,15 +96,15 @@ public class ZKRegistry extends AbstractRegistry {
     /**
      * 服务的路径函数 /根路径/service/接口/别名/consumer|provider/ip:port
      */
-    protected Function<URL, String> serviceFunction;
+    protected Function<URLKey, String> serviceFunction;
     /**
      * 集群的路径函数 /根路径/service/接口/别名/provider
      */
-    protected Function<URL, String> clusterFunction;
+    protected Function<URLKey, String> clusterFunction;
     /**
      * 接口配置路径函数(接口级全局配置) /根路径/config/接口/consumer|provider
      */
-    protected Function<URL, String> configFunction;
+    protected Function<URLKey, String> configFunction;
 
     /**
      * 构造函数
@@ -119,17 +118,10 @@ public class ZKRegistry extends AbstractRegistry {
         this.address = URL.valueOf(url.getString(Constants.ADDRESS_OPTION), "zookeeper", 2181, null).getAddress();
         this.sessionTimeout = url.getInteger(SESSION_TIMEOUT);
         this.connectionTimeout = url.getInteger(CONNECT_TIMEOUT_OPTION);
-        this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
-        if (root.charAt(0) != '/') {
-            root = "/" + root;
-        }
-        if (root.charAt(root.length() - 1) == '/') {
-            root = root.substring(0, root.length() - 1);
-        }
-        this.serviceFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
-        this.clusterFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
-        String appName = GlobalContext.getString(KEY_APPNAME);
-        this.configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
+        this.root = new RootPath().apply(url);
+        this.serviceFunction = new ServicePath(root);
+        this.clusterFunction = new ClusterPath(root);
+        this.configFunction = new ConfigPath(root);
     }
 
     @Override
@@ -138,8 +130,8 @@ public class ZKRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new Registion(url, key, serviceFunction.apply(url));
+    protected Registion createRegistion(final URLKey key) {
+        return new Registion(key, serviceFunction.apply(key));
     }
 
     /**
@@ -163,12 +155,12 @@ public class ZKRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key.getUrl()));
+            return new ZKClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key.getUrl()));
+            return new ZKConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key));
         }
 
         @Override
@@ -260,7 +252,7 @@ public class ZKRegistry extends AbstractRegistry {
             return Futures.call(future -> {
                 ZKClusterBooking zkBooking = (ZKClusterBooking) booking;
                 //添加监听
-                PathChildrenCache cache = new PathChildrenCache(curator.unwrap(), booking.getPath(), true);
+                PathChildrenCache cache = new MyPathChildrenCache(curator.unwrap(), booking.getPath(), true, () -> isOpen());
                 //启动监听
                 cache.start(POST_INITIALIZED_EVENT);
                 zkBooking.setChildrenCache(cache);
@@ -327,7 +319,7 @@ public class ZKRegistry extends AbstractRegistry {
                 if (pathStat == null) {
                     client.create().creatingParentsIfNeeded().forPath(booking.getPath(), new byte[0]);
                 }
-                NodeCache cache = new NodeCache(client, booking.getPath());
+                NodeCache cache = new MyNodeCache(client, booking.getPath(), () -> isOpen());
                 cache.start();
                 zkBooking.setNodeCache(cache);
                 future.complete(null);
@@ -436,6 +428,48 @@ public class ZKRegistry extends AbstractRegistry {
 
         public AtomicLong getStat() {
             return stat;
+        }
+    }
+
+    /**
+     * PathChildrenCache
+     */
+    protected static class MyPathChildrenCache extends PathChildrenCache {
+
+        protected Supplier<Boolean> open;
+
+        public MyPathChildrenCache(CuratorFramework client, String path, boolean cacheData, Supplier<Boolean> open) {
+            super(client, path, cacheData);
+            this.open = open;
+        }
+
+        @Override
+        protected void handleException(Throwable e) {
+            if (open.get()) {
+                //防止退出的时候打印异常
+                super.handleException(e);
+            }
+        }
+    }
+
+    /**
+     * NodeCache
+     */
+    protected static class MyNodeCache extends NodeCache {
+
+        protected Supplier<Boolean> open;
+
+        public MyNodeCache(CuratorFramework client, String path, Supplier<Boolean> open) {
+            super(client, path);
+            this.open = open;
+        }
+
+        @Override
+        protected void handleException(Throwable e) {
+            if (open.get()) {
+                //防止退出的时候打印异常
+                super.handleException(e);
+            }
         }
     }
 }

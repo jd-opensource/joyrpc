@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static io.joyrpc.context.EnvironmentSupplier.SPRING_ORDER;
+import static io.joyrpc.util.Maps.put;
 
 /**
  * Spring环境变量
@@ -39,6 +40,7 @@ public class SpringEnvironmentSupplier implements EnvironmentSupplier {
 
     public static final String BEAN_NAME = "springEnvironmentSupplier";
     public static final String SPRING_APPLICATION_NAME = "spring.application.name";
+    public static final String SPRING_APPLICATION_SERVICE = "spring.application.service";
     public static final String SPRING_PROFILES_ACTIVE = "spring.profiles.active";
 
     /**
@@ -53,8 +55,9 @@ public class SpringEnvironmentSupplier implements EnvironmentSupplier {
     @Override
     public Map<String, String> environment() {
         Map<String, String> result = new HashMap<>();
-        result.put(SPRING_APPLICATION_NAME, environment.getProperty(SPRING_APPLICATION_NAME));
-        result.put(SPRING_PROFILES_ACTIVE, environment.getProperty(SPRING_PROFILES_ACTIVE));
+        put(result, SPRING_APPLICATION_NAME, environment.getProperty(SPRING_APPLICATION_NAME));
+        put(result, SPRING_APPLICATION_SERVICE, environment.getProperty(SPRING_APPLICATION_SERVICE));
+        put(result, SPRING_PROFILES_ACTIVE, environment.getProperty(SPRING_PROFILES_ACTIVE));
         return result;
     }
 }

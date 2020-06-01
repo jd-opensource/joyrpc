@@ -60,6 +60,7 @@ import java.util.function.Predicate;
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.Maps.put;
 import static io.joyrpc.util.StringUtils.*;
 import static io.joyrpc.util.Timer.timer;
 
@@ -137,8 +138,8 @@ public class ConsulRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new ConsulRegistion(url, key, url.getPath());
+    protected Registion createRegistion(final URLKey key) {
+        return new ConsulRegistion(key);
     }
 
     /**
@@ -171,13 +172,12 @@ public class ConsulRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new ConsulClusterBooking(key, this::dirty, getPublisher(key.getKey()), key.getUrl().getPath());
+            return new ConsulClusterBooking(key, this::dirty, getPublisher(key.getKey()), key.getService());
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            URL url = key.getUrl();
-            String path = url.getPath() + "/" + url.getString(ROLE_OPTION) + appPath;
+            String path = key.getInterface() + "/" + key.getString(ROLE_OPTION) + appPath;
             return new ConsulConfigBooking(key, this::dirty, getPublisher(key.getKey()), path);
         }
 
@@ -210,8 +210,7 @@ public class ConsulRegistry extends AbstractRegistry {
 
         @Override
         protected CompletableFuture<Void> doRegister(final Registion registion) {
-            URL url = registion.getUrl();
-            if (Constants.SIDE_CONSUMER.equals(url.getString(Constants.ROLE_OPTION.getName()))) {
+            if (Constants.SIDE_CONSUMER.equals(registion.getString(Constants.ROLE_OPTION))) {
                 //消费者不注册
                 return CompletableFuture.completedFuture(null);
             }
@@ -219,13 +218,13 @@ public class ConsulRegistry extends AbstractRegistry {
             cr.transportErrors.set(0);
             //注册，服务状态异常后自动注销的最小时间是1分钟
             ServiceOptions opts = new ServiceOptions()
-                    .setName(cr.getPath())
+                    .setName(cr.getService())
                     .setId(cr.getInsId())
-                    .setTags(getTags(url))
-                    .setMeta(getMeta(url))
+                    .setTags(getTags(cr.getUrl()))
+                    .setMeta(getMeta(cr.getUrl()))
                     .setCheckOptions(new CheckOptions().setTtl(registry.ttl + "ms").setStatus(CheckStatus.PASSING).setDeregisterAfter("1m"))
-                    .setAddress(url.getHost())
-                    .setPort(url.getPort());
+                    .setAddress(cr.getHost())
+                    .setPort(cr.getPort());
 
             CompletableFuture<Void> result = new CompletableFuture<>();
             client.registerService(opts, r -> {
@@ -439,7 +438,7 @@ public class ConsulRegistry extends AbstractRegistry {
                         } catch (SerializerException e) {
                             //解析出错，设置新的版本，跳过错误的数据
                             booking.setVersion(keyValue.getModifyIndex());
-                            logger.error(String.format("Error occurs while parsing config of %s\n%s", booking.getPath(), keyValue.getValue()));
+                            logger.error(String.format("Error occurs while parsing config of %s\n%s", booking.getInterface(), keyValue.getValue()));
                         }
                     } else if (booking.getVersion() < 0) {
                         booking.handle(new ConfigEvent(registry, null, 0, new HashMap<>()));
@@ -457,23 +456,24 @@ public class ConsulRegistry extends AbstractRegistry {
         protected Map<String, String> getMeta(URL url) {
             Map<String, String> result = new HashMap<>(30);
             Parametric context = new MapParametric(GlobalContext.getContext());
-            result.put(KEY_APPAPTH, context.getString(KEY_APPAPTH));
-            result.put(KEY_APPID, context.getString(KEY_APPID));
-            result.put(KEY_APPNAME, context.getString(KEY_APPNAME));
-            result.put(KEY_APPINSID, context.getString(KEY_APPINSID));
-            result.put(JAVA_VERSION_KEY, context.getString(KEY_JAVA_VERSION));
-            result.put(VERSION_KEY, context.getString(PROTOCOL_VERSION_KEY));
-            result.put(Region.REGION, registry.getRegion());
-            result.put(Region.DATA_CENTER, registry.getDataCenter());
-            result.put(BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
+            put(result, KEY_APPAPTH, context.getString(KEY_APPAPTH));
+            put(result, KEY_APPID, context.getString(KEY_APPID));
+            put(result, KEY_APPNAME, context.getString(KEY_APPNAME));
+            put(result, KEY_APPINSID, context.getString(KEY_APPINSID));
+            put(result, JAVA_VERSION_KEY, context.getString(KEY_JAVA_VERSION));
+            put(result, VERSION_KEY, context.getString(PROTOCOL_VERSION_KEY));
+            put(result, Region.REGION, registry.getRegion());
+            put(result, Region.DATA_CENTER, registry.getDataCenter());
+            put(result, BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
             if (url.getBoolean(SSL_ENABLE)) {
                 result.put(SSL_ENABLE.getName(), "true");
             }
-            result.put(SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
-            result.put(WEIGHT_OPTION.getName(), String.valueOf(url.getInteger(WEIGHT_OPTION)));
-            result.put(TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
-            result.put(PROTOCOL_KEY, url.getProtocol());
-            result.put(ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
+            put(result, SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
+            put(result, WEIGHT_OPTION.getName(), String.valueOf(url.getInteger(WEIGHT_OPTION)));
+            put(result, TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
+            put(result, PROTOCOL_KEY, url.getProtocol());
+            put(result, ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
+
             return result;
         }
 
@@ -506,8 +506,8 @@ public class ConsulRegistry extends AbstractRegistry {
          */
         protected AtomicInteger transportErrors = new AtomicInteger();
 
-        public ConsulRegistion(URL url, String key, String path) {
-            super(url, key, path);
+        public ConsulRegistion(URLKey key) {
+            super(key);
             insId = UUID.randomUUID().toString();
         }
 

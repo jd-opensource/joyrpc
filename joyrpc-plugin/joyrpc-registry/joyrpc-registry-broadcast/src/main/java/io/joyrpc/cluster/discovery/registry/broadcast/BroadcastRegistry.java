@@ -34,12 +34,10 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -53,7 +51,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
-import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.event.UpdateEvent.UpdateType.UPDATE;
 import static io.joyrpc.util.Timer.timer;
@@ -113,19 +110,19 @@ public class BroadcastRegistry extends AbstractRegistry {
     /**
      * 存储provider的Map的路径函数
      */
-    protected Function<URL, String> providersRootKeyFunc;
+    protected Function<URLKey, String> clusterPath;
     /**
      * 存在provider或者consumer的Map的路径函数
      */
-    protected Function<URL, String> serviceRootKeyFunc;
+    protected Function<URLKey, String> servicePath;
     /**
      * provider或consumer在存储map中的key值的函数
      */
-    protected Function<URL, String> serviceNodeKeyFunc;
+    protected Function<URLKey, String> nodePath;
     /**
      * 存储接口配置的Map的路径函数
      */
-    protected Function<URL, String> configRootKeyFunc;
+    protected Function<URLKey, String> configPath;
 
     /**
      * 构造函数
@@ -156,23 +153,16 @@ public class BroadcastRegistry extends AbstractRegistry {
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)
                 .setMulticastGroup(url.getString(MULTICAST_GROUP)).setMulticastPort(url.getPositiveInt(MULTICAST_PORT));
         this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());
-        this.root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
-        if (root.charAt(0) == '/') {
-            root = root.substring(1);
-        }
-        if (root.charAt(root.length() - 1) == '/') {
-            root = root.substring(0, root.length() - 1);
-        }
-        this.providersRootKeyFunc = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
-        this.serviceRootKeyFunc = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION);
-        this.serviceNodeKeyFunc = u -> u.getProtocol() + "://" + u.getHost() + ":" + u.getPort();
-        String appName = GlobalContext.getString(KEY_APPNAME);
-        this.configRootKeyFunc = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
+        this.root = new RootPath().apply(url);
+        this.clusterPath = new ClusterPath(root);
+        this.servicePath = new ServicePath(root, false);
+        this.nodePath = u -> u.getProtocol() + "://" + u.getHost() + ":" + u.getPort();
+        this.configPath = new ConfigPath(root);
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new BroadcastRegistion(url, key, serviceRootKeyFunc.apply(url), serviceNodeKeyFunc.apply(url));
+    protected Registion createRegistion(final URLKey key) {
+        return new BroadcastRegistion(key, servicePath.apply(key), nodePath.apply(key));
     }
 
     @Override
@@ -210,12 +200,12 @@ public class BroadcastRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new BroadcastClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.providersRootKeyFunc.apply(key.getUrl()));
+            return new BroadcastClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterPath.apply(key));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new BroadcastConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configRootKeyFunc.apply(key.getUrl()));
+            return new BroadcastConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configPath.apply(key));
         }
 
         @Override
@@ -311,8 +301,8 @@ public class BroadcastRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doDeregister(final Registion registion) {
             return Futures.call(future -> {
-                String name = registry.serviceRootKeyFunc.apply(registion.getUrl());
-                String key = registry.serviceNodeKeyFunc.apply(registion.getUrl());
+                String name = registry.servicePath.apply(registion);
+                String key = registry.nodePath.apply(registion);
                 IMap<String, URL> iMap = instance.getMap(name);
                 iMap.removeAsync(key).andThen(new ExecutionCallback<URL>() {
                     @Override
@@ -422,8 +412,8 @@ public class BroadcastRegistry extends AbstractRegistry {
          */
         protected String node;
 
-        public BroadcastRegistion(final URL url, final String key, final String path, final String node) {
-            super(url, key, path);
+        public BroadcastRegistion(final URLKey key, final String path, final String node) {
+            super(key, path);
             this.node = node;
         }
 

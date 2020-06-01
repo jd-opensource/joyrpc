@@ -91,8 +91,10 @@ public class StateMachine<T extends StateMachine.Controller> {
      */
     public CompletableFuture<Void> open(final Runnable runnable) {
         if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.OPENING)) {
-            publish(EventType.START_OPEN);
+            //这个时候才创建Future，存在并发风险，并发调用getOpenFuture为空
             final CompletableFuture<Void> future = stateFuture.newOpenFuture();
+            //把通知事件放在newOpenFuture后，可以减少并发问题
+            publish(EventType.START_OPEN);
             final T cc = supplier.get();
             controller = cc;
             //在赋值controller之后执行
@@ -118,15 +120,22 @@ public class StateMachine<T extends StateMachine.Controller> {
             });
             return future;
         } else {
-            switch (status) {
-                case OPENING:
-                case OPENED:
-                    //可重入，没有并发调用
-                    return stateFuture.getOpenFuture();
-                default:
-                    //其它状态不应该并发执行
-                    return Futures.completeExceptionally(new InitializationException("state is illegal."));
+            CompletableFuture<Void> result = null;
+            while (result == null) {
+                switch (status) {
+                    case OPENING:
+                        //并发问题，这个时候可能还没有创建好Future，循环一下
+                        result = stateFuture.getOpenFuture();
+                        break;
+                    case OPENED:
+                        //可重入，没有并发调用
+                        return stateFuture.getOpenFuture();
+                    default:
+                        //其它状态不应该并发执行
+                        return Futures.completeExceptionally(new InitializationException("state is illegal."));
+                }
             }
+            return result;
         }
     }
 

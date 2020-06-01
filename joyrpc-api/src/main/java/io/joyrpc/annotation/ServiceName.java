@@ -9,9 +9,9 @@ package io.joyrpc.annotation;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,6 +20,7 @@ package io.joyrpc.annotation;
  * #L%
  */
 
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -27,13 +28,12 @@ import java.lang.annotation.Target;
 import static java.lang.annotation.ElementType.TYPE;
 
 /**
- * 服务
- * @See io.joyrpc.annotation.Alias
+ * 服务名称，用于注册订阅
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({TYPE})
-@Deprecated
-public @interface Service {
+@Inherited
+public @interface ServiceName {
 
     String name() default "";
 }

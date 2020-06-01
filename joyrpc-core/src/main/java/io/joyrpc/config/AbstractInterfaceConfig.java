@@ -21,6 +21,7 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.annotation.Alias;
+import io.joyrpc.annotation.ServiceName;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.Region;
@@ -51,11 +52,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.CONFIGURATOR;
 import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Configurator.*;
+import static io.joyrpc.util.StringUtils.isEmpty;
 import static io.joyrpc.util.StringUtils.isNotEmpty;
 import static io.joyrpc.util.Timer.timer;
 
@@ -67,15 +70,18 @@ import static io.joyrpc.util.Timer.timer;
 @ValidateFilter
 public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     private final static Logger logger = LoggerFactory.getLogger(AbstractInterfaceConfig.class);
-
+    /**
+     * 服务名称
+     */
+    protected String serviceName;
+    /**
+     * 服务分组
+     */
+    protected String alias;
     /**
      * 不管普通调用和泛化调用，都是设置实际的接口类名称
      */
     protected String interfaceClazz;
-    /**
-     * 服务别名
-     */
-    protected String alias;
     /**
      * 过滤器配置，多个用逗号隔开
      */
@@ -194,19 +200,19 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     /**
      * 获取接口类
      *
-     * @return
+     * @return 接口类
      */
     public Class getInterfaceClass() {
         return interfaceClass;
     }
 
+    /**
+     * 设置接口名称
+     *
+     * @param interfaceClass 接口类
+     */
     public void setInterfaceClass(Class interfaceClass) {
         this.interfaceClass = interfaceClass;
-        if (interfaceClass != null) {
-            if (interfaceClazz == null || interfaceClazz.isEmpty()) {
-                interfaceClazz = interfaceClass.getName();
-            }
-        }
     }
 
     /**
@@ -225,13 +231,47 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     public abstract String name();
 
-    public String getInterfaceClazz() {
-        return interfaceClazz;
+    /**
+     * 获取服务名称
+     *
+     * @return 服务名称
+     */
+    public String getServiceName() {
+        return getServiceName(null);
     }
 
-    @Alias("interface")
-    public void setInterfaceClazz(String interfaceClazz) {
-        this.interfaceClazz = interfaceClazz;
+    /**
+     * 获取服务名称
+     *
+     * @param supplier 额外的提供者
+     * @return 服务名称
+     */
+    protected String getServiceName(final Supplier<String> supplier) {
+        String result = serviceName;
+        if (isEmpty(result)) {
+            Class<?> clazz = getInterfaceClass();
+            if (clazz != null) {
+                ServiceName service = clazz.getAnnotation(ServiceName.class);
+                if (service != null && !service.name().isEmpty()) {
+                    //判断服务名
+                    result = service.name();
+                }
+            }
+            if (isEmpty(result)) {
+                if (supplier != null) {
+                    result = supplier.get();
+                }
+                if (isEmpty(result)) {
+                    result = getInterfaceClazz();
+                }
+            }
+            serviceName = result;
+        }
+        return result;
+    }
+
+    public void setServiceName(String serviceName) {
+        this.serviceName = serviceName;
     }
 
     public String getAlias() {
@@ -240,6 +280,26 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
 
     public void setAlias(String alias) {
         this.alias = alias;
+    }
+
+    public String getInterfaceClazz() {
+        String result = interfaceClazz;
+        if (result == null || result.isEmpty()) {
+            Class<?> clazz = getInterfaceClass();
+            if (clazz != null) {
+                Alias alias = clazz.getAnnotation(Alias.class);
+                if (alias != null && !alias.value().isEmpty()) {
+                    result = alias.value();
+                }
+            }
+            interfaceClazz = result;
+        }
+        return result;
+    }
+
+    @Alias("interface")
+    public void setInterfaceClazz(String interfaceClazz) {
+        this.interfaceClazz = interfaceClazz;
     }
 
     public boolean isRegister() {
@@ -564,8 +624,9 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     @Override
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
-        addElement2Map(params, Constants.INTERFACE_CLAZZ_OPTION, interfaceClazz);
+        addElement2Map(params, Constants.SERVICE_NAME_OPTION, getServiceName());
         addElement2Map(params, Constants.ALIAS_OPTION, alias);
+        addElement2Map(params, Constants.INTERFACE_CLAZZ_OPTION, getInterfaceClazz());
         addElement2Map(params, Constants.FILTER_OPTION, filter);
         //register与subscribe默认值为true，防止url过长，为true的情况，不加入params
         if (!register) {
@@ -838,7 +899,8 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                 }
                 future.complete(null);
             } else {
-                registry.open().whenComplete((v, t) -> {
+                CompletableFuture<Void> open = registry.open();
+                open.whenComplete((v, t) -> {
                     if (t != null) {
                         future.completeExceptionally(new InitializationException(
                                 String.format("Registry open error. %s", registry.getUrl().toString(false, false))));

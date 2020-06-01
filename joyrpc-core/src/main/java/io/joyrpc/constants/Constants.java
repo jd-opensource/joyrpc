@@ -30,6 +30,7 @@ import io.joyrpc.util.GrpcType;
 
 import java.lang.reflect.Method;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.Plugin.GRPC_FACTORY;
@@ -350,6 +351,10 @@ public class Constants {
      */
     public final static String KEY_APPGROUP = "appGroup";
     /**
+     * 服务名称
+     */
+    public final static String KEY_APPSERVICE = "appService";
+    /**
      * 应用实例ID
      */
     public final static String KEY_APPINSID = "appInsId";
@@ -455,6 +460,14 @@ public class Constants {
      * grpc header 异常消息key
      */
     public static final String GRPC_MESSAGE_KEY = "grpc-message";
+    public static final String SERVICE_NAME_KEY = "serviceName";
+    public static final String ROLE_KEY = "side";
+    /**
+     * 分组
+     */
+    public static final String ALIAS_KEY = "alias";
+
+    public static final String TYPE_KEY = "type";
 
     /**
      * eventbus 默认常量
@@ -463,21 +476,23 @@ public class Constants {
     public static final String EVENT_PUBLISHER_SERVER_NAME = "event.server";
     public static final PublisherConfig EVENT_PUBLISHER_TRANSPORT_CONF = PublisherConfig.builder().timeout(1000).build();
 
-
     /**
      * 方法参数函数
      */
     public static final BiFunction<String, String, String> METHOD_KEY_FUNC = (method, key) -> key == null ? null : new StringBuilder(60).append(URL_METHOD_PREX).append(method).append(".").append(key).toString();
 
-    /*------------------------ 通用配置 ------------------------*/
     public static final URLOption<String> FILTER_OPTION = new URLOption<>("filter", "");
     public static final URLOption<String> ADDRESS_OPTION = new URLOption<>("address", "");
-    public static final URLOption<String> ALIAS_OPTION = new URLOption<>("alias", "");
+    public static final URLOption<String> ALIAS_OPTION = new URLOption<>(ALIAS_KEY, "");
     public static final URLOption<Boolean> EMPTY_ALIAS_OPTION = new URLOption<>("emptyAlias", () -> GlobalContext.getBoolean("emptyAlias", false));
     public static final URLOption<Long> START_TIME_OPTION = new URLOption<>("startTime", 0L); //provider启动时间戳
     public static final URLOption<Boolean> SERVICE_MESH_OPTION = new URLOption<>(SERVICE_MESH_KEY, false);
     public static final URLOption<String> FILTER_CHAIN_FACTORY_OPTION = new URLOption<>("filterChainFactory", "default");
     public static final URLOption<String> SERVICE_VERSION_OPTION = new URLOption<>("serviceVersion", "");
+    /**
+     * 别名正则验证，默认可用的字符串为：英文大小写，数字，横杆-，下划线_，点. 冒号:
+     */
+    public static final URLOption<String> ALIAS_PATTERN_OPTION = new URLOption<>("alias.pattern", "^[a-zA-Z0-9\\-\\_\\.:]+$");
 
     /**
      * 消费者调用超时时间
@@ -485,17 +500,21 @@ public class Constants {
     public static final URLOption<Integer> TIMEOUT_OPTION = new URLOption<>("timeout", DEFAULT_TIMEOUT);
     public static final URLOption<Boolean> REGISTER_OPTION = new URLOption<>("register", true);
     public static final URLOption<Boolean> SUBSCRIBE_OPTION = new URLOption<>("subscribe", true);
+    public static final URLOption<String> SERVICE_NAME_OPTION = new URLOption<>(SERVICE_NAME_KEY, "");
     public static final URLOption<String> INTERFACE_CLAZZ_OPTION = new URLOption<>("interfaceClazz", "");
     public static final URLOption<String> URL_OPTION = new URLOption<>("url", "");
     public static final URLOption<String> INSTANCE_KEY_OPTION = new URLOption<>("insKey", "");
-    public static final URLOption<String> ROLE_OPTION = new URLOption<>("side", SIDE_CONSUMER);
+
+    public static final URLOption<String> ROLE_OPTION = new URLOption<>(ROLE_KEY, SIDE_CONSUMER);
     public static final URLOption<Boolean> ENABLE_VALIDATOR_OPTION = new URLOption<>("enableValidator", true);
     public static final URLOption<String> INTERFACE_VALIDATOR_OPTION = new URLOption<>("interfaceValidator", "standard");
-
-    /*------------------------ consumer配置 ------------------------*/
     public static final URLOption<Boolean> GENERIC_OPTION = new URLOption<>("generic", false);
     public static final URLOption<Boolean> SYSTEM_OPTION = new URLOption<>("system.service", false);
     public static final URLOption<Boolean> ASYNC_OPTION = new URLOption<>("async", false);
+    /**
+     * 获取服务名称
+     */
+    public static final Function<URL, String> SERVICE_NAME_FUNCTION = u -> u.getString(SERVICE_NAME_KEY, u.getPath());
     /**
      * 默认分发算法
      */

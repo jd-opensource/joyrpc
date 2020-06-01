@@ -40,9 +40,9 @@ import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
+import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
-import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -59,7 +59,6 @@ import java.util.function.Function;
 import static io.etcd.jetcd.watch.WatchEvent.EventType.PUT;
 import static io.joyrpc.Plugin.CONFIG_EVENT_HANDLER;
 import static io.joyrpc.Plugin.JSON;
-import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.event.UpdateEvent.UpdateType;
 import static io.joyrpc.event.UpdateEvent.UpdateType.FULL;
 import static io.joyrpc.event.UpdateEvent.UpdateType.UPDATE;
@@ -98,15 +97,15 @@ public class EtcdRegistry extends AbstractRegistry {
     /**
      * 服务的路径函数 /根路径/service/接口/别名/consumer|provider/ip:port
      */
-    protected Function<URL, String> serviceFunction;
+    protected Function<URLKey, String> servicePath;
     /**
      * 集群的路径函数 /根路径/service/接口/别名/provider
      */
-    protected Function<URL, String> clusterFunction;
+    protected Function<URLKey, String> clusterPath;
     /**
      * 接口配置路径函数(接口级全局配置) /根路径/config/接口/consumer|provider/应用key
      */
-    protected Function<URL, String> configFunction;
+    protected Function<URLKey, String> configPath;
     /**
      * 注册provider的过期时间
      */
@@ -124,18 +123,10 @@ public class EtcdRegistry extends AbstractRegistry {
         this.address = URL.valueOf(url.getString(Constants.ADDRESS_OPTION), "http", 2379, null).toString();
         this.authority = url.getString(AUTHORITY);
         this.timeToLive = Math.max(url.getLong(TTL), 30000L);
-        root = url.getString("namespace", GlobalContext.getString(PROTOCOL_KEY));
-        if (root.charAt(0) != '/') {
-            root = "/" + root;
-        }
-        if (root.charAt(root.length() - 1) == '/') {
-            root = root.substring(0, root.length() - 1);
-        }
-
-        serviceFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + u.getString(ROLE_OPTION) + "/" + u.getProtocol() + "_" + u.getHost() + "_" + u.getPort();
-        clusterFunction = u -> root + "/service/" + u.getPath() + "/" + u.getString(ALIAS_OPTION) + "/" + SIDE_PROVIDER;
-        String appName = GlobalContext.getString(KEY_APPNAME);
-        configFunction = u -> root + "/config/" + u.getPath() + "/" + u.getString(ROLE_OPTION) + (StringUtils.isEmpty(appName) ? "" : "/" + appName);
+        this.root = new RootPath().apply(url);
+        this.servicePath = new ServicePath(root);
+        this.clusterPath = new ClusterPath(root);
+        this.configPath = new ConfigPath(root);
     }
 
     @Override
@@ -144,8 +135,8 @@ public class EtcdRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected Registion createRegistion(final URL url, final String key) {
-        return new Registion(url, key, serviceFunction.apply(url));
+    protected Registion createRegistion(final URLKey key) {
+        return new Registion(key, servicePath.apply(key));
     }
 
     /**
@@ -188,12 +179,12 @@ public class EtcdRegistry extends AbstractRegistry {
 
         @Override
         protected ClusterBooking createClusterBooking(final URLKey key) {
-            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterFunction.apply(key.getUrl()));
+            return new EtcdClusterBooking(key, this::dirty, getPublisher(key.getKey()), registry.clusterPath.apply(key));
         }
 
         @Override
         protected ConfigBooking createConfigBooking(final URLKey key) {
-            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configFunction.apply(key.getUrl()));
+            return new EtcdConfigBooking(key, this::dirty, getPublisher(key.getKey()), registry.configPath.apply(key));
         }
 
         @Override
@@ -263,7 +254,7 @@ public class EtcdRegistry extends AbstractRegistry {
             if (leaseId <= 0) {
                 //没有租约
                 future.completeExceptionally(new IllegalStateException(
-                        String.format("Error occurs while register provider of %s, caused by no leaseId. retry....", registion.getPath())));
+                        String.format("Error occurs while register provider of %s, caused by no leaseId. retry....", registion.getService())));
             } else {
                 //有租约
                 PutOption putOption = PutOption.newBuilder().withLeaseId(leaseId).build();
@@ -312,7 +303,7 @@ public class EtcdRegistry extends AbstractRegistry {
                 if (!isOpen()) {
                     future.completeExceptionally(new IllegalStateException("controller is closed."));
                 } else if (err != null) {
-                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), err.getMessage()), err);
+                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getService(), err.getMessage()), err);
                     future.completeExceptionally(err);
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
@@ -325,7 +316,7 @@ public class EtcdRegistry extends AbstractRegistry {
                         etcdBooking.setWatcher(watcher);
                         future.complete(null);
                     } catch (Exception e) {
-                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), e.getMessage()), e);
+                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getService(), e.getMessage()), e);
                         future.completeExceptionally(e);
                     }
                 }
@@ -350,12 +341,11 @@ public class EtcdRegistry extends AbstractRegistry {
             //先查询
             ByteSequence key = ByteSequence.from(etcdBooking.getPath(), UTF_8);
             //先查询，无异常后添加watcher，若结果不为空，通知FULL事件
-            GetOption getOption = GetOption.newBuilder().withPrefix(key).build();
-            client.getKVClient().get(key, getOption).whenComplete((res, err) -> {
+            client.getKVClient().get(key).whenComplete((res, err) -> {
                 if (!isOpen()) {
                     future.completeExceptionally(new IllegalStateException("controller is closed."));
                 } else if (err != null) {
-                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), err.getMessage()), err);
+                    logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getInterface(), err.getMessage()), err);
                     future.completeExceptionally(err);
                 } else {
                     List<WatchEvent> events = new ArrayList<>();
@@ -368,7 +358,7 @@ public class EtcdRegistry extends AbstractRegistry {
                         etcdBooking.setWatcher(watcher);
                         future.complete(null);
                     } catch (Exception e) {
-                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getPath(), e.getMessage()), e);
+                        logger.error(String.format("Error occurs while subscribe of %s, caused by %s. retry....", etcdBooking.getInterface(), e.getMessage()), e);
                         future.completeExceptionally(e);
                     }
                 }
@@ -499,11 +489,16 @@ public class EtcdRegistry extends AbstractRegistry {
          */
         public void onUpdate(final List<WatchEvent> events, final long version) {
             if (events != null && !events.isEmpty()) {
-                events.forEach(e -> {
+                events.forEach(event -> {
                     Map<String, String> datum = null;
-                    switch (e.getEventType()) {
+                    switch (event.getEventType()) {
                         case PUT:
-                            datum = JSON.get().parseObject(e.getKeyValue().getValue().toString(UTF_8), Map.class);
+                            String text = event.getKeyValue().getValue().toString(UTF_8);
+                            try {
+                                datum = JSON.get().parseObject(text, Map.class);
+                            } catch (SerializerException e) {
+                                logger.error("Error occurs while parsing config.\n" + text, e);
+                            }
                             break;
                         case DELETE:
                             datum = new HashMap<>();

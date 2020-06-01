@@ -66,8 +66,6 @@ public class SpringEnvironmentSupplier implements EnvironmentSupplier {
 
             }
         });
-        result.put(SPRING_APPLICATION_NAME, environment.getProperty(SPRING_APPLICATION_NAME));
-        result.put(SPRING_PROFILES_ACTIVE, environment.getProperty(SPRING_PROFILES_ACTIVE));
         return result;
     }
 

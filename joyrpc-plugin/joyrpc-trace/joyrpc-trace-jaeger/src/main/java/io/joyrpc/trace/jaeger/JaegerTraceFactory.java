@@ -202,7 +202,7 @@ public class JaegerTraceFactory implements TraceFactory {
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
-            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.nowMicros()).start();
+            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).start();
             JaegerSpanContext jsc = span.context();
             inject(jsc);
             tag(tags);
@@ -237,7 +237,7 @@ public class JaegerTraceFactory implements TraceFactory {
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
             JaegerSpanContext jsc = reject();
-            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.nowMicros()).asChildOf(jsc).start();
+            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).asChildOf(jsc).start();
             tag(tags);
         }
 

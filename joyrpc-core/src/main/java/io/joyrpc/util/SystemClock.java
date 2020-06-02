@@ -79,9 +79,10 @@ public class SystemClock {
 
     /**
      * 获取当前时钟，微妙
+     *
      * @return
      */
-    public static long nowMicros() {
+    public static long microTime() {
         long nanoTime = System.nanoTime(); // 纳秒
         return now() + (nanoTime - nanoTime / 1000000 * 1000000) / 1000;
     }

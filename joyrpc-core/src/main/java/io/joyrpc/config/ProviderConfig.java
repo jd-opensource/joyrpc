@@ -31,7 +31,7 @@ import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
@@ -626,7 +626,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                     serviceUrl = u;
                     try {
                         List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, serviceUrl)).collect(Collectors.toList());
-                        exporter = InvokerManager.export(serviceUrl, config, registries, registerUrls, configureRef, subscribeUrl, configHandler);
+                        exporter = ServiceManager.export(serviceUrl, config, registries, registerUrls, configureRef, subscribeUrl, configHandler);
                         future.complete(null);
                     } catch (Exception ex) {
                         future.completeExceptionally(ex);
@@ -739,7 +739,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 if (!isClose()) {
                     List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, newUrl)).collect(Collectors.toList());
                     URL newSubscribeUrl = config.subscribe ? buildSubscribedUrl(configureRef, newUrl) : null;
-                    Exporter newExporter = InvokerManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
+                    Exporter newExporter = ServiceManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
                     //打开
                     chain(newExporter.open(), future, s -> {
                         //异步，再次判断是否关闭了

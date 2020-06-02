@@ -41,17 +41,15 @@ import java.util.function.Consumer;
 import static io.joyrpc.util.Status.*;
 
 /**
- * 抽象调用器
+ * 抽象服务调用
  */
-public abstract class AbstractInvoker implements Invoker {
-    protected static final AtomicReferenceFieldUpdater<AbstractInvoker, Status> STATE_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractInvoker.class, Status.class, "status");
-
+public abstract class AbstractService implements Invoker {
+    protected static final AtomicReferenceFieldUpdater<AbstractService, Status> STATE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(AbstractService.class, Status.class, "status");
     /**
      * 代理的接口类
      */
     protected Class<?> interfaceClass;
-
     /**
      * 接口真实名称
      */

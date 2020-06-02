@@ -23,7 +23,7 @@ package io.joyrpc.protocol.telnet.handler;
  * #L%
  */
 
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
@@ -74,8 +74,8 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
             return new TelnetResponse(help());
         } else if (cmd.getOptions().length == 0) {
             Map<String, Object> result = new HashMap<>(100);
-            export(CALLBACK, InvokerManager.getCallbackThreadPool(), result);
-            export(InvokerManager.getServers(), result);
+            export(CALLBACK, ServiceManager.getCallbackThreadPool(), result);
+            export(ServiceManager.getServers(), result);
             return new TelnetResponse(JSON.get().toJSONString(result));
         } else {
             String port = cmd.getOptionValue("p", String.valueOf(channel.getLocalAddress().getPort()));
@@ -131,10 +131,10 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
         if (name == null) {
             return null;
         } else if (Character.isDigit(name.charAt(0))) {
-            Server server = InvokerManager.getServer(Integer.parseInt(name));
+            Server server = ServiceManager.getServer(Integer.parseInt(name));
             return server == null ? null : server.getBizThreadPool();
         } else if (CALLBACK.equalsIgnoreCase(name)) {
-            return InvokerManager.getCallbackThreadPool();
+            return ServiceManager.getCallbackThreadPool();
         }
         return null;
     }

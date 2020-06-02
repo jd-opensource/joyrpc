@@ -65,7 +65,6 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.*;
@@ -76,18 +75,15 @@ import static io.joyrpc.constants.ExceptionCode.CONSUMER_DUPLICATE_REFER;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_DUPLICATE_EXPORT;
 
 /**
+ * 服务管理器
  * @date: 9/1/2019
  */
-public class InvokerManager {
+public class ServiceManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(InvokerManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(ServiceManager.class);
 
     public static final String HASH_CODE = "hashCode";
 
-    /**
-     * 名称函数
-     */
-    public static final BiFunction<String, String, String> NAME = (className, alias) -> className + "/" + (alias == null ? "" : alias);
     protected static final String EVENT_PUBLISHER_GROUP = "event.invoker";
     protected static final String EVENT_PUBLISHER_NAME = "default";
     protected static final PublisherConfig EVENT_PUBLISHER_CONF = PublisherConfig.builder().timeout(1000).build();
@@ -95,7 +91,7 @@ public class InvokerManager {
     /**
      * 全局的生成器
      */
-    public static final InvokerManager INSTANCE = new InvokerManager();
+    public static final ServiceManager INSTANCE = new ServiceManager();
     /**
      * 事件通知器
      */
@@ -104,17 +100,14 @@ public class InvokerManager {
      * 业务服务引用
      */
     protected Map<String, Refer> refers = new ConcurrentHashMap<>();
-
     /**
      * 系统内置服务引用，需要最后关闭
      */
     protected Map<String, Refer> systems = new ConcurrentHashMap<>();
-
     /**
      * 业务服务输出,key为接口+别名，一个接口可以输出到不同的端口
      */
     protected Map<String, Map<Integer, Exporter>> exports = new ConcurrentHashMap<>();
-
     /**
      * 共享的TCP服务
      */
@@ -128,7 +121,7 @@ public class InvokerManager {
      */
     protected Map<Long, String> interfaceIds = new ConcurrentHashMap<>();
 
-    protected InvokerManager() {
+    protected ServiceManager() {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_GROUP, EVENT_PUBLISHER_NAME, EVENT_PUBLISHER_CONF);
         this.publisher.start();
@@ -250,7 +243,7 @@ public class InvokerManager {
      * @return
      */
     public static void getExporter(final String className, final String alias, BiConsumer<Integer, Exporter> consumer) {
-        Map<Integer, Exporter> exporters = getExporter(NAME.apply(className, alias));
+        Map<Integer, Exporter> exporters = getExporter(EXPORTER_NAME_FUNC.apply(className, alias));
         if (null != exporters) {
             exporters.forEach(consumer);
         }
@@ -278,7 +271,7 @@ public class InvokerManager {
      * @return
      */
     public static Exporter getExporter(final String className, final String alias, final int port) {
-        return getExporter(NAME.apply(className, alias), port);
+        return getExporter(EXPORTER_NAME_FUNC.apply(className, alias), port);
     }
 
     /**
@@ -318,7 +311,7 @@ public class InvokerManager {
      * @return
      */
     public static Exporter getFirstExporter(final String className, final String alias) {
-        return getFirstExporter(NAME.apply(className, alias));
+        return getFirstExporter(EXPORTER_NAME_FUNC.apply(className, alias));
     }
 
     /**
@@ -470,7 +463,7 @@ public class InvokerManager {
             //refer的名称和key保持一致，便于删除
             return new Refer(clusterName, url, config, registry, registerUrl, configure, subscribeUrl, configHandler,
                     cluster, loadBalance, callbackManager.getConsumer(), this.publisher,
-                    InvokerManager::getFirstExporter,
+                    ServiceManager::getFirstExporter,
                     (v, t) -> refers.remove(v.getName()));
         });
     }
@@ -561,7 +554,7 @@ public class InvokerManager {
                                 final URL subscribeUrl,
                                 final ConfigHandler configHandler) {
         //使用url.getPath获取真实接口名称
-        final String name = NAME.apply(url.getPath(), config.getAlias());
+        final String name = EXPORTER_NAME_FUNC.apply(url.getPath(), config.getAlias());
         Map<Integer, Exporter> ports = exports.get(name);
         if (ports != null && ports.containsKey(url.getPort())) {
             throw new IllegalConfigureException(

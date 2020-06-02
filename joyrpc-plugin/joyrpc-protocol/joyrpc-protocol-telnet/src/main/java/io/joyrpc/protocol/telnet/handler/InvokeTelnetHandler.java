@@ -32,7 +32,7 @@ import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.channel.Channel;
@@ -229,7 +229,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
      * @return
      */
     protected Exporter getExporter(final String interfaceId, final String alias) {
-        return alias != null ? InvokerManager.getFirstExporter(interfaceId, alias) : InvokerManager.getFirstExporterByInterface(interfaceId);
+        return alias != null ? ServiceManager.getFirstExporter(interfaceId, alias) : ServiceManager.getFirstExporterByInterface(interfaceId);
     }
 
     /**

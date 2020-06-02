@@ -470,6 +470,11 @@ public class Constants {
     public static final String TYPE_KEY = "type";
 
     /**
+     * 服务名称函数
+     */
+    public static final BiFunction<String, String, String> EXPORTER_NAME_FUNC = (className, alias) -> className + "/" + (alias == null ? "" : alias);
+
+    /**
      * eventbus 默认常量
      */
     public static final String EVENT_PUBLISHER_CLIENT_NAME = "event.client";

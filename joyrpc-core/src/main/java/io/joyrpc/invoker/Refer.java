@@ -74,17 +74,15 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
-import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
-import static io.joyrpc.constants.Constants.HIDDEN_KEY_TIME_OUT;
+import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
-import static io.joyrpc.invoker.InvokerManager.NAME;
 
 /**
  * 引用
  *
  * @date: 2019/1/10
  */
-public class Refer extends AbstractInvoker {
+public class Refer extends AbstractService {
     private static final Logger logger = LoggerFactory.getLogger(Refer.class);
     /**
      * 消费配置
@@ -212,7 +210,7 @@ public class Refer extends AbstractInvoker {
         this.interfaceName = url.getPath();
 
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
-        this.exporterName = NAME.apply(interfaceName, alias);
+        this.exporterName = EXPORTER_NAME_FUNC.apply(interfaceName, alias);
         //路由器
         this.nodeSelector = configure(NODE_SELECTOR.get(url.getString(Constants.NODE_SELECTOR_OPTION)));
         //方法选项

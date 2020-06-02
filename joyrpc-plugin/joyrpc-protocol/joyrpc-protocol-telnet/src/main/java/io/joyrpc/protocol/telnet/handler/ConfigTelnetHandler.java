@@ -24,7 +24,7 @@ import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.invoker.Refer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
@@ -94,7 +94,7 @@ public class ConfigTelnetHandler extends AbstractTelnetHandler {
             String alias = ifaceAndAlias.length > 1 ? ifaceAndAlias[1] : null;
             //输出所有分组
             StringBuilder builder = new StringBuilder(1024);
-            Map<Integer, Exporter> exporters = InvokerManager.getExporter(ifaceAndAlias[0]);
+            Map<Integer, Exporter> exporters = ServiceManager.getExporter(ifaceAndAlias[0]);
             if (exporters != null) {
                 exporters.values().forEach(exporter -> {
                     if (alias == null || alias.equals(exporter.getAlias())) {
@@ -106,7 +106,7 @@ public class ConfigTelnetHandler extends AbstractTelnetHandler {
         } else if (cmd.hasOption("c")) {
             String[] ifaceAndAlias = cmd.getOptionValues("c");
             String alias = ifaceAndAlias.length > 1 ? ifaceAndAlias[1] : null;
-            List<Refer> refers = InvokerManager.getRefers();
+            List<Refer> refers = ServiceManager.getRefers();
             StringBuilder builder = new StringBuilder(1024);
             for (Refer refer : refers) {
                 ConsumerConfig cc = refer.getConfig();
@@ -124,7 +124,7 @@ public class ConfigTelnetHandler extends AbstractTelnetHandler {
             result = JSON.get().toJSONString(GlobalContext.getInterfaceConfigs());
         } else if (cmd.hasOption("i")) {
             Map<String, String> ifaceIds = new HashMap<>();
-            InvokerManager.getInterfaceIds().forEach((k, v) -> ifaceIds.put(v, String.valueOf(k)));
+            ServiceManager.getInterfaceIds().forEach((k, v) -> ifaceIds.put(v, String.valueOf(k)));
             result = JSON.get().toJSONString(ifaceIds);
         } else {
             result = help();

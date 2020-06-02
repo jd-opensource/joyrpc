@@ -23,7 +23,6 @@ package io.joyrpc.protocol.telnet.handler;
  * #L%
  */
 
-import io.joyrpc.invoker.InvokerManager;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ServerChannel;
@@ -33,8 +32,8 @@ import org.apache.commons.cli.Options;
 
 import java.util.List;
 
-import static io.joyrpc.invoker.InvokerManager.getServer;
-import static io.joyrpc.invoker.InvokerManager.getServers;
+import static io.joyrpc.invoker.ServiceManager.getServer;
+import static io.joyrpc.invoker.ServiceManager.getServers;
 
 /**
  * @date: 2019/1/22

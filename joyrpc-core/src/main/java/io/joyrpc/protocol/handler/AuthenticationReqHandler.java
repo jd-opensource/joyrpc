@@ -22,7 +22,7 @@ package io.joyrpc.protocol.handler;
 
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.permission.Authentication;
 import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MessageHandler;
@@ -74,7 +74,7 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         int port = channel.getLocalAddress().getPort();
         String className = session.getInterfaceName();
         String alias = session.getAlias();
-        Exporter exporter = InvokerManager.getExporter(className, alias, port);
+        Exporter exporter = ServiceManager.getExporter(className, alias, port);
         if (exporter == null) {
             //抛出异常
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),

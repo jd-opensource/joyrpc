@@ -63,7 +63,7 @@ import static io.joyrpc.constants.Constants.FILTER_CHAIN_FACTORY_OPTION;
 /**
  * @date: 15/1/2019
  */
-public class Exporter extends AbstractInvoker {
+public class Exporter extends AbstractService {
 
     private static final Logger logger = LoggerFactory.getLogger(Exporter.class);
     /**

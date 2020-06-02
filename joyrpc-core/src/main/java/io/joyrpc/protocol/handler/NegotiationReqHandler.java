@@ -25,7 +25,7 @@ import io.joyrpc.constants.Version;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
@@ -98,7 +98,7 @@ public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> i
         session.setChecksums(negotiation.getChecksums());
         session.putAll(attributes);
         //提前绑定Exporter
-        session.setExporter(InvokerManager.getExporter(session.getInterfaceName(), session.getAlias(),
+        session.setExporter(ServiceManager.getExporter(session.getInterfaceName(), session.getAlias(),
                 session.localAddress.getPort()));
         channel.addSession(sessionId, session);
     }

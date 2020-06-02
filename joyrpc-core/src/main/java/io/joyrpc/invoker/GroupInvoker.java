@@ -30,7 +30,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 /**
- * 分组路由
+ * 分组路由调用
  */
 @Extensible("groupRoute")
 public interface GroupInvoker extends Invoker, InvokerAware, Prototype {

@@ -28,7 +28,7 @@ import io.joyrpc.context.injection.RespInjection;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.*;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
@@ -207,7 +207,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         transmits.forEach(o -> o.restoreOnReceive(request, session));
         //直接使用会话上的Exporter，加快性能
         if (exporter == null) {
-            exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
+            exporter = ServiceManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
             if (exporter == null) {
                 //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
                 throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
@@ -242,7 +242,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         if (Character.isDigit(className.charAt(0))) {
             //处理接口ID，兼容老版本调用
             try {
-                className = InvokerManager.getClassName(Long.parseLong(className));
+                className = ServiceManager.getClassName(Long.parseLong(className));
                 if (className == null) {
                     throw new ClassNotFoundException("class is not found by interfaceId " + invocation.getClassName());
                 }

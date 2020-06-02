@@ -25,7 +25,7 @@ import io.joyrpc.Result;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.*;
@@ -53,10 +53,10 @@ public class CallbackReqHandler implements MessageHandler {
         // handle the callback Request
         RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
         String callbackInsId = (String) request.getHeader().getAttribute(HEAD_CALLBACK_INSID);
-        Invoker invoker = InvokerManager.getConsumerCallback().getInvoker(callbackInsId);
+        Invoker invoker = ServiceManager.getConsumerCallback().getInvoker(callbackInsId);
         Channel channel = context.getChannel();
         Header header = message.getHeader();
-        InvokerManager.getCallbackThreadPool().execute(() -> {
+        ServiceManager.getCallbackThreadPool().execute(() -> {
             try {
                 //TODO 参数恢复
                 CompletableFuture<Result> future = invoker != null ? invoker.invoke(request) :

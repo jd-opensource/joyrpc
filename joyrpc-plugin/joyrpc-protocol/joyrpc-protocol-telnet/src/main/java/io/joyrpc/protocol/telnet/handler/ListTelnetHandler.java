@@ -26,7 +26,7 @@ package io.joyrpc.protocol.telnet.handler;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.URL;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
 import org.apache.commons.cli.CommandLine;
@@ -72,7 +72,7 @@ public class ListTelnetHandler extends AbstractTelnetHandler {
             String[] realArgs = cmd.getArgs();
             if (realArgs == null || realArgs.length == 0) {
                 Set<ProviderInfo> providers = new HashSet<>();
-                InvokerManager.exports(o -> providers.add(new ProviderInfo(o.getInterfaceClass().getCanonicalName(), o.getInterfaceClass(), o.getUrl())));
+                ServiceManager.exports(o -> providers.add(new ProviderInfo(o.getInterfaceClass().getCanonicalName(), o.getInterfaceClass(), o.getUrl())));
                 //打印所有接口名称
                 if (cmd.hasOption("l")) {
                     providers.forEach(p -> builder.append(p.getIfaceName()).append(" -> ")
@@ -83,7 +83,7 @@ public class ListTelnetHandler extends AbstractTelnetHandler {
                 }
             } else {
                 Map<String, ProviderInfo> providerMap = new HashMap<>();
-                InvokerManager.exports(o -> {
+                ServiceManager.exports(o -> {
                     ProviderInfo providerInfo = new ProviderInfo(o.getInterfaceClass().getCanonicalName(), o.getInterfaceClass(), o.getUrl());
                     providerMap.put(providerInfo.getIfaceName(), providerInfo);
                 });

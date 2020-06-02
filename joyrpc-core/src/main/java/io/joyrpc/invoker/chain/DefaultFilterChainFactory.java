@@ -153,11 +153,11 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
         }
 
         @Override
-        public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
+        public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
             try {
                 return filter.invoke(next, request);
             } catch (Throwable e) {
-                //防止出异常
+                //捕获所有异常，确保上一步过滤器能使用CompletableFuture拿到异常信息
                 return Futures.completeExceptionally(e);
             }
         }

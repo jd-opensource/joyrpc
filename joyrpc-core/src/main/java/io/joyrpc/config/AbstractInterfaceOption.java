@@ -543,7 +543,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * @return 跟踪ID
          */
         protected String getTraceSpanId(final String className, final String methodName) {
-            return className + "." + methodName;
+            return className + "/" + methodName;
         }
 
         @Override

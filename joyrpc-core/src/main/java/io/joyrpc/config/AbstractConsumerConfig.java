@@ -246,19 +246,27 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      */
     public T proxy() {
         if (stub == null) {
-            stub = getProxyFactory().getProxy((Class<T>) getProxyClass(), (proxy, method, args) -> {
+            final Class<T> proxyClass = getProxyClass();
+            stub = getProxyFactory().getProxy(proxyClass, (proxy, method, args) -> {
                 AbstractConsumerController<T, ? extends AbstractConsumerConfig> cc = controller;
-                if (cc == null) {
-                    switch (status) {
-                        case CLOSING:
-                            throw new RpcException("Consumer config is closing. " + name());
-                        case CLOSED:
-                            throw new RpcException("Consumer config is closed. " + name());
-                        default:
-                            throw new RpcException("Consumer config is opening. " + name());
+                try {
+                    if (cc == null) {
+                        switch (status) {
+                            case CLOSING:
+                                throw new RpcException("Consumer config is closing. " + name());
+                            case CLOSED:
+                                throw new RpcException("Consumer config is closed. " + name());
+                            default:
+                                throw new RpcException("Consumer config is opening. " + name());
+                        }
+                    } else {
+                        return cc.invoke(proxy, method, args);
                     }
-                } else {
-                    return cc.invoke(proxy, method, args);
+                } catch (Throwable e) {
+                    if (isReturnFuture(proxyClass, method)) {
+                        return Futures.completeExceptionally(e);
+                    }
+                    throw e;
                 }
             });
         }

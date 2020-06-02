@@ -425,7 +425,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 } else {
                     try {
                         Class<?> clazz = forName(className);
-                        genericClass = clazz.isInterface() && GenericService.class.isAssignableFrom(clazz) ? clazz : GenericService.class;
+                        genericClass = GENERIC.test(clazz) ? clazz : GenericService.class;
                     } catch (ClassNotFoundException e) {
                         genericClass = GenericService.class;
                     }

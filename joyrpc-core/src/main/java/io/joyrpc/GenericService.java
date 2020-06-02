@@ -36,9 +36,9 @@ import java.util.function.Predicate;
 public interface GenericService {
 
     /**
-     * 判断是否是泛化类型
+     * 判断是否是泛化接口
      */
-    Predicate<Class<?>> GENERIC = GenericService.class::isAssignableFrom;
+    Predicate<Class<?>> GENERIC = cls -> cls.isInterface() && GenericService.class.isAssignableFrom(cls);
 
     /**
      * 泛化调用，和老接口兼容

@@ -19,6 +19,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>io.jaegertracing</groupId>
+            <artifactId>jaeger-client</artifactId>
+            <version>${jaeger.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-spring</artifactId>
             <version>${project.version}</version>

@@ -162,9 +162,8 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         }
     }
 
-
     @Override
-    public synchronized void onApplicationEvent(ApplicationEvent event) {
+    public void onApplicationEvent(ApplicationEvent event) {
         //等待上下文初始化完成事件
         if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
             //刷新事件会多次，防止重入

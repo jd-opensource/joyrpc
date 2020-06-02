@@ -78,7 +78,7 @@ public class Counter {
      * @return 消费者标识
      */
     public static boolean hasConsumer() {
-        return UNSUCCESS_CONSUMER_BEANS.get() > 0;
+        return CONSUMER_BEANS.get() > 0;
     }
 
     /**
@@ -87,7 +87,7 @@ public class Counter {
      * @return 上下文标识
      */
     public static boolean hasContext() {
-        return UNSUCCESS_CONTEXT_BEANS.get() > 0;
+        return CONTEXT_BEANS.get() > 0;
     }
 
     /**

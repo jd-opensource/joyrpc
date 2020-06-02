@@ -20,13 +20,10 @@ package io.joyrpc.example.boot;
  * #L%
  */
 
-import com.alibaba.fastjson.JSON;
 import io.joyrpc.GenericService;
-import io.joyrpc.example.service.vo.EchoData;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
-import io.joyrpc.example.service.vo.EchoRequest;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -38,7 +35,6 @@ public class BootGeneric {
         System.setProperty("spring.profiles.active", "generic");
         ConfigurableApplicationContext run = SpringApplication.run(BootGeneric.class, args);
         GenericService consumer = run.getBean(GenericService.class);
-
 
         Map<String, Object> param = new HashMap<>();
         //header
@@ -55,9 +51,6 @@ public class BootGeneric {
         //param
         param.put("header", header);
         param.put("body", body);
-
-        String paramJson = JSON.toJSONString(param);
-
 
         Object res1 = consumer.$invoke("echoRequest", null, new Object[]{param});
         Object res2 = consumer.$invoke("echoRequestGeneric", null, new Object[]{param});

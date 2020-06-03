@@ -28,7 +28,6 @@ import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
 import io.jaegertracing.internal.reporters.RemoteReporter;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.Variable;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.Parametric;
@@ -267,7 +266,7 @@ public class JaegerTraceFactory implements TraceFactory {
         @Override
         protected void inject(final JaegerSpanContext jsc) {
             //保存到请求上下文，可以继续传递
-            RequestContext.getContext().setAttachment(HIDDEN_KEY_TRACE_JAEGER, build(jsc));
+            request.getContext().setAttachment(HIDDEN_KEY_TRACE_JAEGER, build(jsc));
         }
     }
 }

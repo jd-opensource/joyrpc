@@ -26,7 +26,6 @@ import io.jaegertracing.Configuration.SamplerConfiguration;
 import io.jaegertracing.internal.JaegerSpan;
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
-import io.jaegertracing.internal.JaegerTracer.SpanBuilder;
 import io.jaegertracing.internal.reporters.RemoteReporter;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
@@ -159,10 +158,13 @@ public class JaegerTraceFactory implements TraceFactory {
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
-            JaegerSpanContext parentJsc = reject();
-            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).asChildOf(parentJsc).start();
-            JaegerSpanContext jsc = span.context();
-            inject(jsc);
+            //拿到当前请求的跟踪span
+            JaegerSpanContext parent = reject();
+            //构建新span
+            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).asChildOf(parent).start();
+            //注入新的span
+            inject(span.context());
+            //标签
             tag(tags);
         }
 
@@ -201,13 +203,23 @@ public class JaegerTraceFactory implements TraceFactory {
          * @param jsc 跟踪上下文
          */
         protected void inject(final JaegerSpanContext jsc) {
+
+        }
+
+        /**
+         * 构建调用传递的上下文
+         *
+         * @param jsc 上下文
+         * @return 传递的上下文
+         */
+        protected Map<String, Object> build(JaegerSpanContext jsc) {
             Map<String, Object> ctx = new HashMap<>(5);
             ctx.put(TRACE_ID_HIGH, jsc.getTraceIdHigh());
             ctx.put(TRACE_ID_LOW, jsc.getTraceIdLow());
             ctx.put(SPAN_ID, jsc.getSpanId());
             ctx.put(PARENT_ID, jsc.getParentId());
             ctx.put(FLAGS, jsc.getFlags());
-            invocation.addAttachment(HIDDEN_KEY_TRACE_JAEGER, ctx);
+            return ctx;
         }
 
         /**
@@ -236,6 +248,10 @@ public class JaegerTraceFactory implements TraceFactory {
             super(tracer, request);
         }
 
+        @Override
+        protected void inject(final JaegerSpanContext jsc) {
+            invocation.addAttachment(HIDDEN_KEY_TRACE_JAEGER, build(jsc));
+        }
     }
 
     /**
@@ -249,9 +265,9 @@ public class JaegerTraceFactory implements TraceFactory {
         }
 
         @Override
-        protected void inject(JaegerSpanContext jsc) {
-            super.inject(jsc);
-            RequestContext.getContext().setAttachment(HIDDEN_KEY_TRACE_JAEGER, invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER));
+        protected void inject(final JaegerSpanContext jsc) {
+            //保存到请求上下文，可以继续传递
+            RequestContext.getContext().setAttachment(HIDDEN_KEY_TRACE_JAEGER, build(jsc));
         }
     }
 }

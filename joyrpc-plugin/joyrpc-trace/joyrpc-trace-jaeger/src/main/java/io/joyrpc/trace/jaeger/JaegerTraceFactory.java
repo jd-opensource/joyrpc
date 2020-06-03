@@ -26,8 +26,10 @@ import io.jaegertracing.Configuration.SamplerConfiguration;
 import io.jaegertracing.internal.JaegerSpan;
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
+import io.jaegertracing.internal.JaegerTracer.SpanBuilder;
 import io.jaegertracing.internal.reporters.RemoteReporter;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.Variable;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.Parametric;
@@ -183,25 +185,6 @@ public class JaegerTraceFactory implements TraceFactory {
             }
             span.finish();
         }
-    }
-
-    /**
-     * 消费者跟踪
-     */
-    protected static class ConsumerTracer extends AbstractTracer {
-
-        public ConsumerTracer(final JaegerTracer tracer,
-                              final RequestMessage<Invocation> request) {
-            super(tracer, request);
-        }
-
-        @Override
-        public void begin(final String name, final String component, final Map<String, String> tags) {
-            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).start();
-            JaegerSpanContext jsc = span.context();
-            inject(jsc);
-            tag(tags);
-        }
 
         /**
          * 注入分布式跟踪
@@ -217,6 +200,46 @@ public class JaegerTraceFactory implements TraceFactory {
             ctx.put(FLAGS, jsc.getFlags());
             invocation.addAttachment(HIDDEN_KEY_TRACE_JAEGER, ctx);
         }
+
+        /**
+         * 解析跟踪上下文
+         *
+         * @return 跟踪上下文
+         */
+        protected JaegerSpanContext reject() {
+            Map<String, Object> ctx = (Map<String, Object>) invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER);
+            return ctx == null ? null : new JaegerSpanContext(
+                    (Long) ctx.get(TRACE_ID_HIGH),
+                    (Long) ctx.get(TRACE_ID_LOW),
+                    (Long) ctx.get(SPAN_ID),
+                    (Long) ctx.get(PARENT_ID),
+                    (Byte) ctx.get(FLAGS));
+        }
+    }
+
+    /**
+     * 消费者跟踪
+     */
+    protected static class ConsumerTracer extends AbstractTracer {
+
+        public ConsumerTracer(final JaegerTracer tracer,
+                              final RequestMessage<Invocation> request) {
+            super(tracer, request);
+        }
+
+        @Override
+        public void begin(final String name, final String component, final Map<String, String> tags) {
+            SpanBuilder builder = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime());
+            JaegerSpanContext parentJsc = reject();
+            if (parentJsc != null) {
+                builder.asChildOf(parentJsc);
+            }
+            span = builder.start();
+            JaegerSpanContext jsc = span.context();
+            inject(jsc);
+            tag(tags);
+        }
+
     }
 
     /**
@@ -233,22 +256,14 @@ public class JaegerTraceFactory implements TraceFactory {
         public void begin(final String name, final String component, final Map<String, String> tags) {
             JaegerSpanContext jsc = reject();
             span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).asChildOf(jsc).start();
+            inject(jsc);
             tag(tags);
         }
 
-        /**
-         * 解析跟踪上下文
-         *
-         * @return 跟踪上下文
-         */
-        protected JaegerSpanContext reject() {
-            Map<String, Object> ctx = (Map<String, Object>) invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER);
-            return ctx == null ? null : new JaegerSpanContext(
-                    (Long) ctx.get(TRACE_ID_HIGH),
-                    (Long) ctx.get(TRACE_ID_LOW),
-                    (Long) ctx.get(SPAN_ID),
-                    (Long) ctx.get(PARENT_ID),
-                    (Byte) ctx.get(FLAGS));
+        @Override
+        protected void inject(JaegerSpanContext jsc) {
+            super.inject(jsc);
+            RequestContext.getContext().setAttachment(HIDDEN_KEY_TRACE_JAEGER, invocation.removeAttachment(HIDDEN_KEY_TRACE_JAEGER));
         }
     }
 }

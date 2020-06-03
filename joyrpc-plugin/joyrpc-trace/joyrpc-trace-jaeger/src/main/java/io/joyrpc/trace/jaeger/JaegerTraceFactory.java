@@ -61,6 +61,7 @@ public class JaegerTraceFactory implements TraceFactory {
     public static final String SPAN_ID = "spanId";
     public static final String PARENT_ID = "parentId";
     public static final String FLAGS = "flags";
+    public static final String ERROR = "error";
     protected JaegerTracer tracer;
 
     public JaegerTraceFactory() {
@@ -177,6 +178,7 @@ public class JaegerTraceFactory implements TraceFactory {
         @Override
         public void end(final Throwable throwable) {
             if (throwable != null) {
+                span.setTag(ERROR, true);
                 span.log(throwable.getMessage());
             }
             span.finish();

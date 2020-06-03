@@ -49,6 +49,7 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.alibaba.fastjson.JSON.DEFAULT_GENERATE_FEATURE;
+import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
  * JSON序列化，不推荐在调用请求序列化场景使用
@@ -175,7 +176,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
          */
         protected JsonConfig createParserConfig() {
             JsonConfig config = new JsonConfig(BLACK_LIST);
-            config.setSafeMode(GlobalContext.getBoolean(ParserConfig.SAFE_MODE_PROPERTY, true));
+            config.setSafeMode(VARIABLE.getBoolean(ParserConfig.SAFE_MODE_PROPERTY, true));
             config.putDeserializer(MonthDay.class, MonthDaySerialization.INSTANCE);
             config.putDeserializer(YearMonth.class, YearMonthSerialization.INSTANCE);
             config.putDeserializer(Year.class, YearSerialization.INSTANCE);
@@ -203,7 +204,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         protected Feature[] createParserFeatures() {
             HashSet<Feature> set = new HashSet<>();
             //从上下文中读取
-            String cfg = GlobalContext.getString("json.parser.features");
+            String cfg = VARIABLE.getString("json.parser.features");
             if (cfg != null && !cfg.isEmpty()) {
                 String[] features = cfg.split("[,;\\s]");
                 for (String feature : features) {

@@ -20,21 +20,17 @@ package io.joyrpc.config.validator;
  * #L%
  */
 
-import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.context.GlobalContext;
-import io.joyrpc.extension.MapParametric;
 import io.joyrpc.util.StringUtils;
-import io.joyrpc.config.ProviderConfig;
-import io.joyrpc.extension.MapParametric;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
 
-import static io.joyrpc.constants.Constants.EMPTY_ALIAS_OPTION;
+import static io.joyrpc.constants.Constants.ALIAS_EMPTY_OPTION;
+import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
  * 插件验证
@@ -43,12 +39,12 @@ public class AliasValidator implements ConstraintValidator<ValidateAlias, Abstra
 
     @Override
     public boolean isValid(final AbstractInterfaceConfig value, final ConstraintValidatorContext context) {
-        String regex = new MapParametric(GlobalContext.getContext()).getString(Constants.ALIAS_PATTERN_OPTION);
+        String regex = VARIABLE.getString(Constants.ALIAS_PATTERN_OPTION);
         Pattern pattern = Pattern.compile(regex);
         String alias = value.getAlias();
         String message = null;
         if (alias == null || alias.isEmpty()) {
-            if (new MapParametric(value.getParameters()).getBoolean(EMPTY_ALIAS_OPTION)) {
+            if (VARIABLE.getBoolean(ALIAS_EMPTY_OPTION)) {
                 if (alias == null) {
                     //设置为空字符串，防止空指针异常
                     value.setAlias("");

@@ -22,6 +22,7 @@ package io.joyrpc.config.validator;
 
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.invoker.FilterChainFactory;
 
 import javax.validation.ConstraintValidator;
@@ -40,7 +41,7 @@ public class FilterValidator implements ConstraintValidator<ValidateFilter, Abst
         //判断插件配置
         String value = config.getFilter();
         if (value != null && !value.isEmpty()) {
-            MapParametric parametric = new MapParametric(config.getParameters());
+            Parametric parametric = new MapParametric(config.getParameters());
             FilterChainFactory chainFactory = FILTER_CHAIN_FACTORY.getOrDefault(parametric.getString(FILTER_CHAIN_FACTORY_OPTION));
             String message = chainFactory.validate(config);
             if (message != null && !message.isEmpty()) {

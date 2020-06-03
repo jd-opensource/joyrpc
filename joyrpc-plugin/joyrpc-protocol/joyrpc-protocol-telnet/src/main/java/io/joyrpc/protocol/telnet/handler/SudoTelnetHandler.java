@@ -65,7 +65,7 @@ public class SudoTelnetHandler extends AbstractTelnetHandler {
             return new TelnetResponse(help());
         } else {
             try {
-                Parametric parametric = new MapParametric(GlobalContext.getContext());
+                MapParametric<String, Object> parametric = new MapParametric(GlobalContext.getContext());
                 //应用名称
                 String appName = parametric.getString(Constants.KEY_APPNAME);
                 //密码

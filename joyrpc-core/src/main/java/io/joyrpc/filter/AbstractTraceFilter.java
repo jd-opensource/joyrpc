@@ -25,7 +25,6 @@ import io.joyrpc.Result;
 import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -38,6 +37,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.TRACE_FACTORY;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
  * 抽象的跟踪插件,标签的名称和业界通用叫法一致
@@ -69,9 +69,8 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
 
     @Override
     public void setup() {
-        MapParametric parametric = new MapParametric(GlobalContext.getContext());
-        factory = TRACE_FACTORY.getOrDefault(parametric.getString(TRACE_TYPE));
-        component = parametric.getString(PROTOCOL_KEY);
+        factory = TRACE_FACTORY.getOrDefault(VARIABLE.getString(TRACE_TYPE));
+        component = GlobalContext.getString(PROTOCOL_KEY);
         enableTrace = (EnableTrace) clazz.getAnnotation(EnableTrace.class);
         enable = factory != null && (enableTrace == null || enableTrace.value());
     }
@@ -107,9 +106,9 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        MapParametric parametric = new MapParametric(GlobalContext.getContext());
+        boolean enable = VARIABLE.getBoolean(TRACE_OPEN_OPTION);
         //是配置了开关
-        if (url.getBoolean(TRACE_OPEN, parametric.getBoolean(TRACE_OPEN, Boolean.FALSE))) {
+        if (url.getBoolean(TRACE_OPEN, enable)) {
             return true;
         }
         Map<String, String> tokens = url.endsWith("." + TRACE_OPEN);

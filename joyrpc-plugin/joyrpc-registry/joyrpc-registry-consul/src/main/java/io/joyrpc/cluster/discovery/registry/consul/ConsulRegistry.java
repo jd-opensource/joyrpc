@@ -455,7 +455,7 @@ public class ConsulRegistry extends AbstractRegistry {
          */
         protected Map<String, String> getMeta(URL url) {
             Map<String, String> result = new HashMap<>(30);
-            Parametric context = new MapParametric(GlobalContext.getContext());
+            MapParametric<String, Object> context = new MapParametric(GlobalContext.getContext());
             put(result, KEY_APPAPTH, context.getString(KEY_APPAPTH));
             put(result, KEY_APPID, context.getString(KEY_APPID));
             put(result, KEY_APPNAME, context.getString(KEY_APPNAME));

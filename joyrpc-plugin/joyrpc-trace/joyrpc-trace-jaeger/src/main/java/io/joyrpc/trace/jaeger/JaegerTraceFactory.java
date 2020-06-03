@@ -27,10 +27,10 @@ import io.jaegertracing.internal.JaegerSpan;
 import io.jaegertracing.internal.JaegerSpanContext;
 import io.jaegertracing.internal.JaegerTracer;
 import io.jaegertracing.internal.reporters.RemoteReporter;
-import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.context.Variable;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.message.Invocation;
@@ -43,7 +43,6 @@ import io.joyrpc.util.SystemClock;
 import java.util.HashMap;
 import java.util.Map;
 
-import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.constants.Constants.KEY_APPNAME;
 
 /**
@@ -71,13 +70,7 @@ public class JaegerTraceFactory implements TraceFactory {
             //判断是否有全局的变量
             tracer = (JaegerTracer) obj;
         } else {
-            Environment environment = ENVIRONMENT.get();
-            Map<String, Object> context = new HashMap<>();
-            if (environment != null) {
-                context.putAll(environment.env());
-            }
-            context.putAll(global);
-            MapParametric parametric = new MapParametric(context);
+            Parametric parametric = Variable.VARIABLE;
             Configuration configuration = new Configuration(parametric.getString("appService", KEY_APPNAME, "unknown"));
             configuration.withSampler(buildSamplerConfiguration(parametric));
             configuration.withReporter(buildReporterConfiguration(parametric));
@@ -91,7 +84,7 @@ public class JaegerTraceFactory implements TraceFactory {
      * @param parametric 参数
      * @return 报告配置
      */
-    protected ReporterConfiguration buildReporterConfiguration(final MapParametric parametric) {
+    protected ReporterConfiguration buildReporterConfiguration(final Parametric parametric) {
         return new ReporterConfiguration()
                 .withSender(buildSenderConfiguration(parametric))
                 .withFlushInterval(parametric.getPositive("JAEGER_REPORTER_FLUSH_INTERVAL", RemoteReporter.DEFAULT_FLUSH_INTERVAL_MS))
@@ -105,7 +98,7 @@ public class JaegerTraceFactory implements TraceFactory {
      * @param parametric 参数
      * @return 发送配置
      */
-    protected Configuration.SenderConfiguration buildSenderConfiguration(final MapParametric parametric) {
+    protected Configuration.SenderConfiguration buildSenderConfiguration(final Parametric parametric) {
         String endpoint = parametric.getString("JAEGER_ENDPOINT");
         if (!StringUtils.isEmpty(endpoint)) {
             try {
@@ -132,7 +125,7 @@ public class JaegerTraceFactory implements TraceFactory {
      * @param parametric 参数
      * @return 采样配置
      */
-    protected SamplerConfiguration buildSamplerConfiguration(final MapParametric parametric) {
+    protected SamplerConfiguration buildSamplerConfiguration(final Parametric parametric) {
         return new SamplerConfiguration()
                 .withType(parametric.getString("JAEGER_SAMPLER_TYPE", "probabilistic"))
                 .withManagerHostPort(parametric.getString("JAEGER_SAMPLER_MANAGER_HOST_PORT"))

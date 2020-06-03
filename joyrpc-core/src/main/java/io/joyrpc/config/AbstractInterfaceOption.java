@@ -53,6 +53,7 @@ import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.*;
 
 /**
@@ -190,7 +191,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         this.cacheFactory = CACHE.get(cacheProvider);
         //默认是否认证
         this.validation = url.getBoolean(VALIDATION_OPTION);
-        this.trace = url.getBoolean(TRACE_OPEN_OPTION);
+        this.trace = VARIABLE.getBoolean(TRACE_OPEN_OPTION);
         if (!generic) {
             this.validator = Validation.buildDefaultValidatorFactory().getValidator();
             if (validator != null) {

@@ -243,7 +243,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
     protected TelnetResponse authenticate(final String interfaceId, final String password, final boolean isGlobal, final Channel channel) {
         InetSocketAddress address = channel.getRemoteAddress();
         String remoteIp = Ipv4.toIp(address);
-        Parametric parametric = new MapParametric(GlobalContext.getGlobalSetting());
+        MapParametric<String, Object> parametric = new MapParametric(GlobalContext.getGlobalSetting());
         // 注册中心配的密码
         String invokePassword = !isGlobal ? GlobalContext.get(interfaceId, Constants.SETTING_INVOKE_TOKEN, "")
                 : parametric.getString(Constants.SETTING_SERVER_SUDO_PASSWD, "");

@@ -225,7 +225,7 @@ public class DubboNacosRegistry extends NacosRegistry {
 
         @Override
         protected Instance createInstance(URL url) {
-            Parametric context = new MapParametric(GlobalContext.getContext());
+            MapParametric<String, Object> context = new MapParametric(GlobalContext.getContext());
             //metadata
             Map<String, String> meta = new HashMap<>();
             String side = url.getString(ROLE_OPTION);

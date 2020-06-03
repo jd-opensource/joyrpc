@@ -489,7 +489,6 @@ public class Constants {
     public static final URLOption<String> FILTER_OPTION = new URLOption<>("filter", "");
     public static final URLOption<String> ADDRESS_OPTION = new URLOption<>("address", "");
     public static final URLOption<String> ALIAS_OPTION = new URLOption<>(ALIAS_KEY, "");
-    public static final URLOption<Boolean> EMPTY_ALIAS_OPTION = new URLOption<>("emptyAlias", () -> GlobalContext.getBoolean("emptyAlias", false));
     public static final URLOption<Long> START_TIME_OPTION = new URLOption<>("startTime", 0L); //provider启动时间戳
     public static final URLOption<Boolean> SERVICE_MESH_OPTION = new URLOption<>(SERVICE_MESH_KEY, false);
     public static final URLOption<String> FILTER_CHAIN_FACTORY_OPTION = new URLOption<>("filterChainFactory", "default");
@@ -498,6 +497,10 @@ public class Constants {
      * 别名正则验证，默认可用的字符串为：英文大小写，数字，横杆-，下划线_，点. 冒号:
      */
     public static final URLOption<String> ALIAS_PATTERN_OPTION = new URLOption<>("alias.pattern", "^[a-zA-Z0-9\\-\\_\\.:]+$");
+    /**
+     * 是否允许分组为空
+     */
+    public static final URLBiOption<Boolean> ALIAS_EMPTY_OPTION = new URLBiOption<>("alias.empty", "emptyAlias", false);
 
     /**
      * 消费者调用超时时间

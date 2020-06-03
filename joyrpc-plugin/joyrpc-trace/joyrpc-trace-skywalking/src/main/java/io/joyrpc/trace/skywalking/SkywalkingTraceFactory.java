@@ -34,6 +34,7 @@ import org.apache.skywalking.apm.agent.core.context.tag.StringTag;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -42,6 +43,11 @@ import java.util.Map;
 @Extension(value = "skywalking", order = TraceFactory.ORDER_SKYWALKING)
 @ConditionalOnClass("org.apache.skywalking.apm.agent.core.context.ContextManager")
 public class SkywalkingTraceFactory implements TraceFactory {
+
+    /**
+     * 隐藏属性的key：分布式跟踪 数据KEY
+     */
+    public static final String HIDDEN_KEY_TRACE_SKYWALKING = ".skywalking";
 
     @Override
     public Tracer create(final RequestMessage<Invocation> request) {
@@ -108,13 +114,15 @@ public class SkywalkingTraceFactory implements TraceFactory {
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
-            final ContextCarrier contextCarrier = new ContextCarrier();
+            Map<String, String> ctx = new HashMap<>();
+            ContextCarrier contextCarrier = new ContextCarrier();
             span = ContextManager.createExitSpan(name, contextCarrier, null);
             CarrierItem next = contextCarrier.items();
             while (next.hasNext()) {
                 next = next.next();
-                invocation.addAttachment(next.getHeadKey(), next.getHeadValue());
+                ctx.put(next.getHeadKey(), next.getHeadValue());
             }
+            invocation.addAttachment(HIDDEN_KEY_TRACE_SKYWALKING, ctx);
             span.setComponent(component);
             tag(tags);
             SpanLayer.asRPCFramework(span);
@@ -132,13 +140,15 @@ public class SkywalkingTraceFactory implements TraceFactory {
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
+            Map<String, String> ctx = (Map<String, String>) invocation.removeAttachment(HIDDEN_KEY_TRACE_SKYWALKING);
             ContextCarrier contextCarrier = new ContextCarrier();
-            CarrierItem next = contextCarrier.items();
-            while (next.hasNext()) {
-                next = next.next();
-                next.setHeadValue(invocation.getAttachment(next.getHeadKey()));
+            if (ctx != null) {
+                CarrierItem next = contextCarrier.items();
+                while (next.hasNext()) {
+                    next = next.next();
+                    next.setHeadValue(ctx.get(next.getHeadKey()));
+                }
             }
-
             span = ContextManager.createEntrySpan(name, contextCarrier);
             span.setComponent(component);
             tag(tags);

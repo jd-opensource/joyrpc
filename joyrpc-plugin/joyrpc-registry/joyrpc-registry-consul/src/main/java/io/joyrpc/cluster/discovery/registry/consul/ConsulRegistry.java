@@ -37,7 +37,6 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
@@ -465,9 +464,7 @@ public class ConsulRegistry extends AbstractRegistry {
             put(result, Region.REGION, registry.getRegion());
             put(result, Region.DATA_CENTER, registry.getDataCenter());
             put(result, BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
-            if (url.getBoolean(SSL_ENABLE)) {
-                result.put(SSL_ENABLE.getName(), "true");
-            }
+            put(result, SSL_ENABLE_KEY, "true", (key, value) -> url.getBoolean(SSL_ENABLE));
             put(result, SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
             put(result, WEIGHT_OPTION.getName(), String.valueOf(url.getInteger(WEIGHT_OPTION)));
             put(result, TIMESTAMP_KEY, String.valueOf(SystemClock.now()));

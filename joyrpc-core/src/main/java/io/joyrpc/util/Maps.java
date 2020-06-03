@@ -22,6 +22,7 @@ package io.joyrpc.util;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 /**
@@ -65,6 +66,22 @@ public abstract class Maps {
     public static <K, V> V put(final Map<K, V> map, final K key, final V value) {
         return key == null || value == null ? null : map.put(key, value);
     }
+
+    /**
+     * 修改
+     *
+     * @param map       Map对象
+     * @param key       键
+     * @param value     值
+     * @param predicate 断言
+     * @param <K>
+     * @param <V>
+     * @return
+     */
+    public static <K, V> V put(final Map<K, V> map, final K key, final V value, final BiPredicate<K, V> predicate) {
+        return key == null || value == null || (predicate != null && !predicate.test(key, value)) ? null : map.put(key, value);
+    }
+
 
     /**
      * 获取值

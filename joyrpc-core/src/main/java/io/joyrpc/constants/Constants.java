@@ -303,9 +303,7 @@ public class Constants {
     public static final String CONTEXT_RESOURCE = "context.resource";
 
     public static final String PROTOCOL_KEY = "protocol";
-
     public static final String PROTOCOL_VERSION_KEY = "protocol.version";
-
     public final static String KEY_CPU_CORES = "host.cpucores";
     public final static String KEY_MEMORY = "host.memory";
     public final static String KEY_DISK_SIZE = "host.disksize";
@@ -894,21 +892,7 @@ public class Constants {
      * @return boolean
      */
     public static boolean isUseEpoll(final URL url) {
-        return isLinux(url) && url != null && url.getBoolean(USE_EPOLL_KEY, true);
-    }
-
-    /**
-     * 是否为linux系统
-     *
-     * @param url url对象
-     * @return boolean
-     */
-    public static boolean isLinux(final URL url) {
-        try {
-            return url != null && OsType.valueOf(url.getString(KEY_OS_TYPE, OsType.OTHER.name())) == OsType.LINUX;
-        } catch (IllegalArgumentException e) {
-            return false;
-        }
+        return ENVIRONMENT.get().osType() == OsType.LINUX && url != null && url.getBoolean(USE_EPOLL_KEY, true);
     }
 
     /**

@@ -5,6 +5,7 @@
 [registry.protocol]
 [registry.address]
 #启动属性
+[java.version]
 [host.cpucores]
 [host.memory]
 [pid]

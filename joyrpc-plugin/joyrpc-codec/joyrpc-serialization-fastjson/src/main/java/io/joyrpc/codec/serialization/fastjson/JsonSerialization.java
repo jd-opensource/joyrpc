@@ -29,7 +29,6 @@ import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.fastjson.java8.*;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
@@ -238,7 +237,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
          */
         protected SerializerFeature[] createSerializerFeatures() {
             HashSet<SerializerFeature> set = new HashSet<>();
-            String cfg = GlobalContext.getString("json.serializer.features");
+            String cfg = VARIABLE.getString("json.serializer.features");
             if (cfg != null && !cfg.isEmpty()) {
                 String[] features = cfg.split("[,;\\s]");
                 for (String feature : features) {

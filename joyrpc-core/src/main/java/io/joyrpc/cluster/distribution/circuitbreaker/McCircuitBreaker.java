@@ -21,7 +21,6 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  */
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.metric.TPMetric;
 import io.joyrpc.metric.TPWindow;
@@ -35,6 +34,7 @@ import java.util.Set;
 import java.util.concurrent.TimeoutException;
 
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
@@ -98,7 +98,7 @@ public class McCircuitBreaker implements CircuitBreaker {
         whites.add(OverloadException.class);
         whites.add(TimeoutException.class);
         //从全局配置里面添加熔断异常
-        String value = GlobalContext.getString(CIRCUIT_BREAKER_EXCEPTION);
+        String value = VARIABLE.getString(CIRCUIT_BREAKER_EXCEPTION);
         String[] parts = split(value, SEMICOLON_COMMA_WHITESPACE);
         if (parts != null) {
             for (String part : parts) {

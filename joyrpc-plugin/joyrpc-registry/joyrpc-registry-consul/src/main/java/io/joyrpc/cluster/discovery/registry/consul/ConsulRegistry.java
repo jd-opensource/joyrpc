@@ -20,7 +20,6 @@ package io.joyrpc.cluster.discovery.registry.consul;
  * #L%
  */
 
-import io.joyrpc.cluster.Region;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
@@ -30,14 +29,11 @@ import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.constants.Version;
 import io.joyrpc.context.Environment;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.exception.SerializerException;
-import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
@@ -60,7 +56,6 @@ import java.util.function.Predicate;
 import static io.joyrpc.Plugin.ENVIRONMENT;
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.Maps.put;
 import static io.joyrpc.util.StringUtils.*;
 import static io.joyrpc.util.Timer.timer;
 
@@ -453,26 +448,8 @@ public class ConsulRegistry extends AbstractRegistry {
          * @param url
          * @return
          */
-        protected Map<String, String> getMeta(URL url) {
-            Map<String, String> result = new HashMap<>(30);
-            Parametric context = new MapParametric(GlobalContext.getContext());
-            put(result, KEY_APPAPTH, context.getString(KEY_APPAPTH));
-            put(result, KEY_APPID, context.getString(KEY_APPID));
-            put(result, KEY_APPNAME, context.getString(KEY_APPNAME));
-            put(result, KEY_APPINSID, context.getString(KEY_APPINSID));
-            put(result, JAVA_VERSION_KEY, context.getString(KEY_JAVA_VERSION));
-            put(result, VERSION_KEY, context.getString(PROTOCOL_VERSION_KEY));
-            put(result, Region.REGION, registry.getRegion());
-            put(result, Region.DATA_CENTER, registry.getDataCenter());
-            put(result, BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
-            put(result, SSL_ENABLE_KEY, "true", (key, value) -> url.getBoolean(SSL_ENABLE));
-            put(result, SERIALIZATION_OPTION.getName(), url.getString(SERIALIZATION_OPTION));
-            put(result, WEIGHT_OPTION.getName(), String.valueOf(url.getInteger(WEIGHT_OPTION)));
-            put(result, TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
-            put(result, PROTOCOL_KEY, url.getProtocol());
-            put(result, ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
-
-            return result;
+        protected Map<String, String> getMeta(final URL url) {
+            return PARAMETER_FUNCTION.apply(url);
         }
 
         /**

@@ -311,7 +311,6 @@ public class NacosRegistry extends AbstractRegistry {
             return serviceName;
         }
 
-
         public EventListener getListener() {
             return listener;
         }
@@ -369,11 +368,11 @@ public class NacosRegistry extends AbstractRegistry {
          * @param url
          * @return
          */
-        protected Instance createInstance(URL url) {
+        protected Instance createInstance(final URL url) {
             Instance instance = new Instance();
             instance.setIp(url.getHost());
             instance.setPort(url.getPort());
-            instance.setMetadata(url.getParameters());
+            instance.setMetadata(PARAMETER_FUNCTION.apply(url));
             return instance;
         }
 

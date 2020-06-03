@@ -4,6 +4,7 @@ import io.joyrpc.cluster.Region;
 import io.joyrpc.constants.Version;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
+import io.joyrpc.util.SystemClock;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,9 +19,9 @@ import static io.joyrpc.util.Maps.put;
 public interface Normalizer {
 
     /**
-     * 由refer与export的url到注册中心存储url的转换function
+     * 构造URL的参数
      */
-    Function<URL, URL> NORMALIZE_FUNCTION = url -> {
+    Function<URL, Map<String, String>> PARAMETER_FUNCTION = url -> {
         Map<String, String> params = new HashMap<>();
         put(params, ALIAS_OPTION.getName(), url.getString(ALIAS_OPTION));
         put(params, BUILD_VERSION_KEY, String.valueOf(Version.BUILD_VERSION));
@@ -41,16 +42,24 @@ public interface Normalizer {
         put(params, SERVICE_NAME_KEY, url.getString(SERVICE_NAME_KEY));
         put(params, SSL_ENABLE_KEY, "true", (key, value) -> url.getBoolean(SSL_ENABLE));
         put(params, GENERIC_KEY, "true", (key, value) -> url.getBoolean(GENERIC_OPTION));
-        return new URL(url.getProtocol(), url.getHost(), url.getPort(), url.getPath(), params);
+        put(params, TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
+
+        return params;
     };
+
+    /**
+     * 由refer与export的url到注册中心存储url的转换function
+     */
+    Function<URL, URL> NORMALIZE_FUNCTION = url -> new URL(url.getProtocol(), url.getHost(), url.getPort(), url.getPath(), PARAMETER_FUNCTION.apply(url));
 
     /**
      * 标准化
      *
-     * @param url
+     * @param url url
      * @return
      */
-    default URL normalize(URL url) {
+    default URL normalize(final URL url) {
         return url == null ? null : NORMALIZE_FUNCTION.apply(url);
     }
+
 }

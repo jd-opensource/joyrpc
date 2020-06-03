@@ -162,8 +162,12 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         }
     }
 
+    /**
+     * 此处事件需要同步处理，防止在并发的情况下还没refer好就被调用getObject方法返回空代理对象的情况，加上 synchronized
+     * @param event
+     */
     @Override
-    public void onApplicationEvent(ApplicationEvent event) {
+    public synchronized void onApplicationEvent(ApplicationEvent event) {
         //等待上下文初始化完成事件
         if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
             //刷新事件会多次，防止重入

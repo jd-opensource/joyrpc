@@ -158,6 +158,15 @@ public class JaegerTraceFactory implements TraceFactory {
         }
 
         @Override
+        public void begin(final String name, final String component, final Map<String, String> tags) {
+            JaegerSpanContext parentJsc = reject();
+            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).asChildOf(parentJsc).start();
+            JaegerSpanContext jsc = span.context();
+            inject(jsc);
+            tag(tags);
+        }
+
+        @Override
         public void snapshot() {
         }
 
@@ -227,19 +236,6 @@ public class JaegerTraceFactory implements TraceFactory {
             super(tracer, request);
         }
 
-        @Override
-        public void begin(final String name, final String component, final Map<String, String> tags) {
-            SpanBuilder builder = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime());
-            JaegerSpanContext parentJsc = reject();
-            if (parentJsc != null) {
-                builder.asChildOf(parentJsc);
-            }
-            span = builder.start();
-            JaegerSpanContext jsc = span.context();
-            inject(jsc);
-            tag(tags);
-        }
-
     }
 
     /**
@@ -250,14 +246,6 @@ public class JaegerTraceFactory implements TraceFactory {
         public ProviderTracer(final JaegerTracer tracer,
                               final RequestMessage<Invocation> request) {
             super(tracer, request);
-        }
-
-        @Override
-        public void begin(final String name, final String component, final Map<String, String> tags) {
-            JaegerSpanContext jsc = reject();
-            span = tracer.buildSpan(name).withStartTimestamp(SystemClock.microTime()).asChildOf(jsc).start();
-            inject(jsc);
-            tag(tags);
         }
 
         @Override

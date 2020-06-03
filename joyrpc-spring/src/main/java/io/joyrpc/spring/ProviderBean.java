@@ -113,7 +113,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     }
 
     @Override
-    public void onApplicationEvent(ApplicationEvent event) {
+    public synchronized void onApplicationEvent(ApplicationEvent event) {
         if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
             //等待上下文初始化完成，输出服务
             stepExport();

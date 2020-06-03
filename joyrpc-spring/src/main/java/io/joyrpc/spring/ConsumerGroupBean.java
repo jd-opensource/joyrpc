@@ -26,14 +26,17 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.*;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
 
 
 /**
  * 消费组
  */
 public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
 
     /**
      * spring处理器
@@ -50,11 +53,6 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     @Override
     public void setBeanName(String name) {
         spring.setBeanName(name);
-    }
-
-    @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
-        spring.setApplicationEventPublisher(publisher);
     }
 
     @Override

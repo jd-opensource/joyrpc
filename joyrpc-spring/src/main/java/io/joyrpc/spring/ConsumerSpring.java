@@ -12,7 +12,10 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.*;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.util.StringUtils;
 
@@ -28,7 +31,7 @@ import static io.joyrpc.spring.Counter.*;
  * @param <T>
  */
 public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
 
     /**
      * slf4j logger for this class
@@ -52,10 +55,6 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
      * spring上下文
      */
     protected transient ApplicationContext applicationContext;
-    /**
-     * 事件发布器
-     */
-    protected transient ApplicationEventPublisher applicationEventPublisher;
     /**
      * 开关
      */
@@ -94,11 +93,6 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public void setApplicationContext(final ApplicationContext appContext) {
         this.applicationContext = appContext;
-    }
-
-    @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Override
@@ -164,6 +158,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     /**
      * 此处事件需要同步处理，防止在并发的情况下还没refer好就被调用getObject方法返回空代理对象的情况，加上 synchronized
+     *
      * @param event
      */
     @Override
@@ -182,7 +177,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                     } else {
                         //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
                         successConsumer(() -> CompletableFuture.runAsync(
-                                () -> applicationEventPublisher.publishEvent(new ConsumerDoneEvent(this))));
+                                () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
                     }
                 });
                 //启动，如果有多个消费者或服务提供者，通知到链上的最后一个bean会挂住

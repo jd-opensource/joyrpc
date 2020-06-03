@@ -28,7 +28,10 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.*;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
 
 import java.util.List;
 
@@ -36,7 +39,7 @@ import java.util.List;
  * 消费者
  */
 public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
 
     /**
      * 参数配置
@@ -58,11 +61,6 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     @Override
     public void setBeanName(String name) {
         spring.setBeanName(name);
-    }
-
-    @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
-        spring.setApplicationEventPublisher(publisher);
     }
 
     @Override
@@ -98,11 +96,6 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     @Override
     public void afterPropertiesSet() {
         spring.afterPropertiesSet();
-    }
-
-    public ConsumerBean<T> applicationEventPublisher(ApplicationEventPublisher publisher) {
-        setApplicationEventPublisher(publisher);
-        return this;
     }
 
     @Override

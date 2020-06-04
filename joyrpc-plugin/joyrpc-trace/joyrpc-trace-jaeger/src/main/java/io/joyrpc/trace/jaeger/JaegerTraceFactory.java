@@ -206,12 +206,12 @@ public class JaegerTraceFactory implements TraceFactory {
         }
 
         /**
-         * 构建调用传递的上下文
+         * 构建调用传递的上下文，返回Object，方便继承
          *
          * @param jsc 上下文
          * @return 传递的上下文
          */
-        protected Map<String, Object> build(JaegerSpanContext jsc) {
+        protected Object build(JaegerSpanContext jsc) {
             Map<String, Object> ctx = new HashMap<>(5);
             ctx.put(TRACE_ID_HIGH, jsc.getTraceIdHigh());
             ctx.put(TRACE_ID_LOW, jsc.getTraceIdLow());

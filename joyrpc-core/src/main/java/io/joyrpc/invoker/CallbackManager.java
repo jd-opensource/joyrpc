@@ -20,7 +20,7 @@ package io.joyrpc.invoker;
  * #L%
  */
 
-import io.joyrpc.Callback;
+import io.joyrpc.CallbackListener;
 import io.joyrpc.Plugin;
 import io.joyrpc.Result;
 import io.joyrpc.codec.compression.Compression;
@@ -41,6 +41,7 @@ import io.joyrpc.util.network.Ipv4;
 
 import java.io.Closeable;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,10 +50,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
 import static io.joyrpc.constants.Constants.HIDDEN_KEY_TIME_OUT;
+import static io.joyrpc.util.ClassUtils.getPublicMethod;
+import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
 /**
  * 回调管理器
@@ -202,6 +206,7 @@ public class CallbackManager implements Closeable {
          */
         protected T add(String callbackId, ChannelTransport transport, BiFunction<String, ChannelTransport, T> function) {
             T callback = function.apply(callbackId, transport);
+            //回调很少，可以使用CopyOnWriteArraySet
             channelIds.computeIfAbsent(transport, c -> new CopyOnWriteArraySet<>()).add(callbackId);
             callbacks.put(callbackId, callback);
             return callback;
@@ -223,24 +228,23 @@ public class CallbackManager implements Closeable {
             Invocation invocation = request.getPayLoad();
             Object[] args = invocation.getArgs();
             Object callbackArg = args[meta.index];
-            if (!(callbackArg instanceof Callback)) {
-                throw new RpcException(String.format("Callback parameter be null!,%s", invocation.getMethod()));
-            }
-            Callback<?, ?> callback = (Callback<?, ?>) callbackArg;
             String ip = Ipv4.getLocalIp();
             int pid = GlobalContext.getPid();
-            String callbackId = new StringBuilder(100).append(ip).append("_")
+            String callbackId = new StringBuilder(100)
+                    .append(ip).append("_")
                     .append(port).append("_")
-                    .append(pid).append("_")
-                    .append(callbackArg.getClass().getCanonicalName()).append("_")
+                    .append(pid).append("_").append("_")
                     .append(counter.incrementAndGet()).toString();
             //注入回调ID，便于外部感知，再需要的时候进行删除
-            callback.setCallbackId(callbackId);
+            if (callbackArg instanceof CallbackListener) {
+                ((CallbackListener) callbackArg).setCallbackId(callbackId);
+            }
             //header设置callbackId
             request.getHeader().addAttribute(HEAD_CALLBACK_INSID, callbackId);
             //callback参数置空
             args[meta.index] = null;
-            add(callbackId, transport, (c, t) -> new ConsumerCallbackInvoker<>(callback, t));
+            //保存回调对象
+            add(callbackId, transport, (c, t) -> new ConsumerCallbackInvoker(meta.getParameter().getType(), callbackArg, t));
         }
     }
 
@@ -261,38 +265,59 @@ public class CallbackManager implements Closeable {
             if (callbackId == null || callbackId.isEmpty()) {
                 throw new RpcException("callbackId can not be empty! ");
             }
-            Class<? extends Callback<?, ?>> callbackClass = invocation.getArgClasses()[meta.index];
-            ProducerCallbackInvoker<?, ?> handler = add(callbackId, transport,
-                    (c, t) -> new ProducerCallbackInvoker<>(c, invocation.getClazz(),
-                            meta.getParameterType(), callbackClass, header, t, k -> callbacks.remove(k)));
+            ProducerCallbackInvoker handler = add(callbackId, transport,
+                    (c, t) -> new ProducerCallbackInvoker(
+                            c, meta.getParameter().getType(),
+                            m -> meta.getParameterTypes(m),
+                            header,
+                            t,
+                            k -> callbacks.remove(k)));
 
             invocation.getArgs()[meta.index] = handler.callback;
         }
+
     }
 
     /**
      * 消费者注册用于处理服务端回调消息的处理器
      */
-    protected static class ConsumerCallbackInvoker<Q, S> implements CallbackInvoker {
+    protected static abstract class AbstractCallbackInvoker implements CallbackInvoker {
+
+        /**
+         * 回调接口
+         */
+        protected Class<?> callbackClass;
         /**
          * 回调
          */
-        protected Callback<Q, S> callback;
-        //通道
+        protected Object callback;
+        /**
+         * 连接
+         */
         protected ChannelTransport transport;
 
-        public ConsumerCallbackInvoker(Callback<Q, S> callback, ChannelTransport transport) {
-            this.callback = callback;
-            this.transport = transport;
-        }
-
         @Override
-        public CompletableFuture<Result> invoke(RequestMessage<Invocation> request) {
+        public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
+            // 回调的场景少，直接采用反射
+            CompletableFuture<Result> result = new CompletableFuture<>();
             try {
-                return CompletableFuture.completedFuture(new Result(request.getContext(), callback.notify((Q) request.getPayLoad().getArgs()[0])));
-            } catch (Exception e) {
-                return CompletableFuture.completedFuture(new Result(request.getContext(), e));
+                Invocation payLoad = request.getPayLoad();
+                Method method = getPublicMethod(callbackClass, payLoad.getMethodName());
+                Object value = method.invoke(callback, payLoad.getArgs());
+                //异步回调
+                CompletableFuture<?> future = isReturnFuture(callbackClass, method) ?
+                        (CompletableFuture<?>) value : CompletableFuture.completedFuture(value);
+                future.whenComplete((v, t) -> {
+                    if (t != null) {
+                        result.complete(new Result(request.getContext(), t));
+                    } else {
+                        result.complete(new Result(request.getContext(), v));
+                    }
+                });
+            } catch (Throwable e) {
+                result.completedFuture(new Result(request.getContext(), e));
             }
+            return result;
         }
 
         @Override
@@ -301,27 +326,46 @@ public class CallbackManager implements Closeable {
         }
 
         @Override
-        public Callback<Q, S> getCallback() {
-            return callback;
+        public void recallback() {
+
+        }
+    }
+
+    /**
+     * 消费者注册用于处理服务端回调消息的处理器
+     */
+    protected static class ConsumerCallbackInvoker extends AbstractCallbackInvoker {
+        /**
+         * 通道
+         */
+        protected final ChannelTransport transport;
+
+        public ConsumerCallbackInvoker(final Class<?> callbackClass, final Object callback, final ChannelTransport transport) {
+            this.callbackClass = callbackClass;
+            this.callback = callback;
+            this.transport = transport;
+        }
+
+        @Override
+        public void recallback() {
+            if (callback instanceof CallbackListener) {
+                ((CallbackListener) callback).recallback();
+            }
         }
     }
 
     /**
      * 回调
      */
-    protected static class ProducerCallbackInvoker<Q, S> implements CallbackInvoker {
+    protected static class ProducerCallbackInvoker extends AbstractCallbackInvoker {
         /**
          * ID
          */
         protected String id;
         /**
-         * 接口楼
-         */
-        protected Class<?> interfaceClass;
-        /**
          * 参数类型
          */
-        protected Class<S> parameterType;
+        protected Function<Method, Class[]> typeFunc;
         /**
          * 请求头
          */
@@ -334,46 +378,20 @@ public class CallbackManager implements Closeable {
          * 执行完毕消费者
          */
         protected Consumer<String> closing;
-        /**
-         * 回调
-         */
-        protected Callback<Q, S> callback;
-
 
         public ProducerCallbackInvoker(final String id,
-                                       final Class<?> interfaceClass,
-                                       final Class<S> parameterType,
-                                       final Class<? extends Callback<?, ?>> callbackClass,
+                                       final Class<?> callbackClass,
+                                       final Function<Method, Class[]> typeFunc,
                                        final MessageHeader header,
                                        final ChannelTransport transport,
                                        final Consumer<String> closing) {
             this.id = id;
-            this.interfaceClass = interfaceClass;
-            this.parameterType = parameterType;
+            this.callbackClass = callbackClass;
+            this.typeFunc = typeFunc;
             this.header = header;
             this.transport = transport;
             this.closing = closing;
-            this.callback = (Callback<Q, S>) PROXY.get().getProxy(callbackClass, this::doInvoke);
-        }
-
-        @Override
-        public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-            Object response = request.getPayLoad().getArgs()[0];
-            try {
-                return CompletableFuture.completedFuture(new Result(request.getContext(), callback.notify((Q) response)));
-            } catch (Exception e) {
-                return CompletableFuture.completedFuture(new Result(request.getContext(), e));
-            }
-        }
-
-        @Override
-        public Callback<Q, S> getCallback() {
-            return callback;
-        }
-
-        @Override
-        public ChannelTransport getTransport() {
-            return transport;
+            this.callback = PROXY.get().getProxy(callbackClass, this::doInvoke);
         }
 
         /**
@@ -394,10 +412,13 @@ public class CallbackManager implements Closeable {
                 return this.hashCode();
             } else if ("equals".equals(methodName) && paramTypes.length == 1) {
                 return this.equals(param[0]);
+            } else if (Modifier.isStatic(method.getModifiers())) {
+                //静态方法
+                return method.invoke(proxy, param);
             }
             Session session = transport.session();
             //回调不需要别名,需要设置真实的参数类型
-            Invocation invocation = new Invocation(interfaceClass, null, method, param, new Class[]{parameterType});
+            Invocation invocation = new Invocation(callbackClass, null, method, param, typeFunc.apply(method));
             //已经设置了创建时间
             RequestMessage<Invocation> request = RequestMessage.build(invocation);
             MessageHeader rh = request.getHeader();
@@ -405,7 +426,6 @@ public class CallbackManager implements Closeable {
             rh.setMsgType(MsgType.CallbackReq.getType());
             rh.setProtocolType(header.getProtocolType());
             rh.setSerialization(header.getSerialization());
-            //TODO 应答的压缩格式，老版协议没有会话
             rh.setCompression(session == null ? Compression.NONE : session.getCompressionType());
             rh.addAttribute(HEAD_CALLBACK_INSID, id);
             //TODO 缺乏参数注入

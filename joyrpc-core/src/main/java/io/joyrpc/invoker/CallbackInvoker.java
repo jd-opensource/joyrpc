@@ -20,7 +20,6 @@ package io.joyrpc.invoker;
  * #L%
  */
 
-import io.joyrpc.Callback;
 import io.joyrpc.Invoker;
 import io.joyrpc.transport.transport.ChannelTransport;
 
@@ -37,9 +36,7 @@ public interface CallbackInvoker extends Invoker {
     ChannelTransport getTransport();
 
     /**
-     * 获取回调对象
-     *
-     * @return 回调
+     * 重新注册回调
      */
-    Callback getCallback();
+    void recallback();
 }

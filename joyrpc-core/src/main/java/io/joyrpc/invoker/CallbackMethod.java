@@ -20,74 +20,152 @@ package io.joyrpc.invoker;
  * #L%
  */
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import io.joyrpc.util.GenericClass;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
+
+import java.lang.reflect.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 回调方法
  */
 public class CallbackMethod {
 
+    protected static final AtomicLong counter = new AtomicLong(0);
+
+    /**
+     * 所属接口
+     */
+    protected Class<?> interfaceClass;
+    /**
+     * 泛化信息
+     */
+    protected GenericClass genericClass;
     /**
      * 所属方法
      */
     protected Method method;
     /**
-     * 索引
+     * 参数索引
      */
     protected int index;
     /**
-     * 参数索引
+     * 参数对象
      */
     protected Parameter parameter;
     /**
-     * 参数真实类型
+     * 方法的参数类型
      */
-    protected Class<?> parameterType;
-    /**
-     * 返回值真实类型
-     */
-    protected Class<?> returnType;
+    protected Map<Method, Class[]> parameterTypes;
 
     /**
      * 回调方法
      *
-     * @param method    方法
-     * @param index     参数索引
-     * @param parameter 参数
+     * @param interfaceClass 接口类
+     * @param method         方法
+     * @param index          参数索引
+     * @param parameter      参数
+     * @param genericClass   泛化信息
      */
-    public CallbackMethod(Method method, int index, Parameter parameter) {
+    public CallbackMethod(final Class<?> interfaceClass,
+                          final Method method,
+                          final int index,
+                          final Parameter parameter,
+                          final GenericClass genericClass) {
+        this.interfaceClass = interfaceClass;
+        this.genericClass = genericClass;
         this.method = method;
         this.index = index;
         this.parameter = parameter;
-        Type type = parameter.getParameterizedType();
-        if (type instanceof ParameterizedType) {
-            Type[] actualTypes = ((ParameterizedType) type).getActualTypeArguments();
-            if (actualTypes.length == 2) {
-                parameterType = getRealClass(actualTypes[0]);
-                returnType = getRealClass(actualTypes[1]);
+        //兼容Callback，处理泛型
+        Class<?> parameterType = parameter.getType();
+        TypeVariable<? extends Class<?>>[] variables = parameterType.getTypeParameters();
+        //类有泛型变量
+        if (variables.length > 0) {
+            //获取方法参数的泛型信息
+            GenericMethod genericMethod = genericClass.get(method);
+            GenericType[] genericTypes = genericMethod.getParameters();
+            Map<String, Class<?>> variableTypes = new HashMap<>();
+            Type[] types = ((ParameterizedType) parameter.getParameterizedType()).getActualTypeArguments();
+            for (int i = 0; i < types.length; i++) {
+                //计算泛型参数的类型
+                compute(variables[i].getName(), types[i], variableTypes, genericTypes[index]);
+            }
+            //回调参数类的泛型信息
+            GenericClass gc = new GenericClass(parameterType, variableTypes);
+            parameterTypes = new HashMap<>();
+            Method[] methods = parameterType.getMethods();
+            for (Method m : methods) {
+                //计算每个方法的泛型信息
+                parameterTypes.put(m, computeParameterType(gc.get(m)));
             }
         }
     }
 
     /**
+     * 计算类的泛型变量
+     *
+     * @param variable 变量名称
+     * @param type     类型
+     * @param types    变量类型
+     * @param gType    泛型信息
+     */
+    protected void compute(String variable, Type type, Map<String, Class<?>> types, GenericType gType) {
+        if (type instanceof ParameterizedType) {
+            // 例如 Callback<List<String>>
+            Type rawType = ((ParameterizedType) type).getRawType();
+            if (rawType instanceof Class) {
+                types.put(variable, (Class<?>) rawType);
+            } else {
+                types.put(variable, null);
+            }
+        } else if (type instanceof Class) {
+            // 普通的 Callback<String>
+            types.put(variable, (Class<?>) type);
+        } else if (type instanceof TypeVariable) {
+            compute(variable, gType.getVariable(variable).getType(), types, gType);
+        }
+    }
+
+    /**
+     * 计算方法参数类
+     *
+     * @param gMethod
+     * @return
+     */
+    protected Class<?>[] computeParameterType(final GenericMethod gMethod) {
+        GenericType[] types = gMethod.getParameters();
+        Class<?>[] result = new Class<?>[types.length];
+        for (int i = 0; i < types.length; i++) {
+            result[i] = computeParameterType(types[i].getType(), types[i]);
+        }
+        return result;
+    }
+
+    /**
      * 获取真实类型
      *
-     * @param actualType 类型
+     * @param type  类型
+     * @param gType 泛型信息
      * @return 类
      */
-    protected Class<?> getRealClass(final Type actualType) {
-        if (actualType instanceof ParameterizedType) {
+    protected Class<?> computeParameterType(final Type type, final GenericType gType) {
+        if (type instanceof ParameterizedType) {
             // 例如 Callback<List<String>>
-            Type rawType = ((ParameterizedType) actualType).getRawType();
+            Type rawType = ((ParameterizedType) type).getRawType();
             if (rawType instanceof Class) {
                 return (Class<?>) rawType;
             }
-        } else if (actualType instanceof Class) {
+        } else if (type instanceof Class) {
             // 普通的 Callback<String>
-            return (Class<?>) actualType;
+            return (Class<?>) type;
+        } else if (type instanceof TypeVariable) {
+            // 类上的泛型变量
+            GenericType.Variable variable = gType.getVariable(((TypeVariable) type).getName());
+            return variable == null ? null : computeParameterType(variable.getType(), variable.getGenericType());
         }
         return null;
     }
@@ -100,11 +178,14 @@ public class CallbackMethod {
         return parameter;
     }
 
-    public Class<?> getParameterType() {
-        return parameterType;
-    }
-
-    public Class<?> getReturnType() {
-        return returnType;
+    /**
+     * 获取方法的参数类型，进行泛化处理，便于兼容原有的Callback接口
+     *
+     * @param method 方法
+     * @return 参数类型
+     */
+    public Class<?>[] getParameterTypes(final Method method) {
+        //考虑到有泛型情况，需要处理
+        return parameterTypes == null ? null : parameterTypes.get(method);
     }
 }

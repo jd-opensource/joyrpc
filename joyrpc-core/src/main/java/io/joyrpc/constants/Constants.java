@@ -148,6 +148,7 @@ public class Constants {
     public static final String TRACE_OPEN = "trace.open";
     public static final String TRACE_TYPE = "trace.type";
 
+
     /**
      * 统计面板启用标识
      */
@@ -269,6 +270,10 @@ public class Constants {
      * 自定义设置: 是否忽略Consumer变化时最终的删除命令，默认false
      */
     public static final String SETTING_CONSUMER_PROVIDER_NULLABLE = "consumer.provider.nullable";
+    /**
+     * 回调参数索引键
+     */
+    public static final String CALLBACK_ARG_KEY = "callbackArg";
     /**
      * 自定义设置：callback的线程池初始大小
      */

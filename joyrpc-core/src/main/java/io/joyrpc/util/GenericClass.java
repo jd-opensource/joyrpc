@@ -9,9 +9,9 @@ package io.joyrpc.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -45,6 +45,10 @@ public class GenericClass {
     protected Map<Executable, GenericExecutable> methodGeneric = new ConcurrentHashMap<>();
 
     public GenericClass(Class clazz) {
+        this(clazz, null);
+    }
+
+    public GenericClass(Class clazz, Map<String, ? extends Type> parent) {
         this.clazz = clazz;
 
         GenericType childType = new GenericType(clazz);
@@ -53,7 +57,7 @@ public class GenericClass {
         TypeVariable<Class>[] variables = clazz.getTypeParameters();
         if (variables.length > 0) {
             for (TypeVariable<Class> variable : variables) {
-                childType.addVariable(new Variable(variable.toString()));
+                childType.addVariable(new Variable(variable.getName(), parent == null ? null : parent.get(variable.getName())));
             }
             classGeneric.put(clazz, childType);
         }
@@ -132,7 +136,7 @@ public class GenericClass {
                     result.addVariable(new Variable(name, argument));
                 } else if (argument instanceof TypeVariable) {
                     //从子类获取泛型定义
-                    result.addVariable(childType.getOrCreate(name));
+                    result.addVariable(new Variable(name, childType.getVariable(((TypeVariable) argument).getName())));
                 } else {
                     //可以是ParameterizedType和GenericArrayType，判断其内部是否还有泛型变量
                     argumentType = compute(argument, childType);

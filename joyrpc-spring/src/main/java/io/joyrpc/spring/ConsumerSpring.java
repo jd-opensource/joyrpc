@@ -21,7 +21,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.joyrpc.spring.Counter.*;
 
@@ -58,7 +58,11 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     /**
      * 开关
      */
-    protected transient AtomicInteger steps = new AtomicInteger(0);
+    protected transient AtomicBoolean contextDone = new AtomicBoolean();
+    /**
+     * 开关
+     */
+    protected transient AtomicBoolean startDone = new AtomicBoolean();
 
     /**
      * 构造函数
@@ -118,19 +122,18 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public void afterPropertiesSet() {
         //如果没有配置注册中心，则默认订阅全部注册中心
-        if (config.getRegistry() == null) {
-            if (!StringUtils.isEmpty(registryName)) {
-                config.setRegistry(applicationContext.getBean(registryName, RegistryConfig.class));
-            } else {
-                Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
-                if (!beans.isEmpty()) {
-                    Map.Entry<String, RegistryConfig> entry = beans.entrySet().iterator().next();
-                    config.setRegistry(entry.getValue());
-                    logger.info(String.format("detect registryConfig: %s for %s", entry.getKey(), config.getId()));
-                }
-            }
-        }
+        setupRegistry();
         //判断是否设置了配置中心
+        setupConfigure();
+        config.validate();
+        //记录消费者的数量
+        incConsumer();
+    }
+
+    /**
+     * 构建配置器
+     */
+    protected void setupConfigure() {
         if (config.getConfigure() == null) {
             if (!StringUtils.isEmpty(configureName)) {
                 config.setConfigure(applicationContext.getBean(configureName, Configure.class));
@@ -143,9 +146,24 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                 }
             }
         }
-        config.validate();
-        //记录消费者的数量
-        incConsumer();
+    }
+
+    /**
+     * 构建注册中心
+     */
+    protected void setupRegistry() {
+        if (config.getRegistry() == null) {
+            if (!StringUtils.isEmpty(registryName)) {
+                config.setRegistry(applicationContext.getBean(registryName, RegistryConfig.class));
+            } else {
+                Map<String, RegistryConfig> beans = applicationContext.getBeansOfType(RegistryConfig.class, false, false);
+                if (!beans.isEmpty()) {
+                    Map.Entry<String, RegistryConfig> entry = beans.entrySet().iterator().next();
+                    config.setRegistry(entry.getValue());
+                    logger.info(String.format("detect registryConfig: %s for %s", entry.getKey(), config.getId()));
+                }
+            }
+        }
     }
 
 
@@ -156,34 +174,42 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         }
     }
 
-    /**
-     * 此处事件需要同步处理，防止在并发的情况下还没refer好就被调用getObject方法返回空代理对象的情况，加上 synchronized
-     *
-     * @param event
-     */
     @Override
-    public synchronized void onApplicationEvent(ApplicationEvent event) {
-        //等待上下文初始化完成事件
-        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
-            //刷新事件会多次，防止重入
-            if (steps.compareAndSet(0, 1)) {
-                //生成代理，并创建引用
-                config.refer().whenComplete((v, t) -> {
-                    if (t != null) {
-                        //出了异常
-                        logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
-                                config.getServiceName(), config.getAlias(), t.getMessage()));
-                        System.exit(1);
-                    } else {
-                        //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
-                        successConsumer(() -> CompletableFuture.runAsync(
-                                () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
-                    }
-                });
-                //启动，如果有多个消费者或服务提供者，通知到链上的最后一个bean会挂住
-                startBean();
+    public void onApplicationEvent(final ApplicationEvent event) {
+        if (event instanceof ContextRefreshedEvent) {
+            if (!hasContext()) {
+                onContextDone();
             }
+            //判断是否启动过，防止重入
+            if (startDone.compareAndSet(false, true)) {
+                //主线程等待
+                startAndWait();
+            }
+        } else if (event instanceof ContextDoneEvent) {
+            //该事件通知线程不是主线程，不用startAndWait
+            onContextDone();
         }
+    }
 
+    /**
+     * 上下文就绪
+     */
+    protected void onContextDone() {
+        //刷新事件会多次，防止重入
+        if (contextDone.compareAndSet(false, true)) {
+            //生成代理，并创建引用
+            config.refer().whenComplete((v, t) -> {
+                if (t != null) {
+                    //出了异常
+                    logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
+                            config.getServiceName(), config.getAlias(), t.getMessage()));
+                    System.exit(1);
+                } else {
+                    //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
+                    successConsumer(() -> CompletableFuture.runAsync(
+                            () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
+                }
+            });
+        }
     }
 }

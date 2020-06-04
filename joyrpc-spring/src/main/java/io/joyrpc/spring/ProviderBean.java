@@ -44,7 +44,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -87,9 +87,17 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected transient String warmupName;
     /**
-     * 启动步骤
+     * 上下文就绪开关
      */
-    protected transient AtomicInteger steps = new AtomicInteger(0);
+    protected transient AtomicBoolean contextDone = new AtomicBoolean();
+    /**
+     * 消费者就绪开关
+     */
+    protected transient AtomicBoolean consumerDone = new AtomicBoolean();
+    /**
+     * 启动开关
+     */
+    protected transient AtomicBoolean startDone = new AtomicBoolean();
     /**
      * 配置中心名称
      */
@@ -113,21 +121,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     }
 
     @Override
-    public synchronized void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof ContextDoneEvent || (event instanceof ContextRefreshedEvent && !hasContext())) {
-            //等待上下文初始化完成，输出服务
-            stepExport();
-            //没有消费者，直接打开服务
-            if (!hasConsumer()) {
-                stepOpen();
-            }
-        } else if (event instanceof ConsumerDoneEvent) {
-            //等待消费者初始化完成，做到优雅启动
-            stepOpen();
-        }
-    }
-
-    @Override
     public void afterPropertiesSet() {
         setupServer();
         setupRegistry();
@@ -138,21 +131,46 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         incProvider();
     }
 
-    /**
-     * 步骤：输出服务,并没有打开，服务不可用
-     */
-    protected void stepExport() {
-        if (steps.compareAndSet(0, 1)) {
-            exportFuture = export();
+    @Override
+    public void onApplicationEvent(final ApplicationEvent event) {
+        if (event instanceof ContextRefreshedEvent) {
+            if (!hasContext()) {
+                onContextDone();
+            }
+            if (startDone.compareAndSet(false, true)) {
+                //主线程等待
+                startAndWait();
+            }
+        } else if (event instanceof ContextDoneEvent) {
+            //等待上下文初始化完成，输出服务
+            //该事件通知线程不是主线程，不用startAndWait
+            onContextDone();
+        } else if (event instanceof ConsumerDoneEvent) {
+            //等待消费者初始化完成，做到优雅启动
+            //该事件通知线程不是主线程，不用startAndWait
+            onConsumerDone();
         }
     }
 
     /**
-     * 步骤：打开服务步骤
+     * 上下文就绪
      */
-    protected void stepOpen() {
-        //防止重入
-        if (steps.compareAndSet(1, 2)) {
+    protected void onContextDone() {
+        //等待上下文初始化完成，输出服务
+        if (contextDone.compareAndSet(false, true)) {
+            exportFuture = export();
+        }
+        //没有消费者，直接打开服务
+        if (!hasConsumer()) {
+            onConsumerDone();
+        }
+    }
+
+    /**
+     * 消费者就绪，启动服务监听
+     */
+    protected void onConsumerDone() {
+        if (consumerDone.compareAndSet(false, true)) {
             exportFuture.whenComplete((v, t) -> {
                 if (t != null) {
                     logger.error(String.format("Error occurs while export provider %s", id), t);
@@ -171,8 +189,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                     });
                 }
             });
-            //启动，如果有多个消费者或服务提供者，通知到链上的最后一个bean会挂住
-            startBean();
         }
     }
 

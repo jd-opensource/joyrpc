@@ -32,9 +32,10 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.context.event.ContextRefreshedEvent;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
+import static io.joyrpc.spring.Counter.startAndWait;
 import static io.joyrpc.spring.Counter.successContext;
 
 /**
@@ -69,7 +70,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
     /**
      * 开关
      */
-    protected transient AtomicInteger steps = new AtomicInteger(0);
+    protected transient AtomicBoolean startDone = new AtomicBoolean();
 
     public String getKey() {
         return key;
@@ -118,13 +119,14 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
     }
 
     @Override
-    public void onApplicationEvent(ApplicationEvent event) {
+    public void onApplicationEvent(final ApplicationEvent event) {
         //等待上下文初始化完成事件
         if (event instanceof ContextRefreshedEvent) {
             //刷新事件会多次，防止重入
-            if (steps.compareAndSet(0, 1)) {
+            if (startDone.compareAndSet(false, true)) {
                 //上下文初始化完成，异步通知
                 successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
+                startAndWait();
             }
         }
     }

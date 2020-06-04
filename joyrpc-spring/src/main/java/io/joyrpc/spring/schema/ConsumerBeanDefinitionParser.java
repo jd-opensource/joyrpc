@@ -34,9 +34,4 @@ public class ConsumerBeanDefinitionParser extends AbstractInterfaceBeanDefinitio
         super(ConsumerBean.class, true);
     }
 
-    @Override
-    protected void addCustomParser() {
-        super.addCustomParser();
-        parsers.put("registry", new ReferenceParser());
-    }
 }

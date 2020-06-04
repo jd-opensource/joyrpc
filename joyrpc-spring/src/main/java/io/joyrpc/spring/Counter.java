@@ -91,9 +91,9 @@ public class Counter {
     }
 
     /**
-     * 启动
+     * 启动，如果是最后一个则等待
      */
-    public static void startBean() {
+    public static void startAndWait() {
         if (STARTING_BEANS.decrementAndGet() == 0) {
             try {
                 LATCH.await();
@@ -111,6 +111,8 @@ public class Counter {
      * @return
      */
     public static int incContext() {
+        STARTING_BEANS.incrementAndGet();
+        UNSUCCESS_BEANS.incrementAndGet();
         int result = CONTEXT_BEANS.incrementAndGet();
         UNSUCCESS_CONTEXT_BEANS.incrementAndGet();
         return result;
@@ -137,43 +139,46 @@ public class Counter {
     }
 
     /**
-     * 成功启动上下文参数
+     * 启动成功
+     *
+     * @param counter    计数器
+     * @param allSuccess 当所有的启动成功执行操作
      */
-    public static void successContext(final Runnable runnable) {
-        if (UNSUCCESS_CONTEXT_BEANS.decrementAndGet() == 0) {
-            if (runnable != null) {
-                runnable.run();
-            }
-        }
-    }
-
-    /**
-     * 成功启动计数器
-     */
-    public static void successConsumer(final Runnable runnable) {
-        if (UNSUCCESS_CONSUMER_BEANS.decrementAndGet() == 0) {
-            if (runnable != null) {
-                runnable.run();
+    protected static void success(final AtomicInteger counter, final Runnable allSuccess) {
+        if (counter.decrementAndGet() == 0) {
+            if (allSuccess != null) {
+                allSuccess.run();
             }
         }
         if (UNSUCCESS_BEANS.decrementAndGet() == 0) {
             LATCH.countDown();
         }
+    }
+
+    /**
+     * 成功启动上下文参数
+     *
+     * @param allSuccess 当所有的启动成功执行器
+     */
+    public static void successContext(final Runnable allSuccess) {
+        success(UNSUCCESS_CONTEXT_BEANS, allSuccess);
     }
 
     /**
      * 成功启动计数器
      *
-     * @param runnable 执行器
+     * @param allSuccess 当所有的启动成功执行器
      */
-    public static void successProvider(final Runnable runnable) {
-        if (UNSUCCESS_PROVIDER_BEANS.decrementAndGet() == 0) {
-            if (runnable != null) {
-                runnable.run();
-            }
-        }
-        if (UNSUCCESS_BEANS.decrementAndGet() == 0) {
-            LATCH.countDown();
-        }
+    public static void successConsumer(final Runnable allSuccess) {
+        success(UNSUCCESS_CONSUMER_BEANS, allSuccess);
+    }
+
+    /**
+     * 成功启动计数器
+     *
+     * @param allSuccess 当所有的启动成功执行器
+     */
+    public static void successProvider(final Runnable allSuccess) {
+        success(UNSUCCESS_PROVIDER_BEANS, allSuccess);
     }
 }

@@ -1007,7 +1007,8 @@ public class Cluster {
             }
             readys = new ArrayList<>(connects.values());
             Optional.ofNullable(trigger).ifPresent(o -> {
-                if (o.acquire()) {
+                if (!o.acquire()) {
+                    //满足足够的连接了
                     trigger = null;
                 }
             });
@@ -1160,7 +1161,7 @@ public class Cluster {
         /**
          * 初始化连接数
          */
-        protected int initSize;
+        protected volatile int initSize;
         /**
          * 超时时间
          */
@@ -1215,8 +1216,7 @@ public class Cluster {
             this.whenTimeout = whenTimeout;
             if (timeout > 0) {
                 //超时检测
-                timer().add("TimeoutTask-" + clusterName, SystemClock.now() + timeout,
-                        () -> fire(semaphore.get() < initSize || !check.get() ? ready : whenTimeout));
+                timer().add("TimeoutTask-" + clusterName, SystemClock.now() + timeout, this::doTimeout);
             }
         }
 
@@ -1231,7 +1231,10 @@ public class Cluster {
             }
             if (first.compareAndSet(false, true)) {
                 //第一次选择结果，对参数进行修正，避免initSize设置的不合理
-                semaphore.set(Math.max(1, Math.min(size * 2 / 3, semaphore.get())));
+                long value = Math.max(1, Math.min(size * 2 / 3, semaphore.get()));
+                semaphore.set(value);
+                //初始化连接数也要重置，否则超时的时候会触发就绪事件
+                initSize = (int) value;
                 return true;
             }
             return false;
@@ -1249,10 +1252,17 @@ public class Cluster {
                     semaphore.set(0L);
                     fire(ready);
                 } else if (connectTimeout > 0) {
-                    timer().add("ConnectTimeoutTask-" + clusterName, SystemClock.now() + connectTimeout,
-                            () -> fire(semaphore.get() < initSize || !check.get() ? ready : whenTimeout));
+                    timer().add("ConnectTimeoutTask-" + clusterName, SystemClock.now() + connectTimeout, this::doTimeout);
                 }
             }
+        }
+
+        /**
+         * 超时
+         */
+        protected void doTimeout() {
+            //只要有一个连接或者不需要连接就触发就绪事件
+            fire(semaphore.get() < initSize || !check.get() ? ready : whenTimeout);
         }
 
         /**
@@ -1281,9 +1291,9 @@ public class Cluster {
         public boolean acquire() {
             if (semaphore.decrementAndGet() == 0) {
                 fire(ready);
-                return true;
+                return false;
             }
-            return false;
+            return true;
         }
 
     }

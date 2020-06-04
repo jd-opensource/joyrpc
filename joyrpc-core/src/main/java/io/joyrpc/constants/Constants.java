@@ -270,6 +270,10 @@ public class Constants {
      */
     public static final String SETTING_CONSUMER_PROVIDER_NULLABLE = "consumer.provider.nullable";
     /**
+     * 回调参数索引键
+     */
+    public static final String CALLBACK_ARG_KEY = "callbackArg";
+    /**
      * 自定义设置：callback的线程池初始大小
      */
     public static final String SETTING_CALLBACK_POOL_CORE_SIZE = "callback.pool.coresize";

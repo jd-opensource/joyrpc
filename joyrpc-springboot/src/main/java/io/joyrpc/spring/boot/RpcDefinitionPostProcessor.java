@@ -95,6 +95,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
     public static final String PROVIDER_PREFIX = "provider-";
     public static final String CONSUMER_PREFIX = "consumer-";
     public static final String REF_PREFIX = "ref:";
+    public static final String REF_PREFIX_KEY = "rpc.ref.prefix";
 
     protected final ConfigurableEnvironment environment;
 
@@ -129,6 +130,10 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * Provider名称计数器
      */
     protected Map<String, AtomicInteger> providerNameCounters = new HashMap<>();
+    /**
+     * 引用前缀
+     */
+    protected String refPrefix;
 
     /**
      * 构造方法
@@ -140,6 +145,8 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         this.environment = environment;
         this.resourceLoader = resourceLoader;
         this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
+        //值引用前缀
+        this.refPrefix = environment.getProperty(REF_PREFIX_KEY, REF_PREFIX);
         //添加消费者
         if (rpcProperties.getConsumers() != null) {
             rpcProperties.getConsumers().forEach(c -> addConfig(c, CONSUMER_PREFIX, consumerNameCounters, consumers));
@@ -323,8 +330,8 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         if (parameters != null) {
             //从配置文件读取，值已经做了占位符替换
             parameters.forEach((key, value) -> {
-                if (value != null && value.startsWith(REF_PREFIX)) {
-                    String ref = value.substring(REF_PREFIX.length());
+                if (value != null && value.startsWith(refPrefix)) {
+                    String ref = value.substring(refPrefix.length());
                     if (!StringUtils.isEmpty(ref)) {
                         GlobalParameterDefinitionParser.register(registry, key, null, ref, null);
                     }

@@ -35,7 +35,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
-import static io.joyrpc.spring.Counter.startAndWait;
+import static io.joyrpc.spring.Counter.startAndWaitAtLast;
 import static io.joyrpc.spring.Counter.successContext;
 
 /**
@@ -126,7 +126,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
             if (startDone.compareAndSet(false, true)) {
                 //上下文初始化完成，异步通知
                 successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
-                startAndWait();
+                startAndWaitAtLast();
             }
         }
     }

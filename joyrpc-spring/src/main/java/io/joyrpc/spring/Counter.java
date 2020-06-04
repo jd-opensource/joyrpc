@@ -93,7 +93,7 @@ public class Counter {
     /**
      * 启动，如果是最后一个则等待
      */
-    public static void startAndWait() {
+    public static void startAndWaitAtLast() {
         if (STARTING_BEANS.decrementAndGet() == 0) {
             try {
                 LATCH.await();

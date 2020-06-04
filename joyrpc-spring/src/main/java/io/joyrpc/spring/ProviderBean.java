@@ -139,7 +139,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
             }
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
-                startAndWait();
+                startAndWaitAtLast();
             }
         } else if (event instanceof ContextDoneEvent) {
             //等待上下文初始化完成，输出服务

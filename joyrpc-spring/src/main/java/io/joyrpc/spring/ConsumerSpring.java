@@ -166,7 +166,6 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         }
     }
 
-
     @Override
     public void destroy() {
         if (!Shutdown.isShutdown()) {
@@ -183,7 +182,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
             //判断是否启动过，防止重入
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
-                startAndWait();
+                startAndWaitAtLast();
             }
         } else if (event instanceof ContextDoneEvent) {
             //该事件通知线程不是主线程，不用startAndWait

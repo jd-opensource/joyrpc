@@ -25,6 +25,7 @@ import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.*;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
 import io.joyrpc.spring.event.ContextDoneEvent;
+import io.joyrpc.spring.event.ProviderDoneEvent;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
@@ -184,7 +185,8 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                             System.exit(1);
                         } else {
                             //启动完成，如果是最后一个，则触发打开阻塞
-                            successProvider(null);
+                            successProvider(() -> CompletableFuture.runAsync(
+                                    () -> applicationContext.publishEvent(new ProviderDoneEvent(this))));
                         }
                     });
                 }

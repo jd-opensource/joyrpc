@@ -26,6 +26,7 @@ import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
 import io.joyrpc.spring.ConsumerBean;
 import io.joyrpc.spring.ConsumerGroupBean;
+import io.joyrpc.spring.Counter;
 import io.joyrpc.spring.ProviderBean;
 import io.joyrpc.spring.boot.annotation.AnnotationProvider;
 import io.joyrpc.spring.schema.GlobalParameterDefinitionParser;
@@ -134,6 +135,10 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * 引用前缀
      */
     protected String refPrefix;
+    /**
+     * 服务bean计数器
+     */
+    protected transient Counter counter;
 
     /**
      * 构造方法
@@ -144,6 +149,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
+        this.counter = Counter.computeCounter(applicationContext);
         this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
         //值引用前缀
         this.refPrefix = environment.getProperty(REF_PREFIX_KEY, REF_PREFIX);
@@ -333,10 +339,10 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
                 if (value != null && value.startsWith(refPrefix)) {
                     String ref = value.substring(refPrefix.length());
                     if (!StringUtils.isEmpty(ref)) {
-                        GlobalParameterDefinitionParser.register(registry, key, null, ref, null);
+                        GlobalParameterDefinitionParser.register(registry, counter, key, null, ref, null);
                     }
                 }
-                GlobalParameterDefinitionParser.register(registry, key, value);
+                GlobalParameterDefinitionParser.register(registry, counter, key, value);
             });
         }
         //注册

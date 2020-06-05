@@ -23,8 +23,6 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static io.joyrpc.spring.Counter.*;
-
 /**
  * 消费者
  *
@@ -63,6 +61,10 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
      * 开关
      */
     protected transient AtomicBoolean startDone = new AtomicBoolean();
+    /**
+     * 服务bean计数器
+     */
+    protected transient Counter counter;
 
     /**
      * 构造函数
@@ -121,13 +123,14 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     @Override
     public void afterPropertiesSet() {
+        counter = Counter.computeCounter(applicationContext);
         //如果没有配置注册中心，则默认订阅全部注册中心
         setupRegistry();
         //判断是否设置了配置中心
         setupConfigure();
         config.validate();
         //记录消费者的数量
-        incConsumer();
+        counter.incConsumer();
     }
 
     /**
@@ -176,13 +179,13 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public void onApplicationEvent(final ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
-            if (!hasContext()) {
+            if (!counter.hasContext()) {
                 onContextDone();
             }
             //判断是否启动过，防止重入
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
-                startAndWaitAtLast();
+                counter.startAndWaitAtLast();
             }
         } else if (event instanceof ContextDoneEvent) {
             //该事件通知线程不是主线程，不用startAndWait
@@ -205,7 +208,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                     System.exit(1);
                 } else {
                     //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
-                    successConsumer(() -> CompletableFuture.runAsync(
+                    counter.successConsumer(() -> CompletableFuture.runAsync(
                             () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
                 }
             });

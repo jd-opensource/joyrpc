@@ -20,6 +20,7 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
+import io.joyrpc.spring.Counter;
 import io.joyrpc.spring.context.SpringContextSupplier;
 import io.joyrpc.spring.context.SpringEnvironmentSupplier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;

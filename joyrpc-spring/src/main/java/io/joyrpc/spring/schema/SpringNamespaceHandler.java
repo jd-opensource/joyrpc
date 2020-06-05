@@ -27,6 +27,7 @@ import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
  */
 public class SpringNamespaceHandler extends NamespaceHandlerSupport {
 
+
     @Override
     public void init() {
         registerBeanDefinitionParser("provider", new ProviderBeanDefinitionParser());
@@ -36,4 +37,5 @@ public class SpringNamespaceHandler extends NamespaceHandlerSupport {
         registerBeanDefinitionParser("registry", new RegistryBeanDefinitionParser());
         registerBeanDefinitionParser("parameter", new GlobalParameterDefinitionParser());
     }
+
 }

@@ -20,6 +20,7 @@ package io.joyrpc.spring.schema;
  * #L%
  */
 
+import io.joyrpc.spring.Counter;
 import io.joyrpc.spring.GlobalParameterBean;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
@@ -28,9 +29,10 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.ResourceLoader;
 import org.w3c.dom.Element;
 
-import static io.joyrpc.spring.Counter.incContext;
 import static io.joyrpc.spring.GlobalParameterBean.*;
 import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 
@@ -39,6 +41,8 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
  */
 public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
 
+    private Counter counter;
+
     /**
      * 注册全局参数
      *
@@ -46,8 +50,9 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
      * @param key      键
      * @param value    值
      */
-    public static BeanDefinition register(final BeanDefinitionRegistry registry, final String key, final Object value) {
-        return register(registry, key, value, null, null);
+    public static BeanDefinition register(final BeanDefinitionRegistry registry, final Counter counter, final String key,
+                                          final Object value) {
+        return register(registry, counter, key, value, null, null);
     }
 
     /**
@@ -59,8 +64,8 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
      * @param ref      引用
      * @param hide     是否隐藏
      */
-    public static BeanDefinition register(final BeanDefinitionRegistry registry, final String key, final Object value,
-                                          final String ref, final String hide) {
+    public static BeanDefinition register(final BeanDefinitionRegistry registry, final Counter counter, final String key,
+                                          final Object value, final String ref, final String hide) {
         BeanDefinitionBuilder builder = rootBeanDefinition(GlobalParameterBean.class).setLazyInit(false);
         builder.addPropertyValue(KEY, key);
         if (value != null) {
@@ -72,15 +77,21 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
             builder.addPropertyValue(HIDE, hide);
         }
         AbstractBeanDefinition definition = builder.getBeanDefinition();
-        registry.registerBeanDefinition("global-parameter-" + incContext(), definition);
+        registry.registerBeanDefinition("global-parameter-" + counter.incContext(), definition);
         return definition;
     }
 
     @Override
     public BeanDefinition parse(final Element element, final ParserContext parserContext) {
-        return register(parserContext.getRegistry(), element.getAttribute(KEY),
+        if (counter == null) {
+            ResourceLoader resourceLoader = parserContext.getReaderContext().getReader().getResourceLoader();
+            ApplicationContext applicationContext = (ApplicationContext) resourceLoader;
+            counter = Counter.getOrCreate(applicationContext);
+        }
+        return register(parserContext.getRegistry(), counter, element.getAttribute(KEY),
                 element.getAttribute(VALUE),
                 element.getAttribute(REF),
                 element.getAttribute(HIDE));
     }
+
 }

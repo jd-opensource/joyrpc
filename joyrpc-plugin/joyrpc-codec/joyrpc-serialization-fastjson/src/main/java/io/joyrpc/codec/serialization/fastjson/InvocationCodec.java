@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.fastjson;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,16 +34,18 @@ import io.joyrpc.Callback;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.util.ClassUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 
 import static io.joyrpc.protocol.message.Invocation.*;
+import static io.joyrpc.util.ClassUtils.getClasses;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
@@ -163,55 +165,21 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 }
             }
             lexer.nextTokenWithColon(JSONToken.LITERAL_STRING);
-            token = lexer.token();
 
             if (CLASS_NAME.equals(key)) {
-                if (token == JSONToken.LITERAL_STRING) {
-                    invocation.setClassName(lexer.stringVal());
-                    lexer.nextToken();
-                }
+                readString(lexer, CLASS_NAME, false, v -> invocation.setClassName(v));
             } else if (ALIAS.equals(key)) {
-                if (token == JSONToken.LITERAL_STRING) {
-                    invocation.setAlias(lexer.stringVal());
-                } else {
-                    if (!Callback.class.isAssignableFrom(invocation.getClazz())) {
-                        throw new CodecException("syntax error: alias is empty");
-                    }
-                }
-                lexer.nextToken();
+                readString(lexer, ALIAS, true, v -> invocation.setAlias(v));
             } else if (METHOD_NAME.equals(key)) {
-                if (token == JSONToken.LITERAL_STRING) {
-                    invocation.setMethodName(lexer.stringVal());
-                    lexer.nextToken();
-                } else {
-                    throw new CodecException("syntax error:method is empty");
-                }
+                readString(lexer, METHOD_NAME, true, v -> invocation.setMethodName(v));
             } else if (ARGS_TYPE.equals(key)) {
                 invocation.setArgsType(parser.parseObject(String[].class));
             } else if (ARGS.equals(key)) {
-                Class[] argsClass;
-                try {
-                    if (invocation.getArgsType() != null) {
-                        argsClass = ClassUtils.getClasses(invocation.getArgsType());
-                    } else {
-                        Method method = getPublicMethod(invocation.getClassName(), invocation.getMethodName());
-                        //如果调用此方法返回null说明在接口中没有找到对应的方法，接口发生变化
-                        argsClass = method.getParameterTypes();
-                    }
-                } catch (ClassNotFoundException e) {
-                    throw new CodecException(e.getMessage());
-                } catch (NoSuchMethodException e) {
-                    throw new CodecException(e.getMessage());
-                } catch (MethodOverloadException e) {
-                    throw new CodecException(e.getMessage());
-                }
-                invocation.setArgsType(argsClass);
-                parseArgs(parser, argsClass, invocation);
+                parseArgs(parser, lexer, invocation);
             } else if (ATTACHMENTS.equals(key)) {
                 invocation.addAttachments(parser.parseObject());
             }
-            token = lexer.token();
-            if (token == JSONToken.RBRACE) {
+            if (lexer.token() == JSONToken.RBRACE) {
                 lexer.nextToken(JSONToken.COMMA);
                 break;
             }
@@ -220,27 +188,87 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
     }
 
     /**
+     * 读取字符串
+     *
+     * @param lexer    文法
+     * @param field    字段
+     * @param nullable 是否可以null
+     * @param consumer 值消费者
+     */
+    protected void readString(final JSONLexer lexer, String field, boolean nullable, Consumer<String> consumer) {
+        switch (lexer.token()) {
+            case JSONToken.LITERAL_STRING:
+                consumer.accept(lexer.stringVal());
+                lexer.nextToken();
+                break;
+            case JSONToken.NULL:
+                if (!nullable) {
+                    throw new CodecException("syntax error:" + field + " can not be null");
+                }
+                lexer.nextToken();
+                break;
+            default:
+                throw new CodecException("syntax error:" + field + " can not be null");
+        }
+    }
+
+    /**
      * 解析参数
      *
-     * @param parser
-     * @param argsClass
-     * @param invocation
+     * @param parser     解析器
+     * @param lexer      语法
+     * @param invocation 调用
      */
-    protected void parseArgs(final DefaultJSONParser parser, final Class[] argsClass, final Invocation invocation) {
-        JSONReader reader = new JSONReader(parser);
-        reader.startArray();
-        int i = 0;
-        Object[] objects = new Object[argsClass.length];
-        while (reader.hasNext()) {
-            if (i >= objects.length) {
-                throw new CodecException(String.format("the method %s of %s argument length is larger than %d",
-                        invocation.getMethodName(), invocation.getClassName(), objects.length));
+    protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
+        Class[] argsClass = null;
+        Parameter[] parameters;
+        Method method;
+        boolean special = false;
+        try {
+            method = getPublicMethod(invocation.getClassName(), invocation.getMethodName());
+            parameters = method.getParameters();
+            if (parameters.length > 0) {
+                String[] argsType = invocation.getArgsType();
+                if (argsType != null && argsType.length > 0) {
+                    argsClass = getClasses(argsType);
+                    special = true;
+                } else {
+                    //如果调用此方法返回null说明在接口中没有找到对应的方法，接口发生变化
+                    argsClass = method.getParameterTypes();
+                }
             }
-            objects[i] = reader.readObject(argsClass[i]);
-            i++;
+        } catch (ClassNotFoundException e) {
+            throw new CodecException(e.getMessage());
+        } catch (NoSuchMethodException e) {
+            throw new CodecException(e.getMessage());
+        } catch (MethodOverloadException e) {
+            throw new CodecException(e.getMessage());
         }
-        reader.endArray();
-        invocation.setArgs(objects);
-
+        invocation.setArgsType(argsClass);
+        invocation.setMethod(method);
+        //空数组
+        if (lexer.token() == JSONToken.NULL) {
+            if (parameters.length == 0) {
+                lexer.nextToken();
+            } else {
+                throw new CodecException("syntax error: args can not be null");
+            }
+        } else {
+            //解析参数
+            JSONReader reader = new JSONReader(parser);
+            reader.startArray();
+            int i = 0;
+            Object[] objects = new Object[parameters.length];
+            while (reader.hasNext()) {
+                if (i >= objects.length) {
+                    throw new CodecException(String.format("the method %s of %s argument length is larger than %d",
+                            invocation.getMethodName(), invocation.getClassName(), objects.length));
+                }
+                objects[i] = special ? reader.readObject(argsClass[i]) : reader.readObject(parameters[i].getParameterizedType());
+                i++;
+            }
+            reader.endArray();
+            invocation.setArgs(objects);
+        }
     }
 }

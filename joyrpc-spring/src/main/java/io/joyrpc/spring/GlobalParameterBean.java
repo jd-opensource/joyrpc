@@ -35,8 +35,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
-import static io.joyrpc.spring.Counter.startAndWaitAtLast;
-import static io.joyrpc.spring.Counter.successContext;
 
 /**
  * 全局参数
@@ -64,6 +62,10 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
      * 是否隐藏（是的话，业务代码不能获取到）
      */
     protected boolean hide = false;
+    /**
+     * 服务bean计数器
+     */
+    protected transient Counter counter;
 
     protected transient ApplicationContext applicationContext;
 
@@ -103,6 +105,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
 
     @Override
     public void afterPropertiesSet() {
+        counter = Counter.getOrCreate(applicationContext);
         validate();
         if (key != null && !key.isEmpty() && value != null) {
             if (hide) {
@@ -125,8 +128,8 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
             //刷新事件会多次，防止重入
             if (startDone.compareAndSet(false, true)) {
                 //上下文初始化完成，异步通知
-                successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
-                startAndWaitAtLast();
+                counter.successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
+                counter.startAndWaitAtLast();
             }
         }
     }

@@ -49,8 +49,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static io.joyrpc.spring.Counter.*;
-
 /**
  * 服务提供者
  */
@@ -70,7 +68,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected transient ApplicationContext applicationContext;
 
-    protected CompletableFuture<Void> exportFuture;
+    protected transient CompletableFuture<Void> exportFuture;
     /**
      * registryConfig 引用列表
      */
@@ -78,15 +76,15 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     /**
      * server引用
      */
-    protected transient String serverName;
+    protected String serverName;
     /**
      * ref引用
      */
-    protected transient String refName;
+    protected String refName;
     /**
      * 预热引用
      */
-    protected transient String warmupName;
+    protected String warmupName;
     /**
      * 上下文就绪开关
      */
@@ -99,6 +97,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      * 启动开关
      */
     protected transient AtomicBoolean startDone = new AtomicBoolean();
+    /**
+     * 服务bean计数器
+     */
+    protected transient Counter counter;
     /**
      * 配置中心名称
      */
@@ -123,24 +125,25 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void afterPropertiesSet() {
+        counter = Counter.getOrCreate(applicationContext);
         setupServer();
         setupRegistry();
         setupConfigure();
         setupRef();
         setupWarmup();
         validate();
-        incProvider();
+        counter.incProvider();
     }
 
     @Override
     public void onApplicationEvent(final ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
-            if (!hasContext()) {
+            if (!counter.hasContext()) {
                 onContextDone();
             }
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
-                startAndWaitAtLast();
+                counter.startAndWaitAtLast();
             }
         } else if (event instanceof ContextDoneEvent) {
             //等待上下文初始化完成，输出服务
@@ -162,7 +165,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
             exportFuture = export();
         }
         //没有消费者，直接打开服务
-        if (!hasConsumer()) {
+        if (!counter.hasConsumer()) {
             onConsumerDone();
         }
     }
@@ -185,7 +188,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
                             System.exit(1);
                         } else {
                             //启动完成，如果是最后一个，则触发打开阻塞
-                            successProvider(() -> CompletableFuture.runAsync(
+                            counter.successProvider(() -> CompletableFuture.runAsync(
                                     () -> applicationContext.publishEvent(new ProviderDoneEvent(this))));
                         }
                     });

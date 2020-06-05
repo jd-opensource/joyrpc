@@ -176,15 +176,15 @@ public class Timer {
     }
 
     /**
-     * 获取默认的Timer
+     * 获取默认的定时器
      *
-     * @return
+     * @return 定时器
      */
     public static Timer timer() {
         if (timer == null) {
             synchronized (Timer.class) {
                 if (timer == null) {
-                    Parametric parametric = new MapParametric(GlobalContext.getContext());
+                    Parametric parametric = new MapParametric<>(GlobalContext.getContext());
                     timer = new Timer("default", 200, 300,
                             parametric.getPositive(TIMER_THREADS, Math.min(ENVIRONMENT.get().cpuCores() * 2 + 2, 10)));
                 }
@@ -226,7 +226,6 @@ public class Timer {
      * 添加任务
      *
      * @param task 任务
-     * @return
      */
     protected void supply(final Task task) {
         //添加失败任务直接执行
@@ -239,29 +238,49 @@ public class Timer {
      * 添加任务，至少需要一跳
      *
      * @param name     名称
-     * @param time     任务执行时间
+     * @param time     任务执行绝对时间
      * @param runnable 执行任务
-     * @return
+     * @return 超时对象
      */
     public Timeout add(final String name, final long time, final Runnable runnable) {
         return runnable == null ? null : add(new Task(name, timeWheel.getLeastOneTick(time), runnable, afterRun, afterCancel));
     }
 
     /**
+     * 添加延迟执行的任务，至少需要一跳
+     *
+     * @param name     名称
+     * @param delay    延迟任务执行时间
+     * @param runnable 执行任务
+     * @return 超时对象
+     */
+    public Timeout delay(final String name, final long delay, final Runnable runnable) {
+        if (runnable == null) {
+            return null;
+        }
+        long time = timeWheel.getLeastOneTick(delay + SystemClock.now());
+        return add(new Task(name, time, runnable, afterRun, afterCancel));
+    }
+
+    /**
      * 添加任务，至少需要一条
      *
      * @param task 任务
-     * @return
+     * @return 超时对象
      */
     public Timeout add(final TimeTask task) {
-        return task == null ? null : add(new Task(task.getName(), timeWheel.getLeastOneTick(task.getTime()), task, afterRun, afterCancel));
+        if (task == null) {
+            return null;
+        }
+        long time = timeWheel.getLeastOneTick(task instanceof DelayTask ? SystemClock.now() + task.getTime() : task.getTime());
+        return add(new Task(task.getName(), time, task, afterRun, afterCancel));
     }
 
     /**
      * 添加任务
      *
      * @param task 任务
-     * @return
+     * @return 超时对象
      */
     protected Timeout add(final Task task) {
         if (maxTasks > 0 && tasks.incrementAndGet() > maxTasks) {
@@ -275,7 +294,7 @@ public class Timer {
     /**
      * 放弃任务
      *
-     * @param task
+     * @param task 任务
      */
     protected void cancel(final Task task) {
         tasks.decrementAndGet();
@@ -322,10 +341,10 @@ public class Timer {
         /**
          * 时间轮
          *
-         * @param tickTime
-         * @param ticks
-         * @param now
-         * @param queue
+         * @param tickTime 每跳的实际
+         * @param ticks    几跳
+         * @param now      当前时间
+         * @param queue    延迟队列
          */
         public TimeWheel(final long tickTime, final int ticks, final long now, final DelayQueue<Slot> queue) {
             this.tickTime = tickTime;
@@ -357,7 +376,7 @@ public class Timer {
         /**
          * 获取至少一跳的时间
          *
-         * @return
+         * @return 时间点
          */
         public long getLeastOneTick(final long time) {
             long result = SystemClock.now() + tickTime;
@@ -456,11 +475,11 @@ public class Timer {
         /**
          * 构造函数
          *
-         * @param name
-         * @param time
-         * @param runnable
-         * @param afterRun
-         * @param afterCancel
+         * @param name        名称
+         * @param time        运行的时间点
+         * @param runnable    执行器
+         * @param afterRun    运行完消费者
+         * @param afterCancel 放弃消费者
          */
         public Task(final String name, final long time, final Runnable runnable,
                     final Consumer<Task> afterRun,
@@ -555,7 +574,7 @@ public class Timer {
          *
          * @param task   任务
          * @param expire 新的过期时间
-         * @return
+         * @return 位置
          */
         protected int add(final Task task, final long expire) {
             task.slot = this;
@@ -633,6 +652,13 @@ public class Timer {
     }
 
     /**
+     * 延迟任务
+     */
+    public interface DelayTask extends TimeTask {
+
+    }
+
+    /**
      * 超时对象
      */
     public interface Timeout {
@@ -640,21 +666,21 @@ public class Timer {
         /**
          * 是否过期了
          *
-         * @return
+         * @return 过期标识
          */
         boolean isExpired();
 
         /**
          * 是否放弃了
          *
-         * @return
+         * @return 放弃标识
          */
         boolean isCancelled();
 
         /**
          * 放弃
          *
-         * @return
+         * @return 成功标识
          */
         boolean cancel();
     }

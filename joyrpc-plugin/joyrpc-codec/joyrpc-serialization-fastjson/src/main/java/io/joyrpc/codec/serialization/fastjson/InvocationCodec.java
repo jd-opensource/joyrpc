@@ -30,7 +30,6 @@ import com.alibaba.fastjson.serializer.AutowiredObjectSerializer;
 import com.alibaba.fastjson.serializer.JSONSerializer;
 import com.alibaba.fastjson.serializer.ObjectSerializer;
 import com.alibaba.fastjson.serializer.SerializeWriter;
-import io.joyrpc.Callback;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.protocol.message.Invocation;
@@ -93,7 +92,8 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
             out.writeString(invocation.getMethodName());
             out.append(",");
             //4.argsType
-            if (Callback.class.isAssignableFrom(invocation.getClazz())) {
+            //TODO 应该根据泛型变量来决定是否要参数类型
+            if (invocation.isCallback()) {
                 //回调需要写上实际的参数类型
                 ObjectSerializer argsTypeSerializer = serializer.getObjectWriter(String[].class);
                 out.writeFieldName(ARGS_TYPE);

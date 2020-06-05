@@ -212,15 +212,6 @@ public class Counter {
      * @return 计数器
      */
     public static Counter getOrCreate(final ApplicationContext ctx) {
-        ApplicationContext lastCtx = ctx;
-        for (; ; ) {
-            ApplicationContext parentCtx = lastCtx.getParent();
-            if (parentCtx != null) {
-                lastCtx = parentCtx;
-            } else {
-                break;
-            }
-        }
-        return COUNTERS.computeIfAbsent(lastCtx, Counter::new);
+        return COUNTERS.computeIfAbsent(ctx, Counter::new);
     }
 }

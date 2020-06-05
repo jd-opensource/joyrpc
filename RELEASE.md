@@ -62,6 +62,8 @@
 
 - Spring中的消费者和服务提供者在全局上下文初始化Bean完之前就启动了
 
+- 修复应用启动多个Spring ApplicationContext，启动出错问题。
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

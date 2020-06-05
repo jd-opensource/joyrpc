@@ -20,6 +20,7 @@ package io.joyrpc.invoker;
  * #L%
  */
 
+import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GenericType;
@@ -80,7 +81,7 @@ public class CallbackMethod {
         this.method = method;
         this.index = index;
         this.parameter = parameter;
-        //兼容Callback，处理泛型
+        //构造回调方法的时候确保了参数只能是接口，为了兼容Callback，处理泛型
         Class<?> parameterType = parameter.getType();
         TypeVariable<? extends Class<?>>[] variables = parameterType.getTypeParameters();
         //类有泛型变量
@@ -166,6 +167,13 @@ public class CallbackMethod {
             // 类上的泛型变量
             GenericType.Variable variable = gType.getVariable(((TypeVariable) type).getName());
             return variable == null ? null : computeParameterType(variable.getType(), variable.getGenericType());
+        } else if (type instanceof GenericArrayType) {
+            // 泛型数组
+            Class<?> result = computeParameterType(((GenericArrayType) type).getGenericComponentType(), gType);
+            try {
+                return result == null ? null : ClassUtils.getClass(result.getCanonicalName() + "[]");
+            } catch (ClassNotFoundException ignored) {
+            }
         }
         return null;
     }

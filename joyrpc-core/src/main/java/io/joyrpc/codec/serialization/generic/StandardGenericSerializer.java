@@ -414,18 +414,22 @@ public class StandardGenericSerializer implements GenericSerializer {
     /**
      * 反序列化MAP
      *
-     * @param pojo
-     * @param type
-     * @param genericType
-     * @param history
-     * @return
+     * @param pojo        字段值
+     * @param type        类型
+     * @param genericType 泛型
+     * @param history     历史
+     * @return 反序列化后的对象
      */
     protected Object realizeMap(final Map<?, ?> pojo, Class<?> type, final Type genericType,
                                 final Map<Object, Object> history) throws Exception {
         Object className = pojo.get(CLASS);
         if (className instanceof String && !((String) className).isEmpty()) {
             try {
-                type = forName((String) className);
+                Class<?> realType = forName((String) className);
+                if (!type.isAssignableFrom(realType)) {
+                    //类型校验
+                    throw new CodecException(String.format("%s is not assignable from %s", type, className));
+                }
                 pojo.remove(CLASS);
             } catch (ClassNotFoundException e) {
                 // ignore

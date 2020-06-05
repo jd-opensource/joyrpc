@@ -112,6 +112,10 @@ public class Invocation implements Call {
      * 是否泛化调用
      */
     protected transient Boolean generic;
+    /**
+     * 是否回调
+     */
+    protected transient boolean callback;
 
     public Invocation() {
     }
@@ -422,7 +426,6 @@ public class Invocation implements Call {
         return (T) (function == null ? attachments.get(key) : attachments.computeIfAbsent(key, function));
     }
 
-
     /**
      * 移除扩展信息
      *
@@ -475,6 +478,14 @@ public class Invocation implements Call {
             generic = attachment == null ? Boolean.FALSE : Boolean.TRUE.equals(attachment);
         }
         return generic;
+    }
+
+    public boolean isCallback() {
+        return callback;
+    }
+
+    public void setCallback(boolean callback) {
+        this.callback = callback;
     }
 
     /**

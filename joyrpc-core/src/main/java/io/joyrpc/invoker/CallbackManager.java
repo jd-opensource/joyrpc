@@ -419,6 +419,7 @@ public class CallbackManager implements Closeable {
             Session session = transport.session();
             //回调不需要别名,需要设置真实的参数类型
             Invocation invocation = new Invocation(callbackClass, null, method, param, typeFunc.apply(method));
+            invocation.setCallback(true);
             //已经设置了创建时间
             RequestMessage<Invocation> request = RequestMessage.build(invocation);
             MessageHeader rh = request.getHeader();

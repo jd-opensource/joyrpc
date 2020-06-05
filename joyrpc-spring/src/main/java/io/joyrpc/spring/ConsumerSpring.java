@@ -123,7 +123,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.computeCounter(applicationContext);
+        counter = Counter.getOrCreate(applicationContext);
         //如果没有配置注册中心，则默认订阅全部注册中心
         setupRegistry();
         //判断是否设置了配置中心

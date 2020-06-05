@@ -105,7 +105,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.computeCounter(applicationContext);
+        counter = Counter.getOrCreate(applicationContext);
         validate();
         if (key != null && !key.isEmpty() && value != null) {
             if (hide) {

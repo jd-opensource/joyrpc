@@ -41,7 +41,7 @@ public class Counter {
     /**
      * 计数器列表
      */
-    private static final Map<ApplicationContext, Counter> counters = new ConcurrentHashMap<>();
+    private static final Map<ApplicationContext, Counter> COUNTERS = new ConcurrentHashMap<>();
 
     /**
      * spring 上下文
@@ -119,14 +119,13 @@ public class Counter {
         if (STARTING_BEANS.decrementAndGet() == 0) {
             try {
                 LATCH.await();
+                COUNTERS.remove(ctx);
             } catch (InterruptedException e) {
                 //出了异常
                 logger.error(String.format("The system is about to exit, caused by %s", e.getMessage()));
                 System.exit(1);
             }
-            removeCounter(ctx);
         }
-
     }
 
     /**
@@ -209,10 +208,10 @@ public class Counter {
     /**
      * 获取 counter
      *
-     * @param ctx
-     * @return
+     * @param ctx 上下文
+     * @return 计数器
      */
-    public static Counter computeCounter(ApplicationContext ctx) {
+    public static Counter getOrCreate(final ApplicationContext ctx) {
         ApplicationContext lastCtx = ctx;
         for (; ; ) {
             ApplicationContext parentCtx = lastCtx.getParent();
@@ -222,16 +221,6 @@ public class Counter {
                 break;
             }
         }
-        return counters.computeIfAbsent(lastCtx, Counter::new);
-    }
-
-    /**
-     * 移除counter
-     *
-     * @param ctx
-     * @return
-     */
-    public static Counter removeCounter(ApplicationContext ctx) {
-        return counters.remove(ctx);
+        return COUNTERS.computeIfAbsent(lastCtx, Counter::new);
     }
 }

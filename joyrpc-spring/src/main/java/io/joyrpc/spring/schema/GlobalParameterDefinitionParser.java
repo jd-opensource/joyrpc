@@ -86,7 +86,7 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
         if (counter == null) {
             ResourceLoader resourceLoader = parserContext.getReaderContext().getReader().getResourceLoader();
             ApplicationContext applicationContext = (ApplicationContext) resourceLoader;
-            counter = Counter.computeCounter(applicationContext);
+            counter = Counter.getOrCreate(applicationContext);
         }
         return register(parserContext.getRegistry(), counter, element.getAttribute(KEY),
                 element.getAttribute(VALUE),

@@ -68,7 +68,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected transient ApplicationContext applicationContext;
 
-    protected CompletableFuture<Void> exportFuture;
+    protected transient CompletableFuture<Void> exportFuture;
     /**
      * registryConfig 引用列表
      */
@@ -76,15 +76,15 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     /**
      * server引用
      */
-    protected transient String serverName;
+    protected String serverName;
     /**
      * ref引用
      */
-    protected transient String refName;
+    protected String refName;
     /**
      * 预热引用
      */
-    protected transient String warmupName;
+    protected String warmupName;
     /**
      * 上下文就绪开关
      */
@@ -125,7 +125,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.computeCounter(applicationContext);
+        counter = Counter.getOrCreate(applicationContext);
         setupServer();
         setupRegistry();
         setupConfigure();

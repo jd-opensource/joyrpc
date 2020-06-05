@@ -20,12 +20,7 @@ package io.joyrpc.spring.schema;
  * #L%
  */
 
-import io.joyrpc.spring.Counter;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
-import org.springframework.beans.factory.xml.ParserContext;
-import org.w3c.dom.Element;
 
 /**
  * 将xml的标签绑定到解析器
@@ -43,9 +38,4 @@ public class SpringNamespaceHandler extends NamespaceHandlerSupport {
         registerBeanDefinitionParser("parameter", new GlobalParameterDefinitionParser());
     }
 
-    @Override
-    public BeanDefinition parse(Element element, ParserContext parserContext) {
-        parserContext.getRegistry().registerBeanDefinition("1212", new RootBeanDefinition(Counter.class, ()->new Counter(null)));
-        return super.parse(element, parserContext);
-    }
 }

@@ -30,6 +30,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.ResourceLoader;
 import org.w3c.dom.Element;
 
 import static io.joyrpc.spring.GlobalParameterBean.*;
@@ -39,8 +40,6 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
  * 全局解析
  */
 public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
-
-    private ApplicationContext applicationContext;
 
     private Counter counter;
 
@@ -85,7 +84,9 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
     @Override
     public BeanDefinition parse(final Element element, final ParserContext parserContext) {
         if (counter == null) {
-           // counter = Counter.computeCounter(applicationContext);
+            ResourceLoader resourceLoader = parserContext.getReaderContext().getReader().getResourceLoader();
+            ApplicationContext applicationContext = (ApplicationContext) resourceLoader;
+            counter = Counter.computeCounter(applicationContext);
         }
         return register(parserContext.getRegistry(), counter, element.getAttribute(KEY),
                 element.getAttribute(VALUE),

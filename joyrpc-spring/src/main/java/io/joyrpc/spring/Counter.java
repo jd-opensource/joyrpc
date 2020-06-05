@@ -213,7 +213,16 @@ public class Counter {
      * @return
      */
     public static Counter computeCounter(ApplicationContext ctx) {
-        return counters.computeIfAbsent(ctx, Counter::new);
+        ApplicationContext lastCtx = ctx;
+        for (; ; ) {
+            ApplicationContext parentCtx = lastCtx.getParent();
+            if (parentCtx != null) {
+                lastCtx = parentCtx;
+            } else {
+                break;
+            }
+        }
+        return counters.computeIfAbsent(lastCtx, Counter::new);
     }
 
     /**

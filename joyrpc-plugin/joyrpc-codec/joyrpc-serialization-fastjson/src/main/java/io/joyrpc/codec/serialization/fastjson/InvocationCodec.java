@@ -233,7 +233,6 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                     argsClass = getClasses(argsType);
                     special = true;
                 } else {
-                    //如果调用此方法返回null说明在接口中没有找到对应的方法，接口发生变化
                     argsClass = method.getParameterTypes();
                 }
             }

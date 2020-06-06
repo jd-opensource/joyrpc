@@ -23,12 +23,12 @@ package io.joyrpc.codec.serialization.generic;
 import io.joyrpc.Plugin;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.codec.serialization.Json;
+import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.ClassUtils;
 
-import java.io.ByteArrayInputStream;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -88,6 +88,7 @@ public class JsonGenericSerializer implements GenericSerializer {
         String argType = argTypes == null || argTypes.length <= index ? null : argTypes[index];
         if (argType != null && !argType.isEmpty()) {
             try {
+                //TODO 优化泛型类型获取
                 Class aClass = ClassUtils.getClass(argType);
                 if (parameters[index].getType().isAssignableFrom(aClass)) {
                     //防止漏洞攻击
@@ -110,10 +111,11 @@ public class JsonGenericSerializer implements GenericSerializer {
     protected Object[] parseArray(final Parameter[] parameters, final String[] argTypes, final byte[] text) {
         final int[] index = new int[]{0};
         final Object[] result = new Object[parameters.length];
-        json.parseArray(new ByteArrayInputStream(text), o -> {
+        json.parseArray(new UnsafeByteArrayInputStream(text), o -> {
             if (index[0] < parameters.length) {
                 result[index[0]] = o.apply(getType(parameters, argTypes, index[0]));
             } else {
+                //忽略掉多余的参数
                 o.apply(Object.class);
             }
             ++index[0];
@@ -136,7 +138,8 @@ public class JsonGenericSerializer implements GenericSerializer {
      */
     protected Object[] parseObject(final Parameter[] parameters, final String[] argTypes, final byte[] text) {
         if (parameters.length == 1) {
-            return new Object[]{json.parseObject(new ByteArrayInputStream(text), parameters[0].getParameterizedType())};
+            return new Object[]{json.parseObject(new UnsafeByteArrayInputStream(text),
+                    getType(parameters, argTypes, 0))};
         }
         final int[] index = new int[]{0};
         final Object[] result = new Object[parameters.length];
@@ -151,7 +154,7 @@ public class JsonGenericSerializer implements GenericSerializer {
                 names.put(parameter.getName(), i);
             }
         }
-        json.parseObject(new ByteArrayInputStream(text), (k, o) -> {
+        json.parseObject(new UnsafeByteArrayInputStream(text), (k, o) -> {
             //根据名称获取参数位置
             Integer pos = names.get(k);
             if (pos != null) {

@@ -60,7 +60,11 @@ public class GenericClass {
         TypeVariable<Class>[] variables = clazz.getTypeParameters();
         if (variables.length > 0) {
             for (TypeVariable<Class> variable : variables) {
-                childType.addVariable(new Variable(variable.getName(), parent == null ? null : parent.get(variable.getName())));
+                if (parent == null) {
+                    childType.addVariable(new Variable(variable.getName(), variable.getBounds()[0]));
+                } else {
+                    childType.addVariable(new Variable(variable.getName(), parent.get(variable.getName())));
+                }
             }
             classGeneric.put(clazz, childType);
         }
@@ -314,9 +318,10 @@ public class GenericClass {
             //没有泛型信息
         } else if (type instanceof TypeVariable) {
             //变量
-            name = ((TypeVariable) type).getName();
+            TypeVariable typeVariable = (TypeVariable) type;
+            name = typeVariable.getName();
             //泛型声明的地方
-            GenericDeclaration gd = ((TypeVariable) type).getGenericDeclaration();
+            GenericDeclaration gd = typeVariable.getGenericDeclaration();
             if (gd instanceof Class) {
                 //类变量
                 if (declaringType != null) {
@@ -329,7 +334,9 @@ public class GenericClass {
                 }
             } else if (gd instanceof Executable) {
                 //执行器变量（方法&构造函数）
-                genericType.addVariable(new Variable(name));
+                Type[] bounds = typeVariable.getBounds();
+                //添加变量，并计算变量的限定类
+                genericType.addVariable(new Variable(name, compute(genericType, bounds[0], declaringType)));
             }
         } else if (type instanceof ParameterizedType) {
             ParameterizedType pType = (ParameterizedType) type;

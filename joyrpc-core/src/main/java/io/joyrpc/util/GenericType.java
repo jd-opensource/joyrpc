@@ -44,7 +44,7 @@ public class GenericType {
     /**
      * 构造函数
      *
-     * @param type
+     * @param type 类型
      */
     public GenericType(Type type) {
         this.type = type;
@@ -158,7 +158,7 @@ public class GenericType {
         /**
          * 第几个参数代表类型
          */
-        int parameter = -1;
+        protected int parameter = -1;
 
         public Variable(String name) {
             this.name = name;

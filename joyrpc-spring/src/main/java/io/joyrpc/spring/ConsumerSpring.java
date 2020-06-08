@@ -108,7 +108,8 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public T getObject() throws ExecutionException, InterruptedException {
         try {
-            return onRefer().get();
+            onRefer();
+            return referFuture.get();
         } catch (Exception e) {
             //出了异常
             logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
@@ -203,24 +204,25 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     /**
      * 上下文就绪
      */
-    protected CompletableFuture<T> onRefer() {
+    protected void onRefer() {
         //刷新事件会多次，防止重入
         if (referDone.compareAndSet(false, true)) {
-            referFuture = config.refer();
             //生成代理，并创建引用
-            referFuture.whenComplete((v, t) -> {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            final T obj = config.refer(future);
+            future.whenComplete((v, t) -> {
                 if (t != null) {
                     //出了异常
                     logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
                             config.getServiceName(), config.getAlias(), t.getMessage()));
                     System.exit(1);
                 } else {
+                    referFuture.complete(obj);
                     //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
                     counter.successConsumer(() -> CompletableFuture.runAsync(
                             () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
                 }
             });
         }
-        return referFuture;
     }
 }

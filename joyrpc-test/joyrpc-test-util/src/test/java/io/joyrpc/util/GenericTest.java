@@ -4,10 +4,7 @@ import io.joyrpc.exception.MethodOverloadException;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.TypeVariable;
+import java.lang.reflect.*;
 import java.util.List;
 
 public class GenericTest {
@@ -39,8 +36,18 @@ public class GenericTest {
         Assert.assertEquals(genericTypes.length, 1);
         Assert.assertTrue(genericTypes[0].getType() instanceof TypeVariable);
         GenericType.Variable variable = genericTypes[0].getVariable(((TypeVariable) genericTypes[0].getType()).getName());
-        Assert.assertTrue(variable.getType() instanceof ParameterizedType);
-        Assert.assertEquals(((ParameterizedType)variable.getType()).getActualTypeArguments()[0], Apple.class);
+        Assert.assertTrue(variable.getType() instanceof TypeVariable);
+        Type bound = ((TypeVariable) variable.getType()).getBounds()[0];
+        Assert.assertTrue(bound instanceof ParameterizedType);
+        Assert.assertEquals(((ParameterizedType) bound).getActualTypeArguments()[0], Apple.class);
+
+        method = ClassUtils.getPublicMethod(AppleService.class, "wildcard");
+        genericMethod = genericClass.get(method);
+        genericTypes = genericMethod.getParameters();
+        Assert.assertEquals(genericTypes.length, 1);
+        Assert.assertTrue(genericTypes[0].getType() instanceof ParameterizedType);
+        Assert.assertTrue(((ParameterizedType) genericTypes[0].getType()).getActualTypeArguments()[0] instanceof WildcardType);
+        Assert.assertEquals(((WildcardType) ((ParameterizedType) genericTypes[0].getType()).getActualTypeArguments()[0]).getUpperBounds()[0], Apple.class);
     }
 
     public static class Fruit {
@@ -69,6 +76,8 @@ public class GenericTest {
         void delete(List<T> fruits);
 
         <B extends List<T>> void update(B fruits);
+
+        void wildcard(List<? extends T> fruits);
 
     }
 

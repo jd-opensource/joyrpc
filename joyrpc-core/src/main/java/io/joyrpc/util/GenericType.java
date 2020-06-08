@@ -144,17 +144,14 @@ public class GenericType {
          * 名称
          */
         protected String name;
-
         /**
          * 类型，可以是Class、ParameterizedType和GenericArrayType
          */
         protected Type type;
-
         /**
          * 该变量的类型是泛型，提供其泛型信息
          */
         protected GenericType genericType;
-
         /**
          * 第几个参数代表类型
          */
@@ -189,10 +186,6 @@ public class GenericType {
 
         public Type getType() {
             return type;
-        }
-
-        public void setGenericType(GenericType genericType) {
-            this.genericType = genericType;
         }
 
         public GenericType getGenericType() {

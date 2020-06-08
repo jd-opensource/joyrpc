@@ -22,6 +22,7 @@ package io.joyrpc.util;
 
 import io.joyrpc.util.GenericType.Variable;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -294,7 +295,7 @@ public class GenericClass {
     /**
      * 计算泛型
      *
-     * @param type          类型
+     * @param type          待解析类型
      * @param declaringType 声明的泛型
      * @return 泛型
      */
@@ -308,7 +309,7 @@ public class GenericClass {
      * 计算泛型，返回解析好的类型
      *
      * @param genericType   目标泛型
-     * @param type          类型
+     * @param type          待解析类型
      * @param declaringType 子类声明的泛型
      * @return 解析好的类型
      */
@@ -334,23 +335,20 @@ public class GenericClass {
                 }
             } else if (gd instanceof Executable) {
                 //执行器变量（方法&构造函数）
-                Type[] bounds = typeVariable.getBounds();
-                //添加变量，并计算变量的限定类
-                genericType.addVariable(new Variable(name, compute(genericType, bounds[0], declaringType)));
+                Type[] oldBounds = typeVariable.getBounds();
+                //并计算变量的限定类
+                Type[] newBounds = compute(genericType, oldBounds, declaringType);
+                typeVariable = oldBounds == newBounds ? typeVariable : new TypeVariableImpl<>(typeVariable, newBounds);
+                genericType.addVariable(new Variable(name, typeVariable));
+                if (typeVariable != type) {
+                    return typeVariable;
+                }
             }
         } else if (type instanceof ParameterizedType) {
             ParameterizedType pType = (ParameterizedType) type;
             Type[] oldTypes = pType.getActualTypeArguments();
-            Type[] newTypes = new Type[oldTypes.length];
-            boolean flag = false;
-            for (int i = 0; i < oldTypes.length; i++) {
-                //解析每个泛型参数
-                newTypes[i] = compute(genericType, oldTypes[i], declaringType);
-                if (newTypes[i] != oldTypes[i]) {
-                    flag = true;
-                }
-            }
-            if (flag) {
+            Type[] newTypes = compute(genericType, oldTypes, declaringType);
+            if (newTypes != oldTypes) {
                 //把解析好的变量，重新包装生成Type
                 return new ParameterizedTypeImpl(newTypes, pType.getOwnerType(), pType.getRawType());
             }
@@ -362,8 +360,39 @@ public class GenericClass {
                 //把解析好的变量，重新包装生成Type
                 return new GenericArrayTypeImpl(newComponentType);
             }
+        } else if (type instanceof WildcardType) {
+            //通配符
+            WildcardType wildcardType = (WildcardType) type;
+            Type[] oldUpperBounds = wildcardType.getUpperBounds();
+            Type[] oldLowerBounds = wildcardType.getLowerBounds();
+            Type[] newUpperBounds = compute(genericType, oldUpperBounds, declaringType);
+            Type[] newLowerBounds = compute(genericType, oldLowerBounds, declaringType);
+            if (oldUpperBounds != newUpperBounds || oldLowerBounds != newLowerBounds) {
+                return new WildcardTypeImpl(newUpperBounds, newLowerBounds);
+            }
         }
         return type;
+    }
+
+    /**
+     * 计算
+     *
+     * @param genericType   泛型类型
+     * @param types         待解析类型数组
+     * @param declaringType 声明所属的泛型类型
+     * @return 解析好的类型数组
+     */
+    protected Type[] compute(final GenericType genericType, final Type[] types, final GenericType declaringType) {
+        Type[] newTypes = new Type[types.length];
+        boolean flag = false;
+        for (int i = 0; i < types.length; i++) {
+            //解析每个泛型参数
+            newTypes[i] = compute(genericType, types[i], declaringType);
+            if (newTypes[i] != types[i]) {
+                flag = true;
+            }
+        }
+        return flag ? newTypes : types;
     }
 
     /**
@@ -465,6 +494,153 @@ public class GenericClass {
             result = 31 * result + (ownerType != null ? ownerType.hashCode() : 0);
             result = 31 * result + (rawType != null ? rawType.hashCode() : 0);
             return result;
+        }
+    }
+
+    /**
+     * 泛型变量
+     *
+     * @param <D>
+     */
+    protected static class TypeVariableImpl<D extends GenericDeclaration> implements TypeVariable<D> {
+        protected final TypeVariable<D> source;
+        protected final Type[] bounds;
+
+        public TypeVariableImpl(TypeVariable<D> source, Type[] bounds) {
+            this.source = source;
+            this.bounds = bounds;
+        }
+
+        @Override
+        public Type[] getBounds() {
+            return bounds;
+        }
+
+        @Override
+        public D getGenericDeclaration() {
+            return source.getGenericDeclaration();
+        }
+
+        @Override
+        public String getName() {
+            return source.getName();
+        }
+
+        @Override
+        public AnnotatedType[] getAnnotatedBounds() {
+            return source.getAnnotatedBounds();
+        }
+
+        @Override
+        public <T extends Annotation> T getAnnotation(Class<T> annotationClass) {
+            return source.getAnnotation(annotationClass);
+        }
+
+        @Override
+        public Annotation[] getAnnotations() {
+            return source.getAnnotations();
+        }
+
+        @Override
+        public Annotation[] getDeclaredAnnotations() {
+            return source.getDeclaredAnnotations();
+        }
+
+        @Override
+        public String toString() {
+            return getName();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            TypeVariableImpl<?> that = (TypeVariableImpl<?>) o;
+
+            return source.equals(that.source);
+        }
+
+        @Override
+        public int hashCode() {
+            return source.hashCode();
+        }
+    }
+
+    /**
+     * 参数化泛型实现
+     */
+    protected static class WildcardTypeImpl implements WildcardType {
+
+        protected final Type[] upperBounds;
+        protected final Type[] lowerBounds;
+
+        public WildcardTypeImpl(Type[] upperBounds, Type[] lowerBounds) {
+            this.upperBounds = upperBounds;
+            this.lowerBounds = lowerBounds;
+        }
+
+        @Override
+        public Type[] getUpperBounds() {
+            return upperBounds;
+        }
+
+        @Override
+        public Type[] getLowerBounds() {
+            return lowerBounds;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+
+            WildcardTypeImpl that = (WildcardTypeImpl) o;
+
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
+            if (!Arrays.equals(upperBounds, that.upperBounds)) {
+                return false;
+            }
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
+            return Arrays.equals(lowerBounds, that.lowerBounds);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Arrays.hashCode(upperBounds);
+            result = 31 * result + Arrays.hashCode(lowerBounds);
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            Type[] types;
+            StringBuilder builder = new StringBuilder();
+            if (lowerBounds.length > 0) {
+                types = lowerBounds;
+                builder.append("? super ");
+            } else {
+                if (upperBounds.length <= 0 || upperBounds[0].equals(Object.class)) {
+                    return "?";
+                }
+                types = upperBounds;
+                builder.append("? extends ");
+            }
+            for (int i = 0; i < types.length; i++) {
+                if (i > 0) {
+                    builder.append(" & ");
+                }
+                builder.append(types[i].getTypeName());
+            }
+            return builder.toString();
         }
     }
 }

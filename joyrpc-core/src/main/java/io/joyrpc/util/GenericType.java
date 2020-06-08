@@ -54,6 +54,10 @@ public class GenericType {
         return type;
     }
 
+    public void setType(Type type) {
+        this.type = type;
+    }
+
     /**
      * 添加变量
      *

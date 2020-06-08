@@ -4,7 +4,6 @@ import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
-import io.joyrpc.spring.event.ContextDoneEvent;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +20,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -56,11 +56,15 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     /**
      * 开关
      */
-    protected transient AtomicBoolean contextDone = new AtomicBoolean();
+    protected transient AtomicBoolean referDone = new AtomicBoolean();
     /**
      * 开关
      */
     protected transient AtomicBoolean startDone = new AtomicBoolean();
+    /**
+     * refer后返回的future
+     */
+    protected transient CompletableFuture<T> referFuture = new CompletableFuture<>();
     /**
      * 服务bean计数器
      */
@@ -102,8 +106,15 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     }
 
     @Override
-    public T getObject() {
-        return config.getStub();
+    public T getObject() throws ExecutionException, InterruptedException {
+        try {
+            return onRefer().get();
+        } catch (Exception e) {
+            //出了异常
+            logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
+                    config.getServiceName(), config.getAlias(), e.getMessage()));
+            throw e;
+        }
     }
 
     @Override
@@ -177,30 +188,27 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     }
 
     @Override
-    public void onApplicationEvent(final ApplicationEvent event) {
+    public synchronized void onApplicationEvent(final ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
-            if (!counter.hasContext()) {
-                onContextDone();
-            }
+            //执行refer
+            onRefer();
             //判断是否启动过，防止重入
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
                 counter.startAndWaitAtLast();
             }
-        } else if (event instanceof ContextDoneEvent) {
-            //该事件通知线程不是主线程，不用startAndWait
-            onContextDone();
         }
     }
 
     /**
      * 上下文就绪
      */
-    protected void onContextDone() {
+    protected CompletableFuture<T> onRefer() {
         //刷新事件会多次，防止重入
-        if (contextDone.compareAndSet(false, true)) {
+        if (referDone.compareAndSet(false, true)) {
+            referFuture = config.refer();
             //生成代理，并创建引用
-            config.refer().whenComplete((v, t) -> {
+            referFuture.whenComplete((v, t) -> {
                 if (t != null) {
                     //出了异常
                     logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
@@ -213,5 +221,6 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
                 }
             });
         }
+        return referFuture;
     }
 }

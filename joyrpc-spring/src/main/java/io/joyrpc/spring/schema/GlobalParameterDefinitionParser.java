@@ -77,7 +77,7 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
             builder.addPropertyValue(HIDE, hide);
         }
         AbstractBeanDefinition definition = builder.getBeanDefinition();
-        registry.registerBeanDefinition("global-parameter-" + counter.incContext(), definition);
+        registry.registerBeanDefinition(counter.computeContextName(), definition);
         return definition;
     }
 

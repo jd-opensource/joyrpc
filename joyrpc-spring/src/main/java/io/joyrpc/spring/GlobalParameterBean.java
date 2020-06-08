@@ -27,12 +27,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.ApplicationEvent;
-import org.springframework.context.ApplicationListener;
-import org.springframework.context.event.ContextRefreshedEvent;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 
@@ -41,7 +35,7 @@ import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
  *
  * @description:
  */
-public class GlobalParameterBean extends AbstractConfig implements InitializingBean, ApplicationContextAware, ApplicationListener {
+public class GlobalParameterBean extends AbstractConfig implements InitializingBean, ApplicationContextAware {
 
 
     public static final String KEY = "key";
@@ -68,11 +62,6 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
     protected transient Counter counter;
 
     protected transient ApplicationContext applicationContext;
-
-    /**
-     * 开关
-     */
-    protected transient AtomicBoolean startDone = new AtomicBoolean();
 
     public String getKey() {
         return key;
@@ -118,19 +107,6 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
                 GlobalContext.putIfAbsent(key, value);
             }
         }
-        //把通知事件放到onApplicationEvent，因为这个时候不是所有的Bean都初始化好了
     }
 
-    @Override
-    public void onApplicationEvent(final ApplicationEvent event) {
-        //等待上下文初始化完成事件
-        if (event instanceof ContextRefreshedEvent) {
-            //刷新事件会多次，防止重入
-            if (startDone.compareAndSet(false, true)) {
-                //上下文初始化完成，异步通知
-                counter.successContext(() -> CompletableFuture.runAsync(() -> applicationContext.publishEvent(new ContextDoneEvent(this))));
-                counter.startAndWaitAtLast();
-            }
-        }
-    }
 }

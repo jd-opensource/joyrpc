@@ -111,6 +111,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
             route.setup();
             //创建桩
             invokeHandler = new ConsumerInvokeHandler(route, config.getProxyClass(), serviceUrl);
+            latch.countDown();
             config.proxy();
             //创建消费者
             route.refer().whenComplete((v, t) -> {
@@ -127,6 +128,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         public CompletableFuture<Void> close(boolean gracefully) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             invokeHandler = null;
+            latch = null;
             if (route != null) {
                 route.close().whenComplete((v, t) -> future.complete(null));
             } else {

@@ -86,10 +86,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected String warmupName;
     /**
-     * 上下文就绪开关
-     */
-    protected transient AtomicBoolean contextDone = new AtomicBoolean();
-    /**
      * 消费者就绪开关
      */
     protected transient AtomicBoolean consumerDone = new AtomicBoolean();
@@ -137,35 +133,15 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void onApplicationEvent(final ApplicationEvent event) {
-        if (event instanceof ContextRefreshedEvent) {
-            if (!counter.hasContext()) {
-                onContextDone();
-            }
+        if(event instanceof  ContextRefreshedEvent && !counter.hasConsumer()){
+            onConsumerDone();
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
                 counter.startAndWaitAtLast();
             }
-        } else if (event instanceof ContextDoneEvent) {
-            //等待上下文初始化完成，输出服务
-            //该事件通知线程不是主线程，不用startAndWait
-            onContextDone();
-        } else if (event instanceof ConsumerDoneEvent) {
+        }else if(event instanceof ConsumerDoneEvent){
             //等待消费者初始化完成，做到优雅启动
             //该事件通知线程不是主线程，不用startAndWait
-            onConsumerDone();
-        }
-    }
-
-    /**
-     * 上下文就绪
-     */
-    protected void onContextDone() {
-        //等待上下文初始化完成，输出服务
-        if (contextDone.compareAndSet(false, true)) {
-            exportFuture = export();
-        }
-        //没有消费者，直接打开服务
-        if (!counter.hasConsumer()) {
             onConsumerDone();
         }
     }
@@ -175,6 +151,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected void onConsumerDone() {
         if (consumerDone.compareAndSet(false, true)) {
+            exportFuture = export();
             exportFuture.whenComplete((v, t) -> {
                 if (t != null) {
                     logger.error(String.format("Error occurs while export provider %s", id), t);

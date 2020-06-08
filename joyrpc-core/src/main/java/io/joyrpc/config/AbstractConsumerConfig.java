@@ -718,6 +718,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * 调用handler
          */
         protected volatile ConsumerInvokeHandler invokeHandler;
+        /**
+         * 等待invokeHandler初始化
+         */
+        protected CountDownLatch latch = new CountDownLatch(1);
 
         /**
          * 构造函数
@@ -817,12 +821,19 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                         throw new RpcException("Consumer config is closing. " + config.name());
                     case CLOSED:
                         throw new RpcException("Consumer config is closed. " + config.name());
+                    case OPENING:
+                        //正在opening，等待open完
+                        latch.await();
+                        if (invokeHandler == null) {
+                            throw new RpcException("Consumer config is opening. " + config.name());
+                        }
+                        handler = invokeHandler;
+                        break;
                     default:
                         throw new RpcException("Consumer config is opening. " + config.name());
                 }
-            } else {
-                return handler.invoke(proxy, method, args);
             }
+            return handler.invoke(proxy, method, args);
         }
 
     }

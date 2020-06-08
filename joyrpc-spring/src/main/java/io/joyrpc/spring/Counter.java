@@ -24,7 +24,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +44,11 @@ public class Counter {
      * 计数器列表
      */
     private static final Map<ApplicationContext, Counter> COUNTERS = new ConcurrentHashMap<>();
+
+    /**
+     * 上下文Bean名称集合
+     */
+    protected Set<String> contextNames = new HashSet<>();
 
     /**
      * spring 上下文
@@ -69,10 +76,6 @@ public class Counter {
      */
     protected AtomicInteger UNSUCCESS_BEANS = new AtomicInteger(0);
     /**
-     * 未启动成功的上下文计数器
-     */
-    protected AtomicInteger UNSUCCESS_CONTEXT_BEANS = new AtomicInteger(0);
-    /**
      * 未启动成功的消费者计数器
      */
     protected AtomicInteger UNSUCCESS_CONSUMER_BEANS = new AtomicInteger(0);
@@ -95,21 +98,32 @@ public class Counter {
     }
 
     /**
+     * 获取一个上下文Bean的名称
+     *
+     * @return
+     */
+    public String computeContextName() {
+        String name = "global-parameter-" + this.incContext();
+        contextNames.add(name);
+        return name;
+    }
+
+    /**
+     * 获取全部上下文Bean的名称
+     *
+     * @return
+     */
+    public String[] getAllContextNames() {
+        return contextNames.toArray(new String[0]);
+    }
+
+    /**
      * 是否有消费者
      *
      * @return 消费者标识
      */
     public boolean hasConsumer() {
         return CONSUMER_BEANS.get() > 0;
-    }
-
-    /**
-     * 是否有上下文
-     *
-     * @return 上下文标识
-     */
-    public boolean hasContext() {
-        return CONTEXT_BEANS.get() > 0;
     }
 
     /**
@@ -129,16 +143,12 @@ public class Counter {
     }
 
     /**
-     * 添加上下文计数器
+     * 添加上下文计数器，STARTING_BEANS、UNSUCCESS_BEANS 不计数
      *
      * @return
      */
     public int incContext() {
-        STARTING_BEANS.incrementAndGet();
-        UNSUCCESS_BEANS.incrementAndGet();
-        int result = CONTEXT_BEANS.incrementAndGet();
-        UNSUCCESS_CONTEXT_BEANS.incrementAndGet();
-        return result;
+        return CONTEXT_BEANS.incrementAndGet();
     }
 
     /**
@@ -176,15 +186,6 @@ public class Counter {
         if (UNSUCCESS_BEANS.decrementAndGet() == 0) {
             LATCH.countDown();
         }
-    }
-
-    /**
-     * 成功启动上下文参数
-     *
-     * @param allSuccess 当所有的启动成功执行器
-     */
-    public void successContext(final Runnable allSuccess) {
-        success(UNSUCCESS_CONTEXT_BEANS, allSuccess);
     }
 
     /**

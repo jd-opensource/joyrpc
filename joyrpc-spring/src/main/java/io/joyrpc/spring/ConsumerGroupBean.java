@@ -31,6 +31,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 
+import java.util.concurrent.ExecutionException;
+
 
 /**
  * 消费组
@@ -61,7 +63,7 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     }
 
     @Override
-    public T getObject() {
+    public T getObject() throws ExecutionException, InterruptedException {
         return spring.getObject();
     }
 

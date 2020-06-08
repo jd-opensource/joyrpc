@@ -34,6 +34,7 @@ import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationListener;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * 消费者
@@ -55,7 +56,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
      * 默认构造函数，不允许从外部new
      */
     public ConsumerBean() {
-        spring = new ConsumerSpring(this);
+        spring = new ConsumerSpring<>(this);
     }
 
     @Override
@@ -69,7 +70,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public T getObject() {
+    public T getObject() throws ExecutionException, InterruptedException {
         return spring.getObject();
     }
 

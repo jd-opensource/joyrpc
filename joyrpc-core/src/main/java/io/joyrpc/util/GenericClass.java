@@ -128,7 +128,7 @@ public class GenericClass {
      */
     protected GenericType parentType(final Class parent, final Type parentType, final GenericType childType) {
         GenericType result = new GenericType(parent);
-        //父类的泛型
+        //父类的泛型变量
         TypeVariable<Class>[] variables = parent.getTypeParameters();
         //通过子类获取父类泛型的具体类型
         if (parentType instanceof ParameterizedType) {
@@ -136,7 +136,6 @@ public class GenericClass {
             Type[] arguments = ((ParameterizedType) parentType).getActualTypeArguments();
             Type argument;
             String name;
-            GenericType argumentType;//存储父类的泛型信息
             for (int i = 0; i < arguments.length; i++) {
                 argument = arguments[i];
                 name = variables[i].getName();
@@ -146,10 +145,12 @@ public class GenericClass {
                 } else if (argument instanceof TypeVariable) {
                     //从子类获取泛型定义
                     result.addVariable(new Variable(name, childType.getVariable(((TypeVariable) argument).getName())));
-                } else {
-                    //可以是ParameterizedType和GenericArrayType，判断其内部是否还有泛型变量
-                    argumentType = compute(argument, childType);
-                    result.addVariable(new Variable(name, argument, argumentType.variable == null ? null : argumentType));
+                } else if (argument instanceof ParameterizedType) {
+                    result.addVariable(new Variable(name, compute(argument, childType).getType()));
+                } else if (argument instanceof GenericArrayType) {
+                    result.addVariable(new Variable(name, compute(argument, childType).getType()));
+                } else if (argument instanceof WildcardType) {
+                    result.addVariable(new Variable(name, compute(argument, childType).getType()));
                 }
             }
         }

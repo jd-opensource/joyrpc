@@ -25,7 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 泛型信息
+ * 代表参数、返回值和异常的泛型信息
  */
 public class GenericType {
     /**
@@ -96,20 +96,6 @@ public class GenericType {
     }
 
     /**
-     * 获取或创建变量
-     *
-     * @param name
-     * @return
-     */
-    public Variable getOrCreate(final String name) {
-        if (name == null) {
-            return null;
-        }
-        Variable result = getVariable(name);
-        return result != null ? result : new Variable(name);
-    }
-
-    /**
      * 计算泛型参数位置
      *
      * @param parameters
@@ -139,19 +125,14 @@ public class GenericType {
      * 泛型变量
      */
     public static class Variable {
-
         /**
          * 名称
          */
         protected String name;
         /**
-         * 类型，可以是Class、ParameterizedType和GenericArrayType
+         * 类型，可以是Class、ParameterizedType、GenericArrayType和Wi
          */
         protected Type type;
-        /**
-         * 该变量的类型是泛型，提供其泛型信息
-         */
-        protected GenericType genericType;
         /**
          * 第几个参数代表类型
          */
@@ -166,17 +147,10 @@ public class GenericType {
             this.type = type;
         }
 
-        public Variable(String name, Type type, GenericType genericType) {
-            this.name = name;
-            this.type = type;
-            this.genericType = genericType;
-        }
-
         public Variable(String name, Variable variable) {
             this.name = name;
             if (variable != null) {
                 this.type = variable.type;
-                this.genericType = variable.genericType;
             }
         }
 
@@ -186,10 +160,6 @@ public class GenericType {
 
         public Type getType() {
             return type;
-        }
-
-        public GenericType getGenericType() {
-            return genericType;
         }
 
         public int getParameter() {

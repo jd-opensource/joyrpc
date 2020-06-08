@@ -133,13 +133,15 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void onApplicationEvent(final ApplicationEvent event) {
-        if(event instanceof  ContextRefreshedEvent && !counter.hasConsumer()){
-            onConsumerDone();
+        if (event instanceof ContextRefreshedEvent) {
+            if (!counter.hasConsumer()) {
+                onConsumerDone();
+            }
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
                 counter.startAndWaitAtLast();
             }
-        }else if(event instanceof ConsumerDoneEvent){
+        } else if (event instanceof ConsumerDoneEvent) {
             //等待消费者初始化完成，做到优雅启动
             //该事件通知线程不是主线程，不用startAndWait
             onConsumerDone();

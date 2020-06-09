@@ -30,7 +30,6 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.message.Invocation;
@@ -69,7 +68,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
     public InvokeTelnetHandler() {
         options = new Options()
                 .addOption("g", true, "is globle password")
-                .addOption("a", "alias", false, "the alias of the service")
+                .addOption("a", "alias", true, "the alias of the service")
                 .addOption("p", "password", true, "invoke -p password com.xxx.XxxService.xxxMethod(1234, \"abcd\", {\"prop\" : \"value\"})")
                 .addOption("t", "token", true, "invoke -p password -t token com.xxx.XxxService.xxxMethod(1234, \"abcd\", {\"prop\" : \"value\"})")
                 .addOption(HELP_SHORT, HELP_LONG, false, "show help message for command invoke");
@@ -140,7 +139,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
                 return validateRes;
             }
 
-            Exporter exporter = getExporter(interfaceId, alias);
+            Exporter exporter = getExporter(interfaceId, alias == null ? "" : alias);
             if (exporter == null) {
                 return new TelnetResponse("Not found such exported service !");
             } else {

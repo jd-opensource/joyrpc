@@ -57,8 +57,8 @@ public class GenericType {
     /**
      * 构造函数
      *
-     * @param genericType  泛型类型
-     * @param type 类
+     * @param genericType 泛型类型
+     * @param type        类
      */
     public GenericType(final Type genericType, final Class<?> type) {
         this.genericType = genericType;
@@ -127,8 +127,8 @@ public class GenericType {
             //防止漏洞攻击
             return parent ? ((Class) type).isAssignableFrom(clazz) : clazz.isAssignableFrom((Class) type);
         } else if (type instanceof GenericArrayType) {
-            //TODO 是否要验证数组
-            return validate(((GenericArrayType) type).getGenericComponentType(), clazz, parent);
+            //验证数组
+            return clazz.isArray() && validate(((GenericArrayType) type).getGenericComponentType(), clazz.getComponentType(), parent);
         } else if (type instanceof ParameterizedType) {
             return validate(((ParameterizedType) type).getRawType(), clazz, parent);
         } else if (type instanceof TypeVariable) {

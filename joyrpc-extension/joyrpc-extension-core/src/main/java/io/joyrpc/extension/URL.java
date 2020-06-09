@@ -402,7 +402,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return
      */
     public Map<String, String> getParameters() {
-        return new HashMap<>(parameters);
+        return parameters == null ? new HashMap<>() : new HashMap<>(parameters);
     }
 
     /**
@@ -967,7 +967,9 @@ public final class URL extends MapParametric<String, String> implements Serializ
             return this;
         }
         Map<String, String> map = url.getParameters();
-        map.putAll(this.parameters);
+        if (this.parameters != null) {
+            map.putAll(this.parameters);
+        }
         return new URL(protocol, user, password, host, port, path, map);
     }
 
@@ -983,7 +985,9 @@ public final class URL extends MapParametric<String, String> implements Serializ
         }
         //复制一份数据
         Map<String, String> map = new HashMap<String, String>(parameters);
-        map.putAll(this.parameters);
+        if (this.parameters != null) {
+            map.putAll(this.parameters);
+        }
         return new URL(protocol, user, password, host, port, path, map);
     }
 

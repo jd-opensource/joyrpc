@@ -56,7 +56,7 @@ public class GenericClass {
     public GenericClass(Class clazz, Map<String, ? extends Type> parent) {
         this.clazz = clazz;
 
-        GenericType childType = new GenericType(clazz);
+        GenericType childType = new GenericType(clazz, clazz);
         //当前类型声明的泛型
         TypeVariable<Class>[] variables = clazz.getTypeParameters();
         if (variables.length > 0) {
@@ -127,7 +127,7 @@ public class GenericClass {
      * @return
      */
     protected GenericType parentType(final Class parent, final Type parentType, final GenericType childType) {
-        GenericType result = new GenericType(parent);
+        GenericType result = new GenericType(parentType, parent);
         //父类的泛型变量
         TypeVariable<Class>[] variables = parent.getTypeParameters();
         //通过子类获取父类泛型的具体类型
@@ -146,11 +146,11 @@ public class GenericClass {
                     //从子类获取泛型定义
                     result.addVariable(new Variable(name, childType.getVariable(((TypeVariable) argument).getName())));
                 } else if (argument instanceof ParameterizedType) {
-                    result.addVariable(new Variable(name, compute(argument, childType).getType()));
+                    result.addVariable(new Variable(name, compute(argument, null, childType).getGenericType()));
                 } else if (argument instanceof GenericArrayType) {
-                    result.addVariable(new Variable(name, compute(argument, childType).getType()));
+                    result.addVariable(new Variable(name, compute(argument, null, childType).getGenericType()));
                 } else if (argument instanceof WildcardType) {
-                    result.addVariable(new Variable(name, compute(argument, childType).getType()));
+                    result.addVariable(new Variable(name, compute(argument, null, childType).getGenericType()));
                 }
             }
         }
@@ -212,7 +212,7 @@ public class GenericClass {
         GenericType parameterType;
         for (int i = 0; i < parameters.length; i++) {
             parameter = parameters[i];
-            parameterType = compute(parameter.getParameterizedType(), declaringType);
+            parameterType = compute(parameter.getParameterizedType(), parameter.getType(), declaringType);
             parameterTypes[i] = parameterType;
             //判断该参数是否是泛型的类型
             if (parameter.getType() == Class.class && parameterType.variable != null) {
@@ -238,12 +238,13 @@ public class GenericClass {
      * @param declaringType 声明该执行器的类的泛型
      */
     protected GenericType[] computeExceptions(final Executable executable, final GenericType declaringType) {
-        Type[] exceptionTypes = executable.getGenericExceptionTypes();
-        GenericType[] parameterTypes = new GenericType[exceptionTypes.length];
+        Type[] genericExceptionTypes = executable.getGenericExceptionTypes();
+        Class<?>[] exceptionTypes = executable.getExceptionTypes();
+        GenericType[] parameterTypes = new GenericType[genericExceptionTypes.length];
 
         GenericType parameterType;
-        for (int i = 0; i < exceptionTypes.length; i++) {
-            parameterType = compute(exceptionTypes[i], declaringType);
+        for (int i = 0; i < genericExceptionTypes.length; i++) {
+            parameterType = compute(genericExceptionTypes[i], exceptionTypes[i], declaringType);
             parameterTypes[i] = parameterType;
         }
 
@@ -258,7 +259,7 @@ public class GenericClass {
      */
     protected GenericMethod compute(final Method method) {
         GenericType declaringType = classGeneric.get(method.getDeclaringClass());
-        GenericType returnType = compute(method.getGenericReturnType(), declaringType);
+        GenericType returnType = compute(method.getGenericReturnType(), method.getReturnType(), declaringType);
         GenericType[] exceptionsTypes = computeExceptions(method, declaringType);
         GenericType[] parameterTypes = computeParameters(method, declaringType, o -> {
             returnType.compute(o);
@@ -277,7 +278,7 @@ public class GenericClass {
      * @return 泛型
      */
     protected GenericType compute(final Field field) {
-        return compute(field.getGenericType(), classGeneric.get(field.getDeclaringClass()));
+        return compute(field.getGenericType(), field.getType(), classGeneric.get(field.getDeclaringClass()));
     }
 
     /**
@@ -297,12 +298,13 @@ public class GenericClass {
      * 计算泛型
      *
      * @param type          待解析类型
+     * @param clazz         类
      * @param declaringType 声明的泛型
      * @return 泛型
      */
-    protected GenericType compute(final Type type, final GenericType declaringType) {
-        GenericType genericType = new GenericType(type);
-        genericType.setType(compute(genericType, type, declaringType));
+    protected GenericType compute(final Type type, final Class<?> clazz, final GenericType declaringType) {
+        GenericType genericType = new GenericType(type, clazz);
+        genericType.setGenericType(compute(genericType, type, declaringType));
         return genericType;
     }
 
@@ -329,9 +331,9 @@ public class GenericClass {
                 if (declaringType != null) {
                     Variable variable = declaringType.getVariable(name);
                     genericType.addVariable(variable);
-                    if (variable.getType() != type) {
+                    if (variable.getGenericType() != type) {
                         //把解析好的变量，重新包装生成Type
-                        return variable.getType();
+                        return variable.getGenericType();
                     }
                 }
             } else if (gd instanceof Executable) {

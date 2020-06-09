@@ -20,7 +20,7 @@ package io.joyrpc.util;
  * #L%
  */
 
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,7 +31,11 @@ public class GenericType {
     /**
      * 字段或参数的类型
      */
-    protected Type type;
+    protected Type genericType;
+    /**
+     * 类
+     */
+    protected Class<?> type;
     /**
      * 单一变量
      */
@@ -44,18 +48,33 @@ public class GenericType {
     /**
      * 构造函数
      *
-     * @param type 类型
+     * @param genericType 类型
      */
-    public GenericType(Type type) {
+    public GenericType(final Type genericType) {
+        this.genericType = genericType;
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param genericType  泛型类型
+     * @param type 类
+     */
+    public GenericType(final Type genericType, final Class<?> type) {
+        this.genericType = genericType;
         this.type = type;
     }
 
-    public Type getType() {
+    public Type getGenericType() {
+        return genericType;
+    }
+
+    public Class<?> getType() {
         return type;
     }
 
-    public void setType(Type type) {
-        this.type = type;
+    protected void setGenericType(Type genericType) {
+        this.genericType = genericType;
     }
 
     /**
@@ -96,6 +115,52 @@ public class GenericType {
     }
 
     /**
+     * 验证类型，防止漏洞攻击
+     *
+     * @param type   目标类型
+     * @param clazz  调用方指定的类
+     * @param parent 判断目标类型可以被调用方指定的类赋值
+     * @return 是否有效
+     */
+    public static boolean validate(final Type type, final Class<?> clazz, final boolean parent) {
+        if (type instanceof Class) {
+            //防止漏洞攻击
+            return parent ? ((Class) type).isAssignableFrom(clazz) : clazz.isAssignableFrom((Class) type);
+        } else if (type instanceof GenericArrayType) {
+            //TODO 是否要验证数组
+            return validate(((GenericArrayType) type).getGenericComponentType(), clazz, parent);
+        } else if (type instanceof ParameterizedType) {
+            return validate(((ParameterizedType) type).getRawType(), clazz, parent);
+        } else if (type instanceof TypeVariable) {
+            Type[] bounds = ((TypeVariable) type).getBounds();
+            if (parent && bounds != null) {
+                for (Type t : bounds)
+                    if (!validate(t, clazz, true)) {
+                        return false;
+                    }
+            }
+            return true;
+        } else if (type instanceof WildcardType) {
+            Type[] upperBounds = ((WildcardType) type).getUpperBounds();
+            Type[] lowerBounds = ((WildcardType) type).getLowerBounds();
+            if (parent && upperBounds != null) {
+                for (Type t : upperBounds)
+                    if (!validate(t, clazz, true)) {
+                        return false;
+                    }
+            }
+            if (parent && lowerBounds != null) {
+                for (Type t : lowerBounds)
+                    if (!validate(t, clazz, false)) {
+                        return false;
+                    }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 计算泛型参数位置
      *
      * @param parameters
@@ -132,7 +197,7 @@ public class GenericType {
         /**
          * 类型，可以是Class、ParameterizedType、GenericArrayType和Wi
          */
-        protected Type type;
+        protected Type genericType;
         /**
          * 第几个参数代表类型
          */
@@ -142,15 +207,15 @@ public class GenericType {
             this.name = name;
         }
 
-        public Variable(String name, Type type) {
+        public Variable(String name, Type genericType) {
             this.name = name;
-            this.type = type;
+            this.genericType = genericType;
         }
 
         public Variable(String name, Variable variable) {
             this.name = name;
             if (variable != null) {
-                this.type = variable.type;
+                this.genericType = variable.genericType;
             }
         }
 
@@ -158,8 +223,8 @@ public class GenericType {
             return name;
         }
 
-        public Type getType() {
-            return type;
+        public Type getGenericType() {
+            return genericType;
         }
 
         public int getParameter() {

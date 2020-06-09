@@ -36,8 +36,6 @@ import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.protocol.message.Invocation;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Map;
@@ -45,8 +43,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 import static io.joyrpc.protocol.message.Invocation.*;
-import static io.joyrpc.util.ClassUtils.getClasses;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
  * Title: Invocation fastjson 序列化<br>
@@ -220,35 +216,15 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
      * @param invocation 调用
      */
     protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
-        //TODO 处理泛型参数来解析
-        Class[] argsClass = null;
-        Parameter[] parameters;
-        Method method;
-        boolean special = false;
+        Type[] types;
         try {
-            method = getPublicMethod(invocation.getClassName(), invocation.getMethodName());
-            parameters = method.getParameters();
-            if (parameters.length > 0) {
-                String[] argsType = invocation.getArgsType();
-                if (argsType != null && argsType.length > 0) {
-                    argsClass = getClasses(argsType);
-                    special = true;
-                } else {
-                    argsClass = method.getParameterTypes();
-                }
-            }
-        } catch (ClassNotFoundException e) {
-            throw new CodecException(e.getMessage());
-        } catch (NoSuchMethodException e) {
-            throw new CodecException(e.getMessage());
-        } catch (MethodOverloadException e) {
+            types = invocation.getOrBuildTypes();
+        } catch (NoSuchMethodException | MethodOverloadException | ClassNotFoundException e) {
             throw new CodecException(e.getMessage());
         }
-        invocation.setArgsType(argsClass);
-        invocation.setMethod(method);
         //空数组
         if (lexer.token() == JSONToken.NULL) {
-            if (parameters.length == 0) {
+            if (types.length == 0) {
                 lexer.nextToken();
             } else {
                 throw new CodecException("syntax error: args can not be null");
@@ -258,17 +234,18 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
             JSONReader reader = new JSONReader(parser);
             reader.startArray();
             int i = 0;
-            Object[] objects = new Object[parameters.length];
+            Object[] objects = new Object[types.length];
             while (reader.hasNext()) {
                 if (i >= objects.length) {
                     throw new CodecException(String.format("the method %s of %s argument length is larger than %d",
                             invocation.getMethodName(), invocation.getClassName(), objects.length));
                 }
-                objects[i] = special ? reader.readObject(argsClass[i]) : reader.readObject(parameters[i].getParameterizedType());
+                objects[i] = reader.readObject(types[i]);
                 i++;
             }
             reader.endArray();
             invocation.setArgs(objects);
         }
     }
+
 }

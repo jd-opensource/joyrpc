@@ -31,9 +31,12 @@ import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GenericType;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Parameter;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+
+import static io.joyrpc.util.GenericType.validate;
 
 /**
  * JSON序列化
@@ -89,7 +92,7 @@ public class JsonGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Type getType(final GenericType[] genericTypes, final String[] argTypes, final int index) {
-        Type type = genericTypes[index].getType();
+        Type type = genericTypes[index].getGenericType();
         String argType = argTypes == null || argTypes.length <= index ? null : argTypes[index];
         if (argType != null && !argType.isEmpty()) {
             try {
@@ -102,53 +105,6 @@ public class JsonGenericSerializer implements GenericSerializer {
             }
         }
         return type;
-    }
-
-    /**
-     * 验证类型，防止漏洞攻击
-     *
-     * @param type   目标类型
-     * @param clazz  调用方指定的类
-     * @param parent 判断目标类型可以被调用方指定的类赋值
-     * @return 是否有效
-     */
-    protected boolean validate(final Type type, final Class<?> clazz, final boolean parent) {
-        if (type instanceof Class) {
-            if (parent ? ((Class) type).isAssignableFrom(clazz) : clazz.isAssignableFrom((Class) type)) {
-                //防止漏洞攻击
-                return true;
-            }
-        } else if (type instanceof GenericArrayType) {
-            return validate(((GenericArrayType) type).getGenericComponentType(), clazz, parent);
-        } else if (type instanceof ParameterizedType) {
-            return validate(((ParameterizedType) type).getRawType(), clazz, parent);
-        } else if (type instanceof TypeVariable) {
-            Type[] bounds = ((TypeVariable) type).getBounds();
-            if (parent && bounds != null) {
-                for (Type t : bounds)
-                    if (!validate(t, clazz, true)) {
-                        return false;
-                    }
-            }
-            return true;
-        } else if (type instanceof WildcardType) {
-            Type[] upperBounds = ((WildcardType) type).getUpperBounds();
-            Type[] lowerBounds = ((WildcardType) type).getLowerBounds();
-            if (parent && upperBounds != null) {
-                for (Type t : upperBounds)
-                    if (!validate(t, clazz, true)) {
-                        return false;
-                    }
-            }
-            if (parent && lowerBounds != null) {
-                for (Type t : lowerBounds)
-                    if (!validate(t, clazz, false)) {
-                        return false;
-                    }
-            }
-            return true;
-        }
-        return false;
     }
 
     /**

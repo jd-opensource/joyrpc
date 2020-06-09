@@ -220,6 +220,7 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
      * @param invocation 调用
      */
     protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
+        //TODO 处理泛型参数来解析
         Class[] argsClass = null;
         Parameter[] parameters;
         Method method;

@@ -25,6 +25,7 @@ import io.joyrpc.exception.CodecException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GenericMethod;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -81,10 +82,12 @@ public class StandardGenericSerializer implements GenericSerializer {
 
     @Override
     public Object[] deserialize(final Call invocation) throws CodecException {
+        GenericMethod genericMethod = invocation.getGenericMethod();
         Object[] genericArgs = invocation.getArgs();
         Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? new Object[0] : (Object[]) genericArgs[2];
         String[] argTypes = genericArgs == null || genericArgs.length < 3 ? null : (String[]) genericArgs[1];
         try {
+            //TODO 根据识别的泛型来进行反序列化
             //接口的参数类型
             Class[] argClasses = invocation.getArgClasses();
             //计算客户端传递的真实参数类型

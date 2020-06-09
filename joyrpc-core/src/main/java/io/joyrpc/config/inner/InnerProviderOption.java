@@ -32,6 +32,7 @@ import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -122,6 +123,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         return new InnerProviderMethodOption(
                 grpcMethod,
+                genericClass.get(method),
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
@@ -219,7 +221,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
          */
         protected MethodCaller caller;
 
-        public InnerProviderMethodOption(final GrpcMethod method,
+        public InnerProviderMethodOption(final GrpcMethod grpcMethod, final GenericMethod genericMethod,
                                          final Map<String, ?> implicits, final int timeout,
                                          final Concurrency concurrency, final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final boolean trace, final CallbackMethod callback,
@@ -227,7 +229,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter,
                                          final MethodCaller caller) {
-            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
+            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;

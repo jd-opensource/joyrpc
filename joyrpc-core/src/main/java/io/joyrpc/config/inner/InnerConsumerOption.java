@@ -43,10 +43,8 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.GrpcMethod;
-import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
+import io.joyrpc.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -274,6 +272,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         McIntfCircuitBreakerConfig icbCfg = breakerConfigs.get();
         return new InnerConsumerMethodOption(
                 grpcMethod,
+                genericClass.get(method),
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
@@ -447,7 +446,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected volatile Map<String, Object> mock;
 
-        public InnerConsumerMethodOption(final GrpcMethod method, final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
+        public InnerConsumerMethodOption(final GrpcMethod grpcMethod, final GenericMethod genericMethod,
+                                         final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
                                          final CachePolicy cachePolicy, final Validator validator,
                                          final String token, final boolean async, final boolean trace,
                                          final CallbackMethod callback, final int forks,
@@ -457,7 +457,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                                          final McMethodBreakerConfig staticBreakerConfig,
                                          final McMethodBreakerConfig dynamicBreakerConfig,
                                          final Map<String, Object> mock) {
-            super(method, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
+            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
             this.forks = forks;
             this.selector = selector;
             this.router = router;

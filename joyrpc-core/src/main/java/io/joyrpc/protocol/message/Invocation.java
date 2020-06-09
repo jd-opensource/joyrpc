@@ -26,10 +26,7 @@ import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.GrpcMethod;
-import io.joyrpc.util.GrpcType;
-import io.joyrpc.util.StringUtils;
+import io.joyrpc.util.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -112,6 +109,10 @@ public class Invocation implements Call {
      * 是否泛化调用
      */
     protected transient Boolean generic;
+    /**
+     * 泛化的方法
+     */
+    protected transient GenericMethod genericMethod;
 
     public Invocation() {
     }
@@ -354,6 +355,18 @@ public class Invocation implements Call {
 
     public void setObject(Object object) {
         this.object = object;
+    }
+
+    public GenericMethod getGenericMethod() {
+        if (genericMethod == null) {
+            GenericClass genericClass = getGenericClass(clazz);
+            genericMethod = genericClass == null ? null : genericClass.get(method);
+        }
+        return genericMethod;
+    }
+
+    public void setGenericMethod(GenericMethod genericMethod) {
+        this.genericMethod = genericMethod;
     }
 
     /**

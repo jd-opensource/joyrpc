@@ -34,6 +34,7 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.proxy.MethodCaller;
+import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcType;
 
 import javax.validation.Validator;
@@ -80,6 +81,13 @@ public interface InterfaceOption {
          * @return 方法
          */
         Method getMethod();
+
+        /**
+         * 获取泛型信息
+         *
+         * @return 泛型方法
+         */
+        GenericMethod getGenericMethod();
 
         /**
          * 方法级别隐式传参，合并了接口的隐藏参数

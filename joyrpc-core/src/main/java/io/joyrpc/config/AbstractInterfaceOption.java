@@ -35,6 +35,8 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.util.GenericClass;
+import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 import io.joyrpc.util.SystemClock;
@@ -77,6 +79,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * 接口的隐藏参数
      */
     protected Map<String, String> implicits;
+    /**
+     * 泛型方法名称
+     */
+    protected GenericClass genericClass;
     /**
      * 接口级别超时时间
      */
@@ -176,6 +182,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * 构建参数
      */
     protected void setup() {
+        this.genericClass = getGenericClass(interfaceClass);
         //方法级别的隐藏参数，保留以"."开头
         this.implicits = url.startsWith(String.valueOf(HIDE_KEY_PREFIX));
         this.timeout = url.getPositiveInt(TIMEOUT_OPTION);
@@ -389,6 +396,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          */
         protected Method method;
         /**
+         * 泛型方法
+         */
+        protected GenericMethod genericMethod;
+        /**
          * 参数类型
          */
         protected ArgType argType;
@@ -440,17 +451,19 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         /**
          * 构造函数
          *
-         * @param grpcMethod  方法
-         * @param implicits   隐式传参
-         * @param timeout     超时时间
-         * @param concurrency 并发数配置
-         * @param cachePolicy 缓存策略
-         * @param validator   方法参数验证器
-         * @param token       令牌
-         * @param async       判断方法是否是异步调用
-         * @param callback    回调方法
+         * @param grpcMethod    GRPC方法
+         * @param genericMethod 泛型方法
+         * @param implicits     隐式传参
+         * @param timeout       超时时间
+         * @param concurrency   并发数配置
+         * @param cachePolicy   缓存策略
+         * @param validator     方法参数验证器
+         * @param token         令牌
+         * @param async         判断方法是否是异步调用
+         * @param callback      回调方法
          */
         public InnerMethodOption(final GrpcMethod grpcMethod,
+                                 final GenericMethod genericMethod,
                                  final Map<String, ?> implicits, int timeout,
                                  final Concurrency concurrency,
                                  final CachePolicy cachePolicy,
@@ -461,6 +474,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final CallbackMethod callback) {
             //只有泛化调用的时候没有设置grpMethod
             this.method = grpcMethod == null ? null : grpcMethod.getMethod();
+            this.genericMethod = genericMethod;
             Class<?>[] types = method == null ? null : method.getParameterTypes();
             //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
             this.argType = method == null ? null : new ArgType(types, getCanonicalNames(types), grpcMethod.getSupplier());
@@ -480,6 +494,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public Method getMethod() {
             return method;
+        }
+
+        @Override
+        public GenericMethod getGenericMethod() {
+            return genericMethod;
         }
 
         @Override

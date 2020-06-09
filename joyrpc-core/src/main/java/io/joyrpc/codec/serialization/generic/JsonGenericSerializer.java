@@ -28,9 +28,10 @@ import io.joyrpc.exception.CodecException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
 
-import java.lang.reflect.Parameter;
-import java.lang.reflect.Type;
+import java.lang.reflect.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -39,6 +40,8 @@ import java.util.Map;
  */
 @Extension(GenericSerializer.JSON)
 public class JsonGenericSerializer implements GenericSerializer {
+
+    protected static final Object NULL = new Object();
 
     /**
      * JSON插件
@@ -52,6 +55,7 @@ public class JsonGenericSerializer implements GenericSerializer {
 
     @Override
     public Object[] deserialize(final Call invocation) throws CodecException {
+        GenericMethod genericMethod = invocation.getGenericMethod();
         Parameter[] parameters = invocation.getMethod().getParameters();
         Object[] genericArgs = invocation.getArgs();
         if (parameters.length == 0) {
@@ -65,9 +69,9 @@ public class JsonGenericSerializer implements GenericSerializer {
             } else {
                 switch (json[0]) {
                     case '[':
-                        return parseArray(parameters, argTypes, json);
+                        return parseArray(parameters, genericMethod.getParameters(), argTypes, json);
                     case '{':
-                        return parseObject(parameters, argTypes, json);
+                        return parseObject(parameters, genericMethod.getParameters(), argTypes, json);
                     default:
                         throw new CodecException("The content is not json format.");
                 }
@@ -78,42 +82,93 @@ public class JsonGenericSerializer implements GenericSerializer {
     /**
      * 获取真实的参数类型
      *
-     * @param parameters
-     * @param argTypes
-     * @param index
+     * @param genericTypes 参数泛化信息
+     * @param argTypes     调用方指定的类型
+     * @param index        参数索引
+     * @param genericTypes 泛化参数类型
      * @return
      */
-    protected Type getType(final Parameter[] parameters, final String[] argTypes, final int index) {
-        Type type = null;
+    protected Type getType(final GenericType[] genericTypes, final String[] argTypes, final int index) {
+        Type type = genericTypes[index].getType();
         String argType = argTypes == null || argTypes.length <= index ? null : argTypes[index];
         if (argType != null && !argType.isEmpty()) {
             try {
-                //TODO 优化泛型类型获取
-                Class aClass = ClassUtils.getClass(argType);
-                if (parameters[index].getType().isAssignableFrom(aClass)) {
+                Class<?> aClass = ClassUtils.getClass(argType);
+                if (validate(type, aClass, true)) {
                     //防止漏洞攻击
                     type = aClass;
                 }
             } catch (ClassNotFoundException e) {
             }
         }
-        return type == null ? parameters[index].getParameterizedType() : type;
+        return type;
+    }
+
+    /**
+     * 验证类型，防止漏洞攻击
+     *
+     * @param type   目标类型
+     * @param clazz  调用方指定的类
+     * @param parent 判断目标类型可以被调用方指定的类赋值
+     * @return 是否有效
+     */
+    protected boolean validate(final Type type, final Class<?> clazz, final boolean parent) {
+        if (type instanceof Class) {
+            if (parent ? ((Class) type).isAssignableFrom(clazz) : clazz.isAssignableFrom((Class) type)) {
+                //防止漏洞攻击
+                return true;
+            }
+        } else if (type instanceof GenericArrayType) {
+            return validate(((GenericArrayType) type).getGenericComponentType(), clazz, parent);
+        } else if (type instanceof ParameterizedType) {
+            return validate(((ParameterizedType) type).getRawType(), clazz, parent);
+        } else if (type instanceof TypeVariable) {
+            Type[] bounds = ((TypeVariable) type).getBounds();
+            if (parent && bounds != null) {
+                for (Type t : bounds)
+                    if (!validate(t, clazz, true)) {
+                        return false;
+                    }
+            }
+            return true;
+        } else if (type instanceof WildcardType) {
+            Type[] upperBounds = ((WildcardType) type).getUpperBounds();
+            Type[] lowerBounds = ((WildcardType) type).getLowerBounds();
+            if (parent && upperBounds != null) {
+                for (Type t : upperBounds)
+                    if (!validate(t, clazz, true)) {
+                        return false;
+                    }
+            }
+            if (parent && lowerBounds != null) {
+                for (Type t : lowerBounds)
+                    if (!validate(t, clazz, false)) {
+                        return false;
+                    }
+            }
+            return true;
+        }
+        return false;
     }
 
     /**
      * 解析数组
      *
-     * @param parameters 服务端接口参数
-     * @param argTypes   客户端传递的参数
-     * @param text       文本内容
+     * @param parameters   参数对象
+     * @param genericTypes 参数泛化信息
+     * @param argTypes     客户端传递的参数
+     * @param text         文本内容
      * @return
      */
-    protected Object[] parseArray(final Parameter[] parameters, final String[] argTypes, final byte[] text) {
+    protected Object[] parseArray(final Parameter[] parameters,
+                                  final GenericType[] genericTypes,
+                                  final String[] argTypes,
+                                  final byte[] text) {
         final int[] index = new int[]{0};
         final Object[] result = new Object[parameters.length];
         json.parseArray(new UnsafeByteArrayInputStream(text), o -> {
             if (index[0] < parameters.length) {
-                result[index[0]] = o.apply(getType(parameters, argTypes, index[0]));
+                result[index[0]] = o.apply(getType(genericTypes, argTypes, index[0]));
             } else {
                 //忽略掉多余的参数
                 o.apply(Object.class);
@@ -131,15 +186,19 @@ public class JsonGenericSerializer implements GenericSerializer {
     /**
      * 解析数组
      *
-     * @param parameters 服务端接口参数
-     * @param argTypes   客户端传递的参数
-     * @param text       文本内容
+     * @param parameters   参数对象
+     * @param genericTypes 参数泛化信息
+     * @param argTypes     客户端传递的参数
+     * @param text         文本内容
      * @return
      */
-    protected Object[] parseObject(final Parameter[] parameters, final String[] argTypes, final byte[] text) {
+    protected Object[] parseObject(final Parameter[] parameters,
+                                   final GenericType[] genericTypes,
+                                   final String[] argTypes,
+                                   final byte[] text) {
         if (parameters.length == 1) {
             return new Object[]{json.parseObject(new UnsafeByteArrayInputStream(text),
-                    getType(parameters, argTypes, 0))};
+                    getType(genericTypes, argTypes, 0))};
         }
         final int[] index = new int[]{0};
         final Object[] result = new Object[parameters.length];
@@ -158,13 +217,22 @@ public class JsonGenericSerializer implements GenericSerializer {
             //根据名称获取参数位置
             Integer pos = names.get(k);
             if (pos != null) {
-                result[pos] = o.apply(getType(parameters, argTypes, pos));
+                result[pos] = o.apply(getType(genericTypes, argTypes, pos));
+                //null设置为NULL对象
+                if (result[pos] == null) {
+                    result[pos] = NULL;
+                }
             } else {
                 //按照空位顺序占位
                 for (int i = index[0]; i < parameters.length; i++) {
                     if (result[i] == null) {
-                        result[i] = o.apply(getType(parameters, argTypes, i));
-                        index[0] = i;
+                        result[i] = o.apply(getType(genericTypes, argTypes, i));
+                        //null设置为NULL对象
+                        if (result[i] == null) {
+                            result[i] = NULL;
+                        }
+                        //递增
+                        index[0] = i + 1;
                         break;
                     }
                 }
@@ -172,9 +240,11 @@ public class JsonGenericSerializer implements GenericSerializer {
             return true;
         });
         //判断参数是否足够
-        for (int i = 0; i < parameters.length; i++) {
-            if (parameters[i] == null) {
+        for (int i = 0; i < result.length; i++) {
+            if (result[i] == null) {
                 throw new CodecException("The number of parameter is wrong.");
+            } else if (result[i] == NULL) {
+                result[i] = null;
             }
         }
         return result;

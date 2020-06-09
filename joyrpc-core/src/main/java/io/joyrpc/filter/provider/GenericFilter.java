@@ -24,7 +24,6 @@ import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.GenericException;
 import io.joyrpc.exception.LafException;
@@ -38,12 +37,10 @@ import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GENERIC_SERIALIZER;
 import static io.joyrpc.codec.serialization.GenericSerializer.STANDARD;
-import static io.joyrpc.constants.Constants.GENERIC_OPTION;
 
 /**
  * @description: 服务端的泛化调用过滤器<br>
@@ -82,6 +79,7 @@ public class GenericFilter extends AbstractProviderFilter {
                 serializers[0] = defSerializer;
             }
             // 根据调用的参数来获取方法及参数类型
+            invocation.setGenericMethod(request.getOption().getGenericMethod());
             invocation.setArgs(serializers[0].deserialize(invocation));
         } catch (Exception e) {
             String message = String.format(ExceptionCode.format(ExceptionCode.FILTER_GENERIC_CONVERT) +

@@ -20,6 +20,8 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
+import io.joyrpc.util.GenericMethod;
+
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -104,4 +106,12 @@ public interface Call extends Serializable {
      * @return 泛型标识
      */
     boolean isGeneric();
+
+    /**
+     * 泛化方法
+     *
+     * @return
+     */
+    GenericMethod getGenericMethod();
+
 }

@@ -166,7 +166,9 @@ public class GenericChecker {
         } else if (type instanceof TypeVariable) {
             //变量
             GenericType.Variable variable = genericType.getVariable(((TypeVariable) type).getName());
-            checkType(genericType, variable.getGenericType(), scope, consumer);
+            if (variable.getGenericType() != type) {
+                checkType(genericType, variable.getGenericType(), scope, consumer);
+            }
         } else if (type instanceof GenericArrayType) {
             //泛型数组
             checkType(genericType, ((GenericArrayType) type).getGenericComponentType(), scope, consumer);

@@ -193,7 +193,6 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
         if (parameters.length == 0) {
             return new Object[0];
         }
-
         Object[] args;
         //判断是否有参数名称
         boolean hasName = parameters[0].isNamePresent();
@@ -203,6 +202,7 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
             Compression compression = getCompression(parametric, HttpHeaders.Names.CONTENT_ENCODING);
             //解压缩
             byte[] content = decompress(compression, message.content());
+            //构造泛化调用参数
             invocation.setArgs(new Object[]{invocation.getMethodName(), null, new Object[]{content}});
             //反序列化
             args = defSerializer.deserialize(invocation);

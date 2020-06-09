@@ -429,6 +429,10 @@ public class Invocation implements Call {
         return types;
     }
 
+    public void setGenericTypes(Type[] genericTypes) {
+        this.genericTypes = genericTypes;
+    }
+
     /**
      * 如果参数类型不存在，则进行计算
      *
@@ -624,15 +628,18 @@ public class Invocation implements Call {
             method = grpcMethod.getMethod();
             grpcType = grpcMethod.getType();
         }
-        Class[] paramTypes = method.getParameterTypes();
+        GenericClass genericClass = ClassUtils.getGenericClass(ifaceClass);
+        GenericMethod genericMethod = genericClass.get(method);
 
-        Invocation invocation = new Invocation(className, alias, methodName, paramTypes).
+        Invocation invocation = new Invocation(className, alias, methodName, genericMethod.getTypes()).
                 addAttachment(Constants.HIDDEN_KEY_TOKEN, parametric.getString(KEY_TOKEN)).
                 addAttachment(HIDDEN_KEY_APPID, parametric.getString(KEY_APPID)).
                 addAttachment(HIDDEN_KEY_APPNAME, parametric.getString(KEY_APPNAME)).
                 addAttachment(HIDDEN_KEY_APPINSID, parametric.getString(KEY_APPINSID));
         invocation.setClazz(ifaceClass);
         invocation.setMethod(method);
+        invocation.setGenericMethod(genericMethod);
+        invocation.setGenericTypes(genericMethod.getGenericTypes());
         invocation.setGrpcType(grpcType);
         //隐式传参
         parametric.foreach((key, value) -> {

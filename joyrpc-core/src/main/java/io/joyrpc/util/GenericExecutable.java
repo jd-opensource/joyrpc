@@ -63,6 +63,7 @@ public abstract class GenericExecutable<T extends Executable> {
         this.parameters = parameters;
         this.exceptions = exceptions;
         this.genericTypes = new Type[parameters.length];
+        this.types = new Class<?>[parameters.length];
         for (int i = 0; i < genericTypes.length; i++) {
             genericTypes[i] = parameters[i].getGenericType();
             types[i] = parameters[i].getType();

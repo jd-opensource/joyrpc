@@ -533,9 +533,6 @@ public class Invocation implements Call {
             className = parts[0];
             methodName = parts[1];
             alias = parametric.getString(ALIAS_OPTION);
-            if (alias == null || alias.isEmpty()) {
-                throw supplier.get();
-            }
         } else {
             throw supplier.get();
         }
@@ -553,7 +550,7 @@ public class Invocation implements Call {
         }
         Class[] paramTypes = method.getParameterTypes();
 
-        Invocation invocation = new Invocation(className, alias, methodName, paramTypes).
+        Invocation invocation = new Invocation(className, alias == null ? "" : alias, methodName, paramTypes).
                 addAttachment(Constants.HIDDEN_KEY_TOKEN, parametric.getString(KEY_TOKEN)).
                 addAttachment(HIDDEN_KEY_APPID, parametric.getString(KEY_APPID)).
                 addAttachment(HIDDEN_KEY_APPNAME, parametric.getString(KEY_APPNAME)).

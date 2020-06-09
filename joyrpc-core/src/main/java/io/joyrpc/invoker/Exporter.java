@@ -304,6 +304,7 @@ public class Exporter extends AbstractService {
         //类名，如果不存在则从会话里面获取
         invocation.setClazz(interfaceClass);
         invocation.setMethod(option.getMethod());
+        invocation.setGenericMethod(option.getGenericMethod());
         //设置调用的对象，便于Validate
         invocation.setObject(ref);
         //注入身份认证信息和鉴权

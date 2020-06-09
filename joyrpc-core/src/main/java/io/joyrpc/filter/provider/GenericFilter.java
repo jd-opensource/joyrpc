@@ -79,7 +79,6 @@ public class GenericFilter extends AbstractProviderFilter {
                 serializers[0] = defSerializer;
             }
             // 根据调用的参数来获取方法及参数类型
-            invocation.setGenericMethod(request.getOption().getGenericMethod());
             invocation.setArgs(serializers[0].deserialize(invocation));
         } catch (Exception e) {
             String message = String.format(ExceptionCode.format(ExceptionCode.FILTER_GENERIC_CONVERT) +

@@ -109,10 +109,10 @@ public interface Call extends Serializable {
     boolean isGeneric();
 
     /**
-     * 参数泛型数组
+     * 计算真实的参数类型
      *
      * @return 参数泛型数组
      */
-    Type[] getGenericTypes() throws NoSuchMethodException, MethodOverloadException, ClassNotFoundException;
+    Type[] computeTypes() throws NoSuchMethodException, MethodOverloadException, ClassNotFoundException;
 
 }

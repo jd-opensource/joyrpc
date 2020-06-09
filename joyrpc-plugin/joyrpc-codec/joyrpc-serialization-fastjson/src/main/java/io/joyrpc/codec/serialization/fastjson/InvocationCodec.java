@@ -217,7 +217,8 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
      */
     protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
         try {
-            Type[] types = invocation.getGenericTypes();
+            //计算真实的类型
+            Type[] types = invocation.computeTypes();
             //空数组
             if (lexer.token() == JSONToken.NULL) {
                 if (types.length == 0) {

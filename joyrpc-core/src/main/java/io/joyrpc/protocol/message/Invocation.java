@@ -377,12 +377,12 @@ public class Invocation implements Call {
     }
 
     @Override
-    public Type[] getGenericTypes() throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
+    public Type[] computeTypes() throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
         if (genericTypes != null) {
             return genericTypes;
         }
-        Class[] argsClass;
-        Type[] types;
+        Class[] resolvedClasses;
+        Type[] resolvedTypes;
         if (clazz == null) {
             clazz = forName(className);
         }
@@ -394,39 +394,48 @@ public class Invocation implements Call {
             if (genericMethod == null) {
                 genericMethod = getGenericClass(clazz).get(method);
             }
-            if (argsType == null || argsType.length == 0) {
-                types = genericMethod.getGenericTypes();
-                argsClass = genericMethod.getTypes();
-            } else if (argsType.length != parameters.length) {
+            //获取用户设置的参数类型
+            String[] argTypes = argsType;
+            if (isGeneric()) {
+                //返回调用，从参数里面获取参数类型
+                if (args == null || args.length != 3) {
+                    throw new NoSuchMethodException("The number of parameter is wrong.");
+                }
+                argTypes = (String[]) args[1];
+            }
+            if (argTypes == null || argTypes.length == 0) {
+                resolvedTypes = genericMethod.getGenericTypes();
+                resolvedClasses = genericMethod.getTypes();
+            } else if (argTypes.length != parameters.length) {
                 throw new NoSuchMethodException(String.format("There is no method %s with %d parameters", methodName, parameters.length));
             } else {
                 GenericType[] genericTypes = genericMethod.getParameters();
-                types = new Type[parameters.length];
-                argsClass = new Class<?>[parameters.length];
+                resolvedTypes = new Type[parameters.length];
+                resolvedClasses = new Class<?>[parameters.length];
                 Class<?> clazz;
-                for (int i = 0; i < argsClass.length; i++) {
-                    types[i] = genericTypes[i].getGenericType();
-                    argsClass[i] = genericTypes[i].getType();
-                    clazz = ClassUtils.getClass(argsType[i]);
-                    if (validate(types[i], clazz, true)) {
-                        argsClass[i] = clazz;
-                        types[i] = clazz;
+                for (int i = 0; i < resolvedClasses.length; i++) {
+                    resolvedTypes[i] = genericTypes[i].getGenericType();
+                    resolvedClasses[i] = genericTypes[i].getType();
+                    clazz = ClassUtils.getClass(argTypes[i]);
+                    if (validate(resolvedTypes[i], clazz, true)) {
+                        resolvedClasses[i] = clazz;
+                        resolvedTypes[i] = clazz;
                         continue;
                     } else {
-                        throw new NoSuchMethodException(String.format("There is no method %s with parameter type %s at %d", methodName, argsType[i], i));
+                        throw new NoSuchMethodException(String.format("There is no method %s with parameter type %s at %d", methodName, argTypes[i], i));
                     }
                 }
             }
         } else {
-            argsClass = new Class[0];
-            types = new Type[0];
+            resolvedClasses = new Class[0];
+            resolvedTypes = new Type[0];
         }
-        this.argClasses = argsClass;
-        if (this.argsType == null) {
-            this.argsType = getCanonicalNames(argClasses);
+        argClasses = resolvedClasses;
+        if (argsType == null) {
+            argsType = getCanonicalNames(argClasses);
         }
-        this.genericTypes = types;
-        return types;
+        genericTypes = resolvedTypes;
+        return resolvedTypes;
     }
 
     public void setGenericTypes(Type[] genericTypes) {

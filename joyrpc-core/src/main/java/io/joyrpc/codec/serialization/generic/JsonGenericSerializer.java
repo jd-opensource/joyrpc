@@ -25,11 +25,10 @@ import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.codec.serialization.Json;
 import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
 import io.joyrpc.exception.CodecException;
+import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Call;
 import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GenericType;
 
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -58,27 +57,31 @@ public class JsonGenericSerializer implements GenericSerializer {
 
     @Override
     public Object[] deserialize(final Call invocation) throws CodecException {
-        GenericMethod genericMethod = invocation.getGenericMethod();
-        Parameter[] parameters = invocation.getMethod().getParameters();
-        Object[] genericArgs = invocation.getArgs();
-        if (parameters.length == 0) {
-            return new Object[0];
-        } else {
-            Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? null : (Object[]) genericArgs[2];
-            String[] argTypes = genericArgs == null || genericArgs.length < 3 ? null : (String[]) genericArgs[1];
-            byte[] json = paramArgs == null || paramArgs.length == 0 ? null : (byte[]) paramArgs[0];
-            if (json == null || json.length == 0) {
-                throw new CodecException("The number of parameter is wrong.");
+        try {
+            Type[] types = invocation.getGenericTypes();
+            Parameter[] parameters = invocation.getMethod().getParameters();
+            Object[] genericArgs = invocation.getArgs();
+            if (parameters.length == 0) {
+                return new Object[0];
             } else {
-                switch (json[0]) {
-                    case '[':
-                        return parseArray(parameters, genericMethod.getParameters(), argTypes, json);
-                    case '{':
-                        return parseObject(parameters, genericMethod.getParameters(), argTypes, json);
-                    default:
-                        throw new CodecException("The content is not json format.");
+                Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? null : (Object[]) genericArgs[2];
+                String[] argTypes = genericArgs == null || genericArgs.length < 3 ? null : (String[]) genericArgs[1];
+                byte[] json = paramArgs == null || paramArgs.length == 0 ? null : (byte[]) paramArgs[0];
+                if (json == null || json.length == 0) {
+                    throw new CodecException("The number of parameter is wrong.");
+                } else {
+                    switch (json[0]) {
+                        case '[':
+                            return parseArray(parameters, types, argTypes, json);
+                        case '{':
+                            return parseObject(parameters, types, argTypes, json);
+                        default:
+                            throw new CodecException("The content is not json format.");
+                    }
                 }
             }
+        } catch (NoSuchMethodException | MethodOverloadException | ClassNotFoundException e) {
+            throw new CodecException(e.getMessage());
         }
     }
 
@@ -91,8 +94,8 @@ public class JsonGenericSerializer implements GenericSerializer {
      * @param genericTypes 泛化参数类型
      * @return
      */
-    protected Type getType(final GenericType[] genericTypes, final String[] argTypes, final int index) {
-        Type type = genericTypes[index].getGenericType();
+    protected Type getType(final Type[] genericTypes, final String[] argTypes, final int index) {
+        Type type = genericTypes[index];
         String argType = argTypes == null || argTypes.length <= index ? null : argTypes[index];
         if (argType != null && !argType.isEmpty()) {
             try {
@@ -117,7 +120,7 @@ public class JsonGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object[] parseArray(final Parameter[] parameters,
-                                  final GenericType[] genericTypes,
+                                  final Type[] genericTypes,
                                   final String[] argTypes,
                                   final byte[] text) {
         final int[] index = new int[]{0};
@@ -149,7 +152,7 @@ public class JsonGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Object[] parseObject(final Parameter[] parameters,
-                                   final GenericType[] genericTypes,
+                                   final Type[] genericTypes,
                                    final String[] argTypes,
                                    final byte[] text) {
         if (parameters.length == 1) {

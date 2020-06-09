@@ -216,35 +216,34 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
      * @param invocation 调用
      */
     protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
-        Type[] types;
         try {
-            types = invocation.getOrBuildTypes();
+            Type[] types = invocation.getGenericTypes();
+            //空数组
+            if (lexer.token() == JSONToken.NULL) {
+                if (types.length == 0) {
+                    lexer.nextToken();
+                } else {
+                    throw new CodecException("syntax error: args can not be null");
+                }
+            } else {
+                //解析参数
+                JSONReader reader = new JSONReader(parser);
+                reader.startArray();
+                int i = 0;
+                Object[] objects = new Object[types.length];
+                while (reader.hasNext()) {
+                    if (i >= objects.length) {
+                        throw new CodecException(String.format("the method %s of %s argument length is larger than %d",
+                                invocation.getMethodName(), invocation.getClassName(), objects.length));
+                    }
+                    objects[i] = reader.readObject(types[i]);
+                    i++;
+                }
+                reader.endArray();
+                invocation.setArgs(objects);
+            }
         } catch (NoSuchMethodException | MethodOverloadException | ClassNotFoundException e) {
             throw new CodecException(e.getMessage());
-        }
-        //空数组
-        if (lexer.token() == JSONToken.NULL) {
-            if (types.length == 0) {
-                lexer.nextToken();
-            } else {
-                throw new CodecException("syntax error: args can not be null");
-            }
-        } else {
-            //解析参数
-            JSONReader reader = new JSONReader(parser);
-            reader.startArray();
-            int i = 0;
-            Object[] objects = new Object[types.length];
-            while (reader.hasNext()) {
-                if (i >= objects.length) {
-                    throw new CodecException(String.format("the method %s of %s argument length is larger than %d",
-                            invocation.getMethodName(), invocation.getClassName(), objects.length));
-                }
-                objects[i] = reader.readObject(types[i]);
-                i++;
-            }
-            reader.endArray();
-            invocation.setArgs(objects);
         }
     }
 

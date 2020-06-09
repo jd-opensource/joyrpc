@@ -20,10 +20,11 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.util.GenericMethod;
+import io.joyrpc.exception.MethodOverloadException;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Map;
 
 /**
@@ -108,10 +109,10 @@ public interface Call extends Serializable {
     boolean isGeneric();
 
     /**
-     * 泛化方法
+     * 参数泛型数组
      *
-     * @return
+     * @return 参数泛型数组
      */
-    GenericMethod getGenericMethod();
+    Type[] getGenericTypes() throws NoSuchMethodException, MethodOverloadException, ClassNotFoundException;
 
 }

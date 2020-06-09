@@ -82,7 +82,6 @@ public class StandardGenericSerializer implements GenericSerializer {
 
     @Override
     public Object[] deserialize(final Call invocation) throws CodecException {
-        GenericMethod genericMethod = invocation.getGenericMethod();
         Object[] genericArgs = invocation.getArgs();
         Object[] paramArgs = genericArgs == null || genericArgs.length < 3 ? new Object[0] : (Object[]) genericArgs[2];
         String[] argTypes = genericArgs == null || genericArgs.length < 3 ? null : (String[]) genericArgs[1];

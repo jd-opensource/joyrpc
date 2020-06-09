@@ -21,7 +21,6 @@ package io.joyrpc.protocol.message;
  */
 
 import io.joyrpc.constants.Constants;
-import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.MapParametric;
@@ -120,7 +119,7 @@ public class Invocation implements Call {
     /**
      * 参数泛型信息
      */
-    protected transient Type[] types;
+    protected transient Type[] genericTypes;
 
     public Invocation() {
     }
@@ -377,12 +376,57 @@ public class Invocation implements Call {
         this.genericMethod = genericMethod;
     }
 
-    public Type[] getTypes() {
+    @Override
+    public Type[] getGenericTypes() throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
+        if (genericTypes != null) {
+            return genericTypes;
+        }
+        Class[] argsClass;
+        Type[] types;
+        if (clazz == null) {
+            clazz = forName(className);
+        }
+        if (method == null) {
+            method = getPublicMethod(clazz, methodName);
+        }
+        Parameter[] parameters = method.getParameters();
+        if (parameters.length > 0) {
+            if (genericMethod == null) {
+                genericMethod = getGenericClass(clazz).get(method);
+            }
+            if (argsType == null || argsType.length == 0) {
+                types = genericMethod.getGenericTypes();
+                argsClass = genericMethod.getTypes();
+            } else if (argsType.length != parameters.length) {
+                throw new NoSuchMethodException(String.format("There is no method %s with %d parameters", methodName, parameters.length));
+            } else {
+                GenericType[] genericTypes = genericMethod.getParameters();
+                types = new Type[parameters.length];
+                argsClass = new Class<?>[parameters.length];
+                Class<?> clazz;
+                for (int i = 0; i < argsClass.length; i++) {
+                    types[i] = genericTypes[i].getGenericType();
+                    argsClass[i] = genericTypes[i].getType();
+                    clazz = ClassUtils.getClass(argsType[i]);
+                    if (validate(types[i], clazz, true)) {
+                        argsClass[i] = clazz;
+                        types[i] = clazz;
+                        continue;
+                    } else {
+                        throw new NoSuchMethodException(String.format("There is no method %s with parameter type %s at %d", methodName, argsType[i], i));
+                    }
+                }
+            }
+        } else {
+            argsClass = new Class[0];
+            types = new Type[0];
+        }
+        this.argClasses = argsClass;
+        if (this.argsType == null) {
+            this.argsType = getCanonicalNames(argClasses);
+        }
+        this.genericTypes = types;
         return types;
-    }
-
-    public void setTypes(Type[] types) {
-        this.types = types;
     }
 
     /**
@@ -515,61 +559,6 @@ public class Invocation implements Call {
      */
     public Object invoke(final Object target) throws InvocationTargetException, IllegalAccessException {
         return method.invoke(target, args);
-    }
-
-    /**
-     * 反序列化的时候，通过传递的参数类型信息和方法的泛型参数信息来构建参数类型
-     *
-     * @return 参数类型
-     * @throws CodecException
-     */
-    public Type[] getOrBuildTypes() throws NoSuchMethodException, MethodOverloadException, ClassNotFoundException {
-        if (types != null) {
-            return types;
-        }
-        Class[] argsClass;
-        Type[] types;
-        if (clazz == null) {
-            clazz = forName(className);
-        }
-        if (method == null) {
-            method = getPublicMethod(clazz, methodName);
-        }
-        Parameter[] parameters = method.getParameters();
-        if (parameters.length > 0) {
-            if (genericMethod == null) {
-                genericMethod = getGenericClass(clazz).get(method);
-            }
-            if (argsType == null || argsType.length == 0) {
-                types = genericMethod.getGenericTypes();
-                argsClass = genericMethod.getTypes();
-            } else if (argsType.length != parameters.length) {
-                throw new NoSuchMethodException(String.format("There is no method %s with %d parameters", methodName, parameters.length));
-            } else {
-                GenericType[] genericTypes = genericMethod.getParameters();
-                types = new Type[parameters.length];
-                argsClass = new Class<?>[parameters.length];
-                Class<?> clazz;
-                for (int i = 0; i < argsClass.length; i++) {
-                    types[i] = genericTypes[i].getGenericType();
-                    argsClass[i] = genericTypes[i].getType();
-                    clazz = ClassUtils.getClass(argsType[i]);
-                    if (validate(types[i], clazz, true)) {
-                        argsClass[i] = clazz;
-                        types[i] = clazz;
-                        continue;
-                    } else {
-                        throw new NoSuchMethodException(String.format("There is no method %s with parameter type %s at %d", methodName, argsType[i], i));
-                    }
-                }
-            }
-        } else {
-            argsClass = new Class[0];
-            types = new Type[0];
-        }
-        setArgsType(argsClass);
-        setTypes(types);
-        return types;
     }
 
     /**

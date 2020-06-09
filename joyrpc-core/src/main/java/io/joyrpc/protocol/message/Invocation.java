@@ -397,7 +397,7 @@ public class Invocation implements Call {
             //获取用户设置的参数类型
             String[] argTypes = argsType;
             if (isGeneric()) {
-                //返回调用，从参数里面获取参数类型
+                //泛化调用，从参数里面获取参数类型
                 if (args == null || args.length != 3) {
                     throw new NoSuchMethodException("The number of parameter is wrong.");
                 }

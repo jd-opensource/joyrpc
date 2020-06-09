@@ -69,8 +69,8 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
 
     public InvokeTelnetHandler() {
         options = new Options()
-                .addOption("g", true, "is globle password")
-                .addOption("a", "alias", false, "the alias of the service")
+                .addOption("g", true, "is global password")
+                .addOption("a", "alias", true, "the alias of the service")
                 .addOption("p", "password", true, "invoke -p password com.xxx.XxxService.xxxMethod(1234, \"abcd\", {\"prop\" : \"value\"})")
                 .addOption("t", "token", true, "invoke -p password -t token com.xxx.XxxService.xxxMethod(1234, \"abcd\", {\"prop\" : \"value\"})")
                 .addOption(HELP_SHORT, HELP_LONG, false, "show help message for command invoke");

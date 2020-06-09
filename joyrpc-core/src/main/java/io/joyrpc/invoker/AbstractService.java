@@ -132,10 +132,6 @@ public abstract class AbstractService implements Invoker {
         return alias;
     }
 
-    public InterfaceOption getOptions() {
-        return options;
-    }
-
     /**
      * 关闭异常
      *
@@ -154,6 +150,9 @@ public abstract class AbstractService implements Invoker {
         //在关闭判断之前增加计数器，确保安全
         requests.incrementAndGet();
         try {
+            if (request.getOption() == null) {
+                setup(request);
+            }
             future = doInvoke(request);
         } catch (Throwable e) {
             //如果抛出了异常

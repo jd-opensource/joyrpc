@@ -132,6 +132,10 @@ public abstract class AbstractService implements Invoker {
         return alias;
     }
 
+    public InterfaceOption getOptions() {
+        return options;
+    }
+
     /**
      * 关闭异常
      *

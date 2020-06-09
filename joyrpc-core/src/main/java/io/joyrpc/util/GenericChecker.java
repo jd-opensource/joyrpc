@@ -149,7 +149,10 @@ public class GenericChecker {
     public void checkType(final GenericType genericType, final Type type,
                           final Scope scope,
                           final BiConsumer<Class, Scope> consumer) {
-        if (type instanceof Class) {
+        if (!uniques.add(type)) {
+            //已经检查过
+            return;
+        } else if (type instanceof Class) {
             checkClass((Class) type, scope, consumer);
         } else if (type instanceof ParameterizedType) {
             ParameterizedType parameterizedType = (ParameterizedType) type;
@@ -166,9 +169,7 @@ public class GenericChecker {
         } else if (type instanceof TypeVariable) {
             //变量
             GenericType.Variable variable = genericType.getVariable(((TypeVariable) type).getName());
-            if (variable.getGenericType() != type) {
-                checkType(genericType, variable.getGenericType(), scope, consumer);
-            }
+            checkType(genericType, variable.getGenericType(), scope, consumer);
         } else if (type instanceof GenericArrayType) {
             //泛型数组
             checkType(genericType, ((GenericArrayType) type).getGenericComponentType(), scope, consumer);

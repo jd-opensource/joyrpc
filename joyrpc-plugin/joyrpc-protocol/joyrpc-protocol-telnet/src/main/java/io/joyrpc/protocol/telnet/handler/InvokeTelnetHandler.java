@@ -190,7 +190,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
             long start = System.currentTimeMillis();
             RequestMessage<Invocation> request = RequestMessage.build(new Invocation(exporter.getInterfaceClass(), method, paramArgs), channel);
             Invocation invocation = request.getPayLoad();
-            invocation.addAttachment(".telnet", true);
+            invocation.addAttachment(Constants.INTERNAL_KEY_TELNET, true);
             if (token != null) {
                 invocation.addAttachment(Constants.HIDDEN_KEY_TOKEN, token);
             }

@@ -395,7 +395,10 @@ public class Constants {
      * 内部使用的key：消费端配置的分组别名信息
      */
     public static final String INTERNAL_KEY_CONSUMERALIAS = INTERNAL_KEY_PREFIX + "consumerAlias";
-
+    /**
+     * 内部使用的key：用于telnet调用
+     */
+    public static final String INTERNAL_KEY_TELNET = INTERNAL_KEY_PREFIX + "telnet";
     /**
      * 隐藏的key前缀，隐藏的key只能在filter里拿到，在RpcContext里拿不到，不过可以设置
      */

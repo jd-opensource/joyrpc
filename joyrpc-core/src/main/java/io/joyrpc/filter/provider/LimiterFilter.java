@@ -51,6 +51,7 @@ public class LimiterFilter extends AbstractProviderFilter {
         //获取接口的限流器
         ClassLimiter classLimiters = methodOption.getLimiter();
         if (classLimiters != null) {
+            //TODO 优化，可扩展限流策略，支持对不同的来源端、用户级别等进行限流
             //获取应用信息，已经从会话里面恢复为HIDDEN_KEY_APPID
             String appId = invocation.getAttachment(Constants.HIDDEN_KEY_APPID, "");
             String methodName = invocation.getMethodName();

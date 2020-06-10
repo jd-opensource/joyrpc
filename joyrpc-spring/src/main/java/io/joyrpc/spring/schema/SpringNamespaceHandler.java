@@ -22,13 +22,11 @@ package io.joyrpc.spring.schema;
 
 import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

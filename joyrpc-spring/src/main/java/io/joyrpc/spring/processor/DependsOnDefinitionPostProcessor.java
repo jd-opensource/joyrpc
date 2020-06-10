@@ -9,14 +9,17 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 /**
  * 服务bean实例化DependsOn处理Processor
  */
-public interface DependsOnDefinitionPostProcessor extends BeanDefinitionRegistryPostProcessor {
+public class DependsOnDefinitionPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
-    default void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
+    public static final String BEAN_NAME = "dependsOnDefinitionPostProcessor";
+
+    @Override
+    public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
         Counter.getOrCreate(registry).doDependsOn();
     }
 
-    default void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
     }
 
 }

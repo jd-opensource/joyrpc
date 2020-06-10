@@ -49,15 +49,10 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
      * 配置中心名称
      */
     protected String configureName;
-
     /**
      * spring上下文
      */
     protected transient ApplicationContext applicationContext;
-    /**
-     * 开关
-     */
-    protected transient AtomicBoolean referDone = new AtomicBoolean();
     /**
      * 开关
      */

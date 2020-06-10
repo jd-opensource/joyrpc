@@ -25,7 +25,6 @@ import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.*;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
 import io.joyrpc.spring.event.ProviderDoneEvent;
-import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
@@ -34,7 +33,6 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
@@ -128,7 +126,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         setupRef();
         setupWarmup();
         validate();
-        counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
+        counter = Counter.getOrCreate(applicationContext);
         counter.incProvider();
         //全局参数已经注入
         exportFuture = export();

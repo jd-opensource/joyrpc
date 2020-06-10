@@ -11,7 +11,6 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
@@ -136,7 +135,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
         setupConfigure();
         config.validate();
         //记录消费者的数量
-        counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
+        counter = Counter.getOrCreate(applicationContext);
         counter.incConsumer();
         //生成代理，并创建引用
         referFuture = config.refer();

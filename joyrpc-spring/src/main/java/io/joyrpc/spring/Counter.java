@@ -22,15 +22,11 @@ package io.joyrpc.spring;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.context.ApplicationContext;
 
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -45,12 +41,12 @@ public class Counter {
     /**
      * 计数器列表
      */
-    protected static final Map<BeanDefinitionRegistry, Counter> COUNTERS = new ConcurrentHashMap<>();
+    protected static final Map<ApplicationContext, Counter> COUNTERS = new ConcurrentHashMap<>();
 
     /**
      * spring 上下文
      */
-    protected BeanDefinitionRegistry ctx;
+    protected ApplicationContext ctx;
     /**
      * 上下文Bean数量
      */
@@ -80,10 +76,6 @@ public class Counter {
      */
     protected AtomicInteger UNSUCCESS_PROVIDER_BEANS = new AtomicInteger(0);
     /**
-     * 开关
-     */
-    private AtomicBoolean onDependsOn = new AtomicBoolean();
-    /**
      * 等待所有启动成功
      */
     protected CountDownLatch LATCH = new CountDownLatch(1);
@@ -93,7 +85,7 @@ public class Counter {
      *
      * @param ctx
      */
-    public Counter(BeanDefinitionRegistry ctx) {
+    public Counter(ApplicationContext ctx) {
         this.ctx = ctx;
     }
 
@@ -196,42 +188,12 @@ public class Counter {
     }
 
     /**
-     * dependsOn操作
-     */
-    public void doDependsOn() {
-        if (onDependsOn.compareAndSet(false, true)) {
-            Set<BeanDefinition> consumers = new HashSet<>();
-            Set<BeanDefinition> consumerGroups = new HashSet<>();
-            Set<BeanDefinition> providers = new HashSet<>();
-            Set<String> contextNames = new HashSet<>();
-            String[] names = ctx.getBeanDefinitionNames();
-            for (String name : names) {
-                BeanDefinition definition = ctx.getBeanDefinition(name);
-                String beanClassName = definition.getBeanClassName();
-                if (ConsumerBean.class.getName().equals(beanClassName)) {
-                    consumers.add(definition);
-                } else if (ProviderBean.class.getName().equals(beanClassName)) {
-                    providers.add(definition);
-                } else if (ConsumerGroupBean.class.getName().equals(beanClassName)) {
-                    consumerGroups.add(definition);
-                } else if (GlobalParameterBean.class.getName().equals(beanClassName)) {
-                    contextNames.add(name);
-                }
-            }
-            String[] dependOnNames = contextNames.toArray(new String[0]);
-            consumers.forEach(definition -> definition.setDependsOn(dependOnNames));
-            consumerGroups.forEach(definition -> definition.setDependsOn(dependOnNames));
-            providers.forEach(definition -> definition.setDependsOn(dependOnNames));
-        }
-    }
-
-    /**
      * 获取 counter
      *
      * @param ctx 上下文
      * @return 计数器
      */
-    public static Counter getOrCreate(final BeanDefinitionRegistry ctx) {
+    public static Counter getOrCreate(final ApplicationContext ctx) {
         return COUNTERS.computeIfAbsent(ctx, Counter::new);
     }
 }

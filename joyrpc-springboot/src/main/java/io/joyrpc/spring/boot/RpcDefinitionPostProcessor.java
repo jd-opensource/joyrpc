@@ -149,7 +149,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
-        this.counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
+        this.counter = Counter.getOrCreate(applicationContext);
         this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
         //值引用前缀
         this.refPrefix = environment.getProperty(REF_PREFIX_KEY, REF_PREFIX);

@@ -23,7 +23,6 @@ package io.joyrpc.spring;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.ParameterConfig;
-import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
 import io.joyrpc.util.StringUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;

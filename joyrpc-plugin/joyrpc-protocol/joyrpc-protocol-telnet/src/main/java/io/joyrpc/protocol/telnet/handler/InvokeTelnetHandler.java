@@ -25,10 +25,8 @@ package io.joyrpc.protocol.telnet.handler;
 
 import io.joyrpc.Result;
 import io.joyrpc.codec.crypto.Encryptor;
-import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.invoker.Exporter;
@@ -46,7 +44,6 @@ import org.apache.commons.cli.Options;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
@@ -55,7 +52,6 @@ import java.util.concurrent.TimeUnit;
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.codec.Hex.encode;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
 
 /**
  * Invoke命令
@@ -167,40 +163,21 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
         StringBuilder buf = new StringBuilder();
         //查找类及找方法，不支持重载
         try {
-            Method method = getPublicMethod(exporter.getInterfaceClass(), methodName);
-            InterfaceOption.MethodOption option = exporter.getOptions().getOption(methodName);
-            GenericMethod genericMethod = option.getGenericMethod();
-            Type[] resolvedTypes = genericMethod.getGenericTypes();
-            Object[] paramArgs = new Object[resolvedTypes.length];
-            switch (resolvedTypes.length) {
-                case 0:
-                    break;
-                case 1:
-                    paramArgs[0] = JSON.get().parseObject(params, resolvedTypes[0]);
-                    break;
-                default:
-                    String value = params;
-                    //解析多参数
-                    if (params.charAt(0) != '[' || params.charAt(params.length() - 1) != ']') {
-                        //非数组
-                        value = "[" + params + "]";
-                    }
-                    final int[] index = new int[]{0};
-                    JSON.get().parseArray(value, o -> {
-                        paramArgs[index[0]] = o.apply(resolvedTypes[index[0]]);
-                        return ++index[0] < resolvedTypes.length;
-                    });
-            }
-            long start = System.currentTimeMillis();
-            Invocation invocation = new Invocation(exporter.getInterfaceClass(), exporter.getAlias(),
-                    method, paramArgs, genericMethod.getTypes(), Boolean.FALSE);
-            invocation.setGenericMethod(genericMethod);
-            invocation.setGenericTypes(resolvedTypes);
+            Invocation invocation = new Invocation(exporter.getInterfaceName(), exporter.getAlias(), methodName);
             RequestMessage<Invocation> request = RequestMessage.build(invocation, channel);
             invocation.addAttachment(".telnet", true);
             if (token != null) {
                 invocation.addAttachment(Constants.HIDDEN_KEY_TOKEN, token);
             }
+            //设置
+            exporter.setup(request);
+            GenericMethod genericMethod = invocation.getGenericMethod();
+            Type[] resolvedTypes = genericMethod.getGenericTypes();
+            invocation.setGenericTypes(resolvedTypes);
+            invocation.setArgsType(genericMethod.getTypes());
+            invocation.setArgs(parse(params, resolvedTypes));
+
+            long start = System.currentTimeMillis();
             CompletableFuture<Result> future = exporter.invoke(request);
             Result response = future.get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
             long end = System.currentTimeMillis();
@@ -215,10 +192,6 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
             buf.append("\r\nelapsed: ");
             buf.append(end - start);
             buf.append(" ms.");
-        } catch (NoSuchMethodException e) {
-            buf.append("No such method " + methodName + " in interface " + exporter.getInterfaceName());
-        } catch (MethodOverloadException e) {
-            buf.append("Overload method " + methodName + " in interface " + exporter.getInterfaceName());
         } catch (SerializerException e) {
             buf.append("Invalid json argument, caused by: ").append(e.getMessage());
         } catch (Throwable t) {
@@ -226,6 +199,36 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
             buf.append("Failed to invoke method ").append(methodName).append(", cause: ").append(StringUtils.toString(t));
         }
         return new TelnetResponse(buf.toString());
+    }
+
+    /**
+     * 解析参数
+     * @param text 文本
+     * @param types 类型
+     * @return 参数数组
+     */
+    protected Object[] parse(final String text, final Type[] types) {
+        Object[] result = new Object[types.length];
+        switch (types.length) {
+            case 0:
+                break;
+            case 1:
+                result[0] = JSON.get().parseObject(text, types[0]);
+                break;
+            default:
+                String value = text;
+                //解析多参数
+                if (text.charAt(0) != '[' || text.charAt(text.length() - 1) != ']') {
+                    //非数组
+                    value = "[" + text + "]";
+                }
+                final int[] index = new int[]{0};
+                JSON.get().parseArray(value, o -> {
+                    result[index[0]] = o.apply(types[index[0]]);
+                    return ++index[0] < types.length;
+                });
+        }
+        return result;
     }
 
     /**

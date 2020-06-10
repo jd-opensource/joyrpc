@@ -116,7 +116,7 @@ public class SkywalkingTraceFactory implements TraceFactory {
         public void begin(final String name, final String component, final Map<String, String> tags) {
             Map<String, String> ctx = new HashMap<>();
             ContextCarrier contextCarrier = new ContextCarrier();
-            span = ContextManager.createExitSpan(name, contextCarrier, null);
+            span = ContextManager.createExitSpan(name, contextCarrier, "unknown");
             CarrierItem next = contextCarrier.items();
             while (next.hasNext()) {
                 next = next.next();

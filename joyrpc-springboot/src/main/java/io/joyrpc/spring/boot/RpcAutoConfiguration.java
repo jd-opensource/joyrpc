@@ -60,7 +60,9 @@ public class RpcAutoConfiguration {
 
     @ConditionalOnMissingBean
     @Bean(name = DependsOnDefinitionPostProcessor.BEAN_NAME)
-    public static DependsOnDefinitionPostProcessor dependsOnDefinitionPostProcessor() {
+    public static DependsOnDefinitionPostProcessor dependsOnDefinitionPostProcessor(
+            //springContextSupplier 与 springEnvironmentSupplier 要提前被注册
+            SpringContextSupplier springContextSupplier, SpringEnvironmentSupplier springEnvironmentSupplier) {
         return new DependsOnDefinitionPostProcessor();
     }
 

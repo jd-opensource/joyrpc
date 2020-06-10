@@ -29,8 +29,6 @@ import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.ResourceLoader;
 import org.w3c.dom.Element;
 
 import static io.joyrpc.spring.GlobalParameterBean.*;
@@ -40,8 +38,6 @@ import static org.springframework.beans.factory.support.BeanDefinitionBuilder.ro
  * 全局解析
  */
 public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
-
-    private Counter counter;
 
     /**
      * 注册全局参数
@@ -83,12 +79,9 @@ public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
 
     @Override
     public BeanDefinition parse(final Element element, final ParserContext parserContext) {
-        if (counter == null) {
-            ResourceLoader resourceLoader = parserContext.getReaderContext().getReader().getResourceLoader();
-            ApplicationContext applicationContext = (ApplicationContext) resourceLoader;
-            counter = Counter.getOrCreate(applicationContext);
-        }
-        return register(parserContext.getRegistry(), counter, element.getAttribute(KEY),
+        return register(parserContext.getRegistry(),
+                Counter.getOrCreate(parserContext.getRegistry()),
+                element.getAttribute(KEY),
                 element.getAttribute(VALUE),
                 element.getAttribute(REF),
                 element.getAttribute(HIDE));

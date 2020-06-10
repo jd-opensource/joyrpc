@@ -34,6 +34,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
@@ -121,14 +122,16 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.getOrCreate(applicationContext);
         setupServer();
         setupRegistry();
         setupConfigure();
         setupRef();
         setupWarmup();
         validate();
+        counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
         counter.incProvider();
+        //全局参数已经注入
+        exportFuture = export();
     }
 
     @Override
@@ -153,7 +156,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected void onConsumerDone() {
         if (consumerDone.compareAndSet(false, true)) {
-            exportFuture = export();
             exportFuture.whenComplete((v, t) -> {
                 if (t != null) {
                     logger.error(String.format("Error occurs while export provider %s", id), t);

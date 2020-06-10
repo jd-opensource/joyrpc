@@ -37,7 +37,10 @@ import org.springframework.beans.factory.BeanInitializationException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.*;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
+import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.ClassPathBeanDefinitionScanner;
@@ -146,7 +149,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         this.applicationContext = applicationContext;
         this.environment = environment;
         this.resourceLoader = resourceLoader;
-        this.counter = Counter.getOrCreate(applicationContext);
+        this.counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
         this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
         //值引用前缀
         this.refPrefix = environment.getProperty(REF_PREFIX_KEY, REF_PREFIX);

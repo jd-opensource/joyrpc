@@ -11,6 +11,7 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
@@ -64,7 +65,7 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     /**
      * refer后返回的future
      */
-    protected transient CompletableFuture<T> referFuture = new CompletableFuture<>();
+    protected transient CompletableFuture<T> referFuture;
     /**
      * 服务bean计数器
      */
@@ -108,7 +109,6 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     @Override
     public T getObject() throws ExecutionException, InterruptedException {
         try {
-            onRefer();
             return referFuture.get();
         } catch (Exception e) {
             //出了异常
@@ -135,14 +135,16 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.getOrCreate(applicationContext);
         //如果没有配置注册中心，则默认订阅全部注册中心
         setupRegistry();
         //判断是否设置了配置中心
         setupConfigure();
         config.validate();
         //记录消费者的数量
+        counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
         counter.incConsumer();
+        //生成代理，并创建引用
+        referFuture = config.refer();
     }
 
     /**
@@ -189,40 +191,26 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ApplicationEvent event) {
+    public void onApplicationEvent(final ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
-            //执行refer
-            onRefer();
             //判断是否启动过，防止重入
             if (startDone.compareAndSet(false, true)) {
+                referFuture.whenComplete((v, t) -> {
+                    if (t != null) {
+                        //出了异常
+                        logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
+                                config.getServiceName(), config.getAlias(), t.getMessage()));
+                        System.exit(1);
+                    } else {
+                        //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
+                        counter.successConsumer(() -> CompletableFuture.runAsync(
+                                () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
+                    }
+                });
                 //主线程等待
                 counter.startAndWaitAtLast();
             }
         }
     }
 
-    /**
-     * 上下文就绪
-     */
-    protected void onRefer() {
-        //刷新事件会多次，防止重入
-        if (referDone.compareAndSet(false, true)) {
-            //生成代理，并创建引用
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            final T obj = config.refer(future);
-            future.whenComplete((v, t) -> {
-                if (t != null) {
-                    //出了异常
-                    logger.error(String.format("The system is about to exit, Failed refer %s/%s, caused by %s",
-                            config.getServiceName(), config.getAlias(), t.getMessage()));
-                    System.exit(1);
-                } else {
-                    referFuture.complete(obj);
-                    //消费者全部启动完成，异步通知，同步调用会造成Spring的锁阻塞
-                    counter.successConsumer(() -> CompletableFuture.runAsync(
-                            () -> applicationContext.publishEvent(new ConsumerDoneEvent(this))));
-                }
-            });
-        }
-    }
 }

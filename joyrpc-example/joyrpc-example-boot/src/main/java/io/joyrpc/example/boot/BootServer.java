@@ -36,7 +36,7 @@ public class BootServer {
     private static final Logger logger = LoggerFactory.getLogger(BootServer.class);
 
     @Bean("warmup")
-    public Warmup warmup() {
+    public static Warmup warmup() {
         return config -> {
             logger.info("load warmup data........");
             return CompletableFuture.completedFuture(null);

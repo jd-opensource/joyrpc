@@ -22,9 +22,9 @@ package io.joyrpc.spring;
 
 import io.joyrpc.config.AbstractConfig;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.spring.event.ContextDoneEvent;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
@@ -94,7 +94,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.getOrCreate(applicationContext);
+        counter = Counter.getOrCreate((BeanDefinitionRegistry) applicationContext);
         validate();
         if (key != null && !key.isEmpty() && value != null) {
             if (hide) {

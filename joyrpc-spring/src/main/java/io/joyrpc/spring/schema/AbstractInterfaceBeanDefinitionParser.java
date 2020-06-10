@@ -20,14 +20,11 @@ package io.joyrpc.spring.schema;
  * #L%
  */
 
-import io.joyrpc.spring.Counter;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.RuntimeBeanNameReference;
 import org.springframework.beans.factory.support.ManagedList;
 import org.springframework.beans.factory.xml.ParserContext;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.util.StringUtils;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -43,7 +40,6 @@ public class AbstractInterfaceBeanDefinitionParser extends AbstractBeanDefinitio
     public static final String PARAMETER = "parameter";
     public static final String METHOD = "method";
 
-    protected Counter counter;
 
     public AbstractInterfaceBeanDefinitionParser(Class<?> beanClass, boolean requireId) {
         super(beanClass, requireId);
@@ -51,23 +47,7 @@ public class AbstractInterfaceBeanDefinitionParser extends AbstractBeanDefinitio
 
     @Override
     protected void addCustomParser() {
-        super.addCustomParser();
         parsers.put("methods", new MethodParser());
-    }
-
-    @Override
-    public BeanDefinition parse(Element element, ParserContext context) {
-        if (counter == null) {
-            ResourceLoader resourceLoader = context.getReaderContext().getReader().getResourceLoader();
-            ApplicationContext applicationContext = (ApplicationContext) resourceLoader;
-            counter = Counter.getOrCreate(applicationContext);
-        }
-        BeanDefinition beanDefinition = super.parse(element, context);
-        String[] contextNames = counter.getAllContextNames();
-        if (contextNames.length > 0) {
-            beanDefinition.setDependsOn(contextNames);
-        }
-        return beanDefinition;
     }
 
     /**

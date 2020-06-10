@@ -22,10 +22,15 @@ package io.joyrpc.spring;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerGroupConfig;
+import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
+import io.joyrpc.spring.processor.InterfaceBeanDependsOn;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEvent;
@@ -38,7 +43,7 @@ import java.util.concurrent.ExecutionException;
  * 消费组
  */
 public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, DependsOnDefinitionPostProcessor {
 
     /**
      * spring处理器
@@ -113,4 +118,5 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     public void setConfigureName(String configureName) {
         spring.setConfigureName(configureName);
     }
+
 }

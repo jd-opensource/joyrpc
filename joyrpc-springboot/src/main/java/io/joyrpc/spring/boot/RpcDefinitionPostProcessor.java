@@ -347,10 +347,9 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         String defServerName = register(registry, rpcProperties.getServer(), SERVER_NAME);
         register(registry, rpcProperties.getRegistries(), REGISTRY_NAME);
         register(registry, rpcProperties.getServers(), SERVER_NAME);
-        String[] contextNames = counter.getAllContextNames();
-        consumers.forEach((name, c) -> register(c, registry, defRegName, contextNames));
-        groups.forEach((name, c) -> register(c, registry, defRegName, contextNames));
-        providers.forEach((name, p) -> register(p, registry, defRegName, defServerName, contextNames));
+        consumers.forEach((name, c) -> register(c, registry, defRegName));
+        groups.forEach((name, c) -> register(c, registry, defRegName));
+        providers.forEach((name, p) -> register(p, registry, defRegName, defServerName));
     }
 
     /**
@@ -360,8 +359,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * @param registry   BeanDefinitionRegistry
      * @param defRegName 默认注册中心
      */
-    protected void register(final ConsumerBean<?> config, final BeanDefinitionRegistry registry, final String defRegName,
-                            final String[] contextNames) {
+    protected void register(final ConsumerBean<?> config, final BeanDefinitionRegistry registry, final String defRegName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config)
                 .setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
 
@@ -372,9 +370,6 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
             //引用registry
             config.setRegistryName(defRegName);
         }
-        //设置dependsOn
-        AbstractBeanDefinition definition = builder.getBeanDefinition();
-        definition.setDependsOn(contextNames);
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
     }
@@ -386,8 +381,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * @param registry   BeanDefinitionRegistry
      * @param defRegName 默认注册中心
      */
-    protected void register(final ConsumerGroupBean<?> config, final BeanDefinitionRegistry registry, final String defRegName,
-                            final String[] contextNames) {
+    protected void register(final ConsumerGroupBean<?> config, final BeanDefinitionRegistry registry, final String defRegName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerGroupConfig.class, () -> config)
                 .setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
         //这些不需要被再次Proxy，设置成ROLE_INFRASTRUCTURE，忽略Spring的警告
@@ -397,9 +391,6 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
             //引用registry
             config.setRegistryName(defRegName);
         }
-        //设置dependsOn
-        AbstractBeanDefinition definition = builder.getBeanDefinition();
-        definition.setDependsOn(contextNames);
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
     }
@@ -413,7 +404,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
      * @param defServerName 默认网络服务引用
      */
     protected void register(final ProviderBean<?> config, final BeanDefinitionRegistry registry, final String defRegName,
-                            final String defServerName, final String[] contextNames) {
+                            final String defServerName) {
         //这些不需要被再次Proxy，设置成ROLE_INFRASTRUCTURE，忽略Spring的警告
         BeanDefinitionBuilder builder = genericBeanDefinition(ProviderBean.class, () -> config)
                 .setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
@@ -430,9 +421,6 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
                 && !isEmpty(defServerName)) {
             config.setServerName(defServerName);
         }
-        //设置dependsOn
-        AbstractBeanDefinition definition = builder.getBeanDefinition();
-        definition.setDependsOn(contextNames);
         //注册
         registry.registerBeanDefinition(config.getName(), builder.getBeanDefinition());
     }

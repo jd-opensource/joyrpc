@@ -24,8 +24,8 @@ import io.joyrpc.annotation.Alias;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.*;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
-import io.joyrpc.spring.event.ContextDoneEvent;
 import io.joyrpc.spring.event.ProviderDoneEvent;
+import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
  * 服务提供者
  */
 public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBean, DisposableBean,
-        ApplicationContextAware, ApplicationListener, BeanNameAware {
+        ApplicationContextAware, ApplicationListener, BeanNameAware, DependsOnDefinitionPostProcessor {
 
     /**
      * 参数配置

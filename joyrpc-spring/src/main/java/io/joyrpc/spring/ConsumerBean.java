@@ -23,6 +23,7 @@ package io.joyrpc.spring;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.ParameterConfig;
+import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
 import io.joyrpc.util.StringUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
@@ -40,7 +41,7 @@ import java.util.concurrent.ExecutionException;
  * 消费者
  */
 public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, DependsOnDefinitionPostProcessor {
 
     /**
      * 参数配置
@@ -58,6 +59,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     public ConsumerBean() {
         spring = new ConsumerSpring<>(this);
     }
+
 
     @Override
     public void setBeanName(String name) {
@@ -147,4 +149,5 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
             });
         }
     }
+
 }

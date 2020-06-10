@@ -53,7 +53,7 @@ import java.util.stream.Collectors;
  * 服务提供者
  */
 public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBean, DisposableBean,
-        ApplicationContextAware, ApplicationListener, BeanNameAware, DependsOnDefinitionPostProcessor {
+        ApplicationContextAware, ApplicationListener, BeanNameAware {
 
     /**
      * 参数配置

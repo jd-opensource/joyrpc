@@ -41,7 +41,7 @@ import java.util.concurrent.ExecutionException;
  * 消费者
  */
 public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, DependsOnDefinitionPostProcessor {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
 
     /**
      * 参数配置

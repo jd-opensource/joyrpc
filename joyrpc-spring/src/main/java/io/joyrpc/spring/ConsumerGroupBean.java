@@ -43,7 +43,7 @@ import java.util.concurrent.ExecutionException;
  * 消费组
  */
 public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener, DependsOnDefinitionPostProcessor {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
 
     /**
      * spring处理器

@@ -93,6 +93,7 @@ public class Ipv4 {
         try {
             LOCAL_IPS = new HashSet<>(getLocalIps());
             LOCAL_IPS.add("127.0.0.1");
+            LOCAL_IPS.add("0:0:0:0:0:0:0:1");
             //绑定到某个网卡上
             if (NET_INTERFACE != null && !NET_INTERFACE.isEmpty()) {
                 LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);

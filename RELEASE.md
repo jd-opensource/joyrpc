@@ -64,6 +64,8 @@
 
 - 修复应用启动多个Spring ApplicationContext，启动出错问题。
 
+- 修复Telnet命令invoke的分组参数识别不了的问题
+
 ## 1.0.5-RELEASE(2020-04-14)
 
 ### Enhancement

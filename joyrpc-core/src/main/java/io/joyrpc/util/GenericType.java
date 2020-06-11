@@ -48,15 +48,6 @@ public class GenericType {
     /**
      * 构造函数
      *
-     * @param genericType 类型
-     */
-    public GenericType(final Type genericType) {
-        this.genericType = genericType;
-    }
-
-    /**
-     * 构造函数
-     *
      * @param genericType 泛型类型
      * @param type        类
      */
@@ -73,6 +64,11 @@ public class GenericType {
         return type;
     }
 
+    /**
+     * 用于更新识别的泛型
+     *
+     * @param genericType 识别的泛型
+     */
     protected void setGenericType(Type genericType) {
         this.genericType = genericType;
     }

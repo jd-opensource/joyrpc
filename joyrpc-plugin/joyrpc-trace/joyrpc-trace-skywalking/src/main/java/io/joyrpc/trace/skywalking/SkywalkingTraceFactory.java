@@ -115,7 +115,6 @@ public class SkywalkingTraceFactory implements TraceFactory {
                 span.log(throwable);
             }
             span.asyncFinish();
-            ContextManager.stopSpan();
         }
     }
 

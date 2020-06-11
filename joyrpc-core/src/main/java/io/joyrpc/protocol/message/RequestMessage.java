@@ -27,6 +27,7 @@ import io.joyrpc.permission.Authentication;
 import io.joyrpc.permission.Authorization;
 import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.trace.Tracer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ChannelTransport;
@@ -115,6 +116,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * 是否消费端
      */
     protected transient boolean consumer;
+    /**
+     * 跟踪
+     */
+    protected Tracer tracer;
 
     /**
      * 构造函数
@@ -363,6 +368,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setConsumer(boolean consumer) {
         this.consumer = consumer;
+    }
+
+    public Tracer getTracer() {
+        return tracer;
+    }
+
+    public void setTracer(Tracer tracer) {
+        this.tracer = tracer;
     }
 
     /**

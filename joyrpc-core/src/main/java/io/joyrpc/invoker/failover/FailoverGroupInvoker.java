@@ -81,7 +81,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
         }
         return CompletableFuture.allOf(futures).thenAccept(v -> {
             if (configs.length > 0) {
-                intfOption = configs[0].getRefer().getOptions();
+                intfOption = configs[0].getRefer().getOption();
             }
         });
     }

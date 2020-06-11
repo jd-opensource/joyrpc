@@ -5,11 +5,13 @@ import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.*;
 import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.filter.Filter;
 import io.joyrpc.filter.ProviderFilter;
+import io.joyrpc.invoker.AbstractService;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.Refer;
@@ -37,12 +39,12 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
 
     @Override
     public Invoker build(final Refer refer, final Invoker last) {
-        return build(refer.getUrl(), refer.getBuilder(), last, CONSUMER_FILTER);
+        return build(refer, refer.getBuilder(), last, CONSUMER_FILTER);
     }
 
     @Override
     public Invoker build(final Exporter exporter, final Invoker last) {
-        return build(exporter.getUrl(), exporter.getBuilder(), last, PROVIDER_FILTER);
+        return build(exporter, exporter.getBuilder(), last, PROVIDER_FILTER);
     }
 
     @Override
@@ -62,17 +64,17 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     /**
      * 构造过滤链
      *
-     * @param url       参数
+     * @param service   服务
      * @param consumer  消费者
      * @param last      最后调用器
      * @param extension 过滤链扩展点
      * @return 调用
      */
-    protected <T extends Filter> Invoker build(final URL url,
+    protected <T extends Filter> Invoker build(final AbstractService service,
                                                final Consumer<InvokerAware> consumer,
                                                final Invoker last,
                                                final ExtensionPoint<T, String> extension) {
-        List<Filter> filters = getFilters(url, extension);
+        List<Filter> filters = getFilters(service, extension);
         Invoker next = last;
         if (!filters.isEmpty()) {
             Filter filter;
@@ -89,11 +91,13 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
     /**
      * 获取所有配置filter
      *
-     * @param url       参数
+     * @param service   服务
      * @param extension 过滤链扩展点
      * @return 过滤器集合
      */
-    protected <T extends Filter> List<Filter> getFilters(final URL url, final ExtensionPoint<T, String> extension) {
+    protected <T extends Filter> List<Filter> getFilters(final AbstractService service, final ExtensionPoint<T, String> extension) {
+        URL url = service.getUrl();
+        InterfaceOption option = service.getOption();
         // 获取url里面所有-XXX需要排除的filter
         StringBlackWhiteList blackWhiteList = new StringBlackWhiteList(url.getString(Constants.FILTER_OPTION));
         //禁用默认系统插件
@@ -110,7 +114,8 @@ public class DefaultFilterChainFactory implements FilterChainFactory {
             name = meta.getExtension();
             filter = meta.getTarget();
             //如果是系统内置必须的或者满足黑白名单
-            if (filter.test(url) && (filter.type() == Filter.INNER
+            if ((filter.test(option)) || filter.test(url)
+                    && (filter.type() == Filter.INNER
                     || (blackWhiteList.isWhite(name.getName()) || white.test(filter))
                     && !blackWhiteList.isBlack(name.getName()) && !black.test(filter))) {
                 //该插件通过了配置，并且是系统内置必须的，或者在白名单里面并且不在黑名单里面

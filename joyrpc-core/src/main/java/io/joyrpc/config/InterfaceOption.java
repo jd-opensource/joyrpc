@@ -64,6 +64,13 @@ public interface InterfaceOption {
     boolean isCallback();
 
     /**
+     * 是否启动跟踪
+     *
+     * @return 启动跟踪标识
+     */
+    boolean isTrace();
+
+    /**
      * 关闭，释放资源，例如移除监听器
      */
     default void close() {

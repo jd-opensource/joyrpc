@@ -120,6 +120,10 @@ public class MethodOption<M, T> {
         }
     }
 
+    public Map<M, T> getOptions() {
+        return options;
+    }
+
 
     /**
      * 以Method作为key的方法选项缓存

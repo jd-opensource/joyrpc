@@ -23,6 +23,7 @@ package io.joyrpc.annotation;
 
 import java.lang.annotation.*;
 
+import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 
 /**
@@ -30,7 +31,7 @@ import static java.lang.annotation.ElementType.TYPE;
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target(TYPE)
+@Target({TYPE, METHOD})
 @Inherited
 public @interface EnableTrace {
 

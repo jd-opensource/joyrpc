@@ -21,6 +21,7 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.Callback;
+import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
@@ -191,7 +192,9 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         this.cacheFactory = CACHE.get(cacheProvider);
         //默认是否认证
         this.validation = url.getBoolean(VALIDATION_OPTION);
-        this.trace = VARIABLE.getBoolean(TRACE_OPEN_OPTION);
+        EnableTrace enableTrace = interfaceClass.getAnnotation(EnableTrace.class);
+        //全局开关
+        this.trace = url.getBoolean(TRACE_OPEN, enableTrace == null ? VARIABLE.getBoolean(TRACE_OPEN_OPTION) : enableTrace.value());
         if (!generic) {
             this.validator = Validation.buildDefaultValidatorFactory().getValidator();
             if (validator != null) {
@@ -378,6 +381,19 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     @Override
     public boolean isCallback() {
         return callback;
+    }
+
+    @Override
+    public boolean isTrace() {
+        if (trace) {
+            return true;
+        }
+        for (Map.Entry<String, InnerMethodOption> entry : options.getOptions().entrySet()) {
+            if (entry.getValue().isTrace()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

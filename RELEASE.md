@@ -36,7 +36,7 @@
 
 - 熔断的判断条件，连续失败次数和可用率可以并存，默认加上服务端过载和超时异常，避免对所有异常进行熔断
 
-- Fastjson默认改成SafeMode，增强安全性
+- Fastjson默认开启安全模式，使用@type标签会抛异常。可以在环境变量或Springboot配置文件中设置fastjson.parser.safeMode=false来关闭安全模式
 
 - Dependency
 
@@ -63,6 +63,8 @@
 - Spring中的消费者和服务提供者在全局上下文初始化Bean完之前就启动了
 
 - 修复应用启动多个Spring ApplicationContext，启动出错问题。
+
+- 修复Telnet命令invoke的分组参数识别不了的问题
 
 ## 1.0.5-RELEASE(2020-04-14)
 

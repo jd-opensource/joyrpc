@@ -22,7 +22,6 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
@@ -36,7 +35,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.TRACE_FACTORY;
-import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.PROTOCOL_KEY;
+import static io.joyrpc.constants.Constants.TRACE_TYPE;
 import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
@@ -47,6 +47,7 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
     protected static final String CLIENT_ALIAS_TAG = "client.alias";
     protected static final String CLIENT_NAME_TAG = "client.name";
     protected static final String CLIENT_ADDRESS_TAG = "client.address";
+    protected static final String CLIENT_RETRY_TAG = "client.retry";
     protected static final String SERVER_ADDRESS_TAG = "server.address";
     protected static final String SPAN_KIND_TAG = "span.kind";
     protected static final String COMPONENT_TAG = "component";
@@ -58,41 +59,42 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
      * 跟踪工厂类
      */
     protected TraceFactory factory;
-    /**
-     * 接口开启注解
-     */
-    protected EnableTrace enableTrace;
-    /**
-     * 是否开启
-     */
-    protected boolean enable;
 
     @Override
     public void setup() {
-        factory = TRACE_FACTORY.getOrDefault(VARIABLE.getString(TRACE_TYPE));
         component = GlobalContext.getString(PROTOCOL_KEY);
-        enableTrace = (EnableTrace) clazz.getAnnotation(EnableTrace.class);
-        enable = factory != null && (enableTrace == null || enableTrace.value());
     }
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        if (enable) {
-            Invocation invocation = request.getPayLoad();
-            InterfaceOption.MethodOption option = request.getOption();
-            Map<String, String> tags = new HashMap<>();
-            createTags(request, tags);
-            Tracer trace = factory.create(request);
-            trace.begin(option.getTraceSpanId(invocation), component, tags);
-            trace.snapshot();
-            CompletableFuture<Result> future = invoker.invoke(request);
-            future.whenComplete((result, throwable) -> {
-                trace.restore();
-                trace.end(throwable == null ? result.getException() : throwable);
-            });
-            return future;
+        if (factory == null) {
+            return invoker.invoke(request);
         }
-        return invoker.invoke(request);
+        Invocation invocation = request.getPayLoad();
+        InterfaceOption.MethodOption option = request.getOption();
+        if (!option.isTrace()) {
+            return invoker.invoke(request);
+        }
+        //构造跟踪标签
+        Map<String, String> tags = new HashMap<>();
+        createTags(request, tags);
+        //创建跟踪
+        Tracer trace = factory.create(request);
+        //启动跟踪
+        trace.begin(option.getTraceSpanId(invocation), component, tags);
+        //快照
+        trace.snapshot();
+        //远程调用
+        CompletableFuture<Result> future = invoker.invoke(request);
+        //主线程调用结束
+        trace.prepare();
+        future.whenComplete((result, throwable) -> {
+            //异步线程恢复
+            trace.restore();
+            //异步线程结束
+            trace.end(throwable == null ? result.getException() : throwable);
+        });
+        return future;
     }
 
     /**
@@ -106,21 +108,13 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        boolean enable = VARIABLE.getBoolean(TRACE_OPEN_OPTION);
-        //是配置了开关
-        if (url.getBoolean(TRACE_OPEN, enable)) {
-            return true;
-        }
-        Map<String, String> tokens = url.endsWith("." + TRACE_OPEN);
-        if (tokens.isEmpty()) {
-            return false;
-        }
-        for (Map.Entry<String, String> entry : tokens.entrySet()) {
-            if (Boolean.parseBoolean(entry.getValue())) {
-                return true;
-            }
-        }
         return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        factory = TRACE_FACTORY.getOrDefault(VARIABLE.getString(TRACE_TYPE));
+        return factory != null && option.isTrace();
     }
 
     @Override

@@ -22,16 +22,13 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.Concurrency;
-import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static io.joyrpc.constants.Constants.CONCURRENCY_OPTION;
 
 /**
  * 调用端并发限制器，按接口和方法进行限制
@@ -105,19 +102,12 @@ public abstract class AbstractConcurrencyFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        if (url.getInteger(CONCURRENCY_OPTION) > 0) {
-            return true;
-        }
-        Map<String, String> tokens = url.endsWith("." + CONCURRENCY_OPTION.getName());
-        if (tokens.isEmpty()) {
-            return false;
-        }
-        for (Map.Entry<String, String> entry : tokens.entrySet()) {
-            if (Converts.getPositive(entry.getValue(), 0) > 0) {
-                return true;
-            }
-        }
         return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isConcurrency();
     }
 
     @Override

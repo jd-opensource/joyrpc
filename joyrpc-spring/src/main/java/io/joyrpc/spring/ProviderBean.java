@@ -24,7 +24,6 @@ import io.joyrpc.annotation.Alias;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.*;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
-import io.joyrpc.spring.event.ContextDoneEvent;
 import io.joyrpc.spring.event.ProviderDoneEvent;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
@@ -86,10 +85,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected String warmupName;
     /**
-     * 上下文就绪开关
-     */
-    protected transient AtomicBoolean contextDone = new AtomicBoolean();
-    /**
      * 消费者就绪开关
      */
     protected transient AtomicBoolean consumerDone = new AtomicBoolean();
@@ -125,47 +120,31 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
 
     @Override
     public void afterPropertiesSet() {
-        counter = Counter.getOrCreate(applicationContext);
         setupServer();
         setupRegistry();
         setupConfigure();
         setupRef();
         setupWarmup();
         validate();
+        counter = Counter.getOrCreate(applicationContext);
         counter.incProvider();
+        //全局参数已经注入
+        exportFuture = export();
     }
 
     @Override
     public void onApplicationEvent(final ApplicationEvent event) {
         if (event instanceof ContextRefreshedEvent) {
-            if (!counter.hasContext()) {
-                onContextDone();
+            if (!counter.hasConsumer()) {
+                onConsumerDone();
             }
             if (startDone.compareAndSet(false, true)) {
                 //主线程等待
                 counter.startAndWaitAtLast();
             }
-        } else if (event instanceof ContextDoneEvent) {
-            //等待上下文初始化完成，输出服务
-            //该事件通知线程不是主线程，不用startAndWait
-            onContextDone();
         } else if (event instanceof ConsumerDoneEvent) {
             //等待消费者初始化完成，做到优雅启动
             //该事件通知线程不是主线程，不用startAndWait
-            onConsumerDone();
-        }
-    }
-
-    /**
-     * 上下文就绪
-     */
-    protected void onContextDone() {
-        //等待上下文初始化完成，输出服务
-        if (contextDone.compareAndSet(false, true)) {
-            exportFuture = export();
-        }
-        //没有消费者，直接打开服务
-        if (!counter.hasConsumer()) {
             onConsumerDone();
         }
     }

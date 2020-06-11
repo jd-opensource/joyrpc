@@ -20,7 +20,9 @@ package io.joyrpc.trace.skywalking;
  * #L%
  */
 
+import io.joyrpc.context.Variable;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -33,6 +35,7 @@ import org.apache.skywalking.apm.agent.core.context.ContextSnapshot;
 import org.apache.skywalking.apm.agent.core.context.tag.StringTag;
 import org.apache.skywalking.apm.agent.core.context.trace.AbstractSpan;
 import org.apache.skywalking.apm.agent.core.context.trace.SpanLayer;
+import org.apache.skywalking.apm.network.trace.component.OfficialComponent;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,10 +51,17 @@ public class SkywalkingTraceFactory implements TraceFactory {
      * 隐藏属性的key：分布式跟踪 数据KEY
      */
     public static final String HIDDEN_KEY_TRACE_SKYWALKING = ".skywalking";
+    public static final int COMPONENT_ID = 8888;
+    protected int componentId;
+
+    public SkywalkingTraceFactory() {
+        Parametric parametric = Variable.VARIABLE;
+        componentId = parametric.getInteger("skywalking.component.id", COMPONENT_ID);
+    }
 
     @Override
     public Tracer create(final RequestMessage<Invocation> request) {
-        return request.isConsumer() ? new ConsumerTracer(request) : new ProviderTracer(request);
+        return request.isConsumer() ? new ConsumerTracer(request, componentId) : new ProviderTracer(request, componentId);
     }
 
     /**
@@ -62,20 +72,26 @@ public class SkywalkingTraceFactory implements TraceFactory {
         protected Invocation invocation;
         protected ContextSnapshot snapshot;
         protected AbstractSpan span;
+        protected int componentId;
 
-        public AbstractTracer(RequestMessage<Invocation> request) {
+        public AbstractTracer(RequestMessage<Invocation> request, int componentId) {
             this.request = request;
+            this.componentId = componentId;
             this.invocation = request.getPayLoad();
         }
 
         @Override
         public void snapshot() {
-            snapshot = ContextManager.capture();
+        }
+
+        @Override
+        public void prepare() {
+            span.prepareForAsync();
+            ContextManager.stopSpan(span);
         }
 
         @Override
         public void restore() {
-            ContextManager.continued(snapshot);
         }
 
         /**
@@ -95,11 +111,10 @@ public class SkywalkingTraceFactory implements TraceFactory {
         @Override
         public void end(final Throwable throwable) {
             if (throwable != null) {
-                AbstractSpan activeSpan = ContextManager.activeSpan();
-                activeSpan.errorOccurred();
-                activeSpan.log(throwable);
+                span.errorOccurred();
+                span.log(throwable);
             }
-            ContextManager.stopSpan();
+            span.asyncFinish();
         }
     }
 
@@ -108,22 +123,22 @@ public class SkywalkingTraceFactory implements TraceFactory {
      */
     protected static class ConsumerTracer extends AbstractTracer {
 
-        public ConsumerTracer(RequestMessage<Invocation> request) {
-            super(request);
+        public ConsumerTracer(RequestMessage<Invocation> request, int componentId) {
+            super(request, componentId);
         }
 
         @Override
         public void begin(final String name, final String component, final Map<String, String> tags) {
             Map<String, String> ctx = new HashMap<>();
             ContextCarrier contextCarrier = new ContextCarrier();
-            span = ContextManager.createExitSpan(name, contextCarrier, null);
+            span = ContextManager.createExitSpan(name, contextCarrier, "unknown");
             CarrierItem next = contextCarrier.items();
             while (next.hasNext()) {
                 next = next.next();
                 ctx.put(next.getHeadKey(), next.getHeadValue());
             }
             invocation.addAttachment(HIDDEN_KEY_TRACE_SKYWALKING, ctx);
-            span.setComponent(component);
+            span.setComponent(new OfficialComponent(componentId, component));
             tag(tags);
             SpanLayer.asRPCFramework(span);
         }
@@ -134,8 +149,8 @@ public class SkywalkingTraceFactory implements TraceFactory {
      */
     protected static class ProviderTracer extends AbstractTracer {
 
-        public ProviderTracer(RequestMessage<Invocation> request) {
-            super(request);
+        public ProviderTracer(RequestMessage<Invocation> request, int componentId) {
+            super(request, componentId);
         }
 
         @Override
@@ -150,7 +165,7 @@ public class SkywalkingTraceFactory implements TraceFactory {
                 }
             }
             span = ContextManager.createEntrySpan(name, contextCarrier);
-            span.setComponent(component);
+            span.setComponent(new OfficialComponent(componentId, component));
             tag(tags);
             SpanLayer.asRPCFramework(span);
         }

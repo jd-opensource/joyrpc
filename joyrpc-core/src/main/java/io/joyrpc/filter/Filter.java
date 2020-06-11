@@ -23,6 +23,7 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.extension.Prototype;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -82,11 +83,21 @@ public interface Filter extends InvokerAware, Prototype {
     /**
      * 判断是否要开启
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 开启标识
      */
     default boolean test(URL url) {
         return true;
+    }
+
+    /**
+     * 判断是否要开启
+     *
+     * @param option 选项
+     * @return 开启标识
+     */
+    default boolean test(InterfaceOption option) {
+        return false;
     }
 
     /**

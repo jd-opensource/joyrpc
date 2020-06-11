@@ -45,6 +45,10 @@ public class DemoServiceImpl implements DemoService {
 
     @Override
     public <T> T generic(T value) {
+        try {
+            Thread.sleep(10);
+        } catch (InterruptedException e) {
+        }
         return value;
     }
 

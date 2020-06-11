@@ -214,10 +214,10 @@ public class Refer extends AbstractService {
         //路由器
         this.nodeSelector = configure(NODE_SELECTOR.get(url.getString(Constants.NODE_SELECTOR_OPTION)));
         //方法选项
-        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure,
+        this.option = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure,
                 loadBalance instanceof AdaptiveScorer ? (method, cfg) -> ((AdaptiveScorer) loadBalance).score(cluster, method, cfg) : null);
         //有回调函数
-        if (options.isCallback()) {
+        if (option.isCallback()) {
             cluster.addHandler(event -> {
                 if (event.getType() == NodeEvent.EventType.DISCONNECT) {
                     Object payload = event.getPayload();
@@ -391,7 +391,7 @@ public class Refer extends AbstractService {
     @Override
     public void setup(final RequestMessage<Invocation> request) {
         //实际的方法名称，泛型调用进行了处理
-        ConsumerMethodOption option = (ConsumerMethodOption) options.getOption(request.getMethodName());
+        ConsumerMethodOption option = (ConsumerMethodOption) this.option.getOption(request.getMethodName());
         option.setAutoScore(true);
         request.setOption(option);
         //避免分组重试重复调用
@@ -501,7 +501,7 @@ public class Refer extends AbstractService {
 
     @Override
     protected CompletableFuture<Void> doClose() {
-        options.close();
+        option.close();
         publisher.removeHandler(localHandler);
         //注销节点事件
         cluster.removeHandler(config);
@@ -637,7 +637,7 @@ public class Refer extends AbstractService {
         return registry;
     }
 
-    public InterfaceOption getOptions() {
-        return options;
+    public InterfaceOption getOption() {
+        return option;
     }
 }

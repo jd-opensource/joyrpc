@@ -37,8 +37,8 @@ import static io.joyrpc.util.StringUtils.isEmpty;
  */
 public class AbstractInterfaceBeanDefinitionParser extends AbstractBeanDefinitionParser {
 
-    public static final String PARAMETER = "parameter";
     public static final String METHOD = "method";
+
 
     public AbstractInterfaceBeanDefinitionParser(Class<?> beanClass, boolean requireId) {
         super(beanClass, requireId);

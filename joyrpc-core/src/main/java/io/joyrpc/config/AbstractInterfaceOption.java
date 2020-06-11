@@ -21,6 +21,7 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.Callback;
+import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
@@ -31,6 +32,7 @@ import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
@@ -50,6 +52,7 @@ import java.lang.reflect.Parameter;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
@@ -128,6 +131,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      */
     protected boolean trace;
     /**
+     * 启用限流
+     */
+    protected boolean limiter;
+    /**
      * 验证器
      */
     protected Validator validator;
@@ -148,6 +155,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * 是否是泛型调用
      */
     protected boolean generic;
+    /**
+     * 是否启用假数据
+     */
+    protected boolean mock;
     /**
      * 是否有回调方法
      */
@@ -198,7 +209,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         this.cacheFactory = CACHE.get(cacheProvider);
         //默认是否认证
         this.validation = url.getBoolean(VALIDATION_OPTION);
-        this.trace = VARIABLE.getBoolean(TRACE_OPEN_OPTION);
+        this.limiter = url.getBoolean(LIMITER_OPTION);
+        this.mock = url.getBoolean(new URLOption<>(MOCK_KEY, () -> VARIABLE.getBoolean(MOCK_OPTION)));
+        EnableTrace enableTrace = interfaceClass.getAnnotation(EnableTrace.class);
+        //全局开关
+        this.trace = url.getBoolean(TRACE_OPEN, enableTrace == null ? VARIABLE.getBoolean(TRACE_OPEN_OPTION) : enableTrace.value());
         if (!generic) {
             this.validator = Validation.buildDefaultValidatorFactory().getValidator();
             if (validator != null) {
@@ -383,8 +398,58 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     }
 
     @Override
+    public boolean isGeneric() {
+        return generic;
+    }
+
+    @Override
     public boolean isCallback() {
         return callback;
+    }
+
+    @Override
+    public boolean isMock() {
+        return mock;
+    }
+
+    @Override
+    public boolean isTrace() {
+        return trace || predicate(option -> option.isTrace());
+    }
+
+    @Override
+    public boolean isCache() {
+        return cacheEnable || predicate(option -> option.getCachePolicy() != null);
+    }
+
+    @Override
+    public boolean isValidation() {
+        return !generic && validator != null && (validation || predicate(option -> option.getValidator() != null));
+    }
+
+    @Override
+    public boolean isConcurrency() {
+        return concurrency > 0 || predicate(option -> option.getConcurrency().getMax() > 0);
+    }
+
+    @Override
+    public boolean isLimiter() {
+        return limiter;
+    }
+
+    /**
+     * 测试方法选项
+     *
+     * @param predicate 断言
+     * @return 是否满足条件
+     */
+    protected boolean predicate(final Predicate<InnerMethodOption> predicate) {
+        for (Map.Entry<String, InnerMethodOption> entry : options.getOptions().entrySet()) {
+            if (predicate.test(entry.getValue())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

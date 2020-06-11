@@ -81,7 +81,7 @@ public abstract class AbstractService implements Invoker {
     /**
      * 方法选项
      */
-    protected InterfaceOption options;
+    protected InterfaceOption option;
     /**
      * 调用链
      */
@@ -132,8 +132,8 @@ public abstract class AbstractService implements Invoker {
         return alias;
     }
 
-    public InterfaceOption getOptions() {
-        return options;
+    public InterfaceOption getOption() {
+        return option;
     }
 
     /**

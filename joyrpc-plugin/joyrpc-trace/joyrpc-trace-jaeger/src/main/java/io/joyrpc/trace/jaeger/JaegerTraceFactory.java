@@ -168,10 +168,6 @@ public class JaegerTraceFactory implements TraceFactory {
         }
 
         @Override
-        public void snapshot() {
-        }
-
-        @Override
         public void restore() {
             tracer.activateSpan(span);
         }

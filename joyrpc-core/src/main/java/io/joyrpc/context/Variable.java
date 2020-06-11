@@ -52,8 +52,13 @@ public class Variable extends AbstractParametric {
         }
         //从缓存里面取
         Object result = variables.computeIfAbsent(key, k -> {
-            //上下文获取
-            Object value = GlobalContext.get(key);
+            //动态上下文
+            Map<String, String> dynamicGlobal = GlobalContext.getGlobalSetting();
+            Object value = dynamicGlobal == null ? null : dynamicGlobal.get(k);
+            //静态上下文获取
+            if (value == null) {
+                value = GlobalContext.get(key);
+            }
             if (value == null) {
                 //上下文提供者，实现了Spring和环境变量的识别
                 for (ContextSupplier supplier : CONTEXT_SUPPLIER.extensions()) {

@@ -165,7 +165,7 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
         try {
             Invocation invocation = new Invocation(exporter.getInterfaceName(), exporter.getAlias(), methodName);
             RequestMessage<Invocation> request = RequestMessage.build(invocation, channel);
-            invocation.addAttachment(".telnet", true);
+            invocation.addAttachment(Constants.INTERNAL_KEY_TELNET, true);
             if (token != null) {
                 invocation.addAttachment(Constants.HIDDEN_KEY_TOKEN, token);
             }

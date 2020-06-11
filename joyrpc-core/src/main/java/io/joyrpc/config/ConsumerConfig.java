@@ -121,6 +121,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                     future.completeExceptionally(ex);
                 }
             }));
+            future.whenComplete((v, err) -> latch.countDown());
             return future;
         }
 
@@ -129,6 +130,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
             CompletableFuture<Void> future = new CompletableFuture<>();
             //拒绝新请求
             invokeHandler = null;
+            latch = null;
             if (refer != null) {
                 refer.close(gracefully).whenComplete((v, t) -> future.complete(null));
             } else {

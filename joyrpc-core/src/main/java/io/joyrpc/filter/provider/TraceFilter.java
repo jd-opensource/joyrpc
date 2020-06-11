@@ -49,5 +49,6 @@ public class TraceFilter extends AbstractTraceFilter implements ProviderFilter {
         put(tags, CLIENT_NAME_TAG, invocation.getAttachment(Constants.HIDDEN_KEY_APPNAME));
         put(tags, CLIENT_ADDRESS_TAG, Ipv4.toAddress(request.getRemoteAddress()));
         put(tags, SERVER_ADDRESS_TAG, Ipv4.toAddress(request.getLocalAddress()));
+        put(tags, CLIENT_RETRY_TAG, request.getRetryTimes() <= 0 ? null : String.valueOf(request.getRetryTimes()));
     }
 }

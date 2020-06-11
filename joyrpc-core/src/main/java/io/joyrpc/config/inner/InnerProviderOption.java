@@ -20,6 +20,7 @@ package io.joyrpc.config.inner;
  * #L%
  */
 
+import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.config.AbstractInterfaceOption;
 import io.joyrpc.context.IntfConfiguration;
 import io.joyrpc.context.auth.IPPermission;
@@ -99,6 +100,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     }
 
     @Override
+    public boolean isMethodBlackWhiteList() {
+        return methodBlackWhiteList != null;
+    }
+
+    @Override
     protected void setup() {
         super.setup();
         String include = url.getString(METHOD_INCLUDE_OPTION.getName());
@@ -121,6 +127,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     protected InnerMethodOption create(final WrapperParametric parametric) {
         GrpcMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
+        EnableTrace enableTrace = method.getAnnotation(EnableTrace.class);
         return new InnerProviderMethodOption(
                 grpcMethod,
                 genericClass.get(method),
@@ -131,7 +138,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
-                parametric.getBoolean(TRACE_OPEN, trace),
+                parametric.getBoolean(TRACE_OPEN, enableTrace == null ? trace : enableTrace.value()),
                 getCallback(method),
                 methodBlackWhiteList,
                 ipPermissions,

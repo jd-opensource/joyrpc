@@ -184,7 +184,7 @@ public class Exporter extends AbstractService {
         this.warmup = config.getWarmup();
         this.port = url.getPort();
         this.compress = url.getString(Constants.COMPRESS_OPTION.getName());
-        this.options = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, ref);
+        this.option = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, ref);
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::invokeMethod);
         this.identification = IDENTIFICATION.get(url.getString(Constants.IDENTIFICATION_OPTION));
@@ -268,7 +268,7 @@ public class Exporter extends AbstractService {
     @Override
     protected CompletableFuture<Void> doClose() {
         //关闭一下接口选项，释放额外的资源
-        options.close();
+        option.close();
         publisher.offer(new ExporterEvent(EventType.CLOSE, name, this));
         CompletableFuture<Void> future1 = deregister().whenComplete((v, t) -> logger.info("Success deregister provider config " + name));
         CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe provider config " + name));
@@ -300,7 +300,7 @@ public class Exporter extends AbstractService {
     @Override
     public void setup(final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        MethodOption option = options.getOption(invocation.getMethodName());
+        MethodOption option = this.option.getOption(invocation.getMethodName());
         //类名，如果不存在则从会话里面获取
         invocation.setClazz(interfaceClass);
         invocation.setMethod(option.getMethod());

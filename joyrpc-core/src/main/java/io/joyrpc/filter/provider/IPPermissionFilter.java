@@ -23,10 +23,13 @@ package io.joyrpc.filter.provider;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -53,7 +56,10 @@ public class IPPermissionFilter extends AbstractProviderFilter {
             if (!Ipv4.isLocalIp(remoteIp)) {
                 //只有非本地地址才开启IP访问过滤
                 Invocation invocation = request.getPayLoad();
-                if (!permission.permit(invocation.getAlias(), remoteIp)) {
+                MapParametric<String, Object> parametric = new MapParametric<>(invocation.getAttachments());
+                if (!permission.permit(invocation.getAlias(), remoteIp)
+                        && !parametric.getBoolean(Constants.INTERNAL_KEY_TELNET, false)) {
+                    //如果是telnet调用，已经经过认证，可以通过
                     String errorMsg = String.format(
                             "[%s]Error occurs while processing request %s/%s/%s from channel %s->%s, caused by: Fail to pass the ip blackWhiteList",
                             ExceptionCode.PROVIDER_AUTH_FAIL,
@@ -65,6 +71,11 @@ public class IPPermissionFilter extends AbstractProviderFilter {
             }
         }
         return invoker.invoke(request);
+    }
+
+    @Override
+    public boolean test(URL url) {
+        return true;
     }
 
     @Override

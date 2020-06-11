@@ -20,9 +20,9 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
-import io.joyrpc.spring.Counter;
 import io.joyrpc.spring.context.SpringContextSupplier;
 import io.joyrpc.spring.context.SpringEnvironmentSupplier;
+import io.joyrpc.spring.processor.DependsOnDefinitionPostProcessor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
@@ -56,6 +56,14 @@ public class RpcAutoConfiguration {
     @Bean(name = SpringEnvironmentSupplier.BEAN_NAME)
     public static SpringEnvironmentSupplier springEnvironmentSupplier(ConfigurableEnvironment environment) {
         return new SpringEnvironmentSupplier(environment);
+    }
+
+    @ConditionalOnMissingBean
+    @Bean(name = DependsOnDefinitionPostProcessor.BEAN_NAME)
+    public static DependsOnDefinitionPostProcessor dependsOnDefinitionPostProcessor(
+            //springContextSupplier 与 springEnvironmentSupplier 要提前被注册
+            SpringContextSupplier springContextSupplier, SpringEnvironmentSupplier springEnvironmentSupplier) {
+        return new DependsOnDefinitionPostProcessor();
     }
 
 }

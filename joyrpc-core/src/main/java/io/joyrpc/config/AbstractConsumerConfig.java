@@ -718,6 +718,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * 调用handler
          */
         protected volatile ConsumerInvokeHandler invokeHandler;
+        /**
+         * 等待invokeHandler初始化
+         */
+        protected CountDownLatch latch = new CountDownLatch(1);
 
         /**
          * 构造函数
@@ -817,12 +821,19 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                         throw new RpcException("Consumer config is closing. " + config.name());
                     case CLOSED:
                         throw new RpcException("Consumer config is closed. " + config.name());
+                    case OPENING:
+                        //正在opening，等待open完
+                        latch.await();
+                        if (invokeHandler == null) {
+                            throw new RpcException("Consumer config is opening. " + config.name());
+                        }
+                        handler = invokeHandler;
+                        break;
                     default:
                         throw new RpcException("Consumer config is opening. " + config.name());
                 }
-            } else {
-                return handler.invoke(proxy, method, args);
             }
+            return handler.invoke(proxy, method, args);
         }
 
     }
@@ -900,6 +911,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 //静态方法
                 return method.invoke(proxy, param);
             }
+            //处理toString，equals，hashcode等方法
+            Object obj = invokeObjectMethod(proxy, method, param);
+            if (obj != null) {
+                return obj;
+            }
 
             boolean isReturnFuture = isReturnFuture(iface, method);
             boolean isAsync = this.async || isReturnFuture;
@@ -950,15 +966,14 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         }
 
         /**
-         * 调用默认方法
+         * 处理toString，equals，hashcode等方法
          *
          * @param proxy
          * @param method
          * @param param
          * @return
-         * @throws Throwable
          */
-        protected Object invokeDefaultMethod(final Object proxy, final Method method, final Object[] param) throws Throwable {
+        protected Object invokeObjectMethod(final Object proxy, final Method method, final Object[] param) {
             Object[] args = param;
             String name = method.getName();
             if (generic) {
@@ -968,13 +983,26 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             int count = args == null ? 0 : args.length;
             if (count == 0) {
                 if (METHOD_NAME_TO_STRING.equals(name)) {
-                    return invoker.getName();
+                    return proxy.getClass().getName() + "@" + Integer.toHexString(invoker.hashCode());
                 } else if (METHOD_NAME_HASHCODE.equals(name)) {
                     return invoker.hashCode();
                 }
             } else if (count == 1 && METHOD_NAME_EQUALS.equals(name)) {
                 return invoker.equals(args[0]);
             }
+            return null;
+        }
+
+        /**
+         * 调用默认方法
+         *
+         * @param proxy
+         * @param method
+         * @param param
+         * @return
+         * @throws Throwable
+         */
+        protected Object invokeDefaultMethod(final Object proxy, final Method method, final Object[] param) throws Throwable {
             if (constructor == null) {
                 synchronized (this) {
                     if (constructor == null) {

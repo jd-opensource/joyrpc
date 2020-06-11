@@ -70,18 +70,22 @@ public class ContextTransmit implements Transmit {
         String remoteAppName = session == null ? null : session.getRemoteAppName();
         String remoteAppIns = session == null ? null : session.getRemoteAppIns();
         //获取待写入数据条数
-        int attachmentSize = attachments != null && !attachments.isEmpty() ? attachments.size() : 0;
+        int attachmentSize = attachments != null ? attachments.size() : 0;
         int sessionSize = remoteAppId != null || remoteAppName != null ? 3 : 0;
         int size = attachmentSize + sessionSize;
         if (size == 0) {
             return;
         }
-
         InnerContext ctx = new InnerContext(context);
         Map<String, Object> callers = new HashMap<>(size);
         //写入透传的数据
         if (attachmentSize > 0) {
             ctx.setTraces((Map<String, Object>) attachments.remove(INTERNAL_KEY_TRACE));
+            //保留重试次数，便于兼容
+            Integer retryTimes = invocation == null ? null : invocation.getAttachment(INTERNAL_KEY_RETRY_TIMES);
+            if (retryTimes != null) {
+                request.setRetryTimes(retryTimes);
+            }
             //复制内部属性，转换成隐藏属性
             attachments.forEach((k, v) -> callers.put(INTERNAL_KEY.test(k) ? INTERNAL_TO_HIDDEN.apply(k) : k, v));
         }

@@ -365,6 +365,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
     protected void register(final ConsumerBean<?> config, final BeanDefinitionRegistry registry, final String defRegName) {
         BeanDefinitionBuilder builder = genericBeanDefinition(ConsumerBean.class, () -> config)
                 .setRole(RootBeanDefinition.ROLE_INFRASTRUCTURE);
+
         //这些不需要被再次Proxy，设置成ROLE_INFRASTRUCTURE，忽略Spring的警告
         if (config.getRegistry() == null
                 && isEmpty(config.getRegistryName())

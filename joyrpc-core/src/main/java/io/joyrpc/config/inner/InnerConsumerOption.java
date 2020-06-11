@@ -20,6 +20,7 @@ package io.joyrpc.config.inner;
  * #L%
  */
 
+import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
@@ -268,6 +269,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
     protected InnerMethodOption create(final WrapperParametric parametric) {
         GrpcMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
+        EnableTrace enableTrace = method.getAnnotation(EnableTrace.class);
         Map<String, Map<String, Object>> methodMocks = mockConfig.get();
         McIntfCircuitBreakerConfig icbCfg = breakerConfigs.get();
         return new InnerConsumerMethodOption(
@@ -280,7 +282,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 getValidator(parametric),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
-                parametric.getBoolean(TRACE_OPEN, trace),
+                parametric.getBoolean(TRACE_OPEN, enableTrace == null ? trace : enableTrace.value()),
                 getCallback(method),
                 parametric.getInteger(FORKS_OPTION.getName(), forks),
                 () -> selector,

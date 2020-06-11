@@ -27,7 +27,7 @@ import java.util.Map;
  */
 public interface Tracer {
     /**
-     * 开始
+     * 主线程开始
      *
      * @param name      跟踪名称
      * @param component 组件名称
@@ -36,17 +36,28 @@ public interface Tracer {
     void begin(String name, String component, Map<String, String> tags);
 
     /**
-     * 快照
+     * 主线程做快照
      */
-    void snapshot();
+    default void snapshot(){
+
+    }
 
     /**
-     * 恢复
+     * 主线程结束
      */
-    void restore();
+    default void prepare(){
+
+    }
 
     /**
-     * 结束
+     * 异步线程恢复
+     */
+    default void restore(){
+
+    }
+
+    /**
+     * 异步线程调用结束
      *
      * @param throwable 异常
      */

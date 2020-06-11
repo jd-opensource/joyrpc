@@ -36,7 +36,7 @@
 
 - 熔断的判断条件，连续失败次数和可用率可以并存，默认加上服务端过载和超时异常，避免对所有异常进行熔断
 
-- Fastjson默认改成SafeMode，增强安全性
+- Fastjson默认开启安全模式，使用@type标签会抛异常。可以在环境变量或Springboot配置文件中设置fastjson.parser.safeMode=false来关闭安全模式
 
 - Dependency
 

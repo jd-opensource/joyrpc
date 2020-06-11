@@ -25,7 +25,6 @@ import io.joyrpc.Result;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
-import io.joyrpc.extension.URLOption;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.TraceFactory;
@@ -48,6 +47,7 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
     protected static final String CLIENT_ALIAS_TAG = "client.alias";
     protected static final String CLIENT_NAME_TAG = "client.name";
     protected static final String CLIENT_ADDRESS_TAG = "client.address";
+    protected static final String CLIENT_RETRY_TAG = "client.retry";
     protected static final String SERVER_ADDRESS_TAG = "server.address";
     protected static final String SPAN_KIND_TAG = "span.kind";
     protected static final String COMPONENT_TAG = "component";

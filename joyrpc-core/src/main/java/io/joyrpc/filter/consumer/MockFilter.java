@@ -22,9 +22,8 @@ package io.joyrpc.filter.consumer;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
-import io.joyrpc.constants.Constants;
-import io.joyrpc.context.Variable;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractConsumerFilter;
@@ -55,8 +54,12 @@ public class MockFilter extends AbstractConsumerFilter {
 
     @Override
     public boolean test(final URL url) {
-        //兼容老版本，测试环境默认开启，如果环境设置了mock=false则禁用
-        return Variable.VARIABLE.getBoolean(Constants.MOCK_OPTION);
+        return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isMock();
     }
 
     @Override

@@ -64,6 +64,13 @@ public interface InterfaceOption {
     boolean isGeneric();
 
     /**
+     * 是否启用假数据
+     *
+     * @return 启用假数据标识
+     */
+    boolean isMock();
+
+    /**
      * 是否有回调函数
      *
      * @return 回调函数标识

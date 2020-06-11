@@ -32,6 +32,7 @@ import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
@@ -149,6 +150,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      */
     protected boolean generic;
     /**
+     * 是否启用假数据
+     */
+    protected boolean mock;
+    /**
      * 是否有回调方法
      */
     protected boolean callback;
@@ -198,6 +203,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         //默认是否认证
         this.validation = url.getBoolean(VALIDATION_OPTION);
         this.limiter = url.getBoolean(LIMITER_OPTION);
+        this.mock = url.getBoolean(new URLOption<>(MOCK_KEY, () -> VARIABLE.getBoolean(MOCK_OPTION)));
         EnableTrace enableTrace = interfaceClass.getAnnotation(EnableTrace.class);
         //全局开关
         this.trace = url.getBoolean(TRACE_OPEN, enableTrace == null ? VARIABLE.getBoolean(TRACE_OPEN_OPTION) : enableTrace.value());
@@ -392,6 +398,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     @Override
     public boolean isCallback() {
         return callback;
+    }
+
+    @Override
+    public boolean isMock() {
+        return mock;
     }
 
     @Override

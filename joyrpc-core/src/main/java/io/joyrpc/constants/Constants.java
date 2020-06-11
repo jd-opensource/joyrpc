@@ -635,7 +635,8 @@ public class Constants {
 
     /*------------------------ consumer group配置 ------------------------*/
     public static final URLOption<Integer> DST_PARAM_OPTION = new URLOption<>("dstParam", (Integer) null);
-    public static final URLOption<Boolean> MOCK_OPTION = new URLOption<>("mock", true);
+    public static final String MOCK_KEY = "mock";
+    public static final URLOption<Boolean> MOCK_OPTION = new URLOption<>(MOCK_KEY, true);
     /**
      * 默认分组路由算法
      */

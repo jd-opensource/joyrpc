@@ -22,21 +22,17 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-
-import static io.joyrpc.constants.Constants.GENERIC_OPTION;
-import static io.joyrpc.constants.Constants.VALIDATION_OPTION;
 
 /**
  * 参数校验过滤器
@@ -77,21 +73,11 @@ public class AbstractValidationFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        //泛型调用不进行校验
-        if (url.getBoolean(GENERIC_OPTION)) {
-            return false;
-        } else if (url.getBoolean(VALIDATION_OPTION)) {
-            // 参数校验过滤器
-            return true;
-        }
-        //判断是否设置了方法验证
-        Map<String, String> map = url.endsWith("." + VALIDATION_OPTION.getName());
-        for (String value : map.values()) {
-            if (Converts.getBoolean(value, Boolean.FALSE)) {
-                return true;
-            }
-        }
         return false;
     }
 
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isValidation();
+    }
 }

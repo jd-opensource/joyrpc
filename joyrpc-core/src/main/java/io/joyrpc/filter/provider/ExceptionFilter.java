@@ -25,6 +25,7 @@ import io.joyrpc.Result;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -133,6 +134,11 @@ public class ExceptionFilter extends AbstractProviderFilter {
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean test(URL url) {
+        return true;
     }
 
     @Override

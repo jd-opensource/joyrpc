@@ -23,8 +23,8 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.AuthorizationException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
@@ -61,10 +61,12 @@ public class MethodBlackWhiteListFilter extends AbstractProviderFilter {
 
     @Override
     public boolean test(final URL url) {
-        //判断是否配置了方法黑白名单
-        String include = url.getString(Constants.METHOD_INCLUDE_OPTION.getName(), null);
-        String exclude = url.getString(Constants.METHOD_EXCLUDE_OPTION.getName(), null);
-        return include != null && !include.isEmpty() || exclude != null && !exclude.isEmpty();
+        return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isMethodBlackWhiteList();
     }
 
     @Override

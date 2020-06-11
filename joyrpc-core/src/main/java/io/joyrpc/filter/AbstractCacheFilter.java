@@ -23,17 +23,15 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cache.Cache;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.CachePolicy;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CacheException;
-import io.joyrpc.extension.Converts;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -103,19 +101,11 @@ public class AbstractCacheFilter extends AbstractFilter {
 
     @Override
     public boolean test(final URL url) {
-        // 参数校验过滤器
-        if (url.getBoolean(Constants.CACHE_OPTION)) {
-            return true;
-        }
-        Map<String, String> caches = url.endsWith("." + Constants.CACHE_OPTION.getName());
-        if (caches.isEmpty()) {
-            return false;
-        }
-        for (String value : caches.values()) {
-            if (Converts.getBoolean(value, Boolean.FALSE)) {
-                return true;
-            }
-        }
         return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isCache();
     }
 }

@@ -23,6 +23,7 @@ package io.joyrpc.filter.provider;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.distribution.RateLimiter;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
@@ -72,7 +73,12 @@ public class LimiterFilter extends AbstractProviderFilter {
 
     @Override
     public boolean test(final URL url) {
-        return url.getBoolean(Constants.LIMITER_OPTION);
+        return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isLimiter();
     }
 
     @Override

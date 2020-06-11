@@ -57,6 +57,13 @@ public interface InterfaceOption {
     MethodOption getOption(String methodName);
 
     /**
+     * 是否泛化调用
+     *
+     * @return 泛化调用标识
+     */
+    boolean isGeneric();
+
+    /**
      * 是否有回调函数
      *
      * @return 回调函数标识
@@ -69,6 +76,43 @@ public interface InterfaceOption {
      * @return 启动跟踪标识
      */
     boolean isTrace();
+
+    /**
+     * 是否启用缓存
+     *
+     * @return 启用缓存标识
+     */
+    boolean isCache();
+
+    /**
+     * 是否启用认证
+     *
+     * @return 启用认证标识
+     */
+    boolean isValidation();
+
+    /**
+     * 是否启用并发数限制
+     *
+     * @return 启用并发数限制标识
+     */
+    boolean isConcurrency();
+
+    /**
+     * 是否启用限流
+     *
+     * @return 启用限流标识
+     */
+    boolean isLimiter();
+
+    /**
+     * 是否启用方法黑白名单
+     *
+     * @return 启用方法黑白名单标识
+     */
+    default boolean isMethodBlackWhiteList() {
+        return false;
+    }
 
     /**
      * 关闭，释放资源，例如移除监听器

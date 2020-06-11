@@ -24,12 +24,12 @@ import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.GenericException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -38,12 +38,10 @@ import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GENERIC_SERIALIZER;
 import static io.joyrpc.codec.serialization.GenericSerializer.STANDARD;
-import static io.joyrpc.constants.Constants.GENERIC_OPTION;
 
 /**
  * @description: 服务端的泛化调用过滤器<br>
@@ -113,6 +111,11 @@ public class GenericFilter extends AbstractProviderFilter {
             }
         });
 
+    }
+
+    @Override
+    public boolean test(URL url) {
+        return true;
     }
 
     @Override

@@ -22,6 +22,7 @@ package io.joyrpc.filter.consumer;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
@@ -56,7 +57,12 @@ public class GenericFilter extends AbstractConsumerFilter {
 
     @Override
     public boolean test(URL url) {
-        return url.getBoolean(Constants.GENERIC_OPTION);
+        return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isGeneric();
     }
 
     @Override

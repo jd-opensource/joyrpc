@@ -29,6 +29,7 @@ import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -70,6 +71,11 @@ public class IPPermissionFilter extends AbstractProviderFilter {
             }
         }
         return invoker.invoke(request);
+    }
+
+    @Override
+    public boolean test(URL url) {
+        return true;
     }
 
     @Override

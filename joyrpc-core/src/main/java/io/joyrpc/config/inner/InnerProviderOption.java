@@ -99,6 +99,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     }
 
     @Override
+    public boolean isMethodBlackWhiteList() {
+        return methodBlackWhiteList != null;
+    }
+
+    @Override
     protected void setup() {
         super.setup();
         String include = url.getString(METHOD_INCLUDE_OPTION.getName());

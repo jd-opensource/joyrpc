@@ -44,19 +44,18 @@ public abstract class GenericExecutable<T extends Executable> {
     /**
      * 参数泛型
      */
-    protected volatile Type[] genericTypes;
+    protected Type[] genericTypes;
     /**
      * 参数类型
      */
-    protected volatile Class<?>[] types;
-
+    protected Class<?>[] types;
 
     /**
      * 构造函数
      *
-     * @param method
-     * @param parameters
-     * @param exceptions
+     * @param method     方法
+     * @param parameters 泛型参数
+     * @param exceptions 泛型异常
      */
     public GenericExecutable(final T method, final GenericType[] parameters, final GenericType[] exceptions) {
         this.method = method;

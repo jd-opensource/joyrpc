@@ -36,9 +36,9 @@ public class GenericMethod extends GenericExecutable<Method> {
      * 构造函数
      *
      * @param method     方法
-     * @param parameters 参数
-     * @param exceptions 泛型
-     * @param returnType 返回值
+     * @param parameters 泛型参数
+     * @param exceptions 泛型异常
+     * @param returnType 泛型返回值
      */
     public GenericMethod(final Method method,
                          final GenericType[] parameters,

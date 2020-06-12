@@ -38,10 +38,10 @@ public abstract class Hex {
     }
 
     /**
-     * 把字节数组用十六进制表示出来
+     * 把十六进制表示出的字符串还原为字节数组
      *
-     * @param source 字节数组
-     * @return 十六进制字符串
+     * @param source 十六进制字符串
+     * @return 字节数组
      * @throws IOException
      */
     public static byte[] decode(final String source) throws IOException {

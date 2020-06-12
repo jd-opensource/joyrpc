@@ -9,9 +9,9 @@ package io.joyrpc.codec;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -64,10 +64,10 @@ public class HexCodec {
     }
 
     /**
-     * 把字节数组用十六进制表示出来
+     * 把十六进制表示出的字符串还原为字节数组
      *
-     * @param source 字节数组
-     * @return 十六进制字符串
+     * @param source 十六进制字符串
+     * @return 字节数组
      */
     public byte[] decode(final String source) throws IOException {
         if (source == null) {

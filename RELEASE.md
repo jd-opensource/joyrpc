@@ -38,6 +38,8 @@
 
 - Fastjson默认开启安全模式，使用@type标签会抛异常。可以在环境变量或Springboot配置文件中设置fastjson.parser.safeMode=false来关闭安全模式
 
+- 增强泛型检测，在json序列化或泛化调用的时候，服务端尽可能的识别出泛型信息，正常的反序列化，而不需要传递额外的类型
+
 - Dependency
 
   - 升级caffeine为2.8.2版本

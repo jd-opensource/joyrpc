@@ -238,14 +238,14 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
 
     /**
      * 获取Invoker对象
-     * @param interfaceId
-     * @param alias
-     * @return
+     * @param interfaceId 接口
+     * @param alias 分组
+     * @return 服务
      */
     protected Exporter getExporter(final String interfaceId, final String alias) {
         Exporter exporter;
-        if (alias != null && !alias.isEmpty() || alias != null && VARIABLE.getBoolean(ALIAS_EMPTY_OPTION)) {
-            exporter = ServiceManager.getFirstExporter(interfaceId, alias);
+        if (!isEmpty(alias) || VARIABLE.getBoolean(ALIAS_EMPTY_OPTION)) {
+            exporter = ServiceManager.getFirstExporter(interfaceId, alias == null ? "" : alias);
         } else {
             exporter = ServiceManager.getFirstExporterByInterface(interfaceId);
         }

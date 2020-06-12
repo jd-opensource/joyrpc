@@ -56,7 +56,6 @@ import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.constants.Constants.ALIAS_EMPTY_OPTION;
 import static io.joyrpc.context.Variable.VARIABLE;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
 import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**

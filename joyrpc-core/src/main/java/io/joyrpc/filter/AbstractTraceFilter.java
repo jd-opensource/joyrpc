@@ -113,8 +113,11 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
 
     @Override
     public boolean test(final InterfaceOption option) {
-        factory = TRACE_FACTORY.getOrDefault(VARIABLE.getString(TRACE_TYPE));
-        return factory != null && option.isTrace();
+        if (!option.isTrace()) {
+            return false;
+        }
+        factory = TRACE_FACTORY.get(VARIABLE.getString(TRACE_TYPE));
+        return factory != null;
     }
 
     @Override

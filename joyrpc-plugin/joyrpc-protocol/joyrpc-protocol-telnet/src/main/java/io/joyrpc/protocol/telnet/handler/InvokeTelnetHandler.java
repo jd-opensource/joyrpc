@@ -55,6 +55,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.ALIAS_EMPTY_OPTION;
 import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 import static io.joyrpc.util.StringUtils.isEmpty;
@@ -232,7 +233,13 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
      * @return
      */
     protected Exporter getExporter(final String interfaceId, final String alias) {
-        return alias != null ? ServiceManager.getFirstExporter(interfaceId, alias) : ServiceManager.getFirstExporterByInterface(interfaceId);
+        Exporter exporter;
+        if (alias != null && !alias.isEmpty() || alias != null && VARIABLE.getBoolean(ALIAS_EMPTY_OPTION)) {
+            exporter = ServiceManager.getFirstExporter(interfaceId, alias);
+        } else {
+            exporter = ServiceManager.getFirstExporterByInterface(interfaceId);
+        }
+        return exporter;
     }
 
     /**

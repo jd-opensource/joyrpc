@@ -270,15 +270,15 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
         if (Ipv4.isLocalIp(remoteIp)) {
             return null;
         } else if (!lan.contains(remoteIp)) {
-            return new TelnetResponse("Remote ip " + remoteIp + " is not in invoke whitelist");
+            return new TelnetResponse("Failure, remote ip " + remoteIp + " is not in invoke whitelist");
         } else if (sudo != null && sudo) {
             //通过了sudo认证
             return null;
         } else if (isEmpty(password)) {
-            return new TelnetResponse("Password is null, please set it by \"invoke -p password \" or \"invoke -g password \"");
+            return new TelnetResponse("Failure, password is null, please set it by \"invoke -p password \" or \"invoke -g password \"");
         } else if (isEmpty(token)) {
             // 没设置密码不让调用
-            return new TelnetResponse("please set password by administrator website.");
+            return new TelnetResponse("Failure, token is not configured.");
         } else if (encryptor == null) {
             return new TelnetResponse("Failure, encryptor is not found.");
         } else if (isEmpty(cryptoKey)) {

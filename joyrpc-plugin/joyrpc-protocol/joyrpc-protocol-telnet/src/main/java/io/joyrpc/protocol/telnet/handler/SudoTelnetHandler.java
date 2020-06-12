@@ -73,7 +73,7 @@ public class SudoTelnetHandler extends AbstractTelnetHandler {
             String cryptoKey = VARIABLE.getString(SETTING_SERVER_SUDO_CRYPTO_KEY);
             if (isEmpty(password)) {
                 //没有设置密码
-                return new TelnetResponse("Failure, sudo password is not configured.");
+                return new TelnetResponse("Failure, token is not configured.");
             } else if (isEmpty(cryptoKey)) {
                 return new TelnetResponse("Failure, cryptoKey is not configured.");
             } else if (encryptor == null) {

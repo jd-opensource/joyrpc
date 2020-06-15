@@ -65,10 +65,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -147,11 +147,11 @@ public class Refer extends AbstractService {
     /**
      * 本地的服务
      */
-    protected volatile Exporter localProvider;
+    protected volatile Exporter local;
     /**
      * 本地的服务列表
      */
-    protected Set<Exporter> localProviders = new HashSet<>();
+    protected Set<Exporter> locals = new CopyOnWriteArraySet<>();
     /**
      * 本地服务事件处理器
      */
@@ -245,7 +245,7 @@ public class Refer extends AbstractService {
         this.publisher.addHandler(localHandler);
         Exporter provider = localFunc.apply(exporterName);
         if (provider != null) {
-            localProvider = provider;
+            local = provider;
             //有本地节点，不需要等到节点建连成功
             cluster.setCheck(false);
             logger.info("Bind to local provider " + exporterName);
@@ -433,7 +433,7 @@ public class Refer extends AbstractService {
     protected CompletableFuture<Result> distribute(final RequestMessage<Invocation> request) {
         if (inJvm) {
             //本地调用
-            CompletableFuture<Result> result = distribute2Local(request, localProvider);
+            CompletableFuture<Result> result = distribute2Local(request, local);
             if (result != null) {
                 return result;
             }
@@ -605,18 +605,18 @@ public class Refer extends AbstractService {
         switch (event.getType()) {
             case INITIAL:
             case OPEN:
-                localProviders.add(event.getExporter());
-                if (localProvider == null) {
-                    localProvider = event.getExporter();
+                locals.add(event.getExporter());
+                if (local == null) {
+                    local = event.getExporter();
                     cluster.setCheck(false);
                     logger.info("Bind to local provider " + exporterName);
                 }
                 break;
             case CLOSE:
-                localProviders.remove(event.getExporter());
-                if (localProvider == event.getExporter()) {
-                    localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
-                    if (localProvider == null) {
+                locals.remove(event.getExporter());
+                if (local == event.getExporter()) {
+                    local = locals.isEmpty() ? null : locals.iterator().next();
+                    if (local == null) {
                         logger.info("Change to remote provider " + exporterName);
                     }
                 }

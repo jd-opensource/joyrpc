@@ -127,7 +127,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     protected InnerMethodOption create(final WrapperParametric parametric) {
         GrpcMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
-        EnableTrace enableTrace = method.getAnnotation(EnableTrace.class);
+        EnableTrace enableTrace = method == null ? null : method.getAnnotation(EnableTrace.class);
         return new InnerProviderMethodOption(
                 grpcMethod,
                 genericClass.get(method),

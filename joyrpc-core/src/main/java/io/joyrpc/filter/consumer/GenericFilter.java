@@ -23,7 +23,6 @@ package io.joyrpc.filter.consumer;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractConsumerFilter;
@@ -32,6 +31,8 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.concurrent.CompletableFuture;
+
+import static io.joyrpc.constants.Constants.GENERIC_KEY;
 
 /**
  * @description: 调用端的泛化调用过滤器
@@ -44,12 +45,12 @@ public class GenericFilter extends AbstractConsumerFilter {
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
 
         Invocation invocation = request.getPayLoad();
-        // generic 调用 consumer不处理，服务端做转换
+        //generic 调用 consumer不处理，服务端做转换
         if (invocation.isGeneric()) {
             //真实的方法名
             invocation.setMethodName(request.getMethodName());
             //设置泛化标示
-            invocation.addAttachment(Constants.GENERIC_OPTION.getName(), true);
+            invocation.addAttachment(GENERIC_KEY, true);
         }
 
         return invoker.invoke(request);

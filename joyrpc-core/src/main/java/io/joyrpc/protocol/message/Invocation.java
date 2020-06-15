@@ -557,7 +557,7 @@ public class Invocation implements Call {
     @Override
     public boolean isGeneric() {
         if (generic == null) {
-            Object attachment = attachments == null ? null : attachments.get(GENERIC_OPTION.getName());
+            Object attachment = attachments == null ? null : attachments.get(GENERIC_KEY);
             generic = attachment == null ? Boolean.FALSE : Boolean.TRUE.equals(attachment);
         }
         return generic;

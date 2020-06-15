@@ -420,12 +420,13 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history     历史
      * @return 反序列化后的对象
      */
-    protected Object realizeMap(final Map<?, ?> pojo, Class<?> type, final Type genericType,
+    protected Object realizeMap(final Map<?, ?> pojo, final Class<?> type, final Type genericType,
                                 final Map<Object, Object> history) throws Exception {
         Object className = pojo.get(CLASS);
+        Class<?> realType = type;
         if (className instanceof String && !((String) className).isEmpty()) {
             try {
-                Class<?> realType = forName((String) className);
+                realType = forName((String) className);
                 if (!type.isAssignableFrom(realType)) {
                     //类型校验
                     throw new CodecException(String.format("%s is not assignable from %s", type, className));
@@ -436,17 +437,17 @@ public class StandardGenericSerializer implements GenericSerializer {
             }
         }
 
-        if (Map.class.isAssignableFrom(type) || type == Object.class) {
-            return realizeMap2Map(pojo, type, genericType, history);
-        } else if (type.isInterface()) {
-            return realizeMap2Intf(pojo, type, history);
-        } else if (type.isEnum()) {
+        if (Map.class.isAssignableFrom(realType) || realType == Object.class) {
+            return realizeMap2Map(pojo, realType, genericType, history);
+        } else if (realType.isInterface()) {
+            return realizeMap2Intf(pojo, realType, history);
+        } else if (realType.isEnum()) {
             Object name = pojo.get("name");
             if (name != null) {
-                return Enum.valueOf((Class<Enum>) type, name.toString());
+                return Enum.valueOf((Class<Enum>) realType, name.toString());
             }
         }
-        return realizeMap2Pojo(pojo, type, history);
+        return realizeMap2Pojo(pojo, realType, history);
     }
 
     /**

@@ -64,6 +64,7 @@ import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetSocketAddress;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -464,18 +465,23 @@ public class Refer extends AbstractService {
         if (local == null) {
             return null;
         }
+        InetSocketAddress localAddress = local.getServer().getLocalAddress();
         RequestContext srcCtx = RequestContext.getContext();
         RequestContext targetCtx = new RequestContext();
         try {
+            request.setLocalAddress(localAddress);
+            request.setRemoteAddress(localAddress);
             //透传处理
             transmits.forEach(o -> o.injectLocal(srcCtx, targetCtx));
-            //TODO 是否要恢复上下文
+            //TODO Invocation里面的参数已经被改变，是否要恢复上下文
             RequestContext.restore(targetCtx);
             request.setContext(targetCtx);
             local.setup(request);
             return local.invoke(request);
         } finally {
             request.setContext(srcCtx);
+            request.setLocalAddress(null);
+            request.setRemoteAddress(null);
             RequestContext.restore(srcCtx);
         }
     }

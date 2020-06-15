@@ -20,7 +20,6 @@ package io.joyrpc.invoker;
  * #L%
  */
 
-import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.Candidate;
@@ -147,11 +146,11 @@ public class Refer extends AbstractService {
     /**
      * 本地的服务
      */
-    protected volatile Invoker localProvider;
+    protected volatile Exporter localProvider;
     /**
      * 本地的服务列表
      */
-    protected Set<Invoker> localProviders = new HashSet<>();
+    protected Set<Exporter> localProviders = new HashSet<>();
     /**
      * 本地服务事件处理器
      */
@@ -186,7 +185,7 @@ public class Refer extends AbstractService {
                     final LoadBalance loadBalance,
                     final CallbackContainer container,
                     final Publisher<ExporterEvent> publisher,
-                    final Function<String, Invoker> localFunc,
+                    final Function<String, Exporter> localFunc,
                     final BiConsumer<Refer, ? super Throwable> closing) {
         this.name = name;
         this.url = url;
@@ -243,7 +242,7 @@ public class Refer extends AbstractService {
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
         this.publisher = publisher;
         this.publisher.addHandler(localHandler);
-        Invoker provider = localFunc.apply(exporterName);
+        Exporter provider = localFunc.apply(exporterName);
         if (provider != null) {
             localProvider = provider;
             //有本地节点，不需要等到节点建连成功
@@ -461,7 +460,7 @@ public class Refer extends AbstractService {
      * @param local   本地服务
      * @return 结果
      */
-    protected CompletableFuture<Result> distribute2Local(final RequestMessage<Invocation> request, final Invoker local) {
+    protected CompletableFuture<Result> distribute2Local(final RequestMessage<Invocation> request, final Exporter local) {
         if (local == null) {
             return null;
         }
@@ -470,8 +469,10 @@ public class Refer extends AbstractService {
         try {
             //透传处理
             transmits.forEach(o -> o.injectLocal(srcCtx, targetCtx));
+            //TODO 是否要恢复上下文
             RequestContext.restore(targetCtx);
             request.setContext(targetCtx);
+            local.setup(request);
             return local.invoke(request);
         } finally {
             request.setContext(srcCtx);
@@ -598,16 +599,16 @@ public class Refer extends AbstractService {
         switch (event.getType()) {
             case INITIAL:
             case OPEN:
-                localProviders.add(event.getInvoker());
+                localProviders.add(event.getExporter());
                 if (localProvider == null) {
-                    localProvider = event.getInvoker();
+                    localProvider = event.getExporter();
                     cluster.setCheck(false);
                     logger.info("Bind to local provider " + exporterName);
                 }
                 break;
             case CLOSE:
-                localProviders.remove(event.getInvoker());
-                if (localProvider == event.getInvoker()) {
+                localProviders.remove(event.getExporter());
+                if (localProvider == event.getExporter()) {
                     localProvider = localProviders.isEmpty() ? null : localProviders.iterator().next();
                     if (localProvider == null) {
                         logger.info("Change to remote provider " + exporterName);

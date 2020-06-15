@@ -18,12 +18,12 @@ public class ExporterEvent implements Event {
     /**
      * 调用器
      */
-    protected Invoker invoker;
+    protected Exporter exporter;
 
-    public ExporterEvent(EventType type, String name, Invoker invoker) {
+    public ExporterEvent(EventType type, String name, Exporter exporter) {
         this.type = type;
         this.name = name;
-        this.invoker = invoker;
+        this.exporter = exporter;
     }
 
     public EventType getType() {
@@ -34,8 +34,8 @@ public class ExporterEvent implements Event {
         return name;
     }
 
-    public Invoker getInvoker() {
-        return invoker;
+    public Exporter getExporter() {
+        return exporter;
     }
 
     /**

@@ -764,7 +764,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 registryUrl = parse(registry);
                 String host = getLocalHost(registryUrl.getString(Constants.ADDRESS_OPTION));
                 //构造原始URL，调用远程的真实接口名称
-                url = new URL(GlobalContext.getString(PROTOCOL_KEY), host, 0, config.getInterfaceClazz(), config.addAttribute2Map());
+                url = new URL(GlobalContext.getString(PROTOCOL_KEY), host, 0, config.getInterfaceTarget(), config.addAttribute2Map());
                 //加上动态配置的服务URL
                 serviceUrl = configure(null);
                 doOpen().whenComplete((v, e) -> {

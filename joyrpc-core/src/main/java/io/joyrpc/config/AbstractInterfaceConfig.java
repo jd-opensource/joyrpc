@@ -161,6 +161,10 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
      */
     protected transient volatile Class interfaceClass;
     /**
+     * 服务端的目标接口，处理了别名
+     */
+    protected transient volatile String interfaceTarget;
+    /**
      * 名称
      */
     protected transient volatile String name;
@@ -262,7 +266,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                     result = supplier.get();
                 }
                 if (isEmpty(result)) {
-                    result = getInterfaceClazz();
+                    result = getInterfaceTarget();
                 }
             }
             serviceName = result;
@@ -283,23 +287,33 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     public String getInterfaceClazz() {
-        String result = interfaceClazz;
+        return interfaceClazz;
+    }
+
+    @Alias("interface")
+    public void setInterfaceClazz(String interfaceClazz) {
+        this.interfaceClazz = interfaceClazz;
+    }
+
+    /**
+     * 处理接口别名
+     *
+     * @return 接口名称
+     */
+    protected String getInterfaceTarget() {
+        String result = interfaceTarget;
         if (result == null || result.isEmpty()) {
-            Class<?> clazz = getInterfaceClass();
+            result = interfaceClazz;
+            Class<?> clazz = interfaceClass;
             if (clazz != null) {
                 Alias alias = clazz.getAnnotation(Alias.class);
                 if (alias != null && !alias.value().isEmpty()) {
                     result = alias.value();
                 }
             }
-            interfaceClazz = result;
+            interfaceTarget = result;
         }
         return result;
-    }
-
-    @Alias("interface")
-    public void setInterfaceClazz(String interfaceClazz) {
-        this.interfaceClazz = interfaceClazz;
     }
 
     public boolean isRegister() {
@@ -626,7 +640,6 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         super.addAttribute2Map(params);
         addElement2Map(params, Constants.SERVICE_NAME_OPTION, getServiceName());
         addElement2Map(params, Constants.ALIAS_OPTION, alias);
-        addElement2Map(params, Constants.INTERFACE_CLAZZ_OPTION, getInterfaceClazz());
         addElement2Map(params, Constants.FILTER_OPTION, filter);
         //register与subscribe默认值为true，防止url过长，为true的情况，不加入params
         if (!register) {

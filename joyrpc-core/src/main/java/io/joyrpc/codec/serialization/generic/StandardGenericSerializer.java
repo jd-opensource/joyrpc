@@ -507,10 +507,29 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @return
      */
     protected Map<TypeVariable, Type> getValueRealTypes(final Class<?> resolvedClass, final Type resolvedType) {
-        if (resolvedType instanceof ParameterizedType) {
+        Type genericType = resolvedType;
+        Class genericClazz = resolvedClass;
+        //泛型为Class，获取父类的泛型
+        if (genericType instanceof Class) {
+            for (; ; ) {
+                Type superGeneric = ((Class) genericType).getGenericSuperclass();
+                Class superClazz = genericClazz.getSuperclass();
+                if (superGeneric instanceof ParameterizedType) {
+                    genericClazz = superClazz;
+                    genericType = superGeneric;
+                    break;
+                } else if (!(superGeneric instanceof Class)) {
+                    break;
+                } else {
+                    genericType = superGeneric;
+                    genericClazz = superClazz;
+                }
+            }
+        }
+        if (genericType instanceof ParameterizedType) {
             Map<TypeVariable, Type> valueRealTypes = new HashMap<>();
-            TypeVariable[] typeVariables = resolvedClass.getTypeParameters();
-            Type[] genericTypes = ((ParameterizedType) resolvedType).getActualTypeArguments();
+            TypeVariable[] typeVariables = genericClazz.getTypeParameters();
+            Type[] genericTypes = ((ParameterizedType) genericType).getActualTypeArguments();
             for (int i = 0; i < typeVariables.length; i++) {
                 valueRealTypes.put(typeVariables[i], genericTypes[i]);
             }

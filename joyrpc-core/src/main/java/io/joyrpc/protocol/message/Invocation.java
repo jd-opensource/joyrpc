@@ -233,6 +233,23 @@ public class Invocation implements Call {
         setArgsType(argTypes);
     }
 
+    /**
+     * 为本地服务端创建调用对象
+     *
+     * @return 调用对象
+     */
+    public Invocation create() {
+        Invocation result = new Invocation();
+        result.className = className;
+        result.alias = alias;
+        result.methodName = methodName;
+        result.args = args;
+        result.argsType = argsType;
+        result.attachments = attachments == null ? null : new HashMap<>(attachments);
+        result.generic = generic;
+        return result;
+    }
+
     @Override
     public String[] getArgsType() {
         return argsType;

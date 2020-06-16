@@ -38,6 +38,7 @@ import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.constants.Constants;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.Transmit;
@@ -57,6 +58,7 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
@@ -76,6 +78,7 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
+import static io.joyrpc.context.RequestContext.restore;
 
 /**
  * 引用
@@ -466,23 +469,40 @@ public class Refer extends AbstractService {
             return null;
         }
         InetSocketAddress localAddress = local.getServer().getLocalAddress();
+        request.setLocalAddress(localAddress);
+        request.setRemoteAddress(localAddress);
         RequestContext srcCtx = RequestContext.getContext();
-        RequestContext targetCtx = new RequestContext();
+        //创建服务端请求
+        RequestMessage<Invocation> newRequest = new RequestMessage();
+        newRequest.setTimeout(request.getTimeout());
+        newRequest.setCreateTime(request.getCreateTime());
+        newRequest.setReceiveTime(SystemClock.now());
+        newRequest.setLocalAddress(localAddress);
+        newRequest.setRemoteAddress(localAddress);
+        newRequest.setThread(Thread.currentThread());
+        newRequest.setMethodName(request.getMethodName());
+        //本地调用，直接认证成功
+        newRequest.setAuthenticated(session -> Session.AUTH_SESSION_SUCCESS);
+        newRequest.setPayLoad(request.getPayLoad().create());
+        newRequest.setContext(new RequestContext());
+        //构造会话
+        DefaultSession session = new DefaultSession();
+        session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
+        session.put(KEY_APPID, GlobalContext.getString(KEY_APPID));
+        session.put(KEY_APPNAME, GlobalContext.getString(KEY_APPNAME));
+        session.put(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
+        session.put(KEY_APPGROUP, GlobalContext.getString(KEY_APPGROUP));
+
         try {
-            request.setLocalAddress(localAddress);
-            request.setRemoteAddress(localAddress);
             //透传处理
-            transmits.forEach(o -> o.injectLocal(srcCtx, targetCtx));
-            //TODO Invocation里面的参数已经被改变，是否要恢复上下文
-            RequestContext.restore(targetCtx);
-            request.setContext(targetCtx);
-            local.setup(request);
-            return local.invoke(request);
+            transmits.forEach(o -> o.restoreOnReceive(newRequest, session));
+            //服务端上下文
+            restore(newRequest.getContext());
+            local.setup(newRequest);
+            return local.invoke(newRequest);
         } finally {
-            request.setContext(srcCtx);
-            request.setLocalAddress(null);
-            request.setRemoteAddress(null);
-            RequestContext.restore(srcCtx);
+            //恢复原始上下文
+            restore(srcCtx);
         }
     }
 

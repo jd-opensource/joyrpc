@@ -100,31 +100,4 @@ public class ContextTransmit implements Transmit {
         }
     }
 
-    @Override
-    public void injectLocal(final RequestContext source, final RequestContext target) {
-        InnerContext srcCtx = new InnerContext(source);
-        InnerContext targetCtx = new InnerContext(target);
-
-        Map<String, Object> requests = srcCtx.getRequests();
-        Map<String, Object> sessions = srcCtx.getSessions();
-        Map<String, Object> traces = srcCtx.getTraces();
-
-        int requestSize = requests == null ? 0 : requests.size();
-        int sessionSize = sessions == null ? 0 : sessions.size();
-        int size = requestSize + sessionSize;
-        Map<String, Object> newCallers = null;
-        if (size > 0) {
-            newCallers = new HashMap<>(size);
-            if (requestSize > 0) {
-                newCallers.putAll(requests);
-            }
-            if (sessionSize > 0) {
-                newCallers.putAll(sessions);
-            }
-        }
-        targetCtx.setTraces(traces == null ? null : new HashMap<>(traces));
-        targetCtx.setSessions(null);
-        targetCtx.setRequests(null);
-        targetCtx.setCallers(newCallers);
-    }
 }

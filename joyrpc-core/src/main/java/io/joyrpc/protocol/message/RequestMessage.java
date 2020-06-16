@@ -148,7 +148,6 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.payload = payload;
     }
 
-
     /**
      * 构造
      *

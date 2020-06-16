@@ -585,6 +585,20 @@ public class RequestContext {
     }
 
     /**
+     * 创建新的上下文，保留会话、调用者和跟踪的上下文
+     *
+     * @return 新上下文
+     */
+    public RequestContext create() {
+        RequestContext result = new RequestContext();
+        result.sessions = this.sessions;
+        result.callers = this.callers;
+        result.traces = this.traces;
+        result.dirty = true;
+        return result;
+    }
+
+    /**
      * 设置调用者
      *
      * @param callers 调用者参数
@@ -754,20 +768,6 @@ public class RequestContext {
         public void setRequests(final Map<String, Object> requests) {
             context.requests = requests;
             context.dirty = true;
-        }
-
-        /**
-         * 创建新的上下文
-         *
-         * @return 新上下文
-         */
-        public RequestContext create() {
-            RequestContext result = new RequestContext();
-            result.sessions = context.sessions;
-            result.callers = context.callers;
-            result.traces = context.traces;
-            result.dirty = true;
-            return result;
         }
 
         /**

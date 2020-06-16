@@ -20,7 +20,6 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -45,14 +44,9 @@ public interface Transmit extends ReqInjection {
      *
      * @param request 请求
      */
-    void restoreOnComplete(RequestMessage<Invocation> request);
+    @Deprecated
+    default void restoreOnComplete(RequestMessage<Invocation> request) {
 
-    /**
-     * 本地调用前，修改上下文
-     *
-     * @param source 当前上下文
-     * @param target 目标上下文
-     */
-    void injectLocal(RequestContext source, RequestContext target);
+    }
 
 }

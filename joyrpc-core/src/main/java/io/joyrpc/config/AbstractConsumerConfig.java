@@ -32,7 +32,6 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
-import io.joyrpc.context.RequestContext.InnerContext;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
@@ -66,6 +65,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.RequestContext.restore;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.Status.*;
@@ -1063,9 +1063,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             } catch (CompletionException | ExecutionException e) {
                 throw e.getCause() != null ? e.getCause() : e;
             } finally {
-                //调用结束，使用新的请求上下文，保留会话级别上下文
-                InnerContext context = new InnerContext(request.getContext());
-                RequestContext.restore(context.create());
+                //调用结束，使用新的请求上下文，保留会话、调用者和跟踪的上下文
+                restore(request.getContext().create());
             }
         }
 
@@ -1082,10 +1081,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             try {
                 CompletableFuture<Result> future = invoker.invoke(request);
                 future.whenComplete((res, err) -> {
-                    //判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
-//                    if (request.getThread() != Thread.currentThread()) {
-//                        transmits.forEach(o -> o.restoreOnComplete(request));
-//                    }
+                    //目前是让用户自己保留上下文
+                    /*//判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
+                    if (request.getThread() != Thread.currentThread()) {
+                        transmits.forEach(o -> o.restoreOnComplete(request));
+                    }*/
                     Throwable throwable = err == null ? res.getException() : err;
                     if (throwable != null) {
                         response.completeExceptionally(throwable);
@@ -1100,9 +1100,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 //调用出错，线程没有切换，保留原有上下文
                 response.completeExceptionally(e);
             } finally {
-                //调用结束，使用新的请求上下文，保留会话级别上下文
-                InnerContext context = new InnerContext(request.getContext());
-                RequestContext.restore(context.create());
+                //调用结束，使用新的请求上下文，保留会话、调用者和跟踪的上下文
+                restore(request.getContext().create());
             }
             return response;
         }

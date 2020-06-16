@@ -95,11 +95,9 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         try {
             //从会话恢复
             exporter = restore(request, channel);
-            //执行调用，包括过滤器链
-            CompletableFuture<Result> future = exporter.invoke(request);
-
             final Exporter service = exporter;
-            future.whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
+            //执行调用，包括过滤器链
+            exporter.invoke(request).whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
 
         } catch (ClassNotFoundException e) {
             sendException(channel, new RpcException(error(request.getPayLoad(), channel, e.getMessage())), request, null);

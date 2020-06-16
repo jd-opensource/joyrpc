@@ -26,8 +26,8 @@ import io.joyrpc.cluster.discovery.config.ConfigHandler;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.config.ConfigAware;
-import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.InterfaceOption.MethodOption;
+import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.config.Warmup;
 import io.joyrpc.constants.Constants;
@@ -328,31 +328,26 @@ public class Exporter extends AbstractService {
     /**
      * 调用方法
      *
-     * @param request
-     * @return
+     * @param request 请求
+     * @return Future对象
      */
     protected CompletableFuture<Result> invokeMethod(final RequestMessage<Invocation> request) {
-
-        Invocation invocation = request.getPayLoad();
-
-        CompletableFuture<Result> resultFuture;
+        final CompletableFuture<Result> result = new CompletableFuture<>();
         //恢复上下文，因为过滤链（缓存）这些是异步的
-        RequestContext context = request.getContext();
-        RequestContext.restore(context);
-        try {
-            MethodCaller caller = ((InterfaceOption.ProviderMethodOption) request.getOption()).getCaller();
-            // 反射 真正调用业务代码
-            Object value = caller != null ? caller.invoke(invocation.getArgs()) : invocation.invoke(ref);
-            resultFuture = CompletableFuture.completedFuture(new Result(context, value));
-        } catch (IllegalArgumentException | IllegalAccessException e) { // 非法参数，可能是实现类和接口类不对应
-            resultFuture = CompletableFuture.completedFuture(new Result(context, e));
-        } catch (InvocationTargetException e) { // 业务代码抛出异常
-            resultFuture = CompletableFuture.completedFuture(new Result(context, e.getCause()));
-        } finally {
-            RequestContext.remove();
-        }
-
-        return resultFuture;
+        request.restore(() -> {
+            try {
+                Invocation invocation = request.getPayLoad();
+                MethodCaller caller = ((ProviderMethodOption) request.getOption()).getCaller();
+                // 反射 真正调用业务代码
+                Object value = caller != null ? caller.invoke(invocation.getArgs()) : invocation.invoke(ref);
+                result.complete(new Result(request.getContext(), value));
+            } catch (IllegalArgumentException | IllegalAccessException e) { // 非法参数，可能是实现类和接口类不对应
+                result.complete(new Result(request.getContext(), e));
+            } catch (InvocationTargetException e) { // 业务代码抛出异常
+                result.complete(new Result(request.getContext(), e.getCause()));
+            }
+        });
+        return result;
     }
 
     /**

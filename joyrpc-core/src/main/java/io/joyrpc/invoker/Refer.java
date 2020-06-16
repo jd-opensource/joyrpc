@@ -480,7 +480,7 @@ public class Refer extends AbstractService {
         session.put(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
         session.put(KEY_APPGROUP, GlobalContext.getString(KEY_APPGROUP));
         //创建服务端请求
-        final RequestMessage<Invocation> newRequest = new RequestMessage();
+        final RequestMessage<Invocation> newRequest = new RequestMessage<>();
         newRequest.setTimeout(request.getTimeout());
         newRequest.setCreateTime(request.getCreateTime());
         newRequest.setReceiveTime(SystemClock.now());

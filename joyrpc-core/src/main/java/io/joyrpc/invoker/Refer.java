@@ -57,6 +57,7 @@ import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.Client;
+import io.joyrpc.transport.Server;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
@@ -78,7 +79,6 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
-import static io.joyrpc.context.RequestContext.restore;
 
 /**
  * 引用
@@ -468,10 +468,10 @@ public class Refer extends AbstractService {
         if (local == null) {
             return null;
         }
-        InetSocketAddress localAddress = local.getServer().getLocalAddress();
+        Server server = local.getServer();
+        InetSocketAddress localAddress = server.getLocalAddress();
         request.setLocalAddress(localAddress);
         request.setRemoteAddress(localAddress);
-        RequestContext srcCtx = RequestContext.getContext();
         //构造会话
         DefaultSession session = new DefaultSession();
         session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
@@ -480,7 +480,7 @@ public class Refer extends AbstractService {
         session.put(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
         session.put(KEY_APPGROUP, GlobalContext.getString(KEY_APPGROUP));
         //创建服务端请求
-        RequestMessage<Invocation> newRequest = new RequestMessage();
+        final RequestMessage<Invocation> newRequest = new RequestMessage();
         newRequest.setTimeout(request.getTimeout());
         newRequest.setCreateTime(request.getCreateTime());
         newRequest.setReceiveTime(SystemClock.now());
@@ -494,18 +494,23 @@ public class Refer extends AbstractService {
         newRequest.setPayLoad(request.getPayLoad().create());
         newRequest.setContext(new RequestContext());
         newRequest.setSession(session);
+        //透传处理
+        transmits.forEach(o -> o.restoreOnReceive(newRequest, session));
+        local.setup(newRequest);
 
-        try {
-            //透传处理
-            transmits.forEach(o -> o.restoreOnReceive(newRequest, session));
-            //服务端上下文
-            restore(newRequest.getContext());
-            local.setup(newRequest);
-            return local.invoke(newRequest);
-        } finally {
-            //恢复原始上下文
-            restore(srcCtx);
-        }
+        final CompletableFuture<Result> result = new CompletableFuture<>();
+        //异步执行
+        server.runAsync(() -> {
+            //恢复服务端上下文
+            newRequest.restore(() -> local.invoke(newRequest).whenComplete((r, err) -> {
+                if (err != null) {
+                    result.completeExceptionally(err);
+                } else {
+                    result.complete(r);
+                }
+            }));
+        });
+        return result;
     }
 
     @Override

@@ -408,7 +408,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      */
     public void restore(final Runnable runnable) {
         boolean flag = context != null && thread == Thread.currentThread();
-        if (!flag) {
+        if (flag) {
             runnable.run();
         } else {
             try {

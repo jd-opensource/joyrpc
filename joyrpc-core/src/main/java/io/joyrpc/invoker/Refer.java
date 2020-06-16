@@ -472,6 +472,13 @@ public class Refer extends AbstractService {
         request.setLocalAddress(localAddress);
         request.setRemoteAddress(localAddress);
         RequestContext srcCtx = RequestContext.getContext();
+        //构造会话
+        DefaultSession session = new DefaultSession();
+        session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
+        session.put(KEY_APPID, GlobalContext.getString(KEY_APPID));
+        session.put(KEY_APPNAME, GlobalContext.getString(KEY_APPNAME));
+        session.put(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
+        session.put(KEY_APPGROUP, GlobalContext.getString(KEY_APPGROUP));
         //创建服务端请求
         RequestMessage<Invocation> newRequest = new RequestMessage();
         newRequest.setTimeout(request.getTimeout());
@@ -482,16 +489,11 @@ public class Refer extends AbstractService {
         newRequest.setThread(Thread.currentThread());
         newRequest.setMethodName(request.getMethodName());
         //本地调用，直接认证成功
-        newRequest.setAuthenticated(session -> Session.AUTH_SESSION_SUCCESS);
+        newRequest.setAuthenticated(s -> Session.AUTH_SESSION_SUCCESS);
+        newRequest.setAuthorization(r -> Boolean.TRUE);
         newRequest.setPayLoad(request.getPayLoad().create());
         newRequest.setContext(new RequestContext());
-        //构造会话
-        DefaultSession session = new DefaultSession();
-        session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
-        session.put(KEY_APPID, GlobalContext.getString(KEY_APPID));
-        session.put(KEY_APPNAME, GlobalContext.getString(KEY_APPNAME));
-        session.put(KEY_APPINSID, GlobalContext.getString(KEY_APPINSID));
-        session.put(KEY_APPGROUP, GlobalContext.getString(KEY_APPGROUP));
+        newRequest.setSession(session);
 
         try {
             //透传处理

@@ -76,11 +76,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             return;
         }
         RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
-        //绑定上下文
-        request.setContext(RequestContext.getContext());
-        Invocation invocation = request.getPayLoad();
         Channel channel = context.getChannel();
-
         if (request.isTimeout(request::getReceiveTime)) {
             // 客户端已经超时的请求
             logger.warn(ExceptionCode.format(ExceptionCode.PROVIDER_DISCARD_TIMEOUT_MESSAGE)
@@ -93,25 +89,26 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             return;
         }
 
+        //绑定上下文
+        request.setContext(RequestContext.getContext());
         Exporter exporter = null;
         try {
             //从会话恢复
             exporter = restore(request, channel);
-
             //执行调用，包括过滤器链
             CompletableFuture<Result> future = exporter.invoke(request);
 
             final Exporter service = exporter;
             future.whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
 
-        } catch (ClassNotFoundException | NoSuchMethodException e) {
-            sendException(channel, new RpcException(error(invocation, channel, e.getMessage())), request, null);
+        } catch (ClassNotFoundException e) {
+            sendException(channel, new RpcException(error(request.getPayLoad(), channel, e.getMessage())), request, null);
         } catch (LafException e) {
             sendException(channel, e, request, exporter);
         } catch (Throwable e) {
-            sendException(channel, new RpcException(error(invocation, channel, e.getMessage()), e), request, exporter);
+            sendException(channel, new RpcException(error(request.getPayLoad(), channel, e.getMessage()), e), request, exporter);
         } finally {
-            //清理上下文ƒ
+            //清理上下文
             RequestContext.remove();
         }
     }
@@ -163,12 +160,9 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
      * @param request 请求
      * @param channel 通道
      * @return 服务
-     * @throws ClassNotFoundException  类没有找到异常
-     * @throws NoSuchMethodException   方法没有找到异常
-     * @throws MethodOverloadException 方法重载异常
+     * @throws ClassNotFoundException 类没有找到异常
      */
-    protected Exporter restore(final RequestMessage<Invocation> request, final Channel channel)
-            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
+    protected Exporter restore(final RequestMessage<Invocation> request, final Channel channel) throws ClassNotFoundException {
         Exporter exporter = null;
         ServerSession session = (ServerSession) request.getSession();
         //从会话恢复接口和别名

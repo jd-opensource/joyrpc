@@ -401,6 +401,25 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         return true;
     }
 
+    /**
+     * 恢复上下文并允许
+     *
+     * @param runnable 执行器
+     */
+    public void restore(final Runnable runnable) {
+        boolean flag = context != null && thread == Thread.currentThread();
+        if (!flag) {
+            runnable.run();
+        } else {
+            try {
+                RequestContext.restore(context);
+                runnable.run();
+            } finally {
+                RequestContext.remove();
+            }
+        }
+    }
+
     @Override
     public String toString() {
         return "RequestMessage{" +

@@ -407,9 +407,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * @param runnable 执行器
      */
     public void restore(final Runnable runnable) {
-        if (context == null || thread == Thread.currentThread()) {
+        if (context == null) {
             runnable.run();
         } else {
+            //不用判断线程，因为在某些情况下，异步线程和调用主线程一样，但是异步线程执行的时候，主线程的上下文已经被清空了。
             try {
                 RequestContext.restore(context);
                 runnable.run();

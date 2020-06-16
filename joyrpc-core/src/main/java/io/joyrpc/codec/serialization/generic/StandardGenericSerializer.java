@@ -431,7 +431,7 @@ public class StandardGenericSerializer implements GenericSerializer {
                 return Enum.valueOf((Class<Enum>) realType, name.toString());
             }
         }
-        return realizeMap2Pojo(pojo, realType, history);
+        return realizeMap2Pojo(pojo, realType, genericType, history);
     }
 
     /**
@@ -457,13 +457,28 @@ public class StandardGenericSerializer implements GenericSerializer {
      * @param history       历史
      * @return 目标对象
      */
-    protected Object realizeMap2Pojo(final Map<?, ?> pojo, final Class<?> resolvedClass, final Map<Object, Object> history) throws Exception {
+    protected Object realizeMap2Pojo(final Map<?, ?> pojo, final Class<?> resolvedClass, final Type resolvedType, final Map<Object, Object> history) throws Exception {
         Object result = newInstance(resolvedClass);
         history.put(pojo, result);
+        //根据入参类型，匹配泛型T的真正类型
+        Map<TypeVariable, Type> valueRealTypes = new HashMap<>();
+        if (resolvedType instanceof ParameterizedType) {
+            TypeVariable[] typeVariables = resolvedClass.getTypeParameters();
+            Type[] genericTypes = ((ParameterizedType) resolvedType).getActualTypeArguments();
+            for (int i = 0; i < typeVariables.length; i++) {
+                valueRealTypes.put(typeVariables[i], genericTypes[i]);
+            }
+        }
+        //逐一设置字段的值
         for (Map.Entry<?, ?> entry : pojo.entrySet()) {
             if (entry.getKey() instanceof String && entry.getValue() != null) {
                 setValue(result.getClass(), (String) entry.getKey(), result, (c, t) -> {
                     try {
+                        //如果字段是泛型，设置真正的类型
+                        if (t instanceof TypeVariable) {
+                            Type realType = valueRealTypes.get(t);
+                            c = realType instanceof Class ? (Class) realType : c;
+                        }
                         return realize(entry.getValue(), c, t, history);
                     } catch (CodecException e) {
                         throw e;

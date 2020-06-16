@@ -461,14 +461,7 @@ public class StandardGenericSerializer implements GenericSerializer {
         Object result = newInstance(resolvedClass);
         history.put(pojo, result);
         //根据入参类型，匹配泛型T的真正类型
-        Map<TypeVariable, Type> valueRealTypes = new HashMap<>();
-        if (resolvedType instanceof ParameterizedType) {
-            TypeVariable[] typeVariables = resolvedClass.getTypeParameters();
-            Type[] genericTypes = ((ParameterizedType) resolvedType).getActualTypeArguments();
-            for (int i = 0; i < typeVariables.length; i++) {
-                valueRealTypes.put(typeVariables[i], genericTypes[i]);
-            }
-        }
+        Map<TypeVariable, Type> valueRealTypes = getValueRealTypes(resolvedClass, resolvedType);
         //逐一设置字段的值
         for (Map.Entry<?, ?> entry : pojo.entrySet()) {
             if (entry.getKey() instanceof String && entry.getValue() != null) {
@@ -476,7 +469,7 @@ public class StandardGenericSerializer implements GenericSerializer {
                     try {
                         //如果字段是泛型，设置真正的类型
                         if (t instanceof TypeVariable) {
-                            Type realType = valueRealTypes.get(t);
+                            Type realType = valueRealTypes == null ? null : valueRealTypes.get(t);
                             c = realType instanceof Class ? (Class) realType : c;
                         }
                         return realize(entry.getValue(), c, t, history);
@@ -499,6 +492,26 @@ public class StandardGenericSerializer implements GenericSerializer {
             }
         }
         return result;
+    }
+
+    /**
+     * 根据入参类型，匹配泛型T的真正类型
+     *
+     * @param resolvedClass 类型
+     * @param resolvedType  泛型
+     * @return
+     */
+    protected Map<TypeVariable, Type> getValueRealTypes(final Class<?> resolvedClass, final Type resolvedType) {
+        if (resolvedType instanceof ParameterizedType) {
+            Map<TypeVariable, Type> valueRealTypes = new HashMap<>();
+            TypeVariable[] typeVariables = resolvedClass.getTypeParameters();
+            Type[] genericTypes = ((ParameterizedType) resolvedType).getActualTypeArguments();
+            for (int i = 0; i < typeVariables.length; i++) {
+                valueRealTypes.put(typeVariables[i], genericTypes[i]);
+            }
+            return valueRealTypes;
+        }
+        return null;
     }
 
     /**

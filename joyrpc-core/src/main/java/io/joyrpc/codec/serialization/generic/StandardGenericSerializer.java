@@ -470,7 +470,12 @@ public class StandardGenericSerializer implements GenericSerializer {
                         //如果字段是泛型，设置真正的类型
                         if (t instanceof TypeVariable) {
                             Type realType = valueRealTypes == null ? null : valueRealTypes.get(t);
-                            c = realType instanceof Class ? (Class) realType : c;
+                            if (realType instanceof Class) {
+                                c = (Class<?>) realType;
+                            } else if (realType instanceof ParameterizedType) {
+                                c = (Class<?>) ((ParameterizedType) realType).getRawType();
+                                t = realType;
+                            }
                         }
                         return realize(entry.getValue(), c, t, history);
                     } catch (CodecException e) {

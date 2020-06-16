@@ -20,10 +20,7 @@ package io.joyrpc.example.service;
  * #L%
  */
 
-import io.joyrpc.example.service.vo.EchoData;
-import io.joyrpc.example.service.vo.EchoRequest;
-import io.joyrpc.example.service.vo.EchoResponse;
-import io.joyrpc.example.service.vo.Java8TimeObj;
+import io.joyrpc.example.service.vo.*;
 
 import javax.validation.constraints.NotNull;
 
@@ -51,6 +48,10 @@ public interface DemoService {
     }
 
     default EchoResponse echoRequestGeneric(EchoRequest request) {
+        return request == null ? null : new EchoResponse<>(request.getHeader(), request.getBody());
+    }
+
+    default EchoResponse echoDataRequest(EchoDataRequest request) {
         return request == null ? null : new EchoResponse<>(request.getHeader(), request.getBody());
     }
 

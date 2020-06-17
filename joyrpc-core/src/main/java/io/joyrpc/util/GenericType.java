@@ -71,7 +71,16 @@ public class GenericType {
      */
     protected void setGenericType(Type genericType) {
         this.genericType = genericType;
-        this.type = genericType instanceof Class ? (Class) genericType : this.type;
+        if (type != genericType) {
+            if (genericType instanceof Class) {
+                this.type = (Class) genericType;
+            } else if (genericType instanceof ParameterizedType) {
+                Type rawType = ((ParameterizedType) genericType).getRawType();
+                if (rawType instanceof Class && rawType != type) {
+                    type = (Class) rawType;
+                }
+            }
+        }
     }
 
     /**

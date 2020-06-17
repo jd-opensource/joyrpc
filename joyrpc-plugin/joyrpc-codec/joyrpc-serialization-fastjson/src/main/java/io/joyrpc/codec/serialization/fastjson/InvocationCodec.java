@@ -89,7 +89,7 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
             out.writeString(invocation.getMethodName());
             out.append(",");
             //4.argsType
-            if (Callback.class.isAssignableFrom(invocation.getClazz())) {
+            if (Callback.class.isAssignableFrom(invocation.getClazz()) || invocation.isGeneric()) {
                 //回调需要写上实际的参数类型
                 ObjectSerializer argsTypeSerializer = serializer.getObjectWriter(String[].class);
                 out.writeFieldName(ARGS_TYPE);
@@ -217,8 +217,9 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
      */
     protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
         try {
+            Class[] argClasses = invocation.getArgClasses();
             //计算真实的类型
-            Type[] types = invocation.computeTypes();
+            Type[] types = argClasses == null ? invocation.computeTypes() : argClasses;
             //空数组
             if (lexer.token() == JSONToken.NULL) {
                 if (types.length == 0) {

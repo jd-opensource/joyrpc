@@ -71,6 +71,7 @@ public class GenericType {
      */
     protected void setGenericType(Type genericType) {
         this.genericType = genericType;
+        this.type = genericType instanceof Class ? (Class) genericType : this.type;
     }
 
     /**

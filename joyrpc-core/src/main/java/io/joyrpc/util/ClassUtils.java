@@ -2177,15 +2177,13 @@ public class ClassUtils {
                 return;
             }
             try {
-                Type gType = genericType.getGenericType();
-                Class fieldType = gType instanceof Class ? (Class) gType : genericType.getType();
                 if (setter != null) {
-                    setter.invoke(target, function.apply(fieldType, gType));
+                    setter.invoke(target, function.apply(genericType.getType(), genericType.getGenericType()));
                 } else if (field != null) {
                     if (!field.isAccessible()) {
                         field.setAccessible(true);
                     }
-                    field.set(target, function.apply(fieldType, gType));
+                    field.set(target, function.apply(genericType.getType(), genericType.getGenericType()));
                 }
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);

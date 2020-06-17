@@ -66,7 +66,7 @@ public class JsonGenericSerializer implements GenericSerializer {
                 Object[] paramArgs = (Object[]) (invocation.getArgs()[2]);
                 byte[] json = null;
                 if (paramArgs != null && paramArgs.length > 0) {
-                    json = paramArgs[0] instanceof byte[] ? (byte[]) paramArgs[0] : paramArgs[0].toString().getBytes(UTF_8);
+                    json = paramArgs[0] instanceof byte[] ? (byte[]) paramArgs[0] : (paramArgs[0] == null ? null : paramArgs[0].toString().getBytes(UTF_8));
                 }
                 if (json == null || json.length == 0) {
                     throw new CodecException("The number of parameter is wrong.");

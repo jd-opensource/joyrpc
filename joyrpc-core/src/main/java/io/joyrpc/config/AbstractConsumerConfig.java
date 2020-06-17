@@ -921,6 +921,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             boolean isAsync = this.async || isReturnFuture;
             //请求上下文
             RequestContext context = RequestContext.getContext();
+            //调用之前链路是否为异步
+            boolean isAsyncBefore = context.isAsync();
             //上下文的异步必须设置成completeFuture
             context.setAsync(isReturnFuture);
             //构造请求消息，参数类型放在Refer里面设置，使用缓存避免每次计算加快性能
@@ -950,18 +952,23 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             invoker.setup(request);
             //调用
             Object response = doInvoke(invoker, request, isAsync);
-            if (isAsync) {
-                if (isReturnFuture) {
-                    //方法返回值为 future
-                    return response;
+            try {
+                if (isAsync) {
+                    if (isReturnFuture) {
+                        //方法返回值为 future
+                        return response;
+                    } else {
+                        //手动异步
+                        context.setFuture((CompletableFuture<?>) response);
+                        return null;
+                    }
                 } else {
-                    //手动异步
-                    context.setFuture((CompletableFuture<?>) response);
-                    return null;
+                    // 返回同步结果
+                    return response;
                 }
-            } else {
-                // 返回同步结果
-                return response;
+            } finally {
+                //重置异步标识，防止影响同一context下的provider业务逻辑以及其他consumer
+                context.setAsync(isAsyncBefore);
             }
         }
 

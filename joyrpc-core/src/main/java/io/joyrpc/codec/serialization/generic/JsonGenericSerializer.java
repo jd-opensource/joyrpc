@@ -21,6 +21,7 @@ package io.joyrpc.codec.serialization.generic;
  */
 
 import io.joyrpc.Plugin;
+import io.joyrpc.codec.Base64;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.codec.serialization.Json;
 import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
@@ -29,6 +30,7 @@ import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.message.Call;
 
+import java.io.IOException;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.HashMap;
@@ -64,10 +66,7 @@ public class JsonGenericSerializer implements GenericSerializer {
                 //计算真实的类型，处理了泛型调用
                 Type[] types = invocation.computeTypes();
                 Object[] paramArgs = (Object[]) (invocation.getArgs()[2]);
-                byte[] json = null;
-                if (paramArgs != null && paramArgs.length > 0) {
-                    json = paramArgs[0] instanceof byte[] ? (byte[]) paramArgs[0] : (paramArgs[0] == null ? null : paramArgs[0].toString().getBytes(UTF_8));
-                }
+                byte[] json = paramArgs != null && paramArgs.length > 0 ? getBytes(paramArgs[0]) : null;
                 if (json == null || json.length == 0) {
                     throw new CodecException("The number of parameter is wrong.");
                 } else {
@@ -81,8 +80,32 @@ public class JsonGenericSerializer implements GenericSerializer {
                     }
                 }
             }
-        } catch (NoSuchMethodException | MethodOverloadException | ClassNotFoundException e) {
+        } catch (NoSuchMethodException | MethodOverloadException | ClassNotFoundException | IOException e) {
             throw new CodecException(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取字节数据
+     *
+     * @param arg 参数
+     * @return 字节数据
+     * @throws IOException
+     */
+    protected byte[] getBytes(final Object arg) throws IOException {
+        if (arg instanceof byte[]) {
+            return (byte[]) arg;
+        } else if (arg == null) {
+            return null;
+        } else {
+            String value = arg.toString();
+            switch (value.charAt(0)) {
+                case '[':
+                case '{':
+                    return value.getBytes(UTF_8);
+                default:
+                    return Base64.decode(value);
+            }
         }
     }
 

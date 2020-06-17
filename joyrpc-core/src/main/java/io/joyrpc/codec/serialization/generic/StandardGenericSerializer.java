@@ -463,29 +463,25 @@ public class StandardGenericSerializer implements GenericSerializer {
         //根据入参类型，匹配泛型T的真正类型
         Map<TypeVariable, Type> valueRealTypes = getValueRealTypes(resolvedClass, resolvedType);
         //逐一设置字段的值
-        for (Map.Entry<?, ?> entry : pojo.entrySet()) {
-            if (entry.getKey() instanceof String && entry.getValue() != null) {
-                setValue(result.getClass(), (String) entry.getKey(), result, (c, t) -> {
-                    try {
-                        //如果字段是泛型，设置真正的类型
-                        if (t instanceof TypeVariable) {
-                            Type realType = valueRealTypes == null ? null : valueRealTypes.get(t);
-                            if (realType instanceof Class) {
-                                c = (Class<?>) realType;
-                            } else if (realType instanceof ParameterizedType) {
-                                c = (Class<?>) ((ParameterizedType) realType).getRawType();
-                                t = realType;
-                            }
-                        }
-                        return realize(entry.getValue(), c, t, history);
-                    } catch (CodecException e) {
-                        throw e;
-                    } catch (Exception e) {
-                        throw new CodecException(e.getMessage(), e);
+        setValues(result, pojo, (v, c, t) -> {
+            try {
+                //如果字段是泛型，设置真正的类型
+                if (t instanceof TypeVariable) {
+                    Type realType = valueRealTypes == null ? null : valueRealTypes.get(t);
+                    if (realType instanceof Class) {
+                        c = (Class<?>) realType;
+                    } else if (realType instanceof ParameterizedType) {
+                        c = (Class<?>) ((ParameterizedType) realType).getRawType();
+                        t = realType;
                     }
-                });
+                }
+                return realize(v, c, t, history);
+            } catch (CodecException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new CodecException(e.getMessage(), e);
             }
-        }
+        });
         //异常信息
         if (result instanceof Throwable) {
             Object message = pojo.get("message");

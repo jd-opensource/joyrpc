@@ -626,19 +626,18 @@ public class ClassUtils {
     /**
      * 设置值
      *
-     * @param clazz    类
-     * @param name     字段
      * @param target   目标对象
+     * @param name     字段
      * @param function 属性值函数
      * @return
      * @throws ReflectionException 反射异常
      */
-    public static boolean setValue(final Class<?> clazz, final String name, final Object target,
+    public static boolean setValue(final Object target, final String name,
                                    final BiFunction<Class<?>, Type, Object> function) throws ReflectionException {
-        if (clazz == null || name == null) {
+        if (target == null || name == null) {
             return false;
         }
-        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        ReflectAccessor accessor = getClassMeta(target.getClass()).getAccessor(name);
         if (accessor != null && accessor.isWriteable()) {
             accessor.set(target, function);
             return true;
@@ -649,23 +648,23 @@ public class ClassUtils {
     /**
      * 设置值
      *
-     * @param clazz    类
+     * @param target   目标对象
      * @param values   字段值
      * @param function 属性值函数
      * @throws ReflectionException 反射异常
      */
-    public static void setValues(final Class<?> clazz, final Map<?, ?> values,
-                                 final BiFunction<Class<?>, Type, Object> function) throws ReflectionException {
-        if (clazz == null || values == null) {
+    public static void setValues(final Object target, final Map<?, ?> values,
+                                 final TriFunction<Object, Class<?>, Type, Object> function) throws ReflectionException {
+        if (target == null || values == null) {
             return;
         }
-        ClassMeta meta = getClassMeta(clazz);
+        ClassMeta meta = getClassMeta(target.getClass());
         ReflectAccessor accessor;
         for (Map.Entry<?, ?> entry : values.entrySet()) {
             if (entry.getKey() instanceof String && entry.getValue() != null) {
                 accessor = meta.getAccessor((String) entry.getKey());
                 if (accessor != null && accessor.isWriteable()) {
-                    accessor.set(entry.getValue(), function);
+                    accessor.set(entry.getValue(), (c, t) -> function.apply(entry.getValue(), c, t));
                 }
             }
         }

@@ -664,7 +664,7 @@ public class ClassUtils {
             if (entry.getKey() instanceof String && entry.getValue() != null) {
                 accessor = meta.getAccessor((String) entry.getKey());
                 if (accessor != null && accessor.isWriteable()) {
-                    accessor.set(entry.getValue(), (c, t) -> function.apply(entry.getValue(), c, t));
+                    accessor.set(target, (c, t) -> function.apply(entry.getValue(), c, t));
                 }
             }
         }
@@ -1222,13 +1222,14 @@ public class ClassUtils {
             if (result == null) {
                 MethodMeta meta = getMethodMeta();
                 Field field = getField(name);
+                GenericType genericType = getGenericClass().get(field);
                 Method getter = meta.getGetter(name);
                 Method setter = meta.getSetter(name);
                 if (field == null && getter == null && setter == null) {
                     //不缓存，防止外部调用注入过多的无效属性造成OOM
                     return null;
                 }
-                return propertyAccessors.computeIfAbsent(name, o -> new ReflectAccessor(field, getter, setter));
+                return propertyAccessors.computeIfAbsent(name, o -> new ReflectAccessor(field, getter, setter, genericType));
             }
             return result;
         }
@@ -1257,7 +1258,9 @@ public class ClassUtils {
                 getter = getter != null && getter.getReturnType().equals(fieldType) ? getter : null;
                 setter = setter != null && setter.getParameters()[0].getType().equals(fieldType) ? setter : null;
 
-                return new ReflectAccessor(field, getter, setter);
+                GenericType genericType = getGenericClass().get(field);
+
+                return new ReflectAccessor(field, getter, setter, genericType);
 
             });
         }
@@ -2080,11 +2083,14 @@ public class ClassUtils {
         protected Method getter;
         // 设置方法
         protected Method setter;
+        // 字段泛型信息
+        protected GenericType genericType;
 
-        public ReflectAccessor(Field field, Method getter, Method setter) {
+        public ReflectAccessor(Field field, Method getter, Method setter, GenericType genericType) {
             this.field = field;
             this.getter = getter;
             this.setter = setter;
+            this.genericType = genericType;
         }
 
         /**
@@ -2171,14 +2177,17 @@ public class ClassUtils {
                 return;
             }
             try {
+                Class fieldType = genericType.getGenericType() instanceof Class ? (Class) genericType.getGenericType() : null;
                 if (setter != null) {
                     Parameter parameter = setter.getParameters()[0];
-                    setter.invoke(target, function.apply(parameter.getType(), parameter.getParameterizedType()));
+                    fieldType = fieldType == null ? parameter.getType() : fieldType;
+                    setter.invoke(target, function.apply(fieldType, parameter.getParameterizedType()));
                 } else if (field != null) {
                     if (!field.isAccessible()) {
                         field.setAccessible(true);
                     }
-                    field.set(target, function.apply(field.getType(), field.getGenericType()));
+                    fieldType = fieldType == null ? field.getType() : fieldType;
+                    field.set(target, function.apply(fieldType, field.getGenericType()));
                 }
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);

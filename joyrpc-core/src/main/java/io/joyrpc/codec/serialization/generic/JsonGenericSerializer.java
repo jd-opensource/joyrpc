@@ -35,6 +35,8 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 /**
  * JSON序列化
  */
@@ -67,7 +69,10 @@ public class JsonGenericSerializer implements GenericSerializer {
                 Object[] paramArgs = (Object[]) (invocation.getArgs()[2]);
                 byte[] json = null;
                 if (paramArgs != null && paramArgs.length > 0) {
-                    json = paramArgs[0] instanceof byte[] ? (byte[]) paramArgs[0] : BASE64_DECODER.decode((String) paramArgs[0]);
+                    json = paramArgs[0] instanceof byte[] ? (byte[]) paramArgs[0] :
+                            ((String) paramArgs[0]).startsWith("[") || ((String) paramArgs[0]).startsWith("{") ?
+                                    ((String) paramArgs[0]).getBytes(UTF_8) :
+                                    BASE64_DECODER.decode((String) paramArgs[0]);
                 }
                 if (json == null || json.length == 0) {
                     throw new CodecException("The number of parameter is wrong.");

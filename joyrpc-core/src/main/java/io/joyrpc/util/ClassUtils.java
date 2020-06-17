@@ -649,6 +649,31 @@ public class ClassUtils {
     /**
      * 设置值
      *
+     * @param clazz    类
+     * @param values   字段值
+     * @param function 属性值函数
+     * @throws ReflectionException 反射异常
+     */
+    public static void setValues(final Class<?> clazz, final Map<?, ?> values,
+                                 final BiFunction<Class<?>, Type, Object> function) throws ReflectionException {
+        if (clazz == null || values == null) {
+            return;
+        }
+        ClassMeta meta = getClassMeta(clazz);
+        ReflectAccessor accessor;
+        for (Map.Entry<?, ?> entry : values.entrySet()) {
+            if (entry.getKey() instanceof String && entry.getValue() != null) {
+                accessor = meta.getAccessor((String) entry.getKey());
+                if (accessor != null && accessor.isWriteable()) {
+                    accessor.set(entry.getValue(), function);
+                }
+            }
+        }
+    }
+
+    /**
+     * 设置值
+     *
      * @param clazz  类
      * @param field  字段
      * @param target 目标对象

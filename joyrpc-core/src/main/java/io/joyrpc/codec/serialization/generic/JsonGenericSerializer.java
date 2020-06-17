@@ -31,6 +31,7 @@ import io.joyrpc.protocol.message.Call;
 
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -41,6 +42,8 @@ import java.util.Map;
 public class JsonGenericSerializer implements GenericSerializer {
 
     protected static final Object NULL = new Object();
+
+    protected static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
     /**
      * JSON插件
@@ -62,7 +65,10 @@ public class JsonGenericSerializer implements GenericSerializer {
                 //计算真实的类型，处理了泛型调用
                 Type[] types = invocation.computeTypes();
                 Object[] paramArgs = (Object[]) (invocation.getArgs()[2]);
-                byte[] json = paramArgs == null || paramArgs.length == 0 ? null : (byte[]) paramArgs[0];
+                byte[] json = null;
+                if (paramArgs != null && paramArgs.length > 0) {
+                    json = paramArgs[0] instanceof byte[] ? (byte[]) paramArgs[0] : BASE64_DECODER.decode((String) paramArgs[0]);
+                }
                 if (json == null || json.length == 0) {
                     throw new CodecException("The number of parameter is wrong.");
                 } else {

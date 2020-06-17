@@ -2177,17 +2177,15 @@ public class ClassUtils {
                 return;
             }
             try {
-                Class fieldType = genericType.getGenericType() instanceof Class ? (Class) genericType.getGenericType() : null;
+                Type gType = genericType.getGenericType();
+                Class fieldType = gType instanceof Class ? (Class) gType : genericType.getType();
                 if (setter != null) {
-                    Parameter parameter = setter.getParameters()[0];
-                    fieldType = fieldType == null ? parameter.getType() : fieldType;
-                    setter.invoke(target, function.apply(fieldType, parameter.getParameterizedType()));
+                    setter.invoke(target, function.apply(fieldType, gType));
                 } else if (field != null) {
                     if (!field.isAccessible()) {
                         field.setAccessible(true);
                     }
-                    fieldType = fieldType == null ? field.getType() : fieldType;
-                    field.set(target, function.apply(fieldType, field.getGenericType()));
+                    field.set(target, function.apply(fieldType, gType));
                 }
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);

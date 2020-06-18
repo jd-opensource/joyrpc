@@ -22,6 +22,7 @@ package io.joyrpc.config;
 
 import io.joyrpc.Callback;
 import io.joyrpc.annotation.EnableTrace;
+import io.joyrpc.annotation.CallbackArg;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
@@ -31,6 +32,7 @@ import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.WrapperParametric;
@@ -39,6 +41,7 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 import io.joyrpc.util.SystemClock;
@@ -295,23 +298,41 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     /**
      * 获取回调方法
      *
-     * @param method 方法
+     * @param method     方法
+     * @param parametric 参数
      * @return 回调方法对象
      */
-    protected CallbackMethod getCallback(final Method method) {
+    protected CallbackMethod getCallback(final Method method, final Parametric parametric) {
         if (method == null) {
             return null;
         }
+
         Parameter result = null;
-        int index = 0;
+        Parameter parameter;
+        Class<?> type;
         Parameter[] parameters = method.getParameters();
+        //配置了回调参数
+        int index = parametric.getPositive(CALLBACK_ARG_KEY, -1);
+        if (index >= 0 && index < parameters.length) {
+            parameter = parameters[index];
+            type = parameter.getType();
+            if (type.isInterface()) {
+                //回调参数只能是接口
+                result = parameter;
+            }
+        }
+        //遍历确保只有一个回调参数
         for (int i = 0; i < parameters.length; i++) {
-            if (Callback.class.isAssignableFrom((parameters[i].getType()))) {
-                if (result != null) {
+            parameter = parameters[i];
+            type = parameter.getType();
+            if (type.isInterface() &&
+                    (Callback.class.isAssignableFrom(type)
+                            || (parameter.getAnnotation(CallbackArg.class) != null))) {
+                if (result != null && i != index) {
                     throw new InitializationException("Illegal callback parameter at methodName " + method.getName()
                             + ",just allow one callback parameter", ExceptionCode.COMMON_CALL_BACK_ERROR);
                 }
-                result = parameters[i];
+                result = parameter;
                 index = i;
             }
         }
@@ -319,7 +340,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             return null;
         }
         callback = true;
-        return new CallbackMethod(method, index, result);
+        return new CallbackMethod(interfaceClass, method, index, result, genericClass);
     }
 
     /**

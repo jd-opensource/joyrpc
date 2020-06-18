@@ -283,7 +283,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
                 parametric.getBoolean(TRACE_OPEN, enableTrace == null ? trace : enableTrace.value()),
-                getCallback(method),
+                getCallback(method, parametric),
                 parametric.getInteger(FORKS_OPTION.getName(), forks),
                 () -> selector,
                 getRoute(parametric),

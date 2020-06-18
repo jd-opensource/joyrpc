@@ -60,12 +60,14 @@ public class CallbackReqHandler implements MessageHandler {
             try {
                 //TODO 参数恢复
                 CompletableFuture<Result> future = invoker != null ? invoker.invoke(request) :
-                        Futures.completeExceptionally(new RpcException("Can't find callback invoker, callback id:" + callbackInsId));
+                        Futures.completeExceptionally(new RpcException(header, "Can't find callback invoker, callback id:" + callbackInsId));
                 future.whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         logger.error("Error occurs while invoking callback in channel " + Channel.toString(channel)
                                 + ", error message is :" + throwable.getMessage(), throwable);
-                        sendResponse(channel, header, new ResponsePayload(new RpcException(header, throwable)));
+                        sendResponse(channel, header, new ResponsePayload(
+                                throwable instanceof RpcException ? throwable :
+                                        new RpcException(header, throwable)));
                     }
                     boolean isAsync = Optional.ofNullable(result.getContext()).orElse(RequestContext.getContext()).isAsync();
                     if (isAsync) {

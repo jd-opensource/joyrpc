@@ -230,7 +230,7 @@ public class Refer extends AbstractService {
                     List<CallbackInvoker> callbacks = container.removeCallback(client);
                     if (!Shutdown.isShutdown() && cluster.isOpened()) {
                         //没有关机和集群没有销毁则重新callback
-                        callbacks.forEach(invoker -> invoker.getCallback().recallback());
+                        callbacks.forEach(invoker -> invoker.recallback());
                     }
                 }
             });

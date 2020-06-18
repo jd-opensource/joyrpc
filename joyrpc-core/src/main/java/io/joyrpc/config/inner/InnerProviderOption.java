@@ -139,7 +139,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
                 parametric.getBoolean(TRACE_OPEN, enableTrace == null ? trace : enableTrace.value()),
-                getCallback(method),
+                getCallback(method, parametric),
                 methodBlackWhiteList,
                 ipPermissions,
                 limiters,

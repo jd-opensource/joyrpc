@@ -181,18 +181,13 @@ public class GenericChecker {
     /**
      * 检查类型
      *
-     * @param clazz
-     * @param scope
+     * @param clazz    类
+     * @param scope    作用域
+     * @param consumer 消费者
      */
     public void checkClass(final Class clazz, final Scope scope, final BiConsumer<Class, Scope> consumer) {
         //参数允许是Callback
-        if (clazz.isArray()) {
-            checkClass(clazz.getComponentType(), scope, consumer);
-        } else if (uniques.add(clazz)) {
-            //防止并发检查
-            consumer.accept(clazz, scope);
-        }
-
+        consumer.accept(clazz.isArray() ? clazz.getComponentType() : clazz, scope);
     }
 
     /**

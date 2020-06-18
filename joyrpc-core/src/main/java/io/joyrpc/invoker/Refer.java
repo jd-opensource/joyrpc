@@ -73,6 +73,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -89,6 +90,10 @@ import static io.joyrpc.util.Timer.timer;
  */
 public class Refer extends AbstractService {
     private static final Logger logger = LoggerFactory.getLogger(Refer.class);
+    /**
+     * 本地消息ID
+     */
+    protected AtomicInteger localMsgId = new AtomicInteger(0);
     /**
      * 消费配置
      */
@@ -504,9 +509,12 @@ public class Refer extends AbstractService {
         transmits.forEach(o -> o.restoreOnReceive(newRequest, session));
         local.setup(newRequest);
 
+        //产生本地调用的消息ID
+        MessageHeader header = request.getHeader();
+        header.setMsgId(localMsgId.incrementAndGet());
         final CompletableFuture<Result> result = new CompletableFuture<>();
         //超时判断
-        timer().add(FUTURE_TIMEOUT_PREFIX + request.getMsgId(), SystemClock.now() + request.getHeader().getTimeout(), () -> {
+        timer().add(FUTURE_TIMEOUT_PREFIX + request.getMsgId(), SystemClock.now() + header.getTimeout(), () -> {
             if (!result.isDone()) {
                 result.completeExceptionally(new TimeoutException(String.format("It's timeout to invoke %s.%s", interfaceName, request.getMethodName())));
             }

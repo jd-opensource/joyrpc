@@ -55,9 +55,9 @@ public class GenericChecker {
     /**
      * 检测所有公共方法设计的类型
      *
-     * @param clazz
-     * @param predicate
-     * @param consumer
+     * @param clazz     类型
+     * @param predicate 断言
+     * @param consumer  消费者
      */
     public void checkMethods(final Class clazz, final Predicate<Method> predicate,
                              final BiConsumer<Class, Scope> consumer) {
@@ -79,11 +79,11 @@ public class GenericChecker {
     }
 
     /**
-     * 检查字段
+     * 检查字段类型
      *
-     * @param genericClass
-     * @param predicate
-     * @param consumer
+     * @param genericClass 泛型类型
+     * @param predicate    断言
+     * @param consumer     消费者
      */
     public void checkFields(final GenericClass genericClass, final Predicate<Field> predicate,
                             final BiConsumer<Class, Scope> consumer) {
@@ -97,20 +97,20 @@ public class GenericChecker {
     }
 
     /**
-     * 检查返回值
+     * 检查返回值类型
      *
-     * @param genericMethod
-     * @param consumer
+     * @param method   方法
+     * @param consumer 消费者
      */
-    public void checkReturnType(final GenericMethod genericMethod, final BiConsumer<Class, Scope> consumer) {
-        checkType(genericMethod.getReturnType(), genericMethod.getMethod().getGenericReturnType(), Scope.RETURN, consumer);
+    public void checkReturnType(final GenericMethod method, final BiConsumer<Class, Scope> consumer) {
+        checkType(method.getReturnType(), method.getMethod().getGenericReturnType(), Scope.RETURN, consumer);
     }
 
     /**
      * 检查参数类型
      *
-     * @param method
-     * @param consumer
+     * @param method   方法
+     * @param consumer 消费者
      */
     public void checkParameterTypes(final GenericMethod method, final BiConsumer<Class, Scope> consumer) {
         Type[] types = method.getMethod().getGenericParameterTypes();
@@ -123,10 +123,10 @@ public class GenericChecker {
     }
 
     /**
-     * 检查参数类型
+     * 检查异常类型
      *
-     * @param method
-     * @param consumer
+     * @param method   方法
+     * @param consumer 消费者
      */
     public void checkExceptionTypes(final GenericMethod method, final BiConsumer<Class, Scope> consumer) {
         Type[] types = method.getMethod().getGenericExceptionTypes();
@@ -141,10 +141,10 @@ public class GenericChecker {
     /**
      * 检查类型
      *
-     * @param genericType
-     * @param type
-     * @param scope
-     * @param consumer
+     * @param genericType 泛型类型
+     * @param type        类型
+     * @param scope       作用域
+     * @param consumer    消费者
      */
     public void checkType(final GenericType genericType, final Type type,
                           final Scope scope,

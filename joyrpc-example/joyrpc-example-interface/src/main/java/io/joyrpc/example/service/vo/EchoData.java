@@ -29,4 +29,13 @@ public class EchoData {
     public void setMessage(String message) {
         this.message = message;
     }
+
+
+    @Override
+    public String toString() {
+        return "EchoData{" +
+                "code=" + code +
+                ", message='" + message + '\'' +
+                '}';
+    }
 }

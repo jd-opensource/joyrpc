@@ -21,4 +21,11 @@ public class EchoHeader {
     public void setAttrs(Map<String, String> attrs) {
         this.attrs = attrs;
     }
+
+    @Override
+    public String toString() {
+        return "EchoHeader{" +
+                "attrs=" + attrs +
+                '}';
+    }
 }

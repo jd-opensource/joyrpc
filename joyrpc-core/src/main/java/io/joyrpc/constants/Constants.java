@@ -149,6 +149,7 @@ public class Constants {
     public static final String TRACE_OPEN = "trace.open";
     public static final String TRACE_TYPE = "trace.type";
 
+
     /**
      * 统计面板启用标识
      */

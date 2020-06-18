@@ -84,8 +84,8 @@ public abstract class AbstractExpressionCacheKeyGenerator implements CacheKeyGen
             }
         }
         Method method = invocation.getMethod();
-        Map<String, Object> context = new HashMap<>();
         Parameter[] parameters = method.getParameters();
+        Map<String, Object> context = new HashMap<>(parameters.length + 1);
         for (int i = 0; i < parameters.length; i++) {
             context.put(parameters[i].getName(), args[i]);
         }

@@ -33,4 +33,12 @@ public class EchoRequest<T> {
     public void setBody(T body) {
         this.body = body;
     }
+
+    @Override
+    public String toString() {
+        return "EchoRequest{" +
+                "header=" + header +
+                ", body=" + body +
+                '}';
+    }
 }

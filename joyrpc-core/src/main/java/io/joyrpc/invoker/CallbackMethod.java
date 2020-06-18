@@ -127,7 +127,7 @@ public class CallbackMethod {
             // 普通的 Callback<String>
             types.put(variable, (Class<?>) type);
         } else if (type instanceof TypeVariable) {
-            compute(variable, gType.getVariable(variable).getType(), types, gType);
+            compute(variable, gType.getVariable(variable).getGenericType(), types, gType);
         }
     }
 
@@ -166,7 +166,7 @@ public class CallbackMethod {
         } else if (type instanceof TypeVariable) {
             // 类上的泛型变量
             GenericType.Variable variable = gType.getVariable(((TypeVariable) type).getName());
-            return variable == null ? null : computeParameterType(variable.getType(), variable.getGenericType());
+            return variable == null ? null : computeParameterType(variable.getGenericType(), gType);
         } else if (type instanceof GenericArrayType) {
             // 泛型数组
             Class<?> result = computeParameterType(((GenericArrayType) type).getGenericComponentType(), gType);

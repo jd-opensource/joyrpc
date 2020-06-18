@@ -90,7 +90,8 @@ public class CallbackMethod {
             GenericMethod genericMethod = genericClass.get(method);
             GenericType[] genericTypes = genericMethod.getParameters();
             Map<String, Class<?>> variableTypes = new HashMap<>();
-            Type[] types = ((ParameterizedType) parameter.getParameterizedType()).getActualTypeArguments();
+            Type[] types = parameter.getParameterizedType() instanceof ParameterizedType
+                    ? ((ParameterizedType) parameter.getParameterizedType()).getActualTypeArguments() : new Type[0];
             for (int i = 0; i < types.length; i++) {
                 //计算泛型参数的类型
                 compute(variables[i].getName(), types[i], variableTypes, genericTypes[index]);

@@ -33,4 +33,12 @@ public class EchoResponse<T> {
     public void setBody(T body) {
         this.body = body;
     }
+
+    @Override
+    public String toString() {
+        return "EchoResponse{" +
+                "header=" + header +
+                ", body=" + body +
+                '}';
+    }
 }

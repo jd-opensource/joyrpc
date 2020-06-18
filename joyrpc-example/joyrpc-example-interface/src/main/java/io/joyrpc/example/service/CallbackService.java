@@ -5,13 +5,19 @@ import io.joyrpc.example.service.vo.*;
 
 public interface CallbackService {
 
-    String echoCallback(Callback<String, String> callback);
+    boolean echoGenericCallback(Callback callback);
 
-    String echoGenericCallback(Callback callback);
+    boolean echoRequestCallback(Callback<EchoRequest<EchoData>, EchoResponse<EchoData>> callback);
 
-    String echoRequestCallback(Callback<EchoRequest<EchoData>, EchoResponse<EchoData>> callback);
+    boolean echoGenericRequestCallback(Callback<EchoRequest, EchoResponse> callback);
 
-    String echoGenericRequestCallback(Callback<EchoRequest, EchoResponse> callback);
+    boolean echoDataRequestCallback(Callback<EchoDataRequest, EchoDataResponse> callback);
 
-    String echoDataRequestCallback(Callback<EchoDataRequest, EchoDataResponse> callback);
+    boolean echoGenericListener(Listener listener);
+
+    boolean echoRequestListener(Listener<EchoRequest<EchoData>, EchoResponse<EchoData>> listener);
+
+    interface Listener<Q, S> {
+        S notify(Q result);
+    }
 }

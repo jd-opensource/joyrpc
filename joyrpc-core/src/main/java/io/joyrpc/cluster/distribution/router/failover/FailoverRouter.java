@@ -149,7 +149,7 @@ public class FailoverRouter extends AbstractRouter {
                             }
                             if (timeoutPolicy != null) {
                                 //设置新的超时时间
-                                timeoutPolicy.reset(request);
+                                timeoutPolicy.decline(request);
                             }
                             retry(request, node, selector.select(candidate, node, retry, null, origins),
                                     retry + 1, policy, origins, future);

@@ -420,6 +420,21 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         }
     }
 
+    /**
+     * 时间递减
+     *
+     * @return 是否还有剩余时间
+     */
+    public boolean decline() {
+        if (timeout <= 0) {
+            //没有超时
+            return true;
+        }
+        //设置请求的超时时间
+        header.setTimeout(timeout - (int) (SystemClock.now() - createTime));
+        return header.getTimeout() > 0;
+    }
+
     @Override
     public String toString() {
         return "RequestMessage{" +

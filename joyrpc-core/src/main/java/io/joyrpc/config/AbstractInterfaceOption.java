@@ -41,7 +41,6 @@ import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
-import io.joyrpc.util.SystemClock;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
@@ -657,8 +656,8 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         }
 
         @Override
-        public void reset(final RequestMessage<Invocation> request) {
-            request.getHeader().setTimeout((int) (request.getTimeout() + request.getCreateTime() - SystemClock.now()));
+        public void decline(final RequestMessage<Invocation> request) {
+            request.decline();
         }
     }
 

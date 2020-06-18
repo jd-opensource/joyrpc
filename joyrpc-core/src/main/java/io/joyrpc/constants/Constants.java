@@ -143,6 +143,7 @@ public class Constants {
     public final static String COMMA_SEPARATOR = ",";
     public final static String EQUAL_SIGN_SEPARATOR = "=";
     public final static String AND_SEPARATOR = "&";
+    public static final String FUTURE_TIMEOUT_PREFIX = "FutureTimeout-";
     public final static String GENERIC_CLASS = "genericClass";
 
     public static final String TRACE_OPEN = "trace.open";

@@ -23,22 +23,17 @@ package io.joyrpc.cluster.distribution;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
+import java.util.function.Predicate;
+
 /**
  * 超时策略
  */
-public interface TimeoutPolicy {
-    /**
-     * 测试是否超时
-     *
-     * @param request
-     * @return
-     */
-    boolean test(RequestMessage<Invocation> request);
+public interface TimeoutPolicy extends Predicate<RequestMessage<Invocation>> {
 
     /**
      * 重置超时时间
      *
-     * @param request
+     * @param request 请求
      */
-    void reset(RequestMessage<Invocation> request);
+    void decline(RequestMessage<Invocation> request);
 }

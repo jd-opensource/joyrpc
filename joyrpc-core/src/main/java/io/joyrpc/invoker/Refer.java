@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -79,6 +80,7 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
+import static io.joyrpc.util.Timer.timer;
 
 /**
  * 引用
@@ -434,6 +436,10 @@ public class Refer extends AbstractService {
      * @return 结果
      */
     protected CompletableFuture<Result> distribute(final RequestMessage<Invocation> request) {
+        //需要重新设置一下超时时间，防止过滤器占用时间过多
+        if (!request.decline()) {
+            return Futures.completeExceptionally(new TimeoutException(String.format("It's timeout to invoke %s.%s", interfaceName, request.getMethodName())));
+        }
         if (inJvm) {
             //本地调用
             CompletableFuture<Result> result = distribute2Local(request, local);
@@ -499,6 +505,12 @@ public class Refer extends AbstractService {
         local.setup(newRequest);
 
         final CompletableFuture<Result> result = new CompletableFuture<>();
+        //超时判断
+        timer().add(FUTURE_TIMEOUT_PREFIX + request.getMsgId(), SystemClock.now() + request.getHeader().getTimeout(), () -> {
+            if (!result.isDone()) {
+                result.completeExceptionally(new TimeoutException(String.format("It's timeout to invoke %s.%s", interfaceName, request.getMethodName())));
+            }
+        });
         //异步执行
         server.runAsync(() -> {
             //恢复服务端上下文

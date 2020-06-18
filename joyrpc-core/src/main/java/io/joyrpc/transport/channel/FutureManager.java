@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static io.joyrpc.constants.Constants.FUTURE_TIMEOUT_PREFIX;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -189,7 +190,7 @@ public class FutureManager<I, M> {
      * @param <I>
      */
     protected static class FutureTimeoutTask<I> implements Timer.TimeTask {
-        public static final String FUTURE_TIMEOUT = "FutureTimeout-";
+
         /**
          * 消息ID
          */
@@ -218,7 +219,7 @@ public class FutureManager<I, M> {
 
         @Override
         public String getName() {
-            return FUTURE_TIMEOUT + messageId.toString();
+            return FUTURE_TIMEOUT_PREFIX + messageId.toString();
         }
 
         @Override

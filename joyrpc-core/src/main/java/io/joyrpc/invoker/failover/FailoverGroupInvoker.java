@@ -140,7 +140,7 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
                     } else {
                         Invocation invocation = request.getPayLoad();
                         //重新设置剩余超时时间
-                        policy.getTimeoutPolicy().reset(request);
+                        policy.getTimeoutPolicy().decline(request);
                         //TODO 考虑不同的环境和协议版本需要不同的参数，切换分组的时候重新生成一份对象（是否合理）
                         request.setPayLoad(new Invocation(invocation.getClazz(), invocation.getMethod(), invocation.getArgs()));
                         retry(request, retry + 1, policy, future);

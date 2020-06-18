@@ -640,6 +640,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         super.addAttribute2Map(params);
         addElement2Map(params, Constants.SERVICE_NAME_OPTION, getServiceName());
         addElement2Map(params, Constants.ALIAS_OPTION, alias);
+        addElement2Map(params, Constants.INTERFACE_CLAZZ_OPTION, getInterfaceClazz());
         addElement2Map(params, Constants.FILTER_OPTION, filter);
         //register与subscribe默认值为true，防止url过长，为true的情况，不加入params
         if (!register) {

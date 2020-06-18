@@ -28,23 +28,24 @@ public class CallbackServiceImpl implements CallbackService {
         AtomicInteger counter = new AtomicInteger();
         ScheduledExecutorService scheduled = Executors.newSingleThreadScheduledExecutor();
         scheduled.scheduleWithFixedDelay(() -> {
+            int count = counter.incrementAndGet();
             genericCallbacks.forEach(c -> doCallback("GenericCallback",
-                    () -> c.notify("req " + counter.incrementAndGet())
+                    () -> c.notify("req " + count)
             ));
             requestCallbacks.forEach(c -> doCallback("RequestCallback",
-                    () -> c.notify(new EchoRequest<>(new EchoHeader(), new EchoData(counter.get(), "the " + counter.get() + "req")))
+                    () -> c.notify(new EchoRequest<>(new EchoHeader(), new EchoData(count, "the " + count + "req")))
             ));
             genericRequestCallbacks.forEach(c -> doCallback("GenericRequestCallback",
-                    () -> c.notify(new EchoRequest<>(new EchoHeader(), new EchoData(counter.get(), "the " + counter.get() + "req")))
+                    () -> c.notify(new EchoRequest<>(new EchoHeader(), new EchoData(count, "the " + count + "req")))
             ));
             dataRequestCallbacks.forEach(c -> doCallback("DataRequestCallback",
-                    () -> c.notify(new EchoDataRequest(new EchoHeader(), new EchoData(counter.get(), "the " + counter.get() + "req")))
+                    () -> c.notify(new EchoDataRequest(new EchoHeader(), new EchoData(count, "the " + count + "req")))
             ));
             genericListeners.forEach(c -> doCallback("GenericListener",
                     () -> c.notify("req " + counter.incrementAndGet())
             ));
             requestListeners.forEach(c -> doCallback("RequestListener",
-                    () -> c.notify(new EchoRequest<>(new EchoHeader(), new EchoData(counter.get(), "the " + counter.get() + "req")))
+                    () -> c.notify(new EchoRequest<>(new EchoHeader(), new EchoData(count, "the " + count + "req")))
             ));
         }, 5000, 5000, TimeUnit.MILLISECONDS);
     }

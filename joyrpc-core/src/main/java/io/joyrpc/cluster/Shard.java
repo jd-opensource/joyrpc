@@ -398,7 +398,7 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
                     url.getString(Region.DATA_CENTER),
                     url.getProtocol(),
                     url,
-                    url.getPositiveInt(WEIGHT),
+                    url.getInteger(WEIGHT),
                     ShardState.INITIAL);
         }
 
@@ -432,7 +432,7 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             this.dataCenter = dataCenter;
             this.protocol = protocol;
             this.url = url;
-            this.weight = weight;
+            this.weight = weight < 0 ? 0 : weight;
             this.state = state;
         }
 

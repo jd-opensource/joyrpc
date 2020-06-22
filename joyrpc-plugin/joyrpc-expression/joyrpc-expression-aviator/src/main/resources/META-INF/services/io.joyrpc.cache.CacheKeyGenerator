@@ -1,1 +1,1 @@
-io.joyrpc.cache.jexl.JexlCacheKeyGenerator
+io.joyrpc.cache.aviator.AviatorCacheKeyGenerator

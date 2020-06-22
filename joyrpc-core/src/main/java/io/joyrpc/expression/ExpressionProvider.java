@@ -28,9 +28,9 @@ import io.joyrpc.extension.Extensible;
 @Extensible("expressionProvider")
 public interface ExpressionProvider {
 
-    int AVIATOR_ORDER = 90;
+    int MVEL_ORDER = 90;
 
-    int SPEL_ORDER = AVIATOR_ORDER + 10;
+    int SPEL_ORDER = MVEL_ORDER + 10;
 
     int JEXL_ORDER = SPEL_ORDER + 10;
 

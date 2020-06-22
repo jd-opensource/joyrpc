@@ -32,9 +32,9 @@ import io.joyrpc.protocol.message.Call;
 @Extensible(value = "cacheKeyGenerator")
 public interface CacheKeyGenerator {
 
-    int AVIATOR_ORDER = 90;
+    int MVEL_ORDER = 90;
 
-    int SPEL_ORDER = AVIATOR_ORDER + 10;
+    int SPEL_ORDER = MVEL_ORDER + 10;
 
     int JEXL_ORDER = SPEL_ORDER + 10;
 

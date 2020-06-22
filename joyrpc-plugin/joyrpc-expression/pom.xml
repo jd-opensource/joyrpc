@@ -14,6 +14,5 @@
 
     <modules>
         <module>joyrpc-expression-jexl</module>
-        <module>joyrpc-expression-aviator</module>
     </modules>
 </project>

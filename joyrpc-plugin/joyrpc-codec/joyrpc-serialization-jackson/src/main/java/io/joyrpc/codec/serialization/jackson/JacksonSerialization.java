@@ -1,13 +1,35 @@
 package io.joyrpc.codec.serialization.jackson;
 
+/*-
+ * #%L
+ * joyrpc
+ * %%
+ * Copyright (C) 2019 joyrpc.io
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
+import io.joyrpc.protocol.message.Invocation;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -105,6 +127,10 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         protected ObjectMapper mapper = new ObjectMapper();
 
         public JacksonnSerializer() {
+            SimpleModule module = new SimpleModule();
+            module.addSerializer(Invocation.class, new InvocationSerializer());
+            module.addDeserializer(Invocation.class, new InvocationDeserializer());
+            mapper.registerModule(module);
         }
 
         @Override
@@ -131,7 +157,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                 UnsafeByteArrayOutputStream baos = new UnsafeByteArrayOutputStream();
                 mapper.writeValue(baos, object);
                 return baos.toByteArray();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 throw new SerializerException("Error occurred while serializing object", e);
             }
         }
@@ -142,13 +168,8 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                 return null;
             }
             try {
-                return (T) mapper.readValue(text, new com.fasterxml.jackson.core.type.TypeReference<Object>() {
-                    @Override
-                    public Type getType() {
-                        return type;
-                    }
-                });
-            } catch (Exception e) {
+                return (T) mapper.readValue(text, new SimpleTypeReference(type));
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -159,13 +180,8 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                 return null;
             }
             try {
-                return (T) mapper.readValue(text, new com.fasterxml.jackson.core.type.TypeReference<Object>() {
-                    @Override
-                    public Type getType() {
-                        return reference.getType();
-                    }
-                });
-            } catch (Exception e) {
+                return (T) mapper.readValue(text, new SimpleTypeReference(reference.getType()));
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -176,13 +192,8 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                 return null;
             }
             try {
-                return (T) mapper.readValue(is, new com.fasterxml.jackson.core.type.TypeReference<Object>() {
-                    @Override
-                    public Type getType() {
-                        return type;
-                    }
-                });
-            } catch (Exception e) {
+                return (T) mapper.readValue(is, new SimpleTypeReference(type));
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -193,13 +204,8 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                 return null;
             }
             try {
-                return (T) mapper.readValue(is, new com.fasterxml.jackson.core.type.TypeReference<Object>() {
-                    @Override
-                    public Type getType() {
-                        return reference.getType();
-                    }
-                });
-            } catch (Exception e) {
+                return (T) mapper.readValue(is, new SimpleTypeReference(reference.getType()));
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -215,9 +221,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                     }
                 }
                 parser.close();
-            } catch (SerializerException e) {
-                throw e;
-            } catch (Exception e) {
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -233,9 +237,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                     }
                 }
                 parser.close();
-            } catch (SerializerException e) {
-                throw e;
-            } catch (Exception e) {
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
@@ -249,12 +251,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
          */
         protected Object parseObject(final JsonParser parser, final Type type) {
             try {
-                return parser.readValueAs(new com.fasterxml.jackson.core.type.TypeReference<Object>() {
-                    @Override
-                    public Type getType() {
-                        return type;
-                    }
-                });
+                return parser.readValueAs(new SimpleTypeReference(type));
             } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
@@ -264,7 +261,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         public <T> void serialize(final OutputStream os, final T object) throws SerializerException {
             try {
                 mapper.writeValue(os, object);
-            } catch (Exception e) {
+            } catch (IOException e) {
                 throw new SerializerException("Error occurred serializing object", e);
             }
         }
@@ -275,15 +272,12 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
                 return null;
             }
             try {
-                return (T) mapper.readValue(is, new com.fasterxml.jackson.core.type.TypeReference<Object>() {
-                    @Override
-                    public Type getType() {
-                        return type;
-                    }
-                });
-            } catch (Exception e) {
+                return (T) mapper.readValue(is, new SimpleTypeReference(type));
+            } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
         }
     }
+
+
 }

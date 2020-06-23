@@ -250,7 +250,7 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 lexer.nextToken();
                 break;
             default:
-                throw new SerializerException("syntax error:" + field + " can not be null");
+                throw new SerializerException("syntax error: invalid " + field);
         }
         return result;
     }

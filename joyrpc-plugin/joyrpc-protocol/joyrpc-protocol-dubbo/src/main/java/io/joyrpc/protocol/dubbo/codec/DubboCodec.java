@@ -43,7 +43,7 @@ import java.util.Map.Entry;
 
 import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
 import static io.joyrpc.protocol.MsgType.CallbackReq;
-import static io.joyrpc.protocol.dubbo.DubboCallbackInsIdManager.toJoy;
+import static io.joyrpc.protocol.dubbo.DubboCallback.toJoyInsId;
 import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 
@@ -198,7 +198,7 @@ public class DubboCodec extends AbstractCodec {
                     Object callbackInsId = invocation.removeAttachment(DUBBO_CALLBACK_INSID_KEY);
                     //if (isCallbackInvoke != null && Boolean.parseBoolean(isCallbackInvoke.toString()) && callbackInsId != null) {
                     if (callbackInsId != null) {
-                        header.addAttribute(HEAD_CALLBACK_INSID, toJoy(callbackInsId));
+                        header.addAttribute(HEAD_CALLBACK_INSID, toJoyInsId(callbackInsId));
                         header.setMsgType(CallbackReq.getType());
                     }
                 }

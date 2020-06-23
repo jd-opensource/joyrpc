@@ -22,6 +22,7 @@ package io.joyrpc.protocol.dubbo;
 
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
@@ -40,10 +41,12 @@ import io.joyrpc.transport.session.Session;
 import java.util.function.Function;
 
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.protocol.dubbo.DubboCallbackInsIdManager.toDubbo;
+import static io.joyrpc.protocol.dubbo.DubboCallback.getProducerServiceUrl;
+import static io.joyrpc.protocol.dubbo.DubboCallback.toDubboInsId;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
+import static io.joyrpc.util.ClassUtils.getDesc;
 
 /**
  * Dubbo协议
@@ -172,7 +175,9 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             invocation.setClassName(payLoad.getClassName());
             invocation.setMethodName(generic ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
             invocation.setAlias(payLoad.getAlias());
-            invocation.setParameterTypesDesc(generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : message.getOption().getDescription());
+            String parameterTypesDesc = generic ? GENERIC_INVOKE_PARAM_TYPES_DESC :
+                    message.getOption() != null ? message.getOption().getDescription() : getDesc(payLoad.getMethod().getParameterTypes());
+            invocation.setParameterTypesDesc(parameterTypesDesc);
             invocation.setArgs(payLoad.getArgs());
             Session session = message.getSession();
             if (session != null && session.getAttributes() != null) {
@@ -199,7 +204,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
                         int paramIndex = callbackMethod.getIndex();
                         Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
                         if (callbackInsId != null) {
-                            invocation.addAttachment(DUBBO_CALLBACK_ARG_PRE + paramIndex, toDubbo(callbackInsId));
+                            invocation.addAttachment(DUBBO_CALLBACK_ARG_PRE + paramIndex, toDubboInsId(callbackInsId));
                         }
                     }
                     break;
@@ -207,7 +212,12 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
 
                 case CallbackReq: {
                     Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
-                    invocation.addAttachment(DUBBO_CALLBACK_INSID_KEY, toDubbo(callbackInsId));
+                    URL url = getProducerServiceUrl(callbackInsId);
+                    if (url != null) {
+                        invocation.computeIfAbsent(DUBBO_GROUP_KEY, o -> url.getString(ALIAS_OPTION));
+                        invocation.computeIfAbsent(DUBBO_SERVICE_VERSION_KEY, o -> url.getString(SERVICE_VERSION_OPTION));
+                    }
+                    invocation.addAttachment(DUBBO_CALLBACK_INSID_KEY, callbackInsId);
                     invocation.addAttachment(DUBBO_IS_CALLBACK_INVOKE_KEY, true);
                     break;
                 }

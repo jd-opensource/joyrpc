@@ -259,6 +259,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         public <T> void serialize(final OutputStream os, final T object) throws SerializerException {
             try {
                 JSON.writeJSONString(os, StandardCharsets.UTF_8, object, serializeConfig, null, null, DEFAULT_GENERATE_FEATURE, serializerFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurred while serializing class " + object.getClass().getName(), e);
             }
@@ -268,6 +270,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         public <T> T deserialize(final InputStream is, final Type type) throws SerializerException {
             try {
                 return (T) JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurred while deserializing type " + type, e);
             }
@@ -282,6 +286,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         public String toJSONString(final Object object) throws SerializerException {
             try {
                 return JSON.toJSONString(object, serializeConfig, serializerFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurred while serializing object", e);
             }
@@ -291,6 +297,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         public byte[] toJSONBytes(final Object object) throws SerializerException {
             try {
                 return JSON.toJSONBytes(object, serializeConfig, serializerFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurred while serializing object", e);
             }
@@ -303,6 +311,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             }
             try {
                 return JSON.parseObject(text, type, parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
@@ -315,6 +325,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             }
             try {
                 return JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
@@ -327,6 +339,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             }
             try {
                 return JSON.parseObject(is, StandardCharsets.UTF_8, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
@@ -339,6 +353,8 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             }
             try {
                 return JSON.parseObject(text, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
             } catch (Exception e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }

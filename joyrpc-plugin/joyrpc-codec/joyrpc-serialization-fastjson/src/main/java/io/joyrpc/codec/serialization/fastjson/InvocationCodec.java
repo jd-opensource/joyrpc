@@ -30,8 +30,8 @@ import com.alibaba.fastjson.serializer.AutowiredObjectSerializer;
 import com.alibaba.fastjson.serializer.JSONSerializer;
 import com.alibaba.fastjson.serializer.ObjectSerializer;
 import com.alibaba.fastjson.serializer.SerializeWriter;
-import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.exception.SerializerException;
 import io.joyrpc.protocol.message.Invocation;
 
 import java.io.IOException;
@@ -39,7 +39,6 @@ import java.lang.reflect.Type;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import static io.joyrpc.protocol.message.Invocation.*;
 
@@ -129,7 +128,7 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 lexer.nextToken();
                 return null;
             case JSONToken.LBRACE:
-                return (T) parse(parser, lexer, new Invocation());
+                return (T) parse(parser, lexer);
             default:
                 return null;
         }
@@ -138,49 +137,96 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
     /**
      * 解析Invocation
      *
-     * @param parser
-     * @param lexer
-     * @param invocation
+     * @param parser 解析器
+     * @param lexer  文法
      * @return
      */
-    protected Invocation parse(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
+    protected Invocation parse(final DefaultJSONParser parser, final JSONLexer lexer) {
+        Invocation invocation = new Invocation();
         String key;
         int token;
-        for (; ; ) {
-            // lexer.scanSymbol
-            key = lexer.scanSymbol(parser.getSymbolTable());
-            if (key == null) {
-                token = lexer.token();
-                if (token == JSONToken.RBRACE) {
-                    lexer.nextToken(JSONToken.COMMA);
-                    break;
-                } else if (token == JSONToken.COMMA) {
-                    if (lexer.isEnabled(Feature.AllowArbitraryCommas)) {
-                        continue;
+        try {
+            for (; ; ) {
+                // lexer.scanSymbol
+                key = lexer.scanSymbol(parser.getSymbolTable());
+                if (key == null) {
+                    token = lexer.token();
+                    if (token == JSONToken.RBRACE) {
+                        lexer.nextToken(JSONToken.COMMA);
+                        break;
+                    } else if (token == JSONToken.COMMA) {
+                        if (lexer.isEnabled(Feature.AllowArbitraryCommas)) {
+                            continue;
+                        }
                     }
                 }
-            }
-            lexer.nextTokenWithColon(JSONToken.LITERAL_STRING);
+                lexer.nextTokenWithColon(JSONToken.LITERAL_STRING);
 
-            if (CLASS_NAME.equals(key)) {
-                readString(lexer, CLASS_NAME, false, v -> invocation.setClassName(v));
-            } else if (ALIAS.equals(key)) {
-                readString(lexer, ALIAS, true, v -> invocation.setAlias(v));
-            } else if (METHOD_NAME.equals(key)) {
-                readString(lexer, METHOD_NAME, true, v -> invocation.setMethodName(v));
-            } else if (ARGS_TYPE.equals(key)) {
-                invocation.setArgsType(parser.parseObject(String[].class));
-            } else if (ARGS.equals(key)) {
-                parseArgs(parser, lexer, invocation);
-            } else if (ATTACHMENTS.equals(key)) {
-                invocation.addAttachments(parser.parseObject());
+                if (CLASS_NAME.equals(key)) {
+                    invocation.setClassName(readString(lexer, CLASS_NAME, false));
+                } else if (ALIAS.equals(key)) {
+                    invocation.setAlias(readString(lexer, ALIAS, true));
+                } else if (METHOD_NAME.equals(key)) {
+                    invocation.setMethodName(readString(lexer, ALIAS, true));
+                } else if (ARGS_TYPE.equals(key)) {
+                    invocation.setArgsType(parseArgTypes(parser, lexer));
+                } else if (ARGS.equals(key)) {
+                    invocation.setArgs(parseArgs(parser, lexer, invocation.computeTypes()));
+                } else if (ATTACHMENTS.equals(key)) {
+                    invocation.addAttachments(parseAttachments(parser, lexer));
+                }
+                if (lexer.token() == JSONToken.RBRACE) {
+                    lexer.nextToken(JSONToken.COMMA);
+                    break;
+                }
             }
-            if (lexer.token() == JSONToken.RBRACE) {
-                lexer.nextToken(JSONToken.COMMA);
-                break;
-            }
+            return invocation;
+        } catch (ClassNotFoundException | NoSuchMethodException | MethodOverloadException e) {
+            throw new SerializerException(e.getMessage());
         }
-        return invocation;
+
+    }
+
+    /**
+     * 读取扩展
+     *
+     * @param parser 解析器
+     * @param lexer  文法
+     */
+    protected Map<String, Object> parseAttachments(final DefaultJSONParser parser, final JSONLexer lexer) {
+        Map<String, Object> result = null;
+        switch (lexer.token()) {
+            case JSONToken.LBRACE:
+                result = parser.parseObject();
+                break;
+            case JSONToken.NULL:
+                lexer.nextToken();
+                break;
+            default:
+                throw new SerializerException("syntax error: invalid attachments");
+        }
+        return result;
+    }
+
+    /**
+     * 读取参数
+     *
+     * @param parser 解析器
+     * @param lexer  文法
+     */
+    protected String[] parseArgTypes(final DefaultJSONParser parser, final JSONLexer lexer) {
+        String result[] = null;
+        switch (lexer.token()) {
+            case JSONToken.LBRACKET:
+                result = parser.parseObject(String[].class);
+                break;
+            case JSONToken.NULL:
+                lexer.nextToken();
+                break;
+            default:
+                throw new SerializerException("syntax error: invalid argTypes");
+        }
+        return result;
     }
 
     /**
@@ -189,64 +235,58 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
      * @param lexer    文法
      * @param field    字段
      * @param nullable 是否可以null
-     * @param consumer 值消费者
      */
-    protected void readString(final JSONLexer lexer, String field, boolean nullable, Consumer<String> consumer) {
+    protected String readString(final JSONLexer lexer, final String field, final boolean nullable) {
+        String result = null;
         switch (lexer.token()) {
             case JSONToken.LITERAL_STRING:
-                consumer.accept(lexer.stringVal());
+                result = lexer.stringVal();
                 lexer.nextToken();
                 break;
             case JSONToken.NULL:
                 if (!nullable) {
-                    throw new CodecException("syntax error:" + field + " can not be null");
+                    throw new SerializerException("syntax error:" + field + " can not be null");
                 }
                 lexer.nextToken();
                 break;
             default:
-                throw new CodecException("syntax error:" + field + " can not be null");
+                throw new SerializerException("syntax error:" + field + " can not be null");
         }
+        return result;
     }
 
     /**
      * 解析参数
      *
-     * @param parser     解析器
-     * @param lexer      语法
-     * @param invocation 调用
+     * @param parser 解析器
+     * @param lexer  语法
+     * @param types  类型
      */
-    protected void parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Invocation invocation) {
-        try {
-            Class[] argClasses = invocation.getArgClasses();
-            //计算真实的类型
-            Type[] types = argClasses == null ? invocation.computeTypes() : argClasses;
-            //空数组
-            if (lexer.token() == JSONToken.NULL) {
-                if (types.length == 0) {
-                    lexer.nextToken();
-                } else {
-                    throw new CodecException("syntax error: args can not be null");
-                }
+    protected Object[] parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Type[] types) {
+        Object[] result = null;
+        //空数组
+        if (lexer.token() == JSONToken.NULL) {
+            if (types.length == 0) {
+                lexer.nextToken();
             } else {
-                //解析参数
-                JSONReader reader = new JSONReader(parser);
-                reader.startArray();
-                int i = 0;
-                Object[] objects = new Object[types.length];
-                while (reader.hasNext()) {
-                    if (i >= objects.length) {
-                        throw new CodecException(String.format("the method %s of %s argument length is larger than %d",
-                                invocation.getMethodName(), invocation.getClassName(), objects.length));
-                    }
-                    objects[i] = reader.readObject(types[i]);
-                    i++;
-                }
-                reader.endArray();
-                invocation.setArgs(objects);
+                throw new SerializerException("syntax error: args can not be null");
             }
-        } catch (NoSuchMethodException | MethodOverloadException | ClassNotFoundException e) {
-            throw new CodecException(e.getMessage());
+        } else {
+            //解析参数
+            JSONReader reader = new JSONReader(parser);
+            reader.startArray();
+            int i = 0;
+            result = new Object[types.length];
+            while (reader.hasNext()) {
+                if (i >= result.length) {
+                    throw new SerializerException("syntax error: invalid argument size");
+                }
+                result[i] = reader.readObject(types[i]);
+                i++;
+            }
+            reader.endArray();
         }
+        return result;
     }
 
 }

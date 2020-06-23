@@ -22,6 +22,7 @@ package io.joyrpc.protocol.dubbo;
 
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
@@ -38,8 +39,8 @@ import io.joyrpc.transport.session.Session;
 
 import java.util.function.Function;
 
-import static io.joyrpc.constants.Constants.KEY_APPNAME;
-import static io.joyrpc.constants.Constants.SERVICE_VERSION_OPTION;
+import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.protocol.dubbo.DubboCallbackInsIdManager.toDubbo;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
@@ -145,7 +146,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
                         case BizReq:
                         case CallbackReq:
                         case HbReq:
-                            return outputRequest((RequestMessage<Invocation>) message);
+                            return outputRequest((RequestMessage<Invocation>) message, type);
                         case BizResp:
                         case CallbackResp:
                         case HbResp:
@@ -163,7 +164,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
      *
      * @param message
      */
-    protected Object outputRequest(final RequestMessage<Invocation> message) {
+    protected Object outputRequest(final RequestMessage<Invocation> message, MsgType type) {
         Invocation payLoad = message.getPayLoad();
         if (payLoad != null && message.getMsgType() != MsgType.HbReq.getType()) {
             boolean generic = payLoad.isGeneric();
@@ -190,6 +191,29 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             if (generic) {
                 invocation.addAttachment(DUBBO_GENERIC_KEY, "true");
             }
+
+            switch (type) {
+                case BizReq: {
+                    CallbackMethod callbackMethod = message.getOption() == null ? null : message.getOption().getCallback();
+                    if (callbackMethod != null) {
+                        int paramIndex = callbackMethod.getIndex();
+                        Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
+                        if (callbackInsId != null) {
+                            invocation.addAttachment(DUBBO_CALLBACK_ARG_PRE + paramIndex, toDubbo(callbackInsId));
+                        }
+                    }
+                    break;
+                }
+
+                case CallbackReq: {
+                    Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
+                    invocation.addAttachment(DUBBO_CALLBACK_INSID_KEY, toDubbo(callbackInsId));
+                    invocation.addAttachment(DUBBO_IS_CALLBACK_INVOKE_KEY, true);
+                    break;
+                }
+
+            }
+
             message.setPayLoad(invocation);
         }
         return message;
@@ -227,4 +251,5 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
 
         return message;
     }
+
 }

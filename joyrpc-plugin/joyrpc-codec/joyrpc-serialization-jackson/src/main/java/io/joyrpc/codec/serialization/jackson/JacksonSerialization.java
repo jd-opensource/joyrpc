@@ -25,8 +25,10 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.joyrpc.codec.serialization.*;
+import io.joyrpc.codec.serialization.jackson.java8.*;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.Option;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.protocol.message.Invocation;
@@ -36,7 +38,11 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.lang.reflect.Type;
+import java.time.*;
 import java.util.Collection;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -128,8 +134,37 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
 
         public JacksonnSerializer() {
             SimpleModule module = new SimpleModule();
-            module.addSerializer(Invocation.class, new InvocationSerializer());
-            module.addDeserializer(Invocation.class, new InvocationDeserializer());
+            //TODO 增加java8的序列化
+            module.addSerializer(Invocation.class, InvocationSerializer.INSTANCE);
+            module.addSerializer(Duration.class, DurationSerializer.INSTANCE);
+            module.addSerializer(Instant.class, InstantSerializer.INSTANCE);
+            module.addSerializer(LocalDateTime.class, LocalDateTimeSerializer.INSTANCE);
+            module.addSerializer(LocalDate.class, LocalDateSerializer.INSTANCE);
+            module.addSerializer(LocalTime.class, LocalTimeSerializer.INSTANCE);
+            module.addSerializer(OffsetDateTime.class, OffsetDateTimeSerializer.INSTANCE);
+            module.addSerializer(OffsetTime.class, OffsetTimeSerializer.INSTANCE);
+            module.addSerializer(Option.class, OptionalSerializer.INSTANCE);
+            module.addSerializer(OptionalDouble.class, OptionalDoubleSerializer.INSTANCE);
+            module.addSerializer(OptionalInt.class, OptionalIntSerializer.INSTANCE);
+            module.addSerializer(OptionalLong.class, OptionalLongSerializer.INSTANCE);
+            module.addSerializer(Period.class, PeriodSerializer.INSTANCE);
+            module.addSerializer(ZonedDateTime.class, ZonedDateTimeSerializer.INSTANCE);
+            module.addSerializer(ZoneOffset.class, ZoneOffsetSerializer.INSTANCE);
+            module.addDeserializer(Invocation.class, InvocationDeserializer.INSTANCE);
+            module.addDeserializer(Duration.class, DurationDeserializer.INSTANCE);
+            module.addDeserializer(Instant.class, InstantDeserializer.INSTANCE);
+            module.addDeserializer(LocalDateTime.class, LocalDateTimeDeserializer.INSTANCE);
+            module.addDeserializer(LocalDate.class, LocalDateDeserializer.INSTANCE);
+            module.addDeserializer(LocalTime.class, LocalTimeDeserializer.INSTANCE);
+            module.addDeserializer(OffsetDateTime.class, OffsetDateTimeDeserializer.INSTANCE);
+            module.addDeserializer(OffsetTime.class, OffsetTimeDeserializer.INSTANCE);
+            module.addDeserializer(Option.class, OptionalDeserializer.INSTANCE);
+            module.addDeserializer(OptionalDouble.class, OptionalDoubleDeserializer.INSTANCE);
+            module.addDeserializer(OptionalInt.class, OptionalIntDeserializer.INSTANCE);
+            module.addDeserializer(OptionalLong.class, OptionalLongDeserializer.INSTANCE);
+            module.addDeserializer(Period.class, PeriodDeserializer.INSTANCE);
+            module.addDeserializer(ZonedDateTime.class, ZonedDateTimeDeserializer.INSTANCE);
+            module.addDeserializer(ZoneOffset.class, ZoneOffsetDeserializer.INSTANCE);
             mapper.registerModule(module);
         }
 
@@ -278,6 +313,5 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             }
         }
     }
-
 
 }

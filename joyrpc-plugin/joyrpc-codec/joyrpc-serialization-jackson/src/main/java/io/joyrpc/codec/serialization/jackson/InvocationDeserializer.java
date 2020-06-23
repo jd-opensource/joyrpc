@@ -42,6 +42,8 @@ import static io.joyrpc.protocol.message.Invocation.*;
  */
 public class InvocationDeserializer extends JsonDeserializer<Invocation> {
 
+    public static final JsonDeserializer INSTANCE = new InvocationDeserializer();
+
     @Override
     public Invocation deserialize(final JsonParser parser, final DeserializationContext ctx) throws IOException {
         switch (parser.currentToken()) {

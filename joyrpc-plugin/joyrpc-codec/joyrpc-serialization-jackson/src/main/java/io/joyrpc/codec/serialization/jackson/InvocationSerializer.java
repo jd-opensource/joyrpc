@@ -35,6 +35,8 @@ import static io.joyrpc.protocol.message.Invocation.*;
  */
 public class InvocationSerializer extends JsonSerializer<Invocation> {
 
+    public static final JsonSerializer INSTANCE = new InvocationSerializer();
+
     @Override
     public void serialize(final Invocation invocation, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
         if (invocation == null) {

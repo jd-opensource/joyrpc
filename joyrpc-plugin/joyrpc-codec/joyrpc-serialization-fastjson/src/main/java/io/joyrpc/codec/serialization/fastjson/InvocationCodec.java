@@ -74,19 +74,19 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
         } else {
             Invocation invocation = (Invocation) object;
             SerializeWriter out = serializer.getWriter();
-            out.append('{');
+            out.write('{');
             //1、class name
             out.writeFieldName(CLASS_NAME);
             out.writeString(invocation.getClassName());
-            out.append(",");
+            out.write(',');
             //2、alias
             out.writeFieldName(ALIAS);
             out.writeString(invocation.getAlias());
-            out.append(",");
+            out.write(',');
             //3、method name
             out.writeFieldName(METHOD_NAME);
             out.writeString(invocation.getMethodName());
-            out.append(",");
+            out.write(',');
             //4.argsType
             //TODO 应该根据泛型变量来决定是否要参数类型
             if (invocation.isCallback()) {
@@ -94,7 +94,7 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 ObjectSerializer argsTypeSerializer = serializer.getObjectWriter(String[].class);
                 out.writeFieldName(ARGS_TYPE);
                 argsTypeSerializer.write(serializer, invocation.computeArgsType(), ARGS_TYPE, null, features);
-                out.append(",");
+                out.write(',');
             }
             //5、args
             out.writeFieldName(ARGS);
@@ -107,12 +107,12 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
             //7、attachments
             Map<String, Object> attachments = invocation.getAttachments();
             if (attachments != null && !attachments.isEmpty()) {
-                out.append(",");
+                out.write(',');
                 out.writeFieldName(ATTACHMENTS);
                 ObjectSerializer mapSerializer = serializer.getObjectWriter(Map.class);
                 mapSerializer.write(serializer, attachments, ATTACHMENTS, null, features);
             }
-            out.append('}');
+            out.write('}');
         }
     }
 

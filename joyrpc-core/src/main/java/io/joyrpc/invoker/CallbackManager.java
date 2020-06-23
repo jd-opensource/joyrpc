@@ -335,10 +335,6 @@ public class CallbackManager implements Closeable {
      * 消费者注册用于处理服务端回调消息的处理器
      */
     protected static class ConsumerCallbackInvoker extends AbstractCallbackInvoker {
-        /**
-         * 通道
-         */
-        protected final ChannelTransport transport;
 
         public ConsumerCallbackInvoker(final Class<?> callbackClass, final Object callback, final ChannelTransport transport) {
             this.callbackClass = callbackClass;
@@ -370,10 +366,6 @@ public class CallbackManager implements Closeable {
          * 请求头
          */
         protected MessageHeader header;
-        /**
-         * 连接
-         */
-        protected ChannelTransport transport;
         /**
          * 执行完毕消费者
          */

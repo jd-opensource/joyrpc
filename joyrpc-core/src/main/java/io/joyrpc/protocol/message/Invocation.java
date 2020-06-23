@@ -523,7 +523,7 @@ public class Invocation implements Call {
         if (key == null) {
             return null;
         }
-        if (attachments != null) {
+        if (attachments == null) {
             attachments = new HashMap<>();
         }
         return (T) (function == null ? attachments.get(key) : attachments.computeIfAbsent(key, function));

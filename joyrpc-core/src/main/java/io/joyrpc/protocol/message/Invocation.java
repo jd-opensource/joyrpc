@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -479,12 +480,24 @@ public class Invocation implements Call {
     /**
      * 添加扩展信息
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 调用对象
      */
     public Invocation addAttachment(final String key, final Object value) {
-        if (key != null && value != null) {
+        return addAttachment(key, value, null);
+    }
+
+    /**
+     * 添加扩展信息
+     *
+     * @param key       键
+     * @param value     值
+     * @param predicate 断言
+     * @return 调用对象
+     */
+    public Invocation addAttachment(final String key, final Object value, final BiPredicate<String, Object> predicate) {
+        if (key != null && value != null && (predicate == null || predicate.test(key, value))) {
             if (attachments == null) {
                 attachments = new HashMap<>();
             }

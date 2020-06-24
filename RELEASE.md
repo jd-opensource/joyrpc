@@ -24,7 +24,7 @@
 
 - 增加nacos注册中心集成
 
-- 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。暂时不支持回调参数。
+- 增加Dubbo协议支持，目前支持hessian2,kryo,fst,java,protostuff序列化协议。
 
 - 增加分布式跟踪过滤器，并集成了jaeger和skywalking的实现
 
@@ -41,6 +41,8 @@
 - 增强泛型检测，在json序列化或泛化调用的时候，服务端尽可能的识别出泛型信息，正常的反序列化，而不需要传递额外的类型
 
 - 增加回调功能，回调参数不必是Callback接口，可以在回调参数上使用注解@CallbackArg，或者通过消费者方法上配置的的callbackArg指明第几个参数是回调参数
+
+- 默认服务端序列化方式优先，消费者优先从注册中心返回的服务端URL获取序列化方式
 
 - Dependency
 

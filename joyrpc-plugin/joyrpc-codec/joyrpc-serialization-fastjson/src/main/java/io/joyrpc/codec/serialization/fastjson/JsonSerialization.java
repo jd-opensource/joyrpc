@@ -35,6 +35,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.ResponsePayload;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -165,6 +166,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             config.put(ZoneId.class, ZoneIdSerialization.INSTANCE);
             config.put(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             config.put(Invocation.class, InvocationCodec.INSTANCE);
+            config.put(ResponsePayload.class, ResponsePayloadCodec.INSTANCE);
             config.put(BackupShard.class, BackupShardSerializer.INSTANCE);
             return config;
         }
@@ -184,6 +186,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             config.putDeserializer(ZoneId.class, ZoneIdSerialization.INSTANCE);
             config.putDeserializer(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             config.putDeserializer(Invocation.class, InvocationCodec.INSTANCE);
+            config.putDeserializer(ResponsePayload.class, ResponsePayloadCodec.INSTANCE);
             return config;
         }
 

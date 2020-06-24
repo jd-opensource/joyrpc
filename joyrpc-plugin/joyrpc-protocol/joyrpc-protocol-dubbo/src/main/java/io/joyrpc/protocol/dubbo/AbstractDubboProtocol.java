@@ -256,7 +256,8 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
         //创建dubbo payload
         DubboResponsePayload dubboPayload = responsePayload == null
                 ? new DubboResponsePayload(dubboVersion)
-                : new DubboResponsePayload(responsePayload.getResponse(), responsePayload.getException(), dubboVersion);
+                : new DubboResponsePayload(responsePayload.getResponse(), responsePayload.getException(),
+                responsePayload.getReturnType(), dubboVersion);
         message.setPayLoad(dubboPayload);
 
         return message;

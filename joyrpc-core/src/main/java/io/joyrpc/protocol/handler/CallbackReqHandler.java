@@ -33,6 +33,8 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.util.Futures;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,13 +71,15 @@ public class CallbackReqHandler implements MessageHandler {
                                 throwable instanceof RpcException ? throwable :
                                         new RpcException(header, throwable)));
                     }
+                    GenericMethod genericMethod = request.getPayLoad().getGenericMethod();
+                    GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
                     boolean isAsync = Optional.ofNullable(result.getContext()).orElse(RequestContext.getContext()).isAsync();
                     if (isAsync) {
                         ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
-                            sendResponse(channel, header, new ResponsePayload(obj, th));
+                            sendResponse(channel, header, new ResponsePayload(obj, th, returnType));
                         });
                     } else {
-                        sendResponse(channel, header, new ResponsePayload(result.getValue(), result.getException()));
+                        sendResponse(channel, header, new ResponsePayload(result.getValue(), result.getException(), returnType));
                     }
                 });
 

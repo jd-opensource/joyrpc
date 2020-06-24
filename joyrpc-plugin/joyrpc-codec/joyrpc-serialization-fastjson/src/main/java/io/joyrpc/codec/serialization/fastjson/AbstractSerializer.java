@@ -185,6 +185,22 @@ public class AbstractSerializer {
     }
 
     /**
+     * 解析对象
+     *
+     * @param parser 解析器
+     * @param lexer  语法
+     * @param type   类型
+     * @return
+     */
+    protected Object parseObject(final DefaultJSONParser parser, final JSONLexer lexer, final Type type) {
+        Object result = null;
+        if (lexer.token() != JSONToken.NULL) {
+            result = parser.parseObject(type);
+        }
+        return result;
+    }
+
+    /**
      * 解析对象数组
      *
      * @param parser 解析器

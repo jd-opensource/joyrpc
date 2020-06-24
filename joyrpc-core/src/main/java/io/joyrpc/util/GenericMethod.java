@@ -21,11 +21,19 @@ package io.joyrpc.util;
  */
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 泛型方法
  */
 public class GenericMethod extends GenericExecutable<Method> {
+
+    /**
+     * 返回值泛型type名称映射
+     */
+    protected static final Map<String, Type> GENERIC_RETURN_TYPES = new ConcurrentHashMap<>();
 
     /**
      * 返回值泛型
@@ -46,10 +54,22 @@ public class GenericMethod extends GenericExecutable<Method> {
                          final GenericType returnType) {
         super(method, parameters, exceptions);
         this.returnType = returnType;
+        Type type = this.returnType.getGenericType();
+        GENERIC_RETURN_TYPES.put(type.getTypeName(), type);
     }
 
     public GenericType getReturnType() {
         return returnType;
+    }
+
+    /**
+     * 通过名称获取返回值泛型类型
+     *
+     * @param typeName
+     * @return
+     */
+    public static Type getReturnGenericType(String typeName) {
+        return GENERIC_RETURN_TYPES.get(typeName);
     }
 
 }

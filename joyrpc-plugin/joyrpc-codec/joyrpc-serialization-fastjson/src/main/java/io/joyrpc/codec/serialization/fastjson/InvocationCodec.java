@@ -20,7 +20,6 @@ package io.joyrpc.codec.serialization.fastjson;
  * #L%
  */
 
-import com.alibaba.fastjson.JSONReader;
 import com.alibaba.fastjson.parser.DefaultJSONParser;
 import com.alibaba.fastjson.parser.Feature;
 import com.alibaba.fastjson.parser.JSONLexer;
@@ -28,7 +27,6 @@ import com.alibaba.fastjson.parser.JSONToken;
 import com.alibaba.fastjson.parser.deserializer.AutowiredObjectDeserializer;
 import com.alibaba.fastjson.serializer.AutowiredObjectSerializer;
 import com.alibaba.fastjson.serializer.JSONSerializer;
-import com.alibaba.fastjson.serializer.ObjectSerializer;
 import com.alibaba.fastjson.serializer.SerializeWriter;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.SerializerException;
@@ -37,7 +35,6 @@ import io.joyrpc.protocol.message.Invocation;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import static io.joyrpc.protocol.message.Invocation.*;
@@ -55,7 +52,7 @@ import static io.joyrpc.protocol.message.Invocation.*;
  * 6、attachments (值不为空则序列化)<br>
  * <p/>
  */
-public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObjectDeserializer {
+public class InvocationCodec extends AbstractSerializer implements AutowiredObjectSerializer, AutowiredObjectDeserializer {
 
     public static final InvocationCodec INSTANCE = new InvocationCodec();
 
@@ -75,42 +72,21 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
             SerializeWriter out = serializer.getWriter();
             out.write('{');
             //1、class name
-            out.writeFieldName(CLASS_NAME);
-            out.writeString(invocation.getClassName());
-            out.write(',');
+            writeString(out, CLASS_NAME, invocation.getClassName());
             //2、alias
-            out.writeFieldName(ALIAS);
-            out.writeString(invocation.getAlias());
-            out.write(',');
+            writeString(out, ALIAS, invocation.getAlias());
             //3、method name
-            out.writeFieldName(METHOD_NAME);
-            out.writeString(invocation.getMethodName());
-            out.write(',');
+            writeString(out, METHOD_NAME, invocation.getMethodName());
             //4.argsType
             //TODO 应该根据泛型变量来决定是否要参数类型
             if (invocation.isCallback()) {
                 //回调需要写上实际的参数类型
-                ObjectSerializer argsTypeSerializer = serializer.getObjectWriter(String[].class);
-                out.writeFieldName(ARGS_TYPE);
-                argsTypeSerializer.write(serializer, invocation.computeArgsType(), ARGS_TYPE, null, features);
-                out.write(',');
+                write(serializer, ARGS_TYPE, invocation.computeArgsType(), AFTER);
             }
             //5、args
-            out.writeFieldName(ARGS);
-            ObjectSerializer argsSerializer = serializer.getObjectWriter(Object[].class);
-            if (invocation.getArgs() == null || invocation.getArgsType() != null && invocation.getArgsType().length == 0) {
-                out.writeNull();
-            } else {
-                argsSerializer.write(serializer, invocation.getArgs(), ARGS, null, features);
-            }
+            write(serializer, ARGS, invocation.getArgs(), false, NONE);
             //7、attachments
-            Map<String, Object> attachments = invocation.getAttachments();
-            if (attachments != null && !attachments.isEmpty()) {
-                out.write(',');
-                out.writeFieldName(ATTACHMENTS);
-                ObjectSerializer mapSerializer = serializer.getObjectWriter(Map.class);
-                mapSerializer.write(serializer, attachments, ATTACHMENTS, null, features);
-            }
+            write(serializer, ATTACHMENTS, invocation.getAttachments(), true, BEFORE);
             out.write('}');
         }
     }
@@ -163,17 +139,17 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
                 lexer.nextTokenWithColon(JSONToken.LITERAL_STRING);
 
                 if (CLASS_NAME.equals(key)) {
-                    invocation.setClassName(readString(lexer, CLASS_NAME, false));
+                    invocation.setClassName(parseString(lexer, CLASS_NAME, false));
                 } else if (ALIAS.equals(key)) {
-                    invocation.setAlias(readString(lexer, ALIAS, true));
+                    invocation.setAlias(parseString(lexer, ALIAS, true));
                 } else if (METHOD_NAME.equals(key)) {
-                    invocation.setMethodName(readString(lexer, ALIAS, true));
+                    invocation.setMethodName(parseString(lexer, ALIAS, true));
                 } else if (ARGS_TYPE.equals(key)) {
-                    invocation.setArgsType(parseArgTypes(parser, lexer));
+                    invocation.setArgsType(parseStrings(parser, lexer, "argsType"));
                 } else if (ARGS.equals(key)) {
-                    invocation.setArgs(parseArgs(parser, lexer, invocation.computeTypes()));
+                    invocation.setArgs(parseObjects(parser, lexer, invocation.computeTypes(), "args"));
                 } else if (ATTACHMENTS.equals(key)) {
-                    invocation.addAttachments(parseAttachments(parser, lexer));
+                    invocation.addAttachments(parseMap(parser, lexer, "attachments"));
                 }
                 if (lexer.token() == JSONToken.RBRACE) {
                     lexer.nextToken(JSONToken.COMMA);
@@ -187,106 +163,5 @@ public class InvocationCodec implements AutowiredObjectSerializer, AutowiredObje
 
     }
 
-    /**
-     * 读取扩展
-     *
-     * @param parser 解析器
-     * @param lexer  文法
-     */
-    protected Map<String, Object> parseAttachments(final DefaultJSONParser parser, final JSONLexer lexer) {
-        Map<String, Object> result = null;
-        switch (lexer.token()) {
-            case JSONToken.LBRACE:
-                result = parser.parseObject();
-                break;
-            case JSONToken.NULL:
-                lexer.nextToken();
-                break;
-            default:
-                throw new SerializerException("syntax error: invalid attachments");
-        }
-        return result;
-    }
-
-    /**
-     * 读取参数
-     *
-     * @param parser 解析器
-     * @param lexer  文法
-     */
-    protected String[] parseArgTypes(final DefaultJSONParser parser, final JSONLexer lexer) {
-        String result[] = null;
-        switch (lexer.token()) {
-            case JSONToken.LBRACKET:
-                result = parser.parseObject(String[].class);
-                break;
-            case JSONToken.NULL:
-                lexer.nextToken();
-                break;
-            default:
-                throw new SerializerException("syntax error: invalid argTypes");
-        }
-        return result;
-    }
-
-    /**
-     * 读取字符串
-     *
-     * @param lexer    文法
-     * @param field    字段
-     * @param nullable 是否可以null
-     */
-    protected String readString(final JSONLexer lexer, final String field, final boolean nullable) {
-        String result = null;
-        switch (lexer.token()) {
-            case JSONToken.LITERAL_STRING:
-                result = lexer.stringVal();
-                lexer.nextToken();
-                break;
-            case JSONToken.NULL:
-                if (!nullable) {
-                    throw new SerializerException("syntax error:" + field + " can not be null");
-                }
-                lexer.nextToken();
-                break;
-            default:
-                throw new SerializerException("syntax error: invalid " + field);
-        }
-        return result;
-    }
-
-    /**
-     * 解析参数
-     *
-     * @param parser 解析器
-     * @param lexer  语法
-     * @param types  类型
-     */
-    protected Object[] parseArgs(final DefaultJSONParser parser, final JSONLexer lexer, final Type[] types) {
-        Object[] result = null;
-        //空数组
-        if (lexer.token() == JSONToken.NULL) {
-            if (types.length == 0) {
-                lexer.nextToken();
-            } else {
-                throw new SerializerException("syntax error: args can not be null");
-            }
-        } else {
-            //解析参数
-            JSONReader reader = new JSONReader(parser);
-            reader.startArray();
-            int i = 0;
-            result = new Object[types.length];
-            while (reader.hasNext()) {
-                if (i >= result.length) {
-                    throw new SerializerException("syntax error: invalid argument size");
-                }
-                result[i] = reader.readObject(types[i]);
-                i++;
-            }
-            reader.endArray();
-        }
-        return result;
-    }
 
 }

@@ -33,7 +33,7 @@ import java.util.Set;
 /**
  * 备份序列化，加快序列化性能
  */
-public class BackupShardSerializer implements AutowiredObjectSerializer {
+public class BackupShardSerializer extends AbstractSerializer implements AutowiredObjectSerializer {
 
     public static final BackupShardSerializer INSTANCE = new BackupShardSerializer();
 
@@ -60,21 +60,6 @@ public class BackupShardSerializer implements AutowiredObjectSerializer {
             out.writeFieldName("weight");
             out.writeInt(backupShard.getWeight());
             out.write('}');
-        }
-    }
-
-    /**
-     * 写值
-     *
-     * @param out   输出
-     * @param field 字段
-     * @param value 值
-     */
-    protected void writeString(final SerializeWriter out, final String field, final String value) {
-        if (value != null) {
-            out.writeFieldName(field);
-            out.writeString(value);
-            out.write(',');
         }
     }
 }

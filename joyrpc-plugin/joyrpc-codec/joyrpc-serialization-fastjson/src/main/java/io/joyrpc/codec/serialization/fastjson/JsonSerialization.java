@@ -21,6 +21,7 @@ package io.joyrpc.codec.serialization.fastjson;
  */
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONReader;
 import com.alibaba.fastjson.parser.Feature;
 import com.alibaba.fastjson.parser.ParserConfig;
@@ -129,7 +130,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
     }
 
     /**
-     * JSON序列化和反序列化实现
+     * JSON序列化和反序列化实现，有多种JSON序列化框架，把Fastjson的异常进行转换
      */
     protected static class JsonSerializer implements Serializer, Json {
 
@@ -261,8 +262,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 JSON.writeJSONString(os, StandardCharsets.UTF_8, object, serializeConfig, null, null, DEFAULT_GENERATE_FEATURE, serializerFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while serializing class " + object.getClass().getName(), e);
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -272,8 +276,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return (T) JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while deserializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while deserializing type " + type, e);
+                throw new SerializerException("Error occurs while deserializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -288,8 +295,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return JSON.toJSONString(object, serializeConfig, serializerFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while serializing object", e);
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -299,8 +309,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return JSON.toJSONBytes(object, serializeConfig, serializerFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while serializing object", e);
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -313,8 +326,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return JSON.parseObject(text, type, parserConfig, parserFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -327,8 +343,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -341,8 +360,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return JSON.parseObject(is, StandardCharsets.UTF_8, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -355,11 +377,13 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 return JSON.parseObject(text, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
-
 
         @Override
         public void parseArray(final Reader reader, final Function<Function<Type, Object>, Boolean> function) throws SerializerException {
@@ -377,8 +401,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 jsonReader.endArray();
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
 
         }
@@ -399,8 +426,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                 jsonReader.endObject();
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
 
         }

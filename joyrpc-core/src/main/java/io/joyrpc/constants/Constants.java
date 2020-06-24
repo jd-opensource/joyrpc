@@ -611,10 +611,15 @@ public class Constants {
      * 默认序列化算法
      */
     public static final String DEFAULT_SERIALIZATION = "hessian";
+    public static final String SERIALIZATION_KEY = "serialization";
     /**
      * 序列化选项
      */
-    public static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", DEFAULT_SERIALIZATION);
+    public static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>(SERIALIZATION_KEY, DEFAULT_SERIALIZATION);
+    /**
+     * 服务端序列化方式优先选项
+     */
+    public static final URLOption<Boolean> SERIALIZATION_PREFER_PROVIDER_OPTION = new URLOption<>("serialization.prefer.provider", true);
     /**
      * 代理工厂默认值
      */

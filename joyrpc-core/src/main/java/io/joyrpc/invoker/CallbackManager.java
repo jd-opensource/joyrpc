@@ -461,11 +461,6 @@ public class CallbackManager implements Closeable {
         }
 
         @Override
-        protected void setup() {
-            //回调选项，不需要
-        }
-
-        @Override
         protected InnerMethodOption create(WrapperParametric parametric) {
             GrpcMethod grpcMethod = getMethod(parametric.getName());
             return new CallbackInnerMethodOption(grpcMethod);
@@ -488,6 +483,9 @@ public class CallbackManager implements Closeable {
             }
         }
 
+        /**
+         * 方法选项
+         */
         protected static class CallbackInnerMethodOption extends InnerMethodOption {
 
             /**
@@ -496,7 +494,8 @@ public class CallbackManager implements Closeable {
              * @param grpcMethod GRPC方法
              */
             public CallbackInnerMethodOption(GrpcMethod grpcMethod) {
-                super(grpcMethod, null, null, 0, null, null, null, null, false, false, null);
+                super(grpcMethod, null, null, 0, null, null,
+                        null, null, false, false, null);
             }
         }
     }

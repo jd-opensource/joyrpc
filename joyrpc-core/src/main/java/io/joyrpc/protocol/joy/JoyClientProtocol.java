@@ -45,6 +45,7 @@ import io.joyrpc.transport.session.Session;
 import java.util.Map;
 
 import static io.joyrpc.Plugin.IDENTIFICATION;
+import static io.joyrpc.Plugin.SERIALIZATION;
 import static io.joyrpc.constants.Constants.SESSION_TIMEOUT_OPTION;
 import static io.joyrpc.transport.session.Session.REMOTE_START_TIMESTAMP;
 
@@ -63,8 +64,17 @@ public class JoyClientProtocol extends AbstractProtocol implements ClientProtoco
 
     @Override
     public Message negotiate(final URL clusterUrl, final Client client) {
+        //服务端序列化优先
+        boolean preferProvider = clusterUrl.getBoolean(Constants.SERIALIZATION_PREFER_PROVIDER_OPTION);
+        URL url = clusterUrl;
+        if (preferProvider) {
+            String serialization = client.getUrl().getString(Constants.SERIALIZATION_KEY);
+            if (serialization != null && !serialization.isEmpty() && SERIALIZATION.get(serialization) != null) {
+                url = clusterUrl.add(Constants.SERIALIZATION_KEY, serialization);
+            }
+        }
         //构造协商请求
-        NegotiationRequest negotiation = new NegotiationRequest(clusterUrl,
+        NegotiationRequest negotiation = new NegotiationRequest(url,
                 new NegotiationOption(Constants.SERIALIZATION_OPTION, "msgpack", "json0", "json1"),
                 new NegotiationOption(Constants.COMPRESS_OPTION), null);
         //设置client本地session属性

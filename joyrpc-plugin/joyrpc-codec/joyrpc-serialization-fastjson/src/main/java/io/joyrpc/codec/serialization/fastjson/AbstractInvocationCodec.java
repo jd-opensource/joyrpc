@@ -165,7 +165,7 @@ public abstract class AbstractInvocationCodec extends AbstractSerializer impleme
                 } else if (aliasKey.equals(key)) {
                     invocation.setAlias(parseString(lexer, aliasKey, true));
                 } else if (methodNameKey.equals(key)) {
-                    invocation.setMethodName(parseString(lexer, methodNameKey, true));
+                    invocation.setMethodName(parseString(lexer, methodNameKey, false));
                 } else if (argsTypeKey.equals(key)) {
                     invocation.setArgsType(parseStrings(parser, lexer, argsTypeKey));
                 } else if (argsKey.equals(key)) {

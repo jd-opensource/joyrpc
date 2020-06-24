@@ -21,6 +21,7 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.CallbackMethod;
@@ -37,16 +38,15 @@ import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.util.StringUtils;
 
 import java.util.function.Function;
 
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.protocol.dubbo.DubboCallback.getProducerServiceUrl;
-import static io.joyrpc.protocol.dubbo.DubboCallback.toDubboInsId;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
-import static io.joyrpc.util.ClassUtils.getDesc;
 
 /**
  * Dubbo协议
@@ -175,8 +175,8 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             invocation.setClassName(payLoad.getClassName());
             invocation.setMethodName(generic ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
             invocation.setAlias(payLoad.getAlias());
-            String parameterTypesDesc = generic ? GENERIC_INVOKE_PARAM_TYPES_DESC :
-                    message.getOption() != null ? message.getOption().getDescription() : getDesc(payLoad.getMethod().getParameterTypes());
+            InterfaceOption.MethodOption option = message.getOption();
+            String parameterTypesDesc = generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : option.getDescription();
             invocation.setParameterTypesDesc(parameterTypesDesc);
             invocation.setArgs(payLoad.getArgs());
             Session session = message.getSession();
@@ -184,27 +184,22 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
                 String serviceVersion = session.getOrDefault(SERVICE_VERSION_OPTION.getName(), "");
                 invocation.setVersion(serviceVersion);
             }
-            invocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
-            invocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
-            invocation.addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias());
-            invocation.addAttachment(DUBBO_SERVICE_VERSION_KEY, invocation.getVersion());
-            invocation.addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()));
-            String appName = GlobalContext.getString(KEY_APPNAME);
-            if (appName != null && !appName.isEmpty()) {
-                invocation.addAttachment(DUBBO_APPLICATION_KEY, appName);
-            }
-            if (generic) {
-                invocation.addAttachment(DUBBO_GENERIC_KEY, "true");
-            }
+            invocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName())
+                    .addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName())
+                    .addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias())
+                    .addAttachment(DUBBO_SERVICE_VERSION_KEY, invocation.getVersion())
+                    .addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()))
+                    .addAttachment(DUBBO_APPLICATION_KEY, GlobalContext.getString(KEY_APPNAME), (key, value) -> !StringUtils.isEmpty((String) value))
+                    .addAttachment(DUBBO_GENERIC_KEY, "true", (key, value) -> generic);
 
             switch (type) {
                 case BizReq: {
-                    CallbackMethod callbackMethod = message.getOption() == null ? null : message.getOption().getCallback();
+                    CallbackMethod callbackMethod = option.getCallback();
                     if (callbackMethod != null) {
                         int paramIndex = callbackMethod.getIndex();
                         Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
                         if (callbackInsId != null) {
-                            invocation.addAttachment(DUBBO_CALLBACK_ARG_PRE + paramIndex, toDubboInsId(callbackInsId));
+                            invocation.addAttachment(DUBBO_CALLBACK_ARG_PRE + paramIndex, callbackInsId.toString());
                         }
                     }
                     break;

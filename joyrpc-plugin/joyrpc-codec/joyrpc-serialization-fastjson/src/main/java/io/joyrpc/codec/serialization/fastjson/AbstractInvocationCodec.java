@@ -96,11 +96,21 @@ public abstract class AbstractInvocationCodec extends AbstractSerializer impleme
                 write(serializer, argsTypeKey, call.computeArgsType(), AFTER);
             }
             //5、args
-            write(serializer, argsKey, call.getArgs(), false, NONE);
+            writeArgs(serializer, call);
             //7、attachments
             write(serializer, attachmentsKey, call.getAttachments(), true, BEFORE);
             out.write('}');
         }
+    }
+
+    /**
+     * 写参数
+     *
+     * @param serializer 序列化器
+     * @param call       调用对象
+     */
+    protected void writeArgs(final JSONSerializer serializer, final Call call) {
+        write(serializer, argsKey, call.getArgs(), false, NONE);
     }
 
     @Override

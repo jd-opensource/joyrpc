@@ -462,25 +462,12 @@ public class CallbackManager implements Closeable {
 
         @Override
         protected InnerMethodOption create(WrapperParametric parametric) {
-            GrpcMethod grpcMethod = getMethod(parametric.getName());
-            return new CallbackInnerMethodOption(grpcMethod);
-        }
-
-        /**
-         * 获取回调方法
-         *
-         * @param methodName 方法名称
-         * @return 回调方法对象
-         */
-        protected GrpcMethod getMethod(final String methodName) {
-            if (generic) {
-                return null;
-            }
+            GrpcMethod grpcMethod = null;
             try {
-                return getPublicMethod(interfaceClass, methodName, GRPC_TYPE_FUNCTION);
+                grpcMethod = getPublicMethod(interfaceClass, parametric.getName(), GRPC_TYPE_FUNCTION);
             } catch (NoSuchMethodException | MethodOverloadException e) {
-                return null;
             }
+            return new CallbackInnerMethodOption(grpcMethod);
         }
 
         /**

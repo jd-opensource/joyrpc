@@ -43,7 +43,6 @@ import io.joyrpc.util.StringUtils;
 import java.util.function.Function;
 
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.protocol.dubbo.DubboCallback.getProducerServiceUrl;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
@@ -204,10 +203,9 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
                     }
                     break;
                 }
-
                 case CallbackReq: {
                     Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
-                    URL url = getProducerServiceUrl(callbackInsId);
+                    URL url = message.getUrl();
                     if (url != null) {
                         invocation.computeIfAbsent(DUBBO_GROUP_KEY, o -> url.getString(ALIAS_OPTION));
                         invocation.computeIfAbsent(DUBBO_SERVICE_VERSION_KEY, o -> url.getString(SERVICE_VERSION_OPTION));
@@ -216,7 +214,6 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
                     invocation.addAttachment(DUBBO_IS_CALLBACK_INVOKE_KEY, true);
                     break;
                 }
-
             }
 
             message.setPayLoad(invocation);

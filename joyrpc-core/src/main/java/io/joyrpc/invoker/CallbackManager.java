@@ -24,14 +24,17 @@ import io.joyrpc.CallbackListener;
 import io.joyrpc.Plugin;
 import io.joyrpc.Result;
 import io.joyrpc.codec.compression.Compression;
+import io.joyrpc.config.AbstractInterfaceOption;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.config.inner.InnerConsumerOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
+import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.thread.NamedThreadFactory;
@@ -39,8 +42,11 @@ import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.transport.transport.Transport;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.network.Ipv4;
 
+import javax.validation.Validator;
 import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -55,8 +61,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.PROXY;
-import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
-import static io.joyrpc.constants.Constants.HIDDEN_KEY_TIME_OUT;
+import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
@@ -416,6 +421,7 @@ public class CallbackManager implements Closeable {
             //已经设置了创建时间
             RequestMessage<Invocation> request = RequestMessage.build(invocation);
             request.setOption(option.getOption(methodName));
+            request.setUrl(transport.getUrl());
             MessageHeader rh = request.getHeader();
             //回调请求
             rh.setMsgType(MsgType.CallbackReq.getType());
@@ -447,16 +453,53 @@ public class CallbackManager implements Closeable {
     /**
      * 回调请求选项
      */
-    protected static class CallbackRequestOption extends InnerConsumerOption {
+    protected static class CallbackRequestOption extends AbstractInterfaceOption {
 
         public CallbackRequestOption(Class<?> interfaceClass, String interfaceName) {
-            super(interfaceClass, interfaceName, URL.valueOf("http://127.0.0.1"), null, null);
+            super(interfaceClass, interfaceName, URL.valueOf("callback://localhost"));
+            buildOptions();
         }
 
         @Override
         protected void setup() {
             //回调选项，不需要
         }
+
+        @Override
+        protected InnerMethodOption create(WrapperParametric parametric) {
+            GrpcMethod grpcMethod = getMethod(parametric.getName());
+            return new CallbackInnerMethodOption(grpcMethod);
+        }
+
+        /**
+         * 获取回调方法
+         *
+         * @param methodName 方法名称
+         * @return 回调方法对象
+         */
+        protected GrpcMethod getMethod(final String methodName) {
+            if (generic) {
+                return null;
+            }
+            try {
+                return getPublicMethod(interfaceClass, methodName, GRPC_TYPE_FUNCTION);
+            } catch (NoSuchMethodException | MethodOverloadException e) {
+                return null;
+            }
+        }
+
+        protected static class CallbackInnerMethodOption extends InnerMethodOption {
+
+            /**
+             * 构造函数
+             *
+             * @param grpcMethod GRPC方法
+             */
+            public CallbackInnerMethodOption(GrpcMethod grpcMethod) {
+                super(grpcMethod, null, null, 0, null, null, null, null, false, false, null);
+            }
+        }
     }
+
 
 }

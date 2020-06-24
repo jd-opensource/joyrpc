@@ -2,6 +2,8 @@ package io.joyrpc.example.dubbo.consumer;
 
 import io.joyrpc.example.service.DemoService;
 import io.joyrpc.example.service.vo.Java8TimeObj;
+import org.apache.dubbo.config.annotation.Argument;
+import org.apache.dubbo.config.annotation.Method;
 import org.apache.dubbo.config.annotation.Reference;
 import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
@@ -10,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.junit.Assert;
 
+import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootApplication
@@ -18,9 +21,13 @@ import java.util.concurrent.atomic.AtomicLong;
 public class DubboClient {
 
     @Reference(version = "0.0.0", group = "2.0-Boot", url = "127.0.0.1:22000", timeout = 50000)
+    /*@Reference(group = "joyrpc-demo", url = "127.0.0.1:22000", timeout = 50000,
+            methods = {@Method(name = "echoCallback", arguments = {@Argument(index = 0, callback = true)})},
+            parameters = {"echoCallback.0.callback", "true"}
+    )*/
     private DemoService demoService;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         System.setProperty("spring.profiles.active", "client");
 
         ConfigurableApplicationContext run = SpringApplication.run(DubboClient.class, args);
@@ -47,13 +54,22 @@ public class DubboClient {
                 }
             }
         }
+
+        /*consumer.echoCallback(new EchoCallbackImpl());
+        System.in.read();*/
     }
 
     public DemoService getDemoService() {
         return demoService;
     }
 
-    public void setDemoService(DemoService demoService) {
-        this.demoService = demoService;
+    private static class EchoCallbackImpl implements DemoService.EchoCallback {
+
+        @Override
+        public boolean echo(String str) {
+            System.out.println("callback ins receive: " + str);
+            return true;
+        }
     }
+
 }

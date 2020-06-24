@@ -23,6 +23,7 @@ package io.joyrpc.protocol.message;
 import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
+import io.joyrpc.extension.URL;
 import io.joyrpc.permission.Authentication;
 import io.joyrpc.permission.Authorization;
 import io.joyrpc.permission.Identification;
@@ -119,7 +120,11 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 跟踪
      */
-    protected Tracer tracer;
+    protected transient Tracer tracer;
+    /**
+     * refer或exporter的url
+     */
+    private transient URL url;
 
     /**
      * 构造函数
@@ -375,6 +380,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setTracer(Tracer tracer) {
         this.tracer = tracer;
+    }
+
+    public URL getUrl() {
+        return url;
+    }
+
+    public void setUrl(URL url) {
+        this.url = url;
     }
 
     /**

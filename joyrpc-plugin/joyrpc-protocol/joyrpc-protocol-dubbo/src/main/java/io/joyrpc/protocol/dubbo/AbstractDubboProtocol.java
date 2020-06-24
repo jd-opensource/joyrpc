@@ -21,7 +21,7 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.CallbackMethod;
@@ -174,9 +174,8 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             invocation.setClassName(payLoad.getClassName());
             invocation.setMethodName(generic ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
             invocation.setAlias(payLoad.getAlias());
-            InterfaceOption.MethodOption option = message.getOption();
-            String parameterTypesDesc = generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : option.getDescription();
-            invocation.setParameterTypesDesc(parameterTypesDesc);
+            MethodOption option = message.getOption();
+            invocation.setParameterTypesDesc(generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : option.getDescription());
             invocation.setArgs(payLoad.getArgs());
             Session session = message.getSession();
             if (session != null && session.getAttributes() != null) {

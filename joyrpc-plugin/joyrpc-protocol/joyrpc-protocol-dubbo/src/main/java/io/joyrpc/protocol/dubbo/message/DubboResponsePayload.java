@@ -28,6 +28,7 @@ import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.GenericType;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,8 +69,8 @@ public class DubboResponsePayload extends ResponsePayload implements Codec {
         this.heartbeat = heartbeat;
     }
 
-    public DubboResponsePayload(Object response, Throwable exception, GenericType returnType, String dubboVersion) {
-        super(response, exception, returnType);
+    public DubboResponsePayload(Object response, Throwable exception, Type type, String dubboVersion) {
+        super(response, exception, type);
         this.dubboVersion = dubboVersion;
     }
 

@@ -43,6 +43,7 @@ import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -144,14 +145,15 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                         session == null ? Compression.NONE : session.getCompressionType()));
         GenericMethod genericMethod = invocation == null ? null : invocation.getGenericMethod();
         GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
+        Type type = returnType == null ? null : returnType.getGenericType();
         if (result.getContext().isAsync() && !result.isException()) {
             //异步
             ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
-                response.setPayLoad(new ResponsePayload(obj, th, returnType));
+                response.setPayLoad(new ResponsePayload(obj, th, type));
                 channel.send(response, sendFailed);
             });
         } else {
-            response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), returnType));
+            response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), type));
             channel.send(response, sendFailed);
         }
     }

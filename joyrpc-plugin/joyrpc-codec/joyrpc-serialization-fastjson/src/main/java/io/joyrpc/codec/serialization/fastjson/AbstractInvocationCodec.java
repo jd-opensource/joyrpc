@@ -27,7 +27,6 @@ import com.alibaba.fastjson.parser.JSONToken;
 import com.alibaba.fastjson.parser.deserializer.AutowiredObjectDeserializer;
 import com.alibaba.fastjson.serializer.AutowiredObjectSerializer;
 import com.alibaba.fastjson.serializer.JSONSerializer;
-import com.alibaba.fastjson.serializer.SerializeWriter;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.protocol.message.Call;
@@ -81,14 +80,13 @@ public abstract class AbstractInvocationCodec extends AbstractSerializer impleme
             serializer.writeNull();
         } else {
             Call call = (Call) object;
-            SerializeWriter out = serializer.getWriter();
-            out.write('{');
+            writeObjectBegin(serializer);
             //1、class name
-            writeString(out, classNameKey, call.getClassName());
+            writeString(serializer, classNameKey, call.getClassName());
             //2、alias
-            writeString(out, aliasKey, call.getAlias());
+            writeString(serializer, aliasKey, call.getAlias());
             //3、method name
-            writeString(out, methodNameKey, call.getMethodName());
+            writeString(serializer, methodNameKey, call.getMethodName());
             //4.argsType
             //TODO 应该根据泛型变量来决定是否要参数类型
             if (call.isCallback()) {
@@ -99,7 +97,7 @@ public abstract class AbstractInvocationCodec extends AbstractSerializer impleme
             writeArgs(serializer, call);
             //7、attachments
             write(serializer, attachmentsKey, call.getAttachments(), true, BEFORE);
-            out.write('}');
+            writeObjectEnd(serializer);
         }
     }
 

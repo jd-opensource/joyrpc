@@ -43,6 +43,17 @@ public class AbstractSerializer {
     /**
      * 写值
      *
+     * @param serializer 输出
+     * @param field      字段
+     * @param value      值
+     */
+    protected void writeString(final JSONSerializer serializer, final String field, final String value) {
+        writeString(serializer.out, field, value, true, AFTER);
+    }
+
+    /**
+     * 写值
+     *
      * @param out   输出
      * @param field 字段
      * @param value 值
@@ -88,6 +99,24 @@ public class AbstractSerializer {
      */
     protected void write(final JSONSerializer serializer, final String field, final Object value, final int separator) {
         write(serializer, field, value, false, separator);
+    }
+
+    /**
+     * 开始对象输出
+     *
+     * @param serializer 输出
+     */
+    protected void writeObjectBegin(final JSONSerializer serializer) {
+        serializer.out.write('{');
+    }
+
+    /**
+     * j结束对象输出
+     *
+     * @param serializer 输出
+     */
+    protected void writeObjectEnd(final JSONSerializer serializer) {
+        serializer.out.write('}');
     }
 
     /**
@@ -193,11 +222,7 @@ public class AbstractSerializer {
      * @return
      */
     protected Object parseObject(final DefaultJSONParser parser, final JSONLexer lexer, final Type type) {
-        Object result = null;
-        if (lexer.token() != JSONToken.NULL) {
-            result = parser.parseObject(type);
-        }
-        return result;
+        return lexer.token() != JSONToken.NULL ? parser.parseObject(type) : null;
     }
 
     /**

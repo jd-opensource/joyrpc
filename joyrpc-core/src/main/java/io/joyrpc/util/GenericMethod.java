@@ -33,7 +33,7 @@ public class GenericMethod extends GenericExecutable<Method> {
     /**
      * 返回值泛型type名称映射
      */
-    protected static final Map<String, Type> GENERIC_RETURN_TYPES = new ConcurrentHashMap<>();
+    protected static final Map<String, Type> GENERIC_RETURN_TYPES = new ConcurrentHashMap<>(5000);
 
     /**
      * 返回值泛型
@@ -65,10 +65,10 @@ public class GenericMethod extends GenericExecutable<Method> {
     /**
      * 通过名称获取返回值泛型类型
      *
-     * @param typeName
-     * @return
+     * @param typeName 类型名称
+     * @return 类型
      */
-    public static Type getReturnGenericType(String typeName) {
+    public static Type getReturnGenericType(final String typeName) {
         return GENERIC_RETURN_TYPES.get(typeName);
     }
 

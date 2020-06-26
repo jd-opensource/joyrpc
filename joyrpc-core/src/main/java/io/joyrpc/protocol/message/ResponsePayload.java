@@ -20,9 +20,8 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.util.GenericType;
-
 import java.io.Serializable;
+import java.lang.reflect.Type;
 
 /**
  * 应答消息
@@ -46,11 +45,11 @@ public class ResponsePayload implements Serializable {
     /**
      * 异常信息
      */
-    protected Throwable exception; //error when the error has been declare in the interface
+    protected Throwable exception;
     /**
      * 返回值泛型
      */
-    protected transient GenericType returnType;
+    protected transient Type type;
 
     /**
      * 默认构造函数
@@ -60,18 +59,18 @@ public class ResponsePayload implements Serializable {
 
 
     /**
-     * 构造函数
+     * 构造返回值消息
      *
-     * @param response
+     * @param response 返回值
      */
     public ResponsePayload(Object response) {
         this.response = response;
     }
 
     /**
-     * 构造函数
+     * 构造异常应答
      *
-     * @param exception
+     * @param exception 异常
      */
     public ResponsePayload(Throwable exception) {
         this.exception = exception;
@@ -80,8 +79,8 @@ public class ResponsePayload implements Serializable {
     /**
      * 构造函数
      *
-     * @param response
-     * @param exception
+     * @param response  返回值
+     * @param exception 异常
      */
     public ResponsePayload(Object response, Throwable exception) {
         this.response = response;
@@ -91,14 +90,14 @@ public class ResponsePayload implements Serializable {
     /**
      * 构造方法
      *
-     * @param response
-     * @param exception
-     * @param returnType
+     * @param response  返回值
+     * @param exception 异常
+     * @param type      返回值类型
      */
-    public ResponsePayload(Object response, Throwable exception, GenericType returnType) {
+    public ResponsePayload(Object response, Throwable exception, Type type) {
         this.response = response;
         this.exception = exception;
-        this.returnType = returnType;
+        this.type = type;
     }
 
     public Object getResponse() {
@@ -117,6 +116,14 @@ public class ResponsePayload implements Serializable {
         this.exception = exception;
     }
 
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
+    }
+
     /**
      * @return the error
      */
@@ -124,7 +131,4 @@ public class ResponsePayload implements Serializable {
         return exception != null;
     }
 
-    public GenericType getReturnType() {
-        return returnType;
-    }
 }

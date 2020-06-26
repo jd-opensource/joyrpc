@@ -38,6 +38,7 @@ import io.joyrpc.util.GenericType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
@@ -73,13 +74,14 @@ public class CallbackReqHandler implements MessageHandler {
                     }
                     GenericMethod genericMethod = request.getPayLoad().getGenericMethod();
                     GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
+                    Type type = returnType == null ? null : returnType.getGenericType();
                     boolean isAsync = Optional.ofNullable(result.getContext()).orElse(RequestContext.getContext()).isAsync();
                     if (isAsync) {
                         ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
-                            sendResponse(channel, header, new ResponsePayload(obj, th, returnType));
+                            sendResponse(channel, header, new ResponsePayload(obj, th, type));
                         });
                     } else {
-                        sendResponse(channel, header, new ResponsePayload(result.getValue(), result.getException(), returnType));
+                        sendResponse(channel, header, new ResponsePayload(result.getValue(), result.getException(), type));
                     }
                 });
 

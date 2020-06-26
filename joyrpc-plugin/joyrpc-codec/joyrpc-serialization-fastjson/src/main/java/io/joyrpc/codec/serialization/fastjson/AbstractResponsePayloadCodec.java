@@ -111,7 +111,7 @@ public abstract class AbstractResponsePayloadCodec extends AbstractSerializer im
                 if (RES_CLASS.equals(key)) {
                     typeName = parseString(lexer, RES_CLASS, false);
                 } else if (RESPONSE.equals(key)) {
-                    payload.setResponse(parseObject(parser, lexer, getType(typeName)));
+                    payload.setResponse(parseResponse(parser, lexer, typeName));
                 } else if (EXCEPTION.equals(key)) {
                     payload.setException((Throwable) parseObject(parser, lexer, getThrowableType(typeName)));
                 }
@@ -127,6 +127,27 @@ public abstract class AbstractResponsePayloadCodec extends AbstractSerializer im
     }
 
     /**
+     * 解析应答
+     *
+     * @param parser   解析器
+     * @param lexer    文法
+     * @param typeName 名称
+     * @return 应答对象
+     */
+    protected Object parseResponse(final DefaultJSONParser parser, final JSONLexer lexer, final String typeName) {
+        if (typeName == null || typeName.isEmpty()) {
+            return null;
+        }
+        try {
+            return parseObject(parser, lexer, getType(typeName));
+        } catch (ClassNotFoundException e) {
+            //泛化调用情况下，类可能不存在
+            //TODO 需要判断是泛化调用
+            return parser.parse();
+        }
+    }
+
+    /**
      * 获取异常类型
      *
      * @param typeName 类型名称
@@ -135,7 +156,9 @@ public abstract class AbstractResponsePayloadCodec extends AbstractSerializer im
      */
     protected Class<?> getThrowableType(final String typeName) throws ClassNotFoundException {
         Class<?> clazz = ClassUtils.getClass(typeName);
-        if (Throwable.class.isAssignableFrom(clazz)) {
+        if (clazz == null) {
+            return Throwable.class;
+        } else if (Throwable.class.isAssignableFrom(clazz)) {
             return clazz;
         } else {
             throw new SerializerException("syntax error: invalid throwable class " + typeName);

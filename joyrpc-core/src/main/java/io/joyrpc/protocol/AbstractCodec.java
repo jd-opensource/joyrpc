@@ -433,7 +433,6 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         if (msgType == null) {
             throw new CodecException(String.format("Error occurs while decoding. unknown message type %d!", header.getMsgType()), ExceptionCode.CODEC_HEADER_FORMAT_EXCEPTION);
         }
-        //TODO 判断数据是否读取完毕
         MessageHeader msgHeader = (MessageHeader) header;
         if (buffer.readableBytes() <= 0) {
             if (msgType.isRequest()) {
@@ -450,8 +449,9 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         Compression compression = COMPRESSION_SELECTOR.select(header.getCompression());
         InputStream inputStream = buffer.inputStream();
         inputStream = compression == null ? inputStream : compression.decompress(inputStream);
-        Class payloadClass = getPayloadClass(msgHeader);
+        Class payloadClass = getPayloadClass(header, msgType);
 
+        //TODO 尽量拿到当前类型来进行反序列化
         Object payload = payloadClass == null ? null : deserialize(serialization, inputStream, payloadClass, msgHeader, context);
         if (msgType.isRequest()) {
             RequestMessage request = new RequestMessage(msgHeader, payload);
@@ -475,7 +475,8 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
      * @param header        头
      * @param context       上下文
      */
-    protected Object deserialize(final Serialization serialization, final InputStream is, final Type type, final MessageHeader header, final DecodeContext context) {
+    protected Object deserialize(final Serialization serialization, final InputStream is, final Type type,
+                                 final MessageHeader header, final DecodeContext context) {
         return serialization.getSerializer().deserialize(is, type);
     }
 
@@ -493,19 +494,10 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
      * 获取消息体的类型
      *
      * @param header 消息头
+     * @param type   消息类型
      * @return 包体类
      */
-    protected Class getPayloadClass(final MessageHeader header) {
-        return getPayloadClass(MsgType.valueOf(header.getMsgType()));
-    }
-
-    /**
-     * 获取消息体的类型
-     *
-     * @param type 类型
-     * @return 包体类
-     */
-    protected Class getPayloadClass(final MsgType type) {
+    protected Class getPayloadClass(final Header header, final MsgType type) {
         return type.getPayloadClz();
     }
 

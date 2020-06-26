@@ -31,7 +31,6 @@ import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
-import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.codec.EncodeContext;
@@ -150,8 +149,7 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected Class getPayloadClass(final MessageHeader header) {
-        MsgType type = MsgType.valueOf(header.getMsgType());
+    protected Class getPayloadClass(final Header header, final MsgType type) {
         switch (type) {
             case BizReq:
             case CallbackReq:

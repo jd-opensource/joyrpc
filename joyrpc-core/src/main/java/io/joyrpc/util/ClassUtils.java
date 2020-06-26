@@ -863,7 +863,7 @@ public class ClassUtils {
      * @throws ClassNotFoundException
      */
     public static Class<?> getClass(final String canonicalName) throws ClassNotFoundException {
-        if (canonicalName == null) {
+        if (canonicalName == null || canonicalName.isEmpty()) {
             return null;
         }
         Class<?> result = nameTypes.get(canonicalName);

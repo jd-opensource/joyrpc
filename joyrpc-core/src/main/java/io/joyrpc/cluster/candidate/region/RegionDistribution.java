@@ -29,24 +29,36 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static io.joyrpc.constants.Constants.REGION_DCEXCLUSIVE;
+import static io.joyrpc.constants.Constants.REGION_STANDBYPERDC;
+
 /**
  * 区域分布
  */
 public class RegionDistribution {
-    protected static final int REJECT_RATIO = 10;
-    //区域
+    /**
+     * 区域
+     */
     protected String region;
-    //机房
+    /**
+     * 机房
+     */
     protected String dataCenter;
-    //必须机房一致,排除空机房
+    /**
+     * 排除其它机房标识
+     */
     protected boolean dcExclusive;
-    //每个机房热备数量
+    /**
+     * 本区域，其它机房热备节点数
+     */
     protected int standbyPerDc;
-    //机房淘汰百分比
-    protected int rejectRatio;
-    //区域的分片
+    /**
+     * 区域的分片
+     */
     protected Map<String, Map<String, DataCenterDistribution>> regions = new HashMap<>(5);
-    //机房分片
+    /**
+     * 机房分片
+     */
     protected Map<String, DataCenterDistribution> dataCenters = new HashMap<>(10);
 
     /**
@@ -71,10 +83,8 @@ public class RegionDistribution {
     public RegionDistribution(final String region, final String dataCenter, final List<Node> nodes, final URL url) {
         this.region = region == null ? "" : region;
         this.dataCenter = dataCenter == null ? "" : dataCenter;
-        this.dcExclusive = url == null ? false : url.getBoolean("dcExclusive", Boolean.FALSE);
-        this.standbyPerDc = url == null ? 1 : url.getPositive("standbyPerDc", 1);
-        this.rejectRatio = url == null ? REJECT_RATIO : url.getInteger("rejectRatio", REJECT_RATIO);
-        this.rejectRatio = Math.max(Math.min(100, rejectRatio), 0);
+        this.dcExclusive = url == null ? false : url.getBoolean(REGION_DCEXCLUSIVE);
+        this.standbyPerDc = url == null ? 1 : url.getInteger(REGION_STANDBYPERDC);
         add(nodes);
     }
 
@@ -118,6 +128,7 @@ public class RegionDistribution {
      * 候选机器
      *
      * @param minSize 选择的最小条数
+     * @return 结果
      */
     public Candidature.Result candidate(final int minSize) {
         List<Node> candidates = new LinkedList<>();
@@ -149,9 +160,9 @@ public class RegionDistribution {
                 }
                 if (remain > 0) {
                     int mount = remain;
+                    //按比例补充
                     for (DataCenterDistribution v : prefers) {
-                        remain -= v.candidate(candidates, otherBackups,
-                                Math.max(standbyPerDc, (int) Math.ceil(mount * v.getSize() * 1.0 / count)));
+                        remain -= v.candidate(candidates, otherBackups, (int) Math.ceil(mount * v.getSize() * 1.0 / count));
                     }
                 } else {
                     //热备
@@ -194,8 +205,8 @@ public class RegionDistribution {
     /**
      * 获取节点数量
      *
-     * @param dcs
-     * @return
+     * @param dcs 机房分布
+     * @return 节点数量
      */
     protected int getCount(final Set<DataCenterDistribution> dcs) {
         int result = 0;
@@ -209,6 +220,7 @@ public class RegionDistribution {
      * 跨机房，首选或同区域的机房
      *
      * @param local 当前机房
+     * @return 目标机房
      */
     protected LinkedHashSet<DataCenterDistribution> preferredOrNeighbourDc(final DataCenterDistribution local) {
         LinkedHashSet<DataCenterDistribution> neighbours = new LinkedHashSet<>(8);

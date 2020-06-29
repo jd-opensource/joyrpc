@@ -828,6 +828,15 @@ public class Constants {
     public static final int DEFAULT_DECUBATION = 10 * 1000;
 
     /**
+     * 区域感知算法，是否排除其它机房
+     */
+    public static final URLOption<Boolean> REGION_DCEXCLUSIVE = new URLOption<>("region.dcExclusive", Boolean.FALSE);
+    /**
+     * 区域感知算法，本区域其它机房的热备节点数量
+     */
+    public static final URLOption<Integer> REGION_STANDBYPERDC = new URLOption<>("region.standbyPerDc", 0);
+
+    /**
      * 自适应负载均衡，综合评分算法
      */
     public static final URLOption<String> ADAPTIVE_ARBITER = new URLOption<>("adaptive.arbiter", "weight");

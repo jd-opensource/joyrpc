@@ -31,7 +31,6 @@ import io.joyrpc.transport.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -99,13 +98,12 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
                 //设置id
                 hbMsg.setMsgId(futureManager.generateId());
                 //创建future
-                CompletableFuture<Message> future = futureManager.create(hbMsg.getMsgId(), strategy.getTimeout()).whenComplete(afterRun);
+                futureManager.create(hbMsg.getMsgId(), strategy.getTimeout(), afterRun);
                 //发送消息
                 channel.send(hbMsg, r -> {
-                    //心跳有应答消息，会触发future的complete
+                    //心跳有应答消息
                     if (!r.isSuccess()) {
-                        futureManager.remove(hbMsg.getMsgId());
-                        future.completeExceptionally(r.getThrowable());
+                        futureManager.completeExceptionally(hbMsg.getMsgId(), r.getThrowable());
                         logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:",
                                 Channel.toString(channel.getRemoteAddress())), r.getThrowable());
                     }

@@ -89,21 +89,28 @@ public class DefaultChannelTransport implements ChannelTransport {
 
     @Override
     public CompletableFuture<Void> oneway(final Message message) {
+        requests.incrementAndGet();
         CompletableFuture<Void> result = new CompletableFuture<>();
         if (message != null) {
             message.setMsgId(channel.getFutureManager().generateId());
             message.setSessionId(transportId);
             message.setSession(session);
-            requests.incrementAndGet();
-            channel.send(message, r -> {
+            try {
+                channel.send(message, r -> {
+                    requests.decrementAndGet();
+                    if (r.isSuccess()) {
+                        result.complete(null);
+                    } else {
+                        result.completeExceptionally(r.getThrowable());
+                    }
+                });
+            } catch (Throwable e) {
                 requests.decrementAndGet();
-                if (r.isSuccess()) {
-                    result.complete(null);
-                } else {
-                    result.completeExceptionally(r.getThrowable());
-                }
-            });
+                //捕获异常
+                result.completeExceptionally(e);
+            }
         } else {
+            requests.decrementAndGet();
             result.completeExceptionally(new NullPointerException("message can not be null."));
         }
         return result;
@@ -111,40 +118,40 @@ public class DefaultChannelTransport implements ChannelTransport {
 
     @Override
     public CompletableFuture<Message> async(final Message message, final int timeoutMillis) {
+        requests.incrementAndGet();
         CompletableFuture<Message> future;
         if (message == null) {
+            requests.decrementAndGet();
             future = Futures.completeExceptionally(new NullPointerException("message can not be null."));
         } else if (!channel.isActive()) {
-            future = Futures.completeExceptionally(new ChannelSendException(String.format("Failed sending message, caused by channel is not active. at %s",
-                    Channel.toString(channel))));
+            requests.decrementAndGet();
+            future = Futures.completeExceptionally(new ChannelSendException(
+                    String.format("Failed sending message, caused by channel is not active. at %s",
+                            Channel.toString(channel))));
         } else {
+            int timeout = timeoutMillis <= 0 ? Constants.DEFAULT_TIMEOUT : timeoutMillis;
+            FutureManager<Long, Message> futureManager = channel.getFutureManager();
+            //设置id
+            message.setMsgId(futureManager.generateId());
+            message.setSessionId(transportId);
+            message.setSession(session);
+            //创建 future
+            future = futureManager.create(message.getMsgId(), timeout, session, requests);
             try {
-                int timeout = timeoutMillis <= 0 ? Constants.DEFAULT_TIMEOUT : timeoutMillis;
-                FutureManager<Long, Message> futureManager = channel.getFutureManager();
-                //设置id
-                message.setMsgId(futureManager.generateId());
-                message.setSessionId(transportId);
-                message.setSession(session);
-                //创建 future
-                future = futureManager.create(message.getMsgId(), timeout, session, requests);
-                requests.incrementAndGet();
                 channel.send(message, r -> {
                     if (!r.isSuccess()) {
                         Throwable throwable = r.getThrowable() == null
                                 ? new ChannelSendException("unknown exception.")
                                 : new ChannelSendException(r.getThrowable());
-                        CompletableFuture<Message> cf = futureManager.remove(message.getMsgId());
-                        if (cf != null) {
-                            cf.completeExceptionally(throwable);
-                            logger.error("Failed sending message. caused by " + throwable.getMessage(), throwable);
-                        }
+                        futureManager.completeExceptionally(message.getMsgId(), throwable);
+                        logger.error("Failed sending message. caused by " + throwable.getMessage(), throwable);
                     } else {
                         lastRequestTime = SystemClock.now();
                     }
                 });
             } catch (Throwable e) {
-                //捕获异常
-                future = Futures.completeExceptionally(e);
+                //捕获系统异常
+                futureManager.completeExceptionally(message.getMsgId(),e);
             }
         }
         return future;

@@ -32,20 +32,23 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.metric.*;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static io.joyrpc.constants.Constants.ADAPTIVE_CLUSTER_TP;
-import static io.joyrpc.constants.Constants.ADAPTIVE_NODE_TP;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 自适应负载均衡
  */
 @Extension(value = "adaptive")
 public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, DashboardAware, AdaptiveScorer {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdaptiveLoadBalance.class);
 
     public static final Function<TPSnapshot, Integer> TP30_FUNCTION = TPSnapshot::getTp30;
     public static final Function<TPSnapshot, Integer> TP50_FUNCTION = TPSnapshot::getTp50;
@@ -91,6 +94,24 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
     public void setup() {
         clusterFunction = getTpFunction(url.getString(ADAPTIVE_CLUSTER_TP), TP30_FUNCTION);
         nodeFunction = getTpFunction(url.getString(ADAPTIVE_NODE_TP), TP90_FUNCTION);
+        if (url.getBoolean(ADAPTIVE_LOG)) {
+            recorder = ranks -> {
+                StringBuilder builder = new StringBuilder();
+                builder.append('[');
+                ranks.forEach(o -> builder.append('{')
+                        .append("\"name\":\"").append(o.getNode().getName()).append('\"')
+                        .append(",\"weight\":").append(o.getWeight())
+                        .append(",\"rank\":").append(o.getRank())
+                        .append(",\"weak\":").append(o.isWeak())
+                        .append(",\"broken\":").append(o.isBroken())
+                        .append("},"));
+                if (!ranks.isEmpty()) {
+                    builder.deleteCharAt(builder.length() - 1);
+                }
+                builder.append(']');
+                logger.info(builder.toString());
+            };
+        }
     }
 
     protected Function<TPSnapshot, Integer> getTpFunction(final String type, final Function<TPSnapshot, Integer> def) {

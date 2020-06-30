@@ -100,7 +100,7 @@ public class NodeRank extends NodeMetric {
                 }
             }
         }
-        policy.getArbiter().score(this, ranks, policy);
+        this.rank = policy.getArbiter().score(this, ranks, policy);
         return this;
     }
 }

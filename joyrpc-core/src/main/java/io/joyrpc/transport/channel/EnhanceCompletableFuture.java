@@ -25,6 +25,7 @@ import io.joyrpc.util.Timer;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 
 /**
  * 增强的CompletableFuture
@@ -52,14 +53,18 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      * 扩展属性
      */
     protected Object attr;
+    /**
+     * 消费者
+     */
+    protected final BiConsumer<M, Throwable> consumer;
 
     /**
      * 构造函数
      *
-     * @param messageId
-     * @param session
-     * @param timeout
-     * @param requests
+     * @param messageId 消息ID
+     * @param session   会话
+     * @param timeout   超时
+     * @param requests  请求数
      */
     public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout,
                                     final AtomicInteger requests) {
@@ -67,6 +72,25 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
         this.session = session;
         this.requests = requests;
         this.timeout = timeout;
+        this.consumer = null;
+    }
+
+    /**
+     * 构造函数
+     *
+     * @param messageId 消息ID
+     * @param session   会话
+     * @param timeout   超时
+     * @param requests  请求数
+     * @param consumer  消费者
+     */
+    public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout,
+                                    final AtomicInteger requests, BiConsumer<M, Throwable> consumer) {
+        this.messageId = messageId;
+        this.session = session;
+        this.requests = requests;
+        this.timeout = timeout;
+        this.consumer = consumer;
     }
 
     public I getMessageId() {
@@ -89,6 +113,30 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
         this.attr = attr;
     }
 
+    @Override
+    public boolean complete(final M value) {
+        if (super.complete(value)) {
+            cancel();
+            if (consumer != null) {
+                consumer.accept(value, null);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean completeExceptionally(final Throwable ex) {
+        if (super.completeExceptionally(ex)) {
+            cancel();
+            if (consumer != null) {
+                consumer.accept(null, ex);
+            }
+            return true;
+        }
+        return false;
+    }
+
     /**
      * 放弃过期检查任务，在从Future管理器移除任务会进行调用
      */
@@ -99,16 +147,6 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
         if (requests != null) {
             requests.decrementAndGet();
         }
-    }
-
-    /**
-     * 放弃过期检查任务
-     *
-     * @param exception
-     */
-    protected void cancel(Throwable exception) {
-        cancel();
-        completeExceptionally(exception);
     }
 
 }

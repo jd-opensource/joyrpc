@@ -73,12 +73,10 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
      * 节点TP函数
      */
     protected Function<TPSnapshot, Integer> nodeFunction;
-
     /**
      * 接口
      */
     protected String className;
-
 
     @Override
     public void setClassName(String className) {

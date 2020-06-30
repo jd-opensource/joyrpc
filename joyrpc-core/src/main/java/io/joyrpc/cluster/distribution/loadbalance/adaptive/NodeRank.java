@@ -26,8 +26,6 @@ import io.joyrpc.cluster.Node;
 import io.joyrpc.metric.Dashboard;
 import io.joyrpc.metric.TPSnapshot;
 import io.joyrpc.metric.TPWindow;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -38,8 +36,6 @@ import java.util.function.Function;
  * 服务的评分
  */
 public class NodeRank extends NodeMetric {
-
-    private final static Logger logger = LoggerFactory.getLogger(NodeRank.class);
 
     //裁判评分
     protected List<JudgeRank> ranks = new LinkedList<>();
@@ -89,13 +85,9 @@ public class NodeRank extends NodeMetric {
             } else {
                 //有投票权，进行评分
                 rank = judge.score(this, policy);
-                if (logger.isDebugEnabled()) {
-                    logger.debug(String.format("ServerRank score judge:%s ratio:%d rank:%s", judge.type(), judge.ratio(), rank.getName()));
-                }
                 ranks.add(new JudgeRank(name, rank, ratio));
                 if (rank == Rank.Disabled) {
                     //一票否决，加快速度
-                    //logger.info(String.format("ServerRank score judge:%s ratio:%d rank:%s", judge.type(), judge.ratio(), rank.getName()));
                     break;
                 }
             }

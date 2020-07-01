@@ -1,5 +1,5 @@
 io.joyrpc.cluster.distribution.loadbalance.adaptive.judge.ConcurrencyLimitJudge
 io.joyrpc.cluster.distribution.loadbalance.adaptive.judge.QpsLimitJudge
 io.joyrpc.cluster.distribution.loadbalance.adaptive.judge.ServerStatusJudge
-io.joyrpc.cluster.distribution.loadbalance.adaptive.judge.Tp99LimitJudge
+io.joyrpc.cluster.distribution.loadbalance.adaptive.judge.TpLimitJudge
 io.joyrpc.cluster.distribution.loadbalance.adaptive.judge.ZoneAwareJudge

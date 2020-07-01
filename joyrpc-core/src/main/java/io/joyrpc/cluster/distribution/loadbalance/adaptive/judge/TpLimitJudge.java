@@ -24,12 +24,12 @@ import io.joyrpc.cluster.distribution.loadbalance.adaptive.*;
 import io.joyrpc.metric.TPSnapshot;
 
 /**
- * TP99评分
+ * TP评分
  */
-public class Tp99LimitJudge extends AbstractJudge implements MetricAware {
+public class TpLimitJudge extends AbstractJudge implements MetricAware {
 
-    public Tp99LimitJudge() {
-        super(JudgeType.Tp99Limit);
+    public TpLimitJudge() {
+        super(JudgeType.TpLimit);
     }
 
     @Override

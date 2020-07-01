@@ -100,6 +100,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
                         .append("\"name\":\"").append(o.getNode().getName()).append('\"')
                         .append(",\"weight\":").append(o.getWeight())
                         .append(",\"rank\":").append(o.getRank())
+                        .append(",\"ranks\":").append(o.getRanks())
                         .append(",\"weak\":").append(o.isWeak())
                         .append(",\"broken\":").append(o.isBroken())
                         .append("},"));

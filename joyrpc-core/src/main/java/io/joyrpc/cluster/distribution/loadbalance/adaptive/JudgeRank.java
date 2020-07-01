@@ -58,10 +58,6 @@ public class JudgeRank {
 
     @Override
     public String toString() {
-        return "{" +
-                "judge='" + judge + '\'' +
-                ", rank=" + rank +
-                ", ratio=" + ratio +
-                '}';
+        return "{\"judge\":\"" + judge + "\",\"rank\":" + rank + ",\"ratio\":" + ratio + '}';
     }
 }

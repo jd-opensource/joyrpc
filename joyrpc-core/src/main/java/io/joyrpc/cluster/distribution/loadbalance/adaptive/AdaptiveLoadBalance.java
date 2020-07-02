@@ -144,6 +144,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
         TPMetric snapshot;
         //采样数量
         int max = 100;
+        //TODO weak和broken的参与计算，会影响正常节点
         for (Node node : nodes) {
             window = node.getDashboard().getMethod(method);
             snapshot = window.getSnapshot();

@@ -36,13 +36,15 @@ public class ServerStatusJudge extends AbstractJudge {
 
     @Override
     public Rank score(final NodeMetric metric, final AdaptivePolicy policy) {
+        if (metric.isBroken()) {
+            return Rank.Disabled;
+        }
         Node node = metric.getNode();
-        //是不是应该秉承如果为null就应该选择的托底思路
         switch (node.getHealth()) {
             case NORMAL:
-                return !metric.isBroken() ? Rank.Good : Rank.Disabled;
+                return Rank.Good;
             case ABNORMAL:
-                return !metric.isBroken() ? Rank.Poor : Rank.Disabled;
+                return Rank.Poor;
             default:
                 return Rank.Disabled;
         }

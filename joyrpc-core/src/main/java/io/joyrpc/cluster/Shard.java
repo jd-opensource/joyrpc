@@ -316,9 +316,9 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
     }
 
     /**
-     * 当前服务健康状态，0：可用，非0：不可用
+     * 当前服务健康状态
      *
-     * @return
+     * @return 健康状态
      */
     default Health getHealth() {
         switch (getState()) {

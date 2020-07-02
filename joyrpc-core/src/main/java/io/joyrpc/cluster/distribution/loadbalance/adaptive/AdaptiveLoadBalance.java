@@ -136,8 +136,10 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
     @Override
     public AdaptiveConfig score(final Cluster cluster, final String method, final AdaptiveConfig config) {
         AdaptiveConfig result = new AdaptiveConfig();
+        //采样数量
+        int max = 100;
         List<Node> nodes = cluster.getNodes();
-        int size = nodes.size();
+        int size = Math.min(nodes.size(), max);
         River actives = config.concurrencyScore == null ? new River(size) : null;
         River requests = config.qpsScore == null ? new River(size) : null;
         River availability = config.availabilityScore == null ? new River(size) : null;
@@ -147,8 +149,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
         TPMetric snapshot;
         MilliPeriod brokenPeriod;
         MilliPeriod weakPeriod;
-        //采样数量
-        int max = 100;
+
         for (Node node : nodes) {
             window = node.getDashboard().getMethod(method);
             brokenPeriod = window.getBrokenPeriod();
@@ -206,7 +207,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
             result.setAvailabilityScore(computeAvailabilityScore(actives.compute()));
         }
         if (config.tpScore == null) {
-            result.setTpScore(AdaptiveConfig.computeTpScore(clusterFunction.apply(
+            result.setTpScore(computeTpScore(clusterFunction.apply(
                     cluster.getDashboard().getMethod(method).getSnapshot().getSnapshot())));
         }
         return result;

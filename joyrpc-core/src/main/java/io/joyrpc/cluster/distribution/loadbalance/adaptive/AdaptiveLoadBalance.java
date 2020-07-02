@@ -135,77 +135,24 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
 
     @Override
     public AdaptiveConfig score(final Cluster cluster, final String method, final AdaptiveConfig config) {
-        AdaptiveConfig result = new AdaptiveConfig();
         //采样数量
         int max = 100;
         List<Node> nodes = cluster.getNodes();
         int size = Math.min(nodes.size(), max);
-        River actives = config.concurrencyScore == null ? new River(size) : null;
-        River requests = config.qpsScore == null ? new River(size) : null;
-        River availability = config.availabilityScore == null ? new River(size) : null;
+        Lake lake = new Lake(
+                config.concurrencyScore == null ? new River(size) : null,
+                config.qpsScore == null ? new River(size) : null,
+                config.availabilityScore == null ? new River(size) : null);
 
         int i = 0;
-        TPWindow window;
-        TPMetric snapshot;
-        MilliPeriod brokenPeriod;
-        MilliPeriod weakPeriod;
-
         for (Node node : nodes) {
-            window = node.getDashboard().getMethod(method);
-            brokenPeriod = window.getBrokenPeriod();
-            weakPeriod = window.getWeakPeriod();
-            snapshot = window.getSnapshot();
-            if (brokenPeriod != null && brokenPeriod.between()) {
-                //禁用
-                if (actives != null) {
-                    actives.addDisable(window.actives().get());
-                }
-                if (requests != null) {
-                    requests.addDisable(window.distribution().get() + snapshot.getSnapshot().getRequests());
-                }
-                if (availability != null) {
-                    //保留3位小数
-                    availability.addDisable((long) (snapshot.getSnapshot().getAvailability() * 1000));
-                }
-            } else if (weakPeriod != null && weakPeriod.between()) {
-                //虚弱
-                if (actives != null) {
-                    actives.addPoor(window.actives().get());
-                }
-                if (requests != null) {
-                    requests.addPoor(window.distribution().get() + snapshot.getSnapshot().getRequests());
-                }
-                if (availability != null) {
-                    //保留3位小数
-                    availability.addPoor((long) (snapshot.getSnapshot().getAvailability() * 1000));
-                }
-            } else {
-                //正常
-                if (actives != null) {
-                    actives.addGood(window.actives().get());
-                }
-                if (requests != null) {
-                    requests.addGood(window.distribution().get() + snapshot.getSnapshot().getRequests());
-                }
-                if (availability != null) {
-                    //保留3位小数
-                    availability.addGood((long) (snapshot.getSnapshot().getAvailability() * 1000));
-                }
-            }
-            if (++i > max) {
+            lake.add(node.getDashboard().getMethod(method));
+            if (++i > size) {
                 //控制循环数量
                 break;
             }
         }
-        if (requests != null) {
-            result.setQpsScore(computeQpsScore(requests.compute()));
-        }
-        if (actives != null) {
-            result.setConcurrencyScore(computeConcurrencyScore(actives.compute()));
-        }
-        if (availability != null) {
-            result.setAvailabilityScore(computeAvailabilityScore(availability.compute()));
-        }
+        AdaptiveConfig result = lake.compute();
         if (config.tpScore == null) {
             result.setTpScore(computeTpScore(clusterFunction.apply(
                     cluster.getDashboard().getMethod(method).getSnapshot().getSnapshot())));
@@ -438,5 +385,124 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
         }
     }
 
+    /**
+     * 指标湖
+     */
+    protected static class Lake {
+        /**
+         * 并发数
+         */
+        protected River actives;
+        /**
+         * QPS
+         */
+        protected River requests;
+        /**
+         * 可用率
+         */
+        protected River availability;
+
+        public Lake(River actives, River requests, River availability) {
+            this.actives = actives;
+            this.requests = requests;
+            this.availability = availability;
+        }
+
+        /**
+         * 添加指标
+         *
+         * @param window 指标窗口
+         */
+        public void add(final TPWindow window) {
+            MilliPeriod brokenPeriod = window.getBrokenPeriod();
+            MilliPeriod weakPeriod = window.getWeakPeriod();
+            if (brokenPeriod != null && brokenPeriod.between()) {
+                //禁用
+                addDisable(window, window.getSnapshot());
+            } else if (weakPeriod != null && weakPeriod.between()) {
+                //虚弱
+                addPoor(window, window.getSnapshot());
+            } else {
+                //正常
+                addGood(window, window.getSnapshot());
+            }
+        }
+
+        /**
+         * 正常指标
+         *
+         * @param window   窗口
+         * @param snapshot 快照
+         */
+        protected void addGood(final TPWindow window, final TPMetric snapshot) {
+            if (actives != null) {
+                actives.addGood(window.actives().get());
+            }
+            if (requests != null) {
+                requests.addGood(window.distribution().get() + snapshot.getSnapshot().getRequests());
+            }
+            if (availability != null) {
+                //保留3位小数
+                availability.addGood((long) (snapshot.getSnapshot().getAvailability() * 1000));
+            }
+        }
+
+        /**
+         * 虚弱指标
+         *
+         * @param window   指标窗口
+         * @param snapshot 指标快照
+         */
+        protected void addPoor(final TPWindow window, final TPMetric snapshot) {
+            if (actives != null) {
+                actives.addPoor(window.actives().get());
+            }
+            if (requests != null) {
+                requests.addPoor(window.distribution().get() + snapshot.getSnapshot().getRequests());
+            }
+            if (availability != null) {
+                //保留3位小数
+                availability.addPoor((long) (snapshot.getSnapshot().getAvailability() * 1000));
+            }
+        }
+
+        /**
+         * 禁用节点指标
+         *
+         * @param window   指标窗口
+         * @param snapshot 指标快照
+         */
+        protected void addDisable(final TPWindow window, final TPMetric snapshot) {
+            if (actives != null) {
+                actives.addDisable(window.actives().get());
+            }
+            if (requests != null) {
+                requests.addDisable(window.distribution().get() + snapshot.getSnapshot().getRequests());
+            }
+            if (availability != null) {
+                //保留3位小数
+                availability.addDisable((long) (snapshot.getSnapshot().getAvailability() * 1000));
+            }
+        }
+
+        /**
+         * 计算评分
+         *
+         * @return 配置
+         */
+        public AdaptiveConfig compute() {
+            AdaptiveConfig result = new AdaptiveConfig();
+            if (requests != null) {
+                result.setQpsScore(computeQpsScore(requests.compute()));
+            }
+            if (actives != null) {
+                result.setConcurrencyScore(computeConcurrencyScore(actives.compute()));
+            }
+            if (availability != null) {
+                result.setAvailabilityScore(computeAvailabilityScore(availability.compute()));
+            }
+            return result;
+        }
+    }
 
 }

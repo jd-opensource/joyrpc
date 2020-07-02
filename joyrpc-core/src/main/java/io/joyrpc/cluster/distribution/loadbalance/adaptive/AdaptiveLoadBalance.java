@@ -204,7 +204,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
             result.setConcurrencyScore(computeConcurrencyScore(actives.compute()));
         }
         if (availability != null) {
-            result.setAvailabilityScore(computeAvailabilityScore(actives.compute()));
+            result.setAvailabilityScore(computeAvailabilityScore(availability.compute()));
         }
         if (config.tpScore == null) {
             result.setTpScore(computeTpScore(clusterFunction.apply(

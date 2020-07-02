@@ -39,8 +39,8 @@ public class TpLimitJudge extends AbstractJudge implements MetricAware {
         Rank result;
         Rank score;
         if (nodeTp.getRequests() == 0 && metric.isWeak()) {
-            //当虚弱的时候，由于没有数据，容易判断出Good，进行修正
-            result = Rank.Fair;
+            //当虚弱的时候，由于没有数据，TP为0，可用率为100，容易判断出Good，进行修正
+            return Rank.Fair;
         } else {
             result = score(policy.getTpScore(), metric.getNodeFunction().apply(nodeTp), RankScore.INT_DESCENDING);
         }

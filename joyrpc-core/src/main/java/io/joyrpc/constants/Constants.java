@@ -900,7 +900,10 @@ public class Constants {
      * 自适应负载均衡，节点TP
      */
     public static final URLOption<String> ADAPTIVE_NODE_TP = new URLOption<>("adaptive.nodeTp", "tp90");
-
+    /**
+     * 自适应负载均衡，集群评分抽样的数量
+     */
+    public static final URLOption<Integer> ADAPTIVE_SAMPLING_SIZE = new URLOption<>("adaptive.samplingSize", 100);
     /**
      * 自适应负载均衡，记录日志
      */

@@ -77,6 +77,10 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
      */
     protected Function<TPSnapshot, Integer> nodeFunction;
     /**
+     * 集群评分抽样数量
+     */
+    protected int samplingSize;
+    /**
      * 接口
      */
     protected String className;
@@ -95,6 +99,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
     public void setup() {
         clusterFunction = getTpFunction(url.getString(ADAPTIVE_CLUSTER_TP), TP30_FUNCTION);
         nodeFunction = getTpFunction(url.getString(ADAPTIVE_NODE_TP), TP90_FUNCTION);
+        samplingSize = url.getInteger(ADAPTIVE_SAMPLING_SIZE);
         if (url.getBoolean(ADAPTIVE_LOG)) {
             recorder = ranks -> {
                 StringBuilder builder = new StringBuilder();

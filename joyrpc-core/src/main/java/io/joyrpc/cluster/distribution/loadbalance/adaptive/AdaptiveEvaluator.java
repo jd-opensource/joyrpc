@@ -47,6 +47,10 @@ public class AdaptiveEvaluator {
      */
     protected final Function<TPSnapshot, Integer> tpFunction;
     /**
+     * 抽样数量
+     */
+    protected final int samplingSize;
+    /**
      * 并发数
      */
     protected final Quota actives;
@@ -62,12 +66,14 @@ public class AdaptiveEvaluator {
     /**
      * 构造函数
      *
-     * @param config     自适应配置
-     * @param tpFunction TP函数
+     * @param config       自适应配置
+     * @param tpFunction   TP函数
+     * @param samplingSize 抽样数量
      */
-    public AdaptiveEvaluator(AdaptiveConfig config, Function<TPSnapshot, Integer> tpFunction) {
+    public AdaptiveEvaluator(AdaptiveConfig config, Function<TPSnapshot, Integer> tpFunction, int samplingSize) {
         this.config = config;
         this.tpFunction = tpFunction;
+        this.samplingSize = samplingSize;
         this.actives = config.concurrencyScore == null ? new Quota() : null;
         this.requests = config.qpsScore == null ? new Quota() : null;
         this.availability = config.availabilityScore == null ? new Quota() : null;
@@ -163,7 +169,7 @@ public class AdaptiveEvaluator {
     public AdaptiveConfig compute(final Cluster cluster, final String method) {
         //采样数量
         List<Node> nodes = cluster.getNodes();
-        int size = Math.min(nodes.size(), 100);
+        int size = samplingSize <= 0 ? nodes.size() : Math.min(nodes.size(), samplingSize);
         int i = 0;
         for (Node node : nodes) {
             add(node.getDashboard().getMethod(method));

@@ -140,7 +140,7 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
 
     @Override
     public AdaptiveConfig score(final Cluster cluster, final String method, final AdaptiveConfig config) {
-        AdaptiveEvaluator evaluator = new AdaptiveEvaluator(config, clusterFunction);
+        AdaptiveEvaluator evaluator = new AdaptiveEvaluator(config, clusterFunction, samplingSize);
         return evaluator.compute(cluster, method);
     }
 

@@ -3,3 +3,4 @@ io.joyrpc.filter.consumer.ConcurrencyFilter
 io.joyrpc.filter.consumer.GenericFilter
 io.joyrpc.filter.consumer.MockFilter
 io.joyrpc.filter.consumer.ValidationFilter
+io.joyrpc.filter.consumer.TraceFilter

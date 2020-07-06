@@ -46,8 +46,6 @@ public interface Channel {
 
     String SERVER_CHANNEL = "SERVER_CHANNEL";
 
-    String HEARTBEAT_FAILED_COUNT = "heartbeat.failed.count";
-
     String CHANNEL_KEY = "CHANNEL_KEY";
 
     String PROTOCOL = "PROTOCOL";
@@ -218,9 +216,9 @@ public interface Channel {
     /**
      * 获取Future管理器
      *
-     * @return
+     * @return Future管理器
      */
-    FutureManager<Integer, Message> getFutureManager();
+    FutureManager<Long, Message> getFutureManager();
 
     /**
      * 申请一个ChannelBuffer

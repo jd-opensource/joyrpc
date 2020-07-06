@@ -1,1 +1,1 @@
-io.joyrpc.cluster.discovery.registry.broadcast.BroadCastRegistryFactory
+io.joyrpc.cluster.discovery.registry.broadcast.BroadcastRegistryFactory

@@ -22,20 +22,17 @@ package io.joyrpc.filter.consumer;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.Constants;
-import io.joyrpc.context.GlobalContext;
-import io.joyrpc.context.mock.MockConfiguration;
+import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractConsumerFilter;
 import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-
-import static io.joyrpc.context.mock.MockConfiguration.MOCK;
 
 /**
  * @description: Mock过滤器<br>
@@ -47,8 +44,8 @@ public class MockFilter extends AbstractConsumerFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        // 如果在注册中心中配置了
-        Object result = MOCK.get(invocation.getClassName(), invocation.getMethodName(), invocation.getAlias());
+        Map<String, Object> mocks = ((ConsumerMethodOption) request.getOption()).getMock();
+        Object result = mocks == null ? null : mocks.get(invocation.getAlias());
         return result != null ?
                 CompletableFuture.completedFuture(
                         new Result(request.getContext(), result)) :
@@ -57,13 +54,12 @@ public class MockFilter extends AbstractConsumerFilter {
 
     @Override
     public boolean test(final URL url) {
-        //兼容老版本，测试环境默认开启，如果环境设置了mock=false则禁用
-        //TODO 如何判断测试环境
-        Parametric parametric = GlobalContext.asParametric(Constants.GLOBAL_SETTING);
-        if (Boolean.TRUE.equals(parametric.getBoolean(Constants.MOCK_OPTION))) {
-            return true;
-        }
         return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isMock();
     }
 
     @Override

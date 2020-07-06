@@ -20,6 +20,9 @@ package io.joyrpc.example.service;
  * #L%
  */
 
+import io.joyrpc.annotation.CallbackArg;
+import io.joyrpc.example.service.vo.*;
+
 import javax.validation.constraints.NotNull;
 
 /**
@@ -27,13 +30,40 @@ import javax.validation.constraints.NotNull;
  */
 public interface DemoService {
 
-    String sayHello(@NotNull String str);
+    String sayHello(@NotNull String str) throws Throwable;
 
-    default String echo(String str) {
+    int test(int count);
+
+    <T> T generic(T value);
+
+    default String echo(String str) throws Throwable {
         return sayHello(str);
+    }
+
+    default Java8TimeObj echoJava8TimeObj(Java8TimeObj timeObj) {
+        return timeObj;
+    }
+
+    default EchoResponse<EchoData> echoRequest(EchoRequest<EchoData> request) {
+        return request == null ? null : new EchoResponse<>(request.getHeader(), request.getBody());
+    }
+
+    default EchoResponse echoRequestGeneric(EchoRequest request) {
+        return request == null ? null : new EchoResponse<>(request.getHeader(), request.getBody());
+    }
+
+    default EchoResponse echoDataRequest(EchoDataRequest request) {
+        return request == null ? null : new EchoResponse<>(request.getHeader(), request.getBody());
     }
 
     static String hello(String v) {
         return v;
+    }
+
+    void echoCallback(@CallbackArg EchoCallback callback);
+
+    public static interface EchoCallback {
+
+        boolean echo(String str);
     }
 }

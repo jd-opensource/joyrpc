@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.hessian2;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,18 +21,16 @@ package io.joyrpc.codec.serialization.hessian2;
  */
 
 import io.joyrpc.codec.serialization.*;
-import io.joyrpc.com.caucho.hessian.io.Hessian2Input;
+import io.joyrpc.com.caucho.hessian.io.AutowiredObjectDeserializer;
+import io.joyrpc.com.caucho.hessian.io.AutowiredObjectSerializer;
 import io.joyrpc.com.caucho.hessian.io.Hessian2Output;
 import io.joyrpc.com.caucho.hessian.io.SerializerFactory;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.permission.BlackList;
-import io.joyrpc.util.ClassUtils;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.Collection;
 
 /**
  * hessian2序列化协议
@@ -56,10 +54,8 @@ public class Hessian2Serialization implements Serialization, BlackList.BlackList
     }
 
     @Override
-    public void updateBlack(final String blackList) {
-        List<String> remotes = blackList == null || blackList.isEmpty() ?
-                new ArrayList<>(0) : Arrays.asList(blackList.split("[;,\\s\\n]"));
-        Hessian2Serializer.BLACK_LIST.updateBlack(remotes);
+    public void updateBlack(final Collection<String> blackList) {
+        Hessian2Serializer.BLACK_LIST.updateBlack(blackList);
     }
 
     /**
@@ -70,27 +66,52 @@ public class Hessian2Serialization implements Serialization, BlackList.BlackList
         protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/hessian.blacklist",
                 "META-INF/permission/hessian.blacklist").load();
 
-        protected static final SerializerFactory SERIALIZER_FACTORY = new SerializerFactory(ClassUtils.getClassLoader(Hessian2Serialization.class));
+        protected static final SerializerFactory SERIALIZER_FACTORY = new SerializerFactory(Thread.currentThread().getContextClassLoader());
 
         protected static final Hessian2Serializer INSTANCE = new Hessian2Serializer();
+        /**
+         * 线程缓存，优化性能
+         */
+        protected static final ThreadLocal<Hessian2Output> HESSIAN_OUTPUT = ThreadLocal.withInitial(() -> {
+            Hessian2Output result = new Hessian2Output(null);
+            result.setSerializerFactory(SERIALIZER_FACTORY);
+            result.setCloseStreamOnClose(true);
+            return result;
+        });
+
+        /**
+         * 线程缓存，优化性能
+         */
+        protected static final ThreadLocal<Hessian2BWLInput> HESSIAN_INPUT = ThreadLocal.withInitial(() -> {
+            Hessian2BWLInput result = new Hessian2BWLInput(BLACK_LIST);
+            result.setSerializerFactory(SERIALIZER_FACTORY);
+            result.setCloseStreamOnClose(true);
+            return result;
+        });
 
         static {
             SERIALIZER_FACTORY.setAllowNonSerializable(true);
-            SERIALIZER_FACTORY.addFactory(new Java8SerializerFactory());
+            Hessian2SerializerFactory factory = new Hessian2SerializerFactory();
+            register(AutowiredObjectSerializer.class, o -> factory.serializers.put(o.getType(), o));
+            register(AutowiredObjectDeserializer.class, o -> factory.deserializers.put(o.getType(), o));
+            if (factory.deserializers.isEmpty()) {
+                factory.deserializers = null;
+            }
+            SERIALIZER_FACTORY.addFactory(factory);
         }
 
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) {
-            Hessian2Output hessian2Output = new io.joyrpc.com.caucho.hessian.io.Hessian2Output(os);
-            hessian2Output.setSerializerFactory(SERIALIZER_FACTORY);
-            return new Hessian2Writer(hessian2Output);
+            Hessian2Output output = HESSIAN_OUTPUT.get();
+            output.init(os);
+            return new Hessian2Writer(output);
         }
 
         @Override
         protected ObjectReader createReader(final InputStream is, final Class clazz) {
-            Hessian2Input hessian2Input = new Hessian2BWLInput(is, BLACK_LIST);
-            hessian2Input.setSerializerFactory(SERIALIZER_FACTORY);
-            return new Hessian2Reader(hessian2Input, is);
+            Hessian2BWLInput input = HESSIAN_INPUT.get();
+            input.init(is);
+            return new Hessian2Reader(input);
         }
     }
 }

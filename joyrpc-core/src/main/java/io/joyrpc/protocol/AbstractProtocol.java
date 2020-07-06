@@ -112,7 +112,7 @@ public abstract class AbstractProtocol implements Protocol {
             return;
         }
         Header header = cause instanceof RpcException ? ((RpcException) cause).getHeader() : null;
-        if (header != null && header instanceof MessageHeader && cause instanceof RpcException) {
+        if (header instanceof MessageHeader) {
             onException(channel, (MessageHeader) header, (RpcException) cause);
         } else {
             logger.error(String.format("Error %s occurs at %s ", cause.getClass().getName(), Channel.toString(channel)), cause);

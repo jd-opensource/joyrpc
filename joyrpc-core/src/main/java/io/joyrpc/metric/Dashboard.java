@@ -9,9 +9,9 @@ package io.joyrpc.metric;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,12 +31,12 @@ public interface Dashboard extends EventHandler<MetricEvent> {
     /**
      * 获取指标
      *
-     * @return
+     * @return 指标
      */
     TPWindow getMetric();
 
     /**
-     * 快照
+     * 执行快照
      */
     default void snapshot() {
         getMetric().snapshot();
@@ -45,7 +45,7 @@ public interface Dashboard extends EventHandler<MetricEvent> {
     /**
      * 数据是否过期
      *
-     * @return
+     * @return 过期标识
      */
     default boolean isExpired() {
         return getMetric().isExpired();
@@ -54,17 +54,17 @@ public interface Dashboard extends EventHandler<MetricEvent> {
     /**
      * 设置上次快照时间
      *
-     * @param lastSnapshotTime
+     * @param timeMillis 上次快照时间，单位毫秒
      */
-    default void setLastSnapshotTime(final long lastSnapshotTime) {
-        getMetric().setLastSnapshotTime(lastSnapshotTime);
+    default void setLastSnapshotTime(final long timeMillis) {
+        getMetric().setLastSnapshotTime(timeMillis);
     }
 
     /**
      * 获取方法的性能指标
      *
-     * @param methodName
-     * @return
+     * @param methodName 方法名称
+     * @return 方法的指标窗口
      */
     TPWindow getMethod(String methodName);
 

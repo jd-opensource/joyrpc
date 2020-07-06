@@ -5,18 +5,13 @@
     <parent>
         <artifactId>joyrpc-protocol</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>joyrpc-protocol-grpc</artifactId>
-
+    <packaging>jar</packaging>
     <dependencies>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-transport-netty4</artifactId>

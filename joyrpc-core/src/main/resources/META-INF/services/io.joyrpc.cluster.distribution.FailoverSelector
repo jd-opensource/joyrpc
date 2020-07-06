@@ -1,1 +1,1 @@
-io.joyrpc.cluster.distribution.route.failover.simple.SimpleFailoverSelector
+io.joyrpc.cluster.distribution.router.failover.simple.SimpleFailoverSelector

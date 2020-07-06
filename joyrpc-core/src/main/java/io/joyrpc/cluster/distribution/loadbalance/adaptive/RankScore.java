@@ -148,6 +148,9 @@ public class RankScore<T> implements Serializable, Cloneable {
         return max;
     }
 
+    public boolean isEmpty() {
+        return fair == null && poor == null && disable == null;
+    }
 
     @Override
     public RankScore<T> clone() {

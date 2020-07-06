@@ -1,3 +1,0 @@
-io.joyrpc.cluster.distribution.route.failfast.FailfastRoute
-io.joyrpc.cluster.distribution.route.failover.FailoverRoute
-io.joyrpc.cluster.distribution.route.pinpoint.PinPointRoute

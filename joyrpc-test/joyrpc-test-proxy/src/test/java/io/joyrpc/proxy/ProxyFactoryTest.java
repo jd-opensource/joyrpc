@@ -20,11 +20,17 @@ package io.joyrpc.proxy;
  * #L%
  */
 
+import io.joyrpc.Plugin;
+import io.joyrpc.util.GrpcType;
+import org.junit.Assert;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.PROXY;
 
@@ -70,6 +76,21 @@ public class ProxyFactoryTest {
                 totalTime += endTime - startTime;
             }
             System.out.println(String.format("%s time %d, tps %d", type, totalTime, (int) (1000000000.0 / totalTime * count)));
+        }
+    }
+
+    @Test
+    public void testGrpType() throws NoSuchMethodException, NoSuchFieldException {
+        Supplier<String> supplier = () -> String.valueOf(ThreadLocalRandom.current().nextInt(1000));
+        Method method = HelloService.class.getMethod("sayHello", String.class);
+        for (GrpcFactory factory : Plugin.GRPC_FACTORY.extensions()) {
+            GrpcType type = factory.generate(HelloService.class, method, supplier);
+            Class<?> clazz = type.getRequest().getClazz();
+            Field[] fields = clazz.getDeclaredFields();
+            Assert.assertEquals(fields.length, 1);
+            clazz = type.getResponse().getClazz();
+            fields = clazz.getDeclaredFields();
+            Assert.assertEquals(fields.length, 1);
         }
     }
 

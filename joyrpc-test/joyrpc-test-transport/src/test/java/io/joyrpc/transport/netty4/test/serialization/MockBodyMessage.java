@@ -49,8 +49,8 @@ public class MockBodyMessage implements Message<MockMessageHeader, MessageBody> 
     }
 
     @Override
-    public void setPayLoad(MessageBody data) {
-        this.body = data;
+    public void setPayLoad(MessageBody payload) {
+        this.body = payload;
     }
 
     @Override

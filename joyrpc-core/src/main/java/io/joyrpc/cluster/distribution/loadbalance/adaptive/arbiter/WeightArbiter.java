@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.arbiter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,7 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.arbiter;
  * #L%
  */
 
-import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.JudgeRank;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.NodeMetric;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Rank;
@@ -49,8 +49,8 @@ public class WeightArbiter extends OverallArbiter {
     }
 
     @Override
-    public Rank score(final NodeMetric node, final List<JudgeRank> ranks, final AdaptiveConfig config) {
-        Rank rank = super.score(node, ranks, config);
+    public Rank score(final NodeMetric node, final List<JudgeRank> ranks, final AdaptivePolicy policy) {
+        Rank rank = super.score(node, ranks, policy);
         switch (rank) {
             case Disabled:
                 return Rank.Disabled;

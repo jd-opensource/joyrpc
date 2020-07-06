@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,7 @@ package io.joyrpc.cluster.distribution;
 /**
  * 重试策略
  */
-public interface FailoverPolicy<T, R> {
+public interface FailoverPolicy {
 
     /**
      * 获取最大重试次数
@@ -42,12 +42,12 @@ public interface FailoverPolicy<T, R> {
     /**
      * 超时策略
      */
-    TimeoutPolicy<T> getTimeoutPolicy();
+    TimeoutPolicy getTimeoutPolicy();
 
     /**
      * 异常策略
      */
-    ExceptionPolicy<R> getExceptionPolicy();
+    ExceptionPolicy getExceptionPolicy();
 
     /**
      * 获取重试节点选择器
@@ -59,7 +59,7 @@ public interface FailoverPolicy<T, R> {
     /**
      * 默认重试策略
      */
-    class DefaultFailoverPolicy<T, R> implements FailoverPolicy<T, R> {
+    class DefaultFailoverPolicy implements FailoverPolicy {
         /**
          * 最大重试次数
          */
@@ -71,11 +71,11 @@ public interface FailoverPolicy<T, R> {
         /**
          * 超时策略
          */
-        protected TimeoutPolicy<T> timeoutPolicy;
+        protected TimeoutPolicy timeoutPolicy;
         /**
          * 异常策略
          */
-        protected ExceptionPolicy<R> exceptionPolicy;
+        protected ExceptionPolicy exceptionPolicy;
         /**
          * 重试节点选择器
          */
@@ -100,8 +100,8 @@ public interface FailoverPolicy<T, R> {
          * @param retrySelector
          */
         public DefaultFailoverPolicy(int maxRetry, boolean onlyOncePerNode,
-                                     TimeoutPolicy<T> timeoutPolicy,
-                                     ExceptionPolicy<R> exceptionPolicy,
+                                     TimeoutPolicy timeoutPolicy,
+                                     ExceptionPolicy exceptionPolicy,
                                      FailoverSelector retrySelector) {
             this.maxRetry = maxRetry;
             this.onlyOncePerNode = onlyOncePerNode;
@@ -121,12 +121,12 @@ public interface FailoverPolicy<T, R> {
         }
 
         @Override
-        public TimeoutPolicy<T> getTimeoutPolicy() {
+        public TimeoutPolicy getTimeoutPolicy() {
             return timeoutPolicy;
         }
 
         @Override
-        public ExceptionPolicy<R> getExceptionPolicy() {
+        public ExceptionPolicy getExceptionPolicy() {
             return exceptionPolicy;
         }
 

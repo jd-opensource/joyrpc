@@ -129,9 +129,7 @@ public class FileBackup implements Backup {
                     //删除原始文件
                     throw new IOException(String.format("Error occurs while backuping %s. Failed renaming file %s to %s", name, temp, target));
                 }
-            } catch (SerializerException e) {
-                throw new IOException(String.format("Error occurs while backuping %s.", name), e);
-            } catch (IOException e) {
+            } catch (SerializerException | IOException e) {
                 throw new IOException(String.format("Error occurs while backuping %s.", name), e);
             } finally {
                 if (temp.exists()) {

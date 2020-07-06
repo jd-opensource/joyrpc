@@ -23,6 +23,8 @@ package io.joyrpc.util;
 import io.joyrpc.exception.CreationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.ReflectionException;
+import io.joyrpc.proxy.MethodArgs;
+import io.joyrpc.util.GrpcType.GrpcConversion;
 
 import java.lang.reflect.*;
 import java.net.URL;
@@ -61,22 +63,22 @@ public class ClassUtils {
         return !Modifier.isStatic(mod) && !Modifier.isTransient(mod);
     };
 
-    protected final static Map<String, Class> forNames = new ConcurrentHashMap(5000);
+    protected final static Map<String, Class<?>> forNames = new ConcurrentHashMap<>(5000);
 
     /**
      * String-->Class 缓存，指定大小
      */
-    protected final static Map<String, Class> nameTypes = new ConcurrentHashMap(5000);
+    protected final static Map<String, Class<?>> nameTypes = new ConcurrentHashMap<>(5000);
 
     /**
      * String-->Class 缓存，指定大小
      */
-    protected final static Map<Class, String> typeNames = new ConcurrentHashMap(5000);
+    protected final static Map<Class<?>, String> canonicalNames = new ConcurrentHashMap<>(5000);
 
     /**
      * 类的元数据
      */
-    protected final static Map<Class<?>, ClassMeta> classMetas = new ConcurrentHashMap<>();
+    protected final static Map<Class<?>, ClassMeta> classMetas = new ConcurrentHashMap<>(5000);
 
     static {
         //这些类型不能用类加载器加载
@@ -118,7 +120,7 @@ public class ClassUtils {
      * @return the boolean
      */
     public static boolean isPrimitive(final Class<?> clazz, final Predicate<Class> predicate) {
-        return clazz == null ? false : (clazz.isPrimitive() ? true : (predicate == null ? false : predicate.test(clazz)));
+        return clazz != null && (clazz.isPrimitive() || (predicate != null && predicate.test(clazz)));
     }
 
     /**
@@ -163,7 +165,7 @@ public class ClassUtils {
      * @throws NoSuchMethodException   如果找不到匹配的方法
      * @throws MethodOverloadException 方法重载异常
      */
-    public static Method getPublicMethod(final Class clazz, final String methodName, final int sign) throws NoSuchMethodException {
+    public static Method getPublicMethod(final Class<?> clazz, final String methodName, final int sign) throws NoSuchMethodException {
         return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethod(methodName, sign);
     }
 
@@ -176,7 +178,7 @@ public class ClassUtils {
      * @return Method对象
      * @throws NoSuchMethodException 如果找不到匹配的方法
      */
-    public static Method getPublicMethod(final Class clazz, final String methodName, final String[] argsType) throws NoSuchMethodException {
+    public static Method getPublicMethod(final Class<?> clazz, final String methodName, final String[] argsType) throws NoSuchMethodException {
         return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethod(methodName, signMethod(methodName, argsType));
     }
 
@@ -206,26 +208,25 @@ public class ClassUtils {
      * @throws NoSuchMethodException   如果找不到匹配的方法
      * @throws MethodOverloadException 有方法重载异常
      */
-    public static Method getPublicMethod(final Class clazz, final String methodName)
+    public static Method getPublicMethod(final Class<?> clazz, final String methodName)
             throws NoSuchMethodException, MethodOverloadException {
         return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethod(methodName);
     }
 
     /**
-     * 获取包装参数的动态类
+     * 获取GRPC方法信息
      *
      * @param clazz      类
      * @param methodName 方法名
-     * @param function   函数
-     * @return 包装参数的动态类
+     * @param function   GrpcType函数
+     * @return GRPC方法信息
      * @throws NoSuchMethodException   如果找不到匹配的方法
      * @throws MethodOverloadException 有方法重载异常
      */
-    public static GrpcType getGrpcType(final Class clazz, final String methodName,
-                                       final BiFunction<Class, Method, GrpcType> function)
+    public static GrpcMethod getPublicMethod(final Class<?> clazz, final String methodName,
+                                             final BiFunction<Class<?>, Method, GrpcType> function)
             throws NoSuchMethodException, MethodOverloadException {
-        return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethodMeta().
-                getMethodInfo(methodName).getGrpcType(function);
+        return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethodMeta().getMethod(methodName, function);
     }
 
     /**
@@ -236,7 +237,7 @@ public class ClassUtils {
      * @return Method对象
      * @throws NoSuchMethodException 如果找不到匹配的方法
      */
-    public static Collection<Method> getPublicMethods(final Class clazz, final String methodName) throws NoSuchMethodException {
+    public static Collection<Method> getPublicMethods(final Class<?> clazz, final String methodName) throws NoSuchMethodException {
         return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethods(methodName);
     }
 
@@ -244,28 +245,29 @@ public class ClassUtils {
      * 获取公共方法，过滤掉了Object类型的方法
      *
      * @param clazz 类
+     * @return 公共方法列表
      */
-    public static List<Method> getPublicMethod(final Class clazz) {
+    public static List<Method> getPublicMethod(final Class<?> clazz) {
         return clazz == null ? null : getClassMeta(clazz).getMethods();
     }
 
     /**
      * 获取Getter
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return getter
      */
-    public static Map<String, Method> getGetter(final Class clazz) {
+    public static Map<String, Method> getGetter(final Class<?> clazz) {
         return clazz == null ? null : getClassMeta(clazz).getMethodMeta().getter;
     }
 
     /**
      * 获取Setter
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return setter
      */
-    public static Map<String, Method> getSetter(final Class clazz) {
+    public static Map<String, Method> getSetter(final Class<?> clazz) {
         return clazz == null ? null : getClassMeta(clazz).getMethodMeta().setter;
     }
 
@@ -274,7 +276,7 @@ public class ClassUtils {
      *
      * @param methodName 方法名称
      * @param types      参数
-     * @return
+     * @return 签名
      */
     public static int signMethod(final String methodName, final String[] types) {
         return Arrays.hashCode(types);
@@ -285,7 +287,7 @@ public class ClassUtils {
      *
      * @param methodName 方法名称
      * @param types      参数
-     * @return
+     * @return 前面
      */
     public static int signMethod(final String methodName, final Class<?>[] types) {
         if (types == null) {
@@ -360,7 +362,7 @@ public class ClassUtils {
      * @return Class
      * @throws ClassNotFoundException 找不到类
      */
-    public static Class forName(final String className) throws ClassNotFoundException {
+    public static Class<?> forName(final String className) throws ClassNotFoundException {
         return forName(className, true, getCurrentClassLoader());
     }
 
@@ -372,7 +374,7 @@ public class ClassUtils {
      * @return Class
      * @throws ClassNotFoundException 找不到类
      */
-    public static Class forName(final String className, final boolean initialize) throws ClassNotFoundException {
+    public static Class<?> forName(final String className, final boolean initialize) throws ClassNotFoundException {
         return forName(className, initialize, getCurrentClassLoader());
     }
 
@@ -384,7 +386,7 @@ public class ClassUtils {
      * @return Class
      * @throws ClassNotFoundException 找不到类
      */
-    public static Class forName(final String className, final ClassLoader classLoader) throws ClassNotFoundException {
+    public static Class<?> forName(final String className, final ClassLoader classLoader) throws ClassNotFoundException {
         return forName(className, true, classLoader);
     }
 
@@ -397,8 +399,8 @@ public class ClassUtils {
      * @return Class
      * @throws ClassNotFoundException 找不到类
      */
-    public static Class forName(final String className, final boolean initialize, final ClassLoader classLoader) throws ClassNotFoundException {
-        Class result = forNameQuiet(className, initialize, classLoader);
+    public static Class<?> forName(final String className, final boolean initialize, final ClassLoader classLoader) throws ClassNotFoundException {
+        Class<?> result = forNameQuiet(className, initialize, classLoader);
         if (result == null) {
             throw new ClassNotFoundException(className);
         }
@@ -411,7 +413,7 @@ public class ClassUtils {
      * @param className 类名
      * @return Class
      */
-    public static Class forNameQuiet(final String className) {
+    public static Class<?> forNameQuiet(final String className) {
         return forNameQuiet(className, true, getCurrentClassLoader());
     }
 
@@ -423,11 +425,11 @@ public class ClassUtils {
      * @param classLoader Classloader
      * @return Class
      */
-    public static Class forNameQuiet(final String className, final boolean initialize, final ClassLoader classLoader) {
+    public static Class<?> forNameQuiet(final String className, final boolean initialize, final ClassLoader classLoader) {
         if (className == null) {
             return null;
         }
-        Class result = forNames.get(className);
+        Class<?> result = forNames.get(className);
         if (result == null) {
             //不存在的类不要缓存，否则会造成漏洞，大量的无效类把内存撑爆
             try {
@@ -441,20 +443,44 @@ public class ClassUtils {
     }
 
     /**
+     * 根据类名加载Class，不存在返回空
+     *
+     * @param className 类名
+     * @param function  函数
+     * @return Class
+     */
+    public static Class<?> forName(final String className, final Function<String, Class<?>> function) {
+        if (className == null) {
+            return null;
+        }
+        Class<?> result = forNames.get(className);
+        if (result == null) {
+            result = function == null ? null : function.apply(className);
+            if (result != null) {
+                Class<?> old = forNames.putIfAbsent(className, result);
+                if (old != null) {
+                    result = old;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * 获取类元数据
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return 类元数据
      */
     protected static ClassMeta getClassMeta(final Class<?> clazz) {
-        return clazz == null ? null : classMetas.computeIfAbsent(clazz, k -> new ClassMeta(k));
+        return clazz == null ? null : classMetas.computeIfAbsent(clazz, ClassMeta::new);
     }
 
     /**
      * 获取类的泛型信息
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return 泛型类
      */
     public static GenericClass getGenericClass(final Class<?> clazz) {
         return clazz == null ? null : getClassMeta(clazz).getGenericClass();
@@ -463,8 +489,8 @@ public class ClassUtils {
     /**
      * 获取类所在文件
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return 类所在文件
      */
     public static String getCodeBase(final Class<?> clazz) {
         return clazz == null ? null : getClassMeta(clazz).getCodeBase();
@@ -484,8 +510,8 @@ public class ClassUtils {
      * 获取类的字段
      *
      * @param clazz      类
-     * @param predicate
-     * @param accessible
+     * @param predicate  断言
+     * @param accessible 可访问标识
      * @return 字段
      */
     public static Field[] getFields(final Class<?> clazz, final Predicate<Field> predicate, final boolean accessible) {
@@ -544,13 +570,13 @@ public class ClassUtils {
     /**
      * 获取值
      *
-     * @param clazz
-     * @param name
+     * @param clazz  类
+     * @param name   名称
      * @param target 目标对象
      * @return 属性值
      * @throws ReflectionException
      */
-    public static Object getValue(final Class clazz, final String name, final Object target) throws ReflectionException {
+    public static Object getValue(final Class<?> clazz, final String name, final Object target) throws ReflectionException {
         if (clazz == null || name == null || target == null) {
             return null;
         }
@@ -561,13 +587,13 @@ public class ClassUtils {
     /**
      * 获取值
      *
-     * @param clazz
-     * @param field
+     * @param clazz  类
+     * @param field  字段
      * @param target 目标对象
      * @return 属性值
      * @throws ReflectionException
      */
-    public static Object getValue(final Class clazz, final Field field, final Object target) throws ReflectionException {
+    public static Object getValue(final Class<?> clazz, final Field field, final Object target) throws ReflectionException {
         if (clazz == null || field == null || target == null) {
             return null;
         }
@@ -585,7 +611,7 @@ public class ClassUtils {
      * @return
      * @throws ReflectionException
      */
-    public static boolean setValue(final Class clazz, final String name, final Object target, final Object value) throws ReflectionException {
+    public static boolean setValue(final Class<?> clazz, final String name, final Object target, final Object value) throws ReflectionException {
         if (clazz == null || name == null) {
             return false;
         }
@@ -600,19 +626,18 @@ public class ClassUtils {
     /**
      * 设置值
      *
-     * @param clazz    类
-     * @param name     字段
      * @param target   目标对象
+     * @param name     字段
      * @param function 属性值函数
      * @return
-     * @throws ReflectionException
+     * @throws ReflectionException 反射异常
      */
-    public static boolean setValue(final Class clazz, final String name, final Object target,
-                                   final BiFunction<Class, Type, Object> function) throws ReflectionException {
-        if (clazz == null || name == null) {
+    public static boolean setValue(final Object target, final String name,
+                                   final BiFunction<Class<?>, Type, Object> function) throws ReflectionException {
+        if (target == null || name == null) {
             return false;
         }
-        ReflectAccessor accessor = getClassMeta(clazz).getAccessor(name);
+        ReflectAccessor accessor = getClassMeta(target.getClass()).getAccessor(name);
         if (accessor != null && accessor.isWriteable()) {
             accessor.set(target, function);
             return true;
@@ -623,13 +648,38 @@ public class ClassUtils {
     /**
      * 设置值
      *
+     * @param target   目标对象
+     * @param values   字段值
+     * @param function 属性值函数
+     * @throws ReflectionException 反射异常
+     */
+    public static void setValues(final Object target, final Map<?, ?> values,
+                                 final TriFunction<Object, Class<?>, Type, Object> function) throws ReflectionException {
+        if (target == null || values == null) {
+            return;
+        }
+        ClassMeta meta = getClassMeta(target.getClass());
+        ReflectAccessor accessor;
+        for (Map.Entry<?, ?> entry : values.entrySet()) {
+            if (entry.getKey() instanceof String && entry.getValue() != null) {
+                accessor = meta.getAccessor((String) entry.getKey());
+                if (accessor != null && accessor.isWriteable()) {
+                    accessor.set(target, (c, t) -> function.apply(entry.getValue(), c, t));
+                }
+            }
+        }
+    }
+
+    /**
+     * 设置值
+     *
      * @param clazz  类
      * @param field  字段
      * @param target 目标对象
      * @param value  属性值
-     * @throws ReflectionException
+     * @throws ReflectionException 反射异常
      */
-    public static boolean setValue(final Class clazz, final Field field, final Object target, final Object value) throws ReflectionException {
+    public static boolean setValue(final Class<?> clazz, final Field field, final Object target, final Object value) throws ReflectionException {
         if (clazz == null || field == null) {
             return false;
         }
@@ -644,20 +694,20 @@ public class ClassUtils {
     /**
      * 获取构造函数
      *
-     * @param type
-     * @return
+     * @param type 类
+     * @return 构造函数计划
      */
-    public static List<Constructor> getConstructors(final Class<?> type) {
+    public static List<Constructor<?>> getConstructors(final Class<?> type) {
         return type == null ? null : getClassMeta(type).getConstructors();
     }
 
     /**
      * 获取默认构造函数
      *
-     * @param type
-     * @return
+     * @param type 类
+     * @return 默认构造函数
      */
-    public static Constructor getDefaultConstructor(final Class<?> type) {
+    public static Constructor<?> getDefaultConstructor(final Class<?> type) {
         return type == null ? null : getClassMeta(type).getDefaultConstructor();
     }
 
@@ -668,15 +718,15 @@ public class ClassUtils {
      * @param parameterType 参数类型
      * @return 字段
      */
-    public static Constructor getConstructor(final Class<?> type, final Class<?> parameterType) {
+    public static Constructor<?> getConstructor(final Class<?> type, final Class<?> parameterType) {
         return type == null ? null : getClassMeta(type).getConstructor(parameterType);
     }
 
     /**
      * 装箱
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return 装箱后的类
      */
     public static Class<?> inbox(final Class<?> clazz) {
         if (clazz == null) {
@@ -707,21 +757,21 @@ public class ClassUtils {
     /**
      * 迭代父类
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return 父类迭代器
      */
-    public static Iterator<Class> iterate(final Class<?> clazz) {
+    public static Iterator<Class<?>> iterate(final Class<?> clazz) {
         return new SuperIterator(clazz);
     }
 
     /**
      * 迭代父类
      *
-     * @param clazz
-     * @param predicate
-     * @return
+     * @param clazz     类
+     * @param predicate 断言
+     * @return 父类迭代器
      */
-    public static Iterator<Class> iterate(final Class<?> clazz, final Predicate<Class> predicate) {
+    public static Iterator<Class<?>> iterate(final Class<?> clazz, final Predicate<Class<?>> predicate) {
         return new SuperIterator(clazz, predicate);
     }
 
@@ -738,78 +788,87 @@ public class ClassUtils {
     }
 
     /**
-     * Class[]转String[]
+     * 获取GRPC转换函数
      *
-     * @param names 对象描述[]
-     * @return Class[]
-     * @throws ClassNotFoundException
+     * @param clazz 对象类
+     * @return 对象实例
+     * @throws CreationException 实例化异常
      */
-    public static Class[] getClasses(final String[] names) throws ClassNotFoundException {
-        if (names == null || names.length == 0) {
+    public static GrpcConversion getGrpcConversion(final Class<?> clazz) throws CreationException {
+        ClassMeta meta = getClassMeta(clazz);
+        return meta == null ? null : meta.getConversion();
+    }
+
+    /**
+     * 根据标准名称获取类型
+     *
+     * @param canonicalNames 标准名称数组
+     * @return Class[]
+     * @throws ClassNotFoundException 类没有找到异常
+     */
+    public static Class[] getClasses(final String[] canonicalNames) throws ClassNotFoundException {
+        if (canonicalNames == null || canonicalNames.length == 0) {
             return new Class[0];
         } else {
-            Class[] classes = new Class[names.length];
-            for (int i = 0; i < names.length; i++) {
-                classes[i] = getClass(names[i]);
+            Class[] classes = new Class[canonicalNames.length];
+            for (int i = 0; i < canonicalNames.length; i++) {
+                classes[i] = getClass(canonicalNames[i]);
             }
             return classes;
         }
     }
 
     /**
-     * 类名称数组转换成类数组，如果不存在，抛出运行时异常
+     * 根据标准名称获取类型，如果不存在，抛出运行时异常
      *
-     * @param names    类名称数组
-     * @param function 异常转换
+     * @param canonicalNames 标准名称数组
+     * @param function       异常转换函数
      * @return Class[]
-     * @throws RuntimeException
+     * @throws RuntimeException 运行时异常
      */
-    public static Class[] getClasses(final String[] names,
-                                     final Function<ClassNotFoundException, RuntimeException> function)
+    public static Class[] getClasses(final String[] canonicalNames, final Function<ClassNotFoundException, RuntimeException> function)
             throws RuntimeException {
-        if (names == null || names.length == 0) {
+        if (canonicalNames == null || canonicalNames.length == 0) {
             return new Class[0];
         } else {
-            Class[] classes = new Class[names.length];
-            for (int i = 0; i < names.length; i++) {
-                classes[i] = getClass(names[i], function);
+            Class[] classes = new Class[canonicalNames.length];
+            for (int i = 0; i < canonicalNames.length; i++) {
+                classes[i] = getClass(canonicalNames[i], function);
             }
             return classes;
         }
     }
 
     /**
-     * String转Class，如果不存在，抛出运行时异常
+     * 根据标准名称获取类型，如果不存在，抛出运行时异常
      *
-     * @param name     对象描述
-     * @param function
-     * @return Class
-     * @throws RuntimeException
+     * @param canonicalName 标准名称
+     * @param function      异常转换函数
+     * @return Class 类
+     * @throws RuntimeException 运行时异常
      */
-    public static Class getClass(final String name,
-                                 final Function<ClassNotFoundException, RuntimeException> function)
-            throws RuntimeException {
+    public static Class<?> getClass(final String canonicalName, final Function<ClassNotFoundException, RuntimeException> function) throws RuntimeException {
         try {
-            return getClass(name);
+            return getClass(canonicalName);
         } catch (ClassNotFoundException e) {
             throw function != null ? function.apply(e) : new RuntimeException(e);
         }
     }
 
     /**
-     * String转Class
+     * 根据标准名称获取类型
      *
-     * @param name 对象描述
+     * @param canonicalName 标准名称
      * @return Class
      * @throws ClassNotFoundException
      */
-    public static Class getClass(final String name) throws ClassNotFoundException {
-        if (name == null) {
+    public static Class<?> getClass(final String canonicalName) throws ClassNotFoundException {
+        if (canonicalName == null || canonicalName.isEmpty()) {
             return null;
         }
-        Class result = nameTypes.get(name);
+        Class<?> result = nameTypes.get(canonicalName);
         if (result == null) {
-            switch (name) {
+            switch (canonicalName) {
                 case "void":
                     result = void.class;
                     break;
@@ -839,9 +898,9 @@ public class ClassUtils {
                     break;
                 default:
                     //不存在的不要缓存，防止缓存大量的无效类，撑爆内存
-                    result = forName(canonicalNameToJvmName(name));
+                    result = forName(canonicalNameToJvmName(canonicalName));
             }
-            nameTypes.putIfAbsent(name, result);
+            nameTypes.putIfAbsent(canonicalName, result);
         }
         return result;
     }
@@ -849,22 +908,56 @@ public class ClassUtils {
     /**
      * 判断返回值是否是CompletableFuture
      *
-     * @param clazz
-     * @return
+     * @param clazz 类
+     * @return 判断返回值是否是CompletableFuture
      */
     public static boolean isReturnFuture(final Class<?> clazz, final Method method) {
-        //TODO 进行泛型判断
-        return CompletableFuture.class.isAssignableFrom(method.getReturnType());
+        return CompletableFuture.class == method.getReturnType();
     }
 
+    /**
+     * 根据类型获取标准名称
+     *
+     * @param types 类型
+     * @return 对象描述
+     */
+    public static String[] getCanonicalNames(final Class[] types) {
+        if (types == null || types.length == 0) {
+            return new String[0];
+        } else {
+            String[] strings = new String[types.length];
+            for (int i = 0; i < types.length; i++) {
+                strings[i] = getCanonicalName(types[i]);
+            }
+            return strings;
+        }
+    }
+
+    /**
+     * 获取标准名称
+     *
+     * @param clazz 类型
+     * @return 对象
+     * @see #getClass(String)
+     */
+    public static String getCanonicalName(final Class clazz) {
+        return clazz == null ? null : canonicalNames.computeIfAbsent(clazz, o -> o.getTypeName());
+    }
+
+    /**
+     * 标准名称转换成JVM名称
+     *
+     * @param name 标准名称
+     * @return JVM名称
+     */
     protected static String canonicalNameToJvmName(String name) {
-        boolean isarray = name.endsWith("[]");
-        if (isarray) {
+        boolean array = name.endsWith("[]");
+        if (array) {
             String t = ""; // 计数，看上几维数组
-            while (isarray) {
+            while (array) {
                 name = name.substring(0, name.length() - 2);
                 t += "[";
-                isarray = name.endsWith("[]");
+                array = name.endsWith("[]");
             }
             switch (name) {
                 case "void":
@@ -903,71 +996,77 @@ public class ClassUtils {
     }
 
     /**
-     * Class[]转String[] <br>
-     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     * 获取类型描述，兼容Dubbo.
+     * boolean[].class => "[Z"
+     * Object.class => "Ljava/lang/Object;"
      *
-     * @param types Class[]
-     * @return 对象描述
+     * @param c class.
+     * @return desc.
      */
-    public static String[] getNames(final Class[] types) {
-        if (types == null || types.length == 0) {
-            return new String[0];
-        } else {
-            String[] strings = new String[types.length];
-            for (int i = 0; i < types.length; i++) {
-                strings[i] = getName(types[i]);
-            }
-            return strings;
-        }
+    public static String getDesc(final Class<?> c) {
+        return getDesc(c, new StringBuilder());
     }
 
     /**
-     * Class转String<br>
-     * 注意，得到的String可能不能直接用于Class.forName，请使用getClass(String)反向获取
+     * get class desc.
+     * boolean[].class => "[Z"
+     * Object.class => "Ljava/lang/Object;"
      *
-     * @param clazz Class
-     * @return 对象
-     * @see #getClass(String)
+     * @param clazz   class.
+     * @param builder String builder.
+     * @return desc.
      */
-    public static String getName(final Class clazz) {
-        return clazz == null ? null : typeNames.computeIfAbsent(clazz,
-                o -> o.isArray() ? jvmNameToCanonicalName(clazz.getName()) : clazz.getName());
+    protected static String getDesc(final Class<?> clazz, final StringBuilder builder) {
+        Class<?> c = clazz;
+        while (c.isArray()) {
+            builder.append('[');
+            c = c.getComponentType();
+        }
+        if (c.isPrimitive()) {
+            String t = c.getName();
+            if ("void".equals(t)) {
+                builder.append('V');
+            } else if ("boolean".equals(t)) {
+                builder.append('Z');
+            } else if ("byte".equals(t)) {
+                builder.append('B');
+            } else if ("char".equals(t)) {
+                builder.append('C');
+            } else if ("double".equals(t)) {
+                builder.append('D');
+            } else if ("float".equals(t)) {
+                builder.append('F');
+            } else if ("int".equals(t)) {
+                builder.append('I');
+            } else if ("long".equals(t)) {
+                builder.append('J');
+            } else if ("short".equals(t)) {
+                builder.append('S');
+            }
+        } else {
+            builder.append('L');
+            builder.append(c.getName().replace('.', '/'));
+            builder.append(';');
+        }
+        return builder.toString();
     }
 
-    protected static String jvmNameToCanonicalName(final String jvmName) {
-        boolean isarray = jvmName.charAt(0) == '[';
-        if (isarray) {
-            String cnName = ""; // 计数，看上几维数组
-            int i = 0;
-            for (; i < jvmName.length(); i++) {
-                if (jvmName.charAt(i) != '[') {
-                    break;
-                }
-                cnName += "[]";
-            }
-            String componentType = jvmName.substring(i, jvmName.length());
-            if ("Z".equals(componentType)) {
-                cnName = "boolean" + cnName;
-            } else if ("B".equals(componentType)) {
-                cnName = "byte" + cnName;
-            } else if ("C".equals(componentType)) {
-                cnName = "char" + cnName;
-            } else if ("D".equals(componentType)) {
-                cnName = "double" + cnName;
-            } else if ("F".equals(componentType)) {
-                cnName = "float" + cnName;
-            } else if ("I".equals(componentType)) {
-                cnName = "int" + cnName;
-            } else if ("J".equals(componentType)) {
-                cnName = "long" + cnName;
-            } else if ("S".equals(componentType)) {
-                cnName = "short" + cnName;
-            } else {
-                cnName = componentType.substring(1, componentType.length() - 1) + cnName; // 对象的 去掉L
-            }
-            return cnName;
+    /**
+     * 获取类型数组描述，兼容Dubbo.
+     * [int.class, boolean[].class, Object.class] => "I[ZLjava/lang/Object;"
+     *
+     * @param classes class array.
+     * @return desc.
+     */
+    public static String getDesc(final Class<?>[] classes) {
+        if (classes == null || classes.length == 0) {
+            return "";
         }
-        return jvmName;
+        StringBuilder builder = new StringBuilder(64);
+        for (Class<?> c : classes) {
+            getDesc(c, builder);
+        }
+        return builder.toString();
     }
 
     /**
@@ -977,7 +1076,7 @@ public class ClassUtils {
         /**
          * 类型
          */
-        protected Class type;
+        protected Class<?> type;
         /**
          * 字段元数据
          */
@@ -1007,19 +1106,21 @@ public class ClassUtils {
          */
         protected volatile Optional<String> codebase;
 
+        protected volatile GrpcConversion conversion;
+
         /**
          * 构造函数
          *
-         * @param type
+         * @param type 类型
          */
-        public ClassMeta(final Class type) {
+        public ClassMeta(final Class<?> type) {
             this.type = type;
         }
 
         /**
          * 获取构造函数元数据，延迟加载
          *
-         * @return
+         * @return 构造函数元数据
          */
         protected ConstructorMeta getConstructorMeta() {
             if (constructorMeta == null) {
@@ -1047,13 +1148,14 @@ public class ClassUtils {
         /**
          * 获取方法元数据
          *
-         * @return
+         * @return 方法元数据
          */
         protected MethodMeta getMethodMeta() {
             if (methodMeta == null) {
+                FieldMeta fieldMeta = getFieldMeta();
                 synchronized (this) {
                     if (methodMeta == null) {
-                        methodMeta = new MethodMeta(type);
+                        methodMeta = new MethodMeta(type, name -> fieldMeta.getField(name) != null);
                     }
                 }
             }
@@ -1077,7 +1179,7 @@ public class ClassUtils {
         /**
          * 获取字段
          *
-         * @return
+         * @return 字段集合
          */
         public List<Field> getFields() {
             return getFieldMeta().getFields();
@@ -1086,7 +1188,7 @@ public class ClassUtils {
         /**
          * 获取字段名称
          *
-         * @return
+         * @return 字段映射
          */
         public Map<String, Field> getFieldNames() {
             return getFieldMeta().getFieldNames();
@@ -1095,8 +1197,8 @@ public class ClassUtils {
         /**
          * 根据名称获取字段
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 字段
          */
         public Field getField(final String name) {
             return getFieldMeta().getField(name);
@@ -1105,8 +1207,8 @@ public class ClassUtils {
         /**
          * 根据属性名称获取访问器
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 反射访问器
          */
         protected ReflectAccessor getAccessor(final String name) {
             if (propertyAccessors == null) {
@@ -1120,13 +1222,14 @@ public class ClassUtils {
             if (result == null) {
                 MethodMeta meta = getMethodMeta();
                 Field field = getField(name);
+                GenericType genericType = getGenericClass().get(field);
                 Method getter = meta.getGetter(name);
                 Method setter = meta.getSetter(name);
                 if (field == null && getter == null && setter == null) {
                     //不缓存，防止外部调用注入过多的无效属性造成OOM
                     return null;
                 }
-                return propertyAccessors.computeIfAbsent(name, o -> new ReflectAccessor(field, getter, setter));
+                return propertyAccessors.computeIfAbsent(name, o -> new ReflectAccessor(field, getter, setter, genericType));
             }
             return result;
         }
@@ -1134,8 +1237,8 @@ public class ClassUtils {
         /**
          * 获取字段访问器
          *
-         * @param field
-         * @return
+         * @param field 字段
+         * @return 反射访问器
          */
         protected ReflectAccessor getFieldAccessor(final Field field) {
             if (fieldAccessors == null) {
@@ -1155,16 +1258,22 @@ public class ClassUtils {
                 getter = getter != null && getter.getReturnType().equals(fieldType) ? getter : null;
                 setter = setter != null && setter.getParameters()[0].getType().equals(fieldType) ? setter : null;
 
-                return new ReflectAccessor(field, getter, setter);
+                GenericType genericType = getGenericClass().get(field);
+
+                return new ReflectAccessor(field, getter, setter, genericType);
 
             });
+        }
+
+        public Class<?> getType() {
+            return type;
         }
 
         /**
          * 获取重载方法
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 重载方法
          */
         public OverloadMethod getOverloadMethod(final String name) {
             return getMethodMeta().getOverloadMethod(name);
@@ -1173,10 +1282,10 @@ public class ClassUtils {
         /**
          * 根据签名获取方法
          *
-         * @param name
-         * @param sign
-         * @return
-         * @throws NoSuchMethodException
+         * @param name 名称
+         * @param sign 签名
+         * @return 方法
+         * @throws NoSuchMethodException 方法不存在异常
          */
         public Method getMethod(final String name, final int sign) throws NoSuchMethodException {
             return getMethodMeta().getMethod(name, sign);
@@ -1185,10 +1294,10 @@ public class ClassUtils {
         /**
          * 获取单一方法
          *
-         * @param name
-         * @return
-         * @throws NoSuchMethodException
-         * @throws MethodOverloadException
+         * @param name 名称
+         * @return 方法
+         * @throws NoSuchMethodException   方法不存在异常
+         * @throws MethodOverloadException 方法重载异常
          */
         public Method getMethod(final String name) throws NoSuchMethodException, MethodOverloadException {
             return getMethodMeta().getMethod(name);
@@ -1197,18 +1306,18 @@ public class ClassUtils {
         /**
          * 获取重载的方法列表
          *
-         * @param name
-         * @return
-         * @throws NoSuchMethodException
+         * @param name 名称
+         * @return 方法
+         * @throws NoSuchMethodException 方法不存在异常
          */
         public Collection<Method> getMethods(final String name) throws NoSuchMethodException {
             return getMethodMeta().getMethods(name);
         }
 
         /**
-         * 获取公共方法列表
+         * 获取方法列表
          *
-         * @return
+         * @return 方法列表
          */
         public List<Method> getMethods() {
             return getMethodMeta().getMethods();
@@ -1217,28 +1326,28 @@ public class ClassUtils {
         /**
          * 获取单一参数的构造函数
          *
-         * @param type
-         * @return
+         * @param type 参数类型
+         * @return 指定类型参数的构造函数
          */
-        public Constructor getConstructor(final Class type) {
+        public Constructor<?> getConstructor(final Class type) {
             return type == null ? null : getConstructorMeta().getConstructor(type);
         }
 
         /**
          * 获取默认构造函数
          *
-         * @return
+         * @return 默认构造函数
          */
-        public Constructor getDefaultConstructor() {
+        public Constructor<?> getDefaultConstructor() {
             return getConstructorMeta().getDefaultConstructor();
         }
 
         /**
          * 获取所有构造函数
          *
-         * @return
+         * @return 构造函数集合
          */
-        public List<Constructor> getConstructors() {
+        public List<Constructor<?>> getConstructors() {
             return getConstructorMeta().getConstructors();
         }
 
@@ -1266,7 +1375,7 @@ public class ClassUtils {
                     }
                 }
             }
-            return codebase.get();
+            return codebase.orElse(null);
 
         }
 
@@ -1274,11 +1383,71 @@ public class ClassUtils {
          * 实例化
          *
          * @param <T>
-         * @return
+         * @return 实例
          * @throws CreationException
          */
         public <T> T newInstance() throws CreationException {
             return getConstructorMeta().newInstance();
+        }
+
+        /**
+         * 获取GRPC转换函数
+         *
+         * @return GRPC转换函数
+         */
+        public GrpcConversion getConversion() {
+            if (conversion == null) {
+                synchronized (this) {
+                    if (conversion == null) {
+                        conversion = new GrpcConversion(this::toWrapper, this::toParameters);
+                    }
+                }
+            }
+            return conversion;
+        }
+
+        /**
+         * 包装对象转换成参数
+         *
+         * @param target 包装对象
+         * @return 参数数组
+         */
+        protected Object[] toParameters(final Object target) {
+            if (target instanceof MethodArgs) {
+                return ((MethodArgs) target).toArgs();
+            }
+            List<Field> fields = getFields();
+            Object[] result = new Object[fields.size()];
+            ReflectAccessor accessor;
+            int i = 0;
+            for (Field field : fields) {
+                accessor = getFieldAccessor(field);
+                result[i++] = accessor == null || !accessor.isReadable() ? null : accessor.get(target);
+            }
+            return result;
+        }
+
+        /**
+         * 参数转成包装对象
+         *
+         * @param args 参数数组
+         * @return 包装对象
+         */
+        protected Object toWrapper(final Object[] args) {
+            Object result = newInstance();
+            if (result instanceof MethodArgs) {
+                ((MethodArgs) result).toFields(args);
+            } else {
+                List<Field> fields = getFields();
+                int i = 0;
+                for (Field field : fields) {
+                    ReflectAccessor accessor = getFieldAccessor(field);
+                    if (accessor != null && accessor.isWriteable()) {
+                        accessor.set(result, args[i++]);
+                    }
+                }
+            }
+            return result;
         }
     }
 
@@ -1289,7 +1458,7 @@ public class ClassUtils {
         /**
          * 类型
          */
-        protected Class type;
+        protected Class<?> type;
         /**
          * 字段
          */
@@ -1299,12 +1468,12 @@ public class ClassUtils {
          */
         protected Map<String, Field> fieldNames;
 
-        public FieldMeta(Class type) {
+        public FieldMeta(Class<?> type) {
             this.type = type;
             //判断非基本类型，非数组，非接口
             if (!type.isPrimitive() && !type.isArray() && !type.isInterface()) {
                 //迭代父类获取字段
-                Iterator<Class> iterator = iterate(type);
+                Iterator<Class<?>> iterator = iterate(type);
                 while (iterator.hasNext()) {
                     for (Field field : iterator.next().getDeclaredFields()) {
                         fields.add(field);
@@ -1345,9 +1514,9 @@ public class ClassUtils {
         /**
          * 类型
          */
-        protected Class type;
+        protected Class<?> type;
         /**
-         * 公共非静态方法的重载信息
+         * 公共重载信息
          */
         protected Map<String, OverloadMethod> overloadMethods;
         /**
@@ -1360,16 +1529,17 @@ public class ClassUtils {
         protected Map<String, Method> setter;
 
         /**
-         * 公共非静态方法
+         * 公共方法
          */
         protected List<Method> methods;
 
         /**
          * 构造函数
          *
-         * @param type
+         * @param type      类型
+         * @param predicate 是否是字段
          */
-        public MethodMeta(Class type) {
+        public MethodMeta(Class<?> type, Predicate<String> predicate) {
             this.type = type;
             if (!type.isPrimitive() && !type.isArray()) {
                 Method[] publicMethods = type.getMethods();
@@ -1382,20 +1552,32 @@ public class ClassUtils {
                     if (!method.getDeclaringClass().equals(Object.class)) {
                         overloadMethods.computeIfAbsent(method.getName(), k -> new OverloadMethod(type, k)).add(method);
                         methods.add(method);
-                        name = method.getName();
-                        if (name.startsWith("get")) {
-                            if (name.length() > 3 && method.getParameterCount() == 0
-                                    && void.class != method.getReturnType()) {
-                                getter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
-                            }
-                        } else if (name.startsWith("is")) {
-                            if (name.length() > 2 && method.getParameterCount() == 0
-                                    && boolean.class == method.getReturnType()) {
-                                getter.put(name.substring(2, 3).toLowerCase() + name.substring(3), method);
-                            }
-                        } else if (name.startsWith("set")) {
-                            if (name.length() > 3 && method.getParameterCount() == 1) {
-                                setter.put(name.substring(3, 4).toLowerCase() + name.substring(4), method);
+                        //getter和setter方法，过滤掉静态方法
+                        if (!Modifier.isStatic(method.getModifiers())) {
+                            name = method.getName();
+                            if (name.startsWith("get")) {
+                                if (name.length() > 3 && method.getParameterCount() == 0
+                                        && void.class != method.getReturnType()) {
+                                    name = name.substring(3, 4).toLowerCase() + name.substring(4);
+                                    if ((predicate == null || predicate.test(name))) {
+                                        getter.put(name, method);
+                                    }
+                                }
+                            } else if (name.startsWith("is")) {
+                                if (name.length() > 2 && method.getParameterCount() == 0
+                                        && boolean.class == method.getReturnType()) {
+                                    name = name.substring(2, 3).toLowerCase() + name.substring(3);
+                                    if ((predicate == null || predicate.test(name))) {
+                                        getter.put(name, method);
+                                    }
+                                }
+                            } else if (name.startsWith("set")) {
+                                if (name.length() > 3 && method.getParameterCount() == 1) {
+                                    name = name.substring(3, 4).toLowerCase() + name.substring(4);
+                                    if ((predicate == null || predicate.test(name))) {
+                                        setter.put(name, method);
+                                    }
+                                }
                             }
                         }
                     }
@@ -1433,9 +1615,9 @@ public class ClassUtils {
         /**
          * 根据签名获取方法
          *
-         * @param name
-         * @param sign
-         * @return
+         * @param name 名称
+         * @param sign 签名
+         * @return 方法
          * @throws NoSuchMethodException
          */
         public Method getMethod(final String name, final int sign) throws NoSuchMethodException {
@@ -1446,8 +1628,8 @@ public class ClassUtils {
         /**
          * 获取单一方法信息
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 方法信息
          * @throws NoSuchMethodException
          * @throws MethodOverloadException
          */
@@ -1462,8 +1644,8 @@ public class ClassUtils {
         /**
          * 获取单一方法
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 方法
          * @throws NoSuchMethodException
          * @throws MethodOverloadException
          */
@@ -1476,10 +1658,29 @@ public class ClassUtils {
         }
 
         /**
+         * 获取GRPC方法信息
+         *
+         * @param name     方法名称
+         * @param function GrpcType函数
+         * @return
+         * @throws NoSuchMethodException
+         * @throws MethodOverloadException
+         */
+        public GrpcMethod getMethod(final String name, final BiFunction<Class<?>, Method, GrpcType> function) throws
+                NoSuchMethodException, MethodOverloadException {
+            OverloadMethod method = getOverloadMethod(name);
+            if (method == null) {
+                throw new NoSuchMethodException(String.format("Method is not found. %s", name));
+            }
+            MethodInfo info = method.get();
+            return new GrpcMethod(type, method.getMethod(), () -> info.getGrpcType(function));
+        }
+
+        /**
          * 获取重载的方法列表
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 方法集合
          * @throws NoSuchMethodException
          */
         public Collection<Method> getMethods(final String name) throws NoSuchMethodException {
@@ -1498,7 +1699,7 @@ public class ClassUtils {
         /**
          * 类型
          */
-        protected Class clazz;
+        protected Class<?> clazz;
         /**
          * 名称
          */
@@ -1519,10 +1720,10 @@ public class ClassUtils {
         /**
          * 构造函数
          *
-         * @param clazz
-         * @param name
+         * @param clazz 类
+         * @param name  名称
          */
-        public OverloadMethod(Class clazz, String name) {
+        public OverloadMethod(Class<?> clazz, String name) {
             this.clazz = clazz;
             this.name = name;
         }
@@ -1530,10 +1731,10 @@ public class ClassUtils {
         /**
          * 构造函数
          *
-         * @param clazz
-         * @param method
+         * @param clazz  类
+         * @param method 方法
          */
-        public OverloadMethod(Class clazz, Method method) {
+        public OverloadMethod(Class<?> clazz, Method method) {
             this.clazz = clazz;
             this.name = method.getName();
             this.first = new MethodInfo(clazz, method);
@@ -1542,7 +1743,7 @@ public class ClassUtils {
         /**
          * 添加方法
          *
-         * @param method
+         * @param method 方法
          */
         protected void add(final Method method) {
             if (first == null) {
@@ -1665,7 +1866,7 @@ public class ClassUtils {
         /**
          * 类型
          */
-        protected Class clazz;
+        protected Class<?> clazz;
         /**
          * 方法
          */
@@ -1689,7 +1890,7 @@ public class ClassUtils {
          * @param clazz
          * @param method
          */
-        public MethodInfo(Class clazz, Method method) {
+        public MethodInfo(Class<?> clazz, Method method) {
             this.clazz = clazz;
             this.method = method;
             this.name = method.getName();
@@ -1711,10 +1912,10 @@ public class ClassUtils {
         /**
          * 获取方法类型
          *
-         * @param function
-         * @return
+         * @param function 函数
+         * @return grpc类型
          */
-        public GrpcType getGrpcType(final BiFunction<Class, Method, GrpcType> function) {
+        public GrpcType getGrpcType(final BiFunction<Class<?>, Method, GrpcType> function) {
             if (grpcType == null) {
                 if (function == null) {
                     return null;
@@ -1736,27 +1937,27 @@ public class ClassUtils {
         /**
          * 类型
          */
-        protected Class type;
+        protected Class<?> type;
         /**
          * 单参数公开的构造函数
          */
-        protected Map<Class<?>, Constructor> singleConstructors = new HashMap<>(3);
+        protected Map<Class<?>, Constructor<?>> singleConstructors = new HashMap<>(3);
         /**
          * 默认公开的构造函数
          */
-        protected Constructor defaultConstructor;
+        protected Constructor<?> defaultConstructor;
         /**
          * 默认单一参数构造函数
          */
-        protected Constructor defaultSingleConstructor;
+        protected Constructor<?> defaultSingleConstructor;
         /**
          * 参数最小的构造函数
          */
-        protected Constructor minimumConstructor;
+        protected Constructor<?> minimumConstructor;
         /**
          * 构造函数
          */
-        protected List<Constructor> constructors = new LinkedList<>();
+        protected List<Constructor<?>> constructors = new LinkedList<>();
 
         /**
          * 构造函数
@@ -1770,7 +1971,7 @@ public class ClassUtils {
             boolean concrete = !Modifier.isAbstract(modifiers) && !Modifier.isInterface(modifiers);
             Parameter[] parameters;
             int minimum = Integer.MAX_VALUE;
-            for (Constructor c : type.getDeclaredConstructors()) {
+            for (Constructor<?> c : type.getDeclaredConstructors()) {
                 constructors.add(c);
                 if (concrete) {
                     parameters = c.getParameters();
@@ -1803,7 +2004,7 @@ public class ClassUtils {
          *
          * @param constructor
          */
-        protected Constructor setAccessible(final Constructor constructor) {
+        protected Constructor<?> setAccessible(final Constructor<?> constructor) {
             if (!constructor.isAccessible()) {
                 constructor.setAccessible(true);
             }
@@ -1816,19 +2017,19 @@ public class ClassUtils {
          * @param type
          * @return
          */
-        public Constructor getConstructor(final Class type) {
+        public Constructor<?> getConstructor(final Class type) {
             return type == null ? null : singleConstructors.get(type);
         }
 
-        public Constructor getDefaultConstructor() {
+        public Constructor<?> getDefaultConstructor() {
             return defaultConstructor;
         }
 
-        public Constructor getDefaultSingleConstructor() {
+        public Constructor<?> getDefaultSingleConstructor() {
             return defaultSingleConstructor;
         }
 
-        public List<Constructor> getConstructors() {
+        public List<Constructor<?>> getConstructors() {
             return constructors;
         }
 
@@ -1882,11 +2083,14 @@ public class ClassUtils {
         protected Method getter;
         // 设置方法
         protected Method setter;
+        // 字段泛型信息
+        protected GenericType genericType;
 
-        public ReflectAccessor(Field field, Method getter, Method setter) {
+        public ReflectAccessor(Field field, Method getter, Method setter, GenericType genericType) {
             this.field = field;
             this.getter = getter;
             this.setter = setter;
+            this.genericType = genericType;
         }
 
         /**
@@ -1895,7 +2099,9 @@ public class ClassUtils {
          * @return
          */
         public boolean isWriteable() {
-            return field != null || setter != null;
+            //有set方法 或 field存在 并且filed不是final的
+            return (field != null && !Modifier.isFinal(field.getModifiers()))
+                    || setter != null;
         }
 
         /**
@@ -1910,8 +2116,8 @@ public class ClassUtils {
         /**
          * 获取值
          *
-         * @param target
-         * @return
+         * @param target 目标对象
+         * @return 值
          * @throws ReflectionException
          */
         public Object get(final Object target) throws ReflectionException {
@@ -1937,8 +2143,8 @@ public class ClassUtils {
         /**
          * 设置值
          *
-         * @param target
-         * @param value
+         * @param target 目标对象
+         * @param value  值
          * @throws ReflectionException
          */
         public void set(final Object target, final Object value) throws ReflectionException {
@@ -1962,23 +2168,22 @@ public class ClassUtils {
         /**
          * 设置值
          *
-         * @param target
-         * @param function
+         * @param target   目标对象
+         * @param function 函数
          * @throws ReflectionException
          */
-        public void set(final Object target, final BiFunction<Class, Type, Object> function) throws ReflectionException {
+        public void set(final Object target, final BiFunction<Class<?>, Type, Object> function) throws ReflectionException {
             if (target == null) {
                 return;
             }
             try {
                 if (setter != null) {
-                    Parameter parameter = setter.getParameters()[0];
-                    setter.invoke(target, function.apply(parameter.getType(), parameter.getParameterizedType()));
+                    setter.invoke(target, function.apply(genericType.getType(), genericType.getGenericType()));
                 } else if (field != null) {
                     if (!field.isAccessible()) {
                         field.setAccessible(true);
                     }
-                    field.set(target, function.apply(field.getType(), field.getGenericType()));
+                    field.set(target, function.apply(genericType.getType(), genericType.getGenericType()));
                 }
             } catch (Exception e) {
                 throw new ReflectionException(e.getMessage(), e);

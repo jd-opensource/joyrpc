@@ -24,7 +24,6 @@ import io.joyrpc.exception.ProxyException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.proxy.ProxyFactory;
-import io.joyrpc.util.ClassUtils;
 import javassist.*;
 
 import java.lang.reflect.InvocationHandler;
@@ -48,7 +47,7 @@ public class JavassistProxyFactory implements ProxyFactory {
     /**
      * 原始类和代理类的映射
      */
-    protected static final Map<Class, Class> PROXIES = new ConcurrentHashMap();
+    protected static final Map<Class<?>, Class<?>> PROXIES = new ConcurrentHashMap<>();
 
     /**
      * ClassLoader 缓存
@@ -63,7 +62,7 @@ public class JavassistProxyFactory implements ProxyFactory {
     @Override
     public <T> T getProxy(final Class<T> clz, final InvocationHandler invoker, final ClassLoader classLoader) throws ProxyException {
         try {
-            Class clazz = PROXIES.get(clz);
+            Class<?> clazz = PROXIES.get(clz);
             if (clazz == null) {
                 ClassPool mPool = ClassPool.getDefault();
                 //添加类加载器，防止重复添加
@@ -72,7 +71,7 @@ public class JavassistProxyFactory implements ProxyFactory {
                 synchronized (clz) {
                     clazz = PROXIES.get(clz);
                     if (clazz == null) {
-                        String interfaceName = ClassUtils.getName(clz);
+                        String interfaceName = clz.getName();
                         String className = interfaceName + "_proxy_" + COUNTER.getAndIncrement();
                         CodeGenerator generator = new CodeGenerator(className, interfaceName, clz.getMethods());
                         clazz = generator.build(mPool);
@@ -117,7 +116,15 @@ public class JavassistProxyFactory implements ProxyFactory {
             this.methods = methods;
         }
 
-        public Class build(final ClassPool classPool) throws CannotCompileException, NotFoundException {
+        /**
+         * 构建类
+         *
+         * @param classPool 类池
+         * @return 类
+         * @throws CannotCompileException
+         * @throws NotFoundException
+         */
+        public Class<?> build(final ClassPool classPool) throws CannotCompileException, NotFoundException {
 
             CtClass mCtc = classPool.makeClass(className);
             mCtc.addInterface(classPool.get(interfaceName));
@@ -127,9 +134,11 @@ public class JavassistProxyFactory implements ProxyFactory {
 
             StringBuilder builder = new StringBuilder(1000);
             for (int i = 0; i < methods.length; i++) {
-                source(mCtc, methods[i], i, builder);
-                mCtc.addMethod(CtMethod.make(builder.toString(), mCtc));
-                builder.setLength(0);
+                if (!Modifier.isStatic(methods[i].getModifiers())) {
+                    source(mCtc, methods[i], i, builder);
+                    mCtc.addMethod(CtMethod.make(builder.toString(), mCtc));
+                    builder.setLength(0);
+                }
             }
             mCtc.addMethod(CtMethod.make("public void setInvocationHandler(" + InvocationHandler.class.getName() + " h){ invocationHandler=$1; }", mCtc));
             return mCtc.toClass();
@@ -166,7 +175,7 @@ public class JavassistProxyFactory implements ProxyFactory {
             builder.append(')');
             //异常
             Class<?>[] et = method.getExceptionTypes();
-            if (et != null && et.length > 0) {
+            if (et.length > 0) {
                 builder.append(" throws ");
                 for (int i = 0; i < et.length; i++) {
                     if (i > 0) {
@@ -183,7 +192,7 @@ public class JavassistProxyFactory implements ProxyFactory {
             for (int j = 0; j < parameterType.length; j++) {
                 builder.append(" args[").append(j).append("] = ($w)$").append(j + 1).append(";");
             }
-            builder.append(" Object result = invocationHandler.invoke(this, methods[" + index + "], args);");
+            builder.append(" Object result = invocationHandler.invoke(this, methods[").append(index).append("], args);");
             if (!Void.TYPE.equals(returnType)) {
                 builder.append(" return ");
                 asArgument(returnType, "result", builder).append(';');
@@ -191,6 +200,13 @@ public class JavassistProxyFactory implements ProxyFactory {
             builder.append('}');
         }
 
+        /**
+         * 添加修饰符
+         *
+         * @param mod     修饰符变量
+         * @param builder 字符串构建器
+         * @return 字符串构建器
+         */
         protected StringBuilder modifier(final int mod, final StringBuilder builder) {
             if (Modifier.isPublic(mod)) {
                 builder.append("public");
@@ -235,8 +251,9 @@ public class JavassistProxyFactory implements ProxyFactory {
                     builder.append(name).append("==null?(long)0:((Long)").append(name).append(").longValue()");
                 } else if (Short.TYPE == cl) {
                     builder.append(name).append("==null?(short)0:((Short)").append(name).append(").shortValue()");
+                } else {
+                    throw new RuntimeException(name + " is unknown primitive type.");
                 }
-                throw new RuntimeException(name + " is unknown primitive type.");
             } else {
                 getName(cl, builder.append('(')).append(')').append(name);
             }
@@ -269,5 +286,4 @@ public class JavassistProxyFactory implements ProxyFactory {
             return builder;
         }
     }
-
 }

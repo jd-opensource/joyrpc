@@ -21,7 +21,7 @@ package io.joyrpc.extension;
  */
 
 /**
- * 实例化接口
+ * 扩展实现构造器
  */
 @FunctionalInterface
 public interface Instantiation {
@@ -31,10 +31,13 @@ public interface Instantiation {
      *
      * @param name 实例名称
      * @param <T>
-     * @return
+     * @return 实例对象
      */
     <T, M> T newInstance(Name<T, M> name);
 
+    /**
+     * 采用类的newInstance进行构造
+     */
     class ClazzInstance implements Instantiation {
 
         public static final Instantiation INSTANCE = new ClazzInstance();
@@ -43,9 +46,7 @@ public interface Instantiation {
         public <T, M> T newInstance(final Name<T, M> name) {
             try {
                 return name == null ? null : name.getClazz().newInstance();
-            } catch (InstantiationException e) {
-                return null;
-            } catch (IllegalAccessException e) {
+            } catch (InstantiationException | IllegalAccessException e) {
                 return null;
             }
         }

@@ -9,9 +9,9 @@ package io.joyrpc.protocol.message;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,14 +20,22 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.cluster.distribution.FailoverPolicy;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
+import io.joyrpc.extension.URL;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Authorization;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.trace.Tracer;
 import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.session.Session;
+import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.SystemClock;
 
 import java.net.InetSocketAddress;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
@@ -50,11 +58,11 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 原始超时时间，不是当前重试调用的超时时间
      */
-    protected transient long timeout;
+    protected transient int timeout;
     /**
-     * 重试策略
+     * 方法选项
      */
-    protected transient FailoverPolicy failoverPolicy;
+    protected transient MethodOption option;
     /**
      * 请求上下文
      */
@@ -70,13 +78,53 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      */
     protected transient InetSocketAddress remoteAddress;
     /**
+     * 通道
+     */
+    protected transient ChannelTransport transport;
+    /**
      * 调用的线程
      */
     protected transient Thread thread;
     /**
      * 用于生成应答消息，便于传递请求的上下文
      */
-    protected transient Supplier<ResponseMessage> responseSupplier;
+    protected transient Supplier<ResponseMessage<ResponsePayload>> responseSupplier;
+    /**
+     * 判断是否已经认证过
+     */
+    protected transient Function<Session, Integer> authenticated;
+    /**
+     * 身份信息
+     */
+    protected transient Identification identification;
+    /**
+     * 认证
+     */
+    protected transient Authentication authentication;
+    /**
+     * 权限认证
+     */
+    protected transient Authorization authorization;
+    /**
+     * 重试次数
+     */
+    protected transient int retryTimes;
+    /**
+     * 实际的方法名称，对泛化进行处理
+     */
+    protected transient String methodName;
+    /**
+     * 是否消费端
+     */
+    protected transient boolean consumer;
+    /**
+     * 跟踪
+     */
+    protected transient Tracer tracer;
+    /**
+     * refer或exporter的url
+     */
+    private transient URL url;
 
     /**
      * 构造函数
@@ -88,7 +136,7 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造函数
      *
-     * @param header
+     * @param header 头
      */
     public RequestMessage(MessageHeader header) {
         super(header);
@@ -97,20 +145,19 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造函数
      *
-     * @param header
-     * @param payload
+     * @param header  头
+     * @param payload 消息体
      */
     public RequestMessage(MessageHeader header, T payload) {
         super(header);
         this.payload = payload;
     }
 
-
     /**
      * 构造
      *
-     * @param invocation
-     * @return
+     * @param invocation 调用信息
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final Invocation invocation) {
         RequestMessage<Invocation> request = new RequestMessage<>(new MessageHeader(MsgType.BizReq.getType()), invocation);
@@ -121,22 +168,23 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 构造
      *
-     * @param invocation
-     * @param channel
-     * @return
+     * @param invocation 请求消息
+     * @param channel    通道
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final Invocation invocation, final Channel channel) {
         return build(new MessageHeader(MsgType.BizReq.getType()), invocation, channel.getLocalAddress(), channel.getRemoteAddress());
     }
 
     /**
-     * 构造
+     * 构造请求消息
      *
-     * @param header
-     * @param invocation
-     * @param channel
-     * @param http
-     * @return
+     * @param header      头
+     * @param invocation  调用信息
+     * @param channel     通道
+     * @param http        参数
+     * @param receiveTime 接收时间
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final MessageHeader header, final Invocation invocation,
                                                    final Channel channel, final Parametric http, final long receiveTime) {
@@ -151,20 +199,20 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
                 remoteAddress = InetSocketAddress.createUnresolved(remoteIp, channel.getRemoteAddress().getPort());
             }
         }
-        RequestMessage requestMessage = build(header, invocation, channel.getLocalAddress(), remoteAddress);
-        requestMessage.setReceiveTime(receiveTime);
+        RequestMessage<Invocation> result = build(header, invocation, channel.getLocalAddress(), remoteAddress);
+        result.setReceiveTime(receiveTime);
         //隐式传参
-        return requestMessage;
+        return result;
     }
 
     /**
      * 构造
      *
-     * @param header
-     * @param invocation
-     * @param localAddress
-     * @param remoteAddress
-     * @return
+     * @param header        头
+     * @param invocation    调用信息
+     * @param localAddress  本地地址
+     * @param remoteAddress 远程地址
+     * @return 请求消息
      */
     public static RequestMessage<Invocation> build(final MessageHeader header, final Invocation invocation,
                                                    final InetSocketAddress localAddress,
@@ -186,8 +234,8 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     }
 
     @Override
-    public void setPayLoad(T data) {
-        this.payload = data;
+    public void setPayLoad(T payload) {
+        this.payload = payload;
     }
 
     public long getCreateTime() {
@@ -206,12 +254,12 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.receiveTime = receiveTime;
     }
 
-    public FailoverPolicy getFailoverPolicy() {
-        return failoverPolicy;
+    public MethodOption getOption() {
+        return option;
     }
 
-    public void setFailoverPolicy(FailoverPolicy failoverPolicy) {
-        this.failoverPolicy = failoverPolicy;
+    public void setOption(MethodOption option) {
+        this.option = option;
     }
 
     public RequestContext getContext() {
@@ -246,26 +294,106 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
         this.remoteAddress = remoteAddress;
     }
 
-    public long getTimeout() {
+    public ChannelTransport getTransport() {
+        return transport;
+    }
+
+    public void setTransport(ChannelTransport transport) {
+        this.transport = transport;
+    }
+
+    public int getTimeout() {
         return timeout;
     }
 
-    public void setTimeout(long timeout) {
+    public void setTimeout(int timeout) {
         this.timeout = timeout;
     }
 
-    public Supplier<ResponseMessage> getResponseSupplier() {
+    public Function<Session, Integer> getAuthenticated() {
+        return authenticated;
+    }
+
+    public void setAuthenticated(Function<Session, Integer> authenticated) {
+        this.authenticated = authenticated;
+    }
+
+    public Identification getIdentification() {
+        return identification;
+    }
+
+    public void setIdentification(Identification identification) {
+        this.identification = identification;
+    }
+
+    public Authentication getAuthentication() {
+        return authentication;
+    }
+
+    public void setAuthentication(Authentication authentication) {
+        this.authentication = authentication;
+    }
+
+    public Authorization getAuthorization() {
+        return authorization;
+    }
+
+    public void setAuthorization(Authorization authorization) {
+        this.authorization = authorization;
+    }
+
+    public Supplier<ResponseMessage<ResponsePayload>> getResponseSupplier() {
         return responseSupplier;
     }
 
-    public void setResponseSupplier(Supplier<ResponseMessage> responseSupplier) {
+    public void setResponseSupplier(Supplier<ResponseMessage<ResponsePayload>> responseSupplier) {
         this.responseSupplier = responseSupplier;
+    }
+
+    public int getRetryTimes() {
+        return retryTimes;
+    }
+
+    public void setRetryTimes(int retryTimes) {
+        this.retryTimes = retryTimes;
+    }
+
+    public String getMethodName() {
+        return methodName;
+    }
+
+    public void setMethodName(String methodName) {
+        this.methodName = methodName;
+    }
+
+    public boolean isConsumer() {
+        return consumer;
+    }
+
+    public void setConsumer(boolean consumer) {
+        this.consumer = consumer;
+    }
+
+    public Tracer getTracer() {
+        return tracer;
+    }
+
+    public void setTracer(Tracer tracer) {
+        this.tracer = tracer;
+    }
+
+    public URL getUrl() {
+        return url;
+    }
+
+    public void setUrl(URL url) {
+        this.url = url;
     }
 
     /**
      * 当前请求是否超时
      *
-     * @return
+     * @return 超时标识
      */
     public boolean isTimeout() {
         return SystemClock.now() - createTime > (timeout > 0 ? timeout : header.timeout);
@@ -274,8 +402,8 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     /**
      * 当前请求是否超时
      *
-     * @param startTime
-     * @return
+     * @param startTime 开始时间
+     * @return 超时标识
      */
     public boolean isTimeout(final Supplier<Long> startTime) {
         return SystemClock.now() - startTime.get() > (timeout > 0 ? timeout : header.timeout);
@@ -284,6 +412,40 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
     @Override
     public boolean isRequest() {
         return true;
+    }
+
+    /**
+     * 恢复上下文并允许
+     *
+     * @param runnable 执行器
+     */
+    public void restore(final Runnable runnable) {
+        if (context == null) {
+            runnable.run();
+        } else {
+            //不用判断线程，因为在某些情况下，异步线程和调用主线程一样，但是异步线程执行的时候，主线程的上下文已经被清空了。
+            try {
+                RequestContext.restore(context);
+                runnable.run();
+            } finally {
+                RequestContext.remove();
+            }
+        }
+    }
+
+    /**
+     * 时间递减
+     *
+     * @return 是否还有剩余时间
+     */
+    public boolean decline() {
+        if (timeout <= 0) {
+            //没有超时
+            return true;
+        }
+        //设置请求的超时时间
+        header.setTimeout(timeout - (int) (SystemClock.now() - createTime));
+        return header.getTimeout() > 0;
     }
 
     @Override

@@ -9,9 +9,9 @@ package io.joyrpc.transport.http.jdk;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ package io.joyrpc.transport.http.jdk;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.transport.http.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,6 +42,8 @@ import static java.net.HttpURLConnection.HTTP_OK;
  */
 @Extension(value = "jdk", provider = "java")
 public class JdkHttpClient implements HttpClient {
+
+    protected static final int BUFFER_SIZE = 1024;
 
     @Override
     public HttpResponse execute(HttpRequest request) throws IOException {
@@ -82,17 +85,15 @@ public class JdkHttpClient implements HttpClient {
             }
             //防止没有错误流
             if (inputStream != null) {
-                int length = inputStream.available();
-                content = new byte[length >= 0 ? length : 0];
-                if (content.length > 0) {
-                    int size;
-                    int offset = 0;
-                    while ((size = inputStream.read(content, offset, length)) > 0) {
-                        offset += size;
-                        length -= size;
+                ByteArrayOutputStream baos = new ByteArrayOutputStream(BUFFER_SIZE);
+                content = new byte[BUFFER_SIZE];
+                int size;
+                while ((size = inputStream.read(content)) != -1) {
+                    if (size > 0) {
+                        baos.write(content, 0, size);
                     }
                 }
-
+                content = baos.toByteArray();
             }
         } finally {
             close(inputStream);

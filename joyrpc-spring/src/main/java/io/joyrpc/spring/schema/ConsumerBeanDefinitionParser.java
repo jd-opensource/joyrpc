@@ -33,4 +33,5 @@ public class ConsumerBeanDefinitionParser extends AbstractInterfaceBeanDefinitio
     public ConsumerBeanDefinitionParser() {
         super(ConsumerBean.class, true);
     }
+
 }

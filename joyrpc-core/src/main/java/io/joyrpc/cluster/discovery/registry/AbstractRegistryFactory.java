@@ -23,7 +23,6 @@ package io.joyrpc.cluster.discovery.registry;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.backup.file.FileBackup;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 
@@ -33,7 +32,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static io.joyrpc.context.Environment.USER_HOME;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 抽象注册中心工厂类
@@ -67,21 +66,21 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     protected Registry createRegistry(final URL url) {
         // 创建注册中心实例
         try {
-            String name = url.getString(Constants.REGISTRY_NAME_KEY, url.getProtocol());
-            String application = GlobalContext.getString(Constants.KEY_APPNAME);
-            //备份路径
-            String path = url.getString(Constants.REGISTRY_BACKUP_PATH_OPTION);
-            if (path == null || path.isEmpty()) {
-                //全局备份路径
-                path = GlobalContext.getString(Constants.REGISTRY_BACKUP_PATH_OPTION.getName());
+            String name = url.getString(REGISTRY_NAME_KEY, url.getProtocol());
+            Backup backup = null;
+            //判断是否开启备份
+            boolean enabled = url.getBoolean(REGISTRY_BACKUP_ENABLED_OPTION);
+            if (enabled) {
+                //改注册中心设置的备份路径
+                String path = url.getString(REGISTRY_BACKUP_PATH_OPTION);
                 if (path == null || path.isEmpty()) {
                     //用户目录
-                    path = System.getProperty(USER_HOME) + File.separator + "rpc_backup";
+                    path = System.getProperty(KEY_USER_HOME) + File.separator + "rpc_backup";
                 }
+                String application = url.getString(KEY_APPNAME, "no_app");
+                File directory = new File(path + File.separator + name + File.separator + application + File.separator);
+                backup = new FileBackup(directory, url.getInteger(REGISTRY_BACKUP_DATUM_OPTION));
             }
-            File directory = new File(path + File.separator + name +
-                    File.separator + (application == null || application.isEmpty() ? "no_app" : application) + File.separator);
-            Backup backup = new FileBackup(directory, url.getInteger(Constants.REGISTRY_BACKUP_DATUM_OPTION));
             return createRegistry(name, url, backup);
         } catch (IOException e) {
             throw new InitializationException("Error occurs while creating registry. caused by: ", e);
@@ -91,10 +90,10 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     /**
      * 创建注册中心
      *
-     * @param name
-     * @param url
-     * @param backup
-     * @return
+     * @param name   名称
+     * @param url    url
+     * @param backup 备份
+     * @return 注册中心
      */
     protected Registry createRegistry(String name, URL url, Backup backup) {
         return null;

@@ -1,7 +1,7 @@
 延迟启动
 ==
 服务发布的时候，spring在加载到 joyrpc:provider的时候默认会马上发布服务。
->说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 如果需要延迟一段时间再发布服务，可以通过如下配置实现：
 

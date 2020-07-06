@@ -20,8 +20,6 @@ package io.joyrpc.extension;
  * #L%
  */
 
-import io.joyrpc.extension.listener.ExtensionEvent;
-import io.joyrpc.extension.listener.ExtensionListener;
 import io.joyrpc.extension.listener.LoaderEvent;
 
 import java.util.Comparator;
@@ -39,14 +37,14 @@ public class ExtensionPointLazy<T, M> implements ExtensionPoint<T, M> {
     protected volatile ExtensionPoint<T, M> delegate;
     protected final Class<T> extensible;
     protected final ExtensionLoader loader;
-    protected final Comparator<ExtensionMeta<T, M>> comparator;
+    protected final Comparator<ExtensionMeta<?, ?>> comparator;
     protected final Classify<T, M> classify;
 
     public ExtensionPointLazy(Class<T> extensible) {
         this(extensible, null, null, null);
     }
 
-    public ExtensionPointLazy(Class<T> extensible, Comparator<ExtensionMeta<T, M>> comparator) {
+    public ExtensionPointLazy(Class<T> extensible, Comparator<ExtensionMeta<?, ?>> comparator) {
         this(extensible, null, comparator, null);
     }
 
@@ -54,7 +52,7 @@ public class ExtensionPointLazy<T, M> implements ExtensionPoint<T, M> {
         this(extensible, null, null, classify);
     }
 
-    public ExtensionPointLazy(Class<T> extensible, ExtensionLoader loader, Comparator<ExtensionMeta<T, M>> comparator,
+    public ExtensionPointLazy(Class<T> extensible, ExtensionLoader loader, Comparator<ExtensionMeta<?, ?>> comparator,
                               Classify<T, M> classify) {
         this.extensible = extensible;
         this.loader = loader;

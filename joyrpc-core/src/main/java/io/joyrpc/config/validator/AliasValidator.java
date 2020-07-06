@@ -20,38 +20,49 @@ package io.joyrpc.config.validator;
  * #L%
  */
 
-import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
-import io.joyrpc.config.ProviderConfig;
+import io.joyrpc.constants.Constants;
+import io.joyrpc.util.StringUtils;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
 
+import static io.joyrpc.constants.Constants.ALIAS_EMPTY_OPTION;
+import static io.joyrpc.context.Variable.VARIABLE;
+
 /**
  * 插件验证
  */
 public class AliasValidator implements ConstraintValidator<ValidateAlias, AbstractInterfaceConfig> {
-    /**
-     * 可用的字符串为：英文大小写，数字，横杆-，下划线_，点. 冒号:
-     * !@#$*,;有特殊含义
-     */
-    public final static Pattern NORMAL_COLON = Pattern.compile("^[a-zA-Z0-9\\-\\_\\.:]+$");
-    public final static Pattern NORMAL_COMMA_COLON = Pattern.compile("^[a-zA-Z0-9\\-\\_\\.,:]+$");
 
     @Override
     public boolean isValid(final AbstractInterfaceConfig value, final ConstraintValidatorContext context) {
+        String regex = VARIABLE.getString(Constants.ALIAS_PATTERN_OPTION);
+        Pattern pattern = Pattern.compile(regex);
         String alias = value.getAlias();
         String message = null;
         if (alias == null || alias.isEmpty()) {
+            if (VARIABLE.getBoolean(ALIAS_EMPTY_OPTION)) {
+                if (alias == null) {
+                    //设置为空字符串，防止空指针异常
+                    value.setAlias("");
+                }
+                return true;
+            }
             message = "alias can not be empty.";
-        } else if (value instanceof AbstractConsumerConfig && !NORMAL_COLON.matcher(alias).matches()) {
-            message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':'";
-        } else if (value instanceof ProviderConfig && !NORMAL_COLON.matcher(alias).matches()) {
-            message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':'";
-        } else if (value instanceof ConsumerGroupConfig && !NORMAL_COMMA_COLON.matcher(alias).matches()) {
-            message = "alias \'" + alias + "\' is invalid. only allow a-zA-Z0-9 '-' '_' '.' ':' ','";
+        } else if (value instanceof ConsumerGroupConfig) {
+            //多个分组
+            String[] parts = StringUtils.split(alias, StringUtils.SEMICOLON_COMMA_WHITESPACE);
+            for (String part : parts) {
+                if (!pattern.matcher(part).matches()) {
+                    message = "alias \'" + alias + "\' is not match " + regex;
+                    break;
+                }
+            }
+        } else if (!pattern.matcher(alias).matches()) {
+            message = "alias \'" + alias + "\' is not match " + regex;
         }
         if (message != null) {
             context.disableDefaultConstraintViolation();

@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.fastjson;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,40 +21,43 @@ package io.joyrpc.codec.serialization.fastjson;
  */
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONReader;
 import com.alibaba.fastjson.parser.Feature;
+import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.serializer.SerializeConfig;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.fastjson.java8.*;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.ResponsePayload;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static com.alibaba.fastjson.JSON.DEFAULT_GENERATE_FEATURE;
+import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
- * JSON序列化
+ * JSON序列化，不推荐在调用请求序列化场景使用
  */
 @Extension(value = "json", provider = "fastjson", order = Serialization.ORDER_FASTJSON)
 @ConditionalOnClass("com.alibaba.fastjson.JSON")
-public class JsonSerialization implements Serialization, Json {
+public class JsonSerialization implements Serialization, Json, BlackList.BlackListAware {
 
     @Override
     public byte getTypeId() {
@@ -64,6 +67,12 @@ public class JsonSerialization implements Serialization, Json {
     @Override
     public String getContentType() {
         return "text/json";
+    }
+
+    @Override
+    public boolean autoType() {
+        //在序列化Invocation的调用参数时候不支持类型，需要类名
+        return false;
     }
 
     @Override
@@ -116,8 +125,13 @@ public class JsonSerialization implements Serialization, Json {
         JsonSerializer.INSTANCE.parseObject(reader, function);
     }
 
+    @Override
+    public void updateBlack(final Collection<String> blackList) {
+        JsonSerializer.BLACK_LIST.updateBlack(blackList);
+    }
+
     /**
-     * JSON序列化和反序列化实现
+     * JSON序列化和反序列化实现，有多种JSON序列化框架，把Fastjson的异常进行转换
      */
     protected static class JsonSerializer implements Serializer, Json {
 
@@ -152,6 +166,7 @@ public class JsonSerialization implements Serialization, Json {
             config.put(ZoneId.class, ZoneIdSerialization.INSTANCE);
             config.put(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             config.put(Invocation.class, InvocationCodec.INSTANCE);
+            config.put(ResponsePayload.class, ResponsePayloadCodec.INSTANCE);
             config.put(BackupShard.class, BackupShardSerializer.INSTANCE);
             return config;
         }
@@ -163,6 +178,7 @@ public class JsonSerialization implements Serialization, Json {
          */
         protected JsonConfig createParserConfig() {
             JsonConfig config = new JsonConfig(BLACK_LIST);
+            config.setSafeMode(VARIABLE.getBoolean(ParserConfig.SAFE_MODE_PROPERTY, true));
             config.putDeserializer(MonthDay.class, MonthDaySerialization.INSTANCE);
             config.putDeserializer(YearMonth.class, YearMonthSerialization.INSTANCE);
             config.putDeserializer(Year.class, YearSerialization.INSTANCE);
@@ -170,6 +186,7 @@ public class JsonSerialization implements Serialization, Json {
             config.putDeserializer(ZoneId.class, ZoneIdSerialization.INSTANCE);
             config.putDeserializer(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             config.putDeserializer(Invocation.class, InvocationCodec.INSTANCE);
+            config.putDeserializer(ResponsePayload.class, ResponsePayloadCodec.INSTANCE);
             return config;
         }
 
@@ -190,7 +207,7 @@ public class JsonSerialization implements Serialization, Json {
         protected Feature[] createParserFeatures() {
             HashSet<Feature> set = new HashSet<>();
             //从上下文中读取
-            String cfg = GlobalContext.getString("json.parser.features");
+            String cfg = VARIABLE.getString("json.parser.features");
             if (cfg != null && !cfg.isEmpty()) {
                 String[] features = cfg.split("[,;\\s]");
                 for (String feature : features) {
@@ -224,13 +241,13 @@ public class JsonSerialization implements Serialization, Json {
          */
         protected SerializerFeature[] createSerializerFeatures() {
             HashSet<SerializerFeature> set = new HashSet<>();
-            String cfg = GlobalContext.getString("json.serializer.features");
+            String cfg = VARIABLE.getString("json.serializer.features");
             if (cfg != null && !cfg.isEmpty()) {
                 String[] features = cfg.split("[,;\\s]");
                 for (String feature : features) {
                     try {
                         set.add(SerializerFeature.valueOf(feature));
-                    } catch (IllegalArgumentException e) {
+                    } catch (IllegalArgumentException ignored) {
                     }
                 }
 
@@ -246,8 +263,13 @@ public class JsonSerialization implements Serialization, Json {
         public <T> void serialize(final OutputStream os, final T object) throws SerializerException {
             try {
                 JSON.writeJSONString(os, StandardCharsets.UTF_8, object, serializeConfig, null, null, DEFAULT_GENERATE_FEATURE, serializerFeatures);
-            } catch (IOException e) {
-                throw new SerializerException("Error occurred while serializing class " + object.getClass().getName(), e);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
+            } catch (Exception e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -255,8 +277,13 @@ public class JsonSerialization implements Serialization, Json {
         public <T> T deserialize(final InputStream is, final Type type) throws SerializerException {
             try {
                 return (T) JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while deserializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while deserializing type " + type, e);
+                throw new SerializerException("Error occurs while deserializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -269,8 +296,13 @@ public class JsonSerialization implements Serialization, Json {
         public String toJSONString(final Object object) throws SerializerException {
             try {
                 return JSON.toJSONString(object, serializeConfig, serializerFeatures);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while serializing object", e);
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -278,8 +310,13 @@ public class JsonSerialization implements Serialization, Json {
         public byte[] toJSONBytes(final Object object) throws SerializerException {
             try {
                 return JSON.toJSONBytes(object, serializeConfig, serializerFeatures);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurred while serializing object", e);
+                throw new SerializerException("Error occurs while serializing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -290,8 +327,13 @@ public class JsonSerialization implements Serialization, Json {
             }
             try {
                 return JSON.parseObject(text, type, parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -302,8 +344,13 @@ public class JsonSerialization implements Serialization, Json {
             }
             try {
                 return JSON.parseObject(is, StandardCharsets.UTF_8, type, parserConfig, parserFeatures);
-            } catch (IOException e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
+            } catch (Exception e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -314,8 +361,13 @@ public class JsonSerialization implements Serialization, Json {
             }
             try {
                 return JSON.parseObject(is, StandardCharsets.UTF_8, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
-            } catch (IOException e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
+            } catch (Exception e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
 
@@ -326,11 +378,15 @@ public class JsonSerialization implements Serialization, Json {
             }
             try {
                 return JSON.parseObject(text, reference == null ? null : reference.getType(), parserConfig, parserFeatures);
+            } catch (SerializerException e) {
+                throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
         }
-
 
         @Override
         public void parseArray(final Reader reader, final Function<Function<Type, Object>, Boolean> function) throws SerializerException {
@@ -348,8 +404,11 @@ public class JsonSerialization implements Serialization, Json {
                 jsonReader.endArray();
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
 
         }
@@ -370,8 +429,11 @@ public class JsonSerialization implements Serialization, Json {
                 jsonReader.endObject();
             } catch (SerializerException e) {
                 throw e;
+            } catch (JSONException e) {
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(),
+                        e.getCause() != null ? e.getCause() : null);
             } catch (Exception e) {
-                throw new SerializerException("Error occurs while parsing object", e);
+                throw new SerializerException("Error occurs while parsing object,caused by " + e.getMessage(), e);
             }
 
         }

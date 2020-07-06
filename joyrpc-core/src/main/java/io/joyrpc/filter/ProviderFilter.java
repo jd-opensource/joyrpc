@@ -48,7 +48,7 @@ public interface ProviderFilter extends Filter {
 
     int EXCEPTION_ORDER = -120;
 
-    int TOKEN_ODER = -100;
+    int AUTHORIZATION_ODER = -100;
 
     int IP_WHITE_BLACK_LIST_ORDER = -90;
 

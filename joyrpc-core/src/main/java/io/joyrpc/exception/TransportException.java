@@ -66,6 +66,10 @@ public class TransportException extends LafException {
         super(message, cause, errorCode, retry);
     }
 
+    public TransportException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace, String errorCode, boolean retry) {
+        super(message, cause, enableSuppression, writableStackTrace, errorCode, retry);
+    }
+
     public TransportException(Throwable cause) {
         super(cause);
     }

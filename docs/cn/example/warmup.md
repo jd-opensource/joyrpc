@@ -1,7 +1,7 @@
 预热接口
 ==
 预热：服务启动完毕后，通过插件实现自定义业务逻辑
->说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 ### 1.写一个warmup实现类，定义Extension
 

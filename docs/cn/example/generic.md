@@ -4,7 +4,7 @@
 
 JOYRPC支持泛化调用，只需要指定接口、方法、参数类型、参数值，就可以完成调用。
 
->说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 
 ### 泛化接口
@@ -16,13 +16,38 @@ JOYRPC支持泛化调用，只需要指定接口、方法、参数类型、参�
    */
   public interface GenericService {
       /**
-       * 泛化调用
-       * @param method         方法名
-       * @param parameterTypes 参数类型
-       * @param args           参数列表
-       * @return 返回值
-       */
-      CompletableFuture<Object> $invoke(String method, String[] parameterTypes, Object[] args);
+           * 同步泛化调用，兼容
+           *
+           * @param method         方法名
+           * @param parameterTypes 参数类型
+           * @param args           参数列表
+           * @return 返回值
+           */
+          default Object $invoke(final String method, final String[] parameterTypes, final Object[] args) {
+              try {
+                  return $async(method, parameterTypes, args).get(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
+              } catch (InterruptedException e) {
+                  throw new RpcException(String.format("Failed invoking %s, It's interrupted.", method), e);
+              } catch (ExecutionException e) {
+                  Throwable throwable = e.getCause() == null ? e : e.getCause();
+                  if (throwable instanceof RpcException) {
+                      throw (RpcException) throwable;
+                  }
+                  throw new RpcException(String.format("Failed invoking %s, caused by %s", method, throwable.getMessage()), throwable);
+              } catch (TimeoutException e) {
+                  throw new RpcException(String.format("Failed invoking %s, It's timeout.", method), e);
+              }
+          }
+      
+          /**
+           * 异步泛化调用
+           *
+           * @param method         方法名
+           * @param parameterTypes 参数类型
+           * @param args           参数列表
+           * @return CompletableFuture
+           */
+          CompletableFuture<Object> $async(String method, String[] parameterTypes, Object[] args);
   
   }
   ```
@@ -49,7 +74,7 @@ JOYRPC支持泛化调用，只需要指定接口、方法、参数类型、参�
           future.get();
   
           try {
-              CompletableFuture<Object> sayHelloFuture = service.$invoke("sayHello", new String[]{String.class.getName()}, new Object[]{"GENERIC"});
+              CompletableFuture<Object> sayHelloFuture = service.$async("sayHello", new String[]{String.class.getName()}, new Object[]{"GENERIC"});
               Object res = sayHelloFuture.get();
               logger.info("Get Response : {}", res);
           } catch (Exception e) {

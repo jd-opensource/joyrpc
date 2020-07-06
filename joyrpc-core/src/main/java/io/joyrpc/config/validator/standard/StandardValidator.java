@@ -24,15 +24,18 @@ import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.GenericChecker.Scope;
+import io.joyrpc.util.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.ValidationException;
-import java.io.*;
+import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -50,28 +53,24 @@ public class StandardValidator implements InterfaceValidator {
      * 标准推荐类
      */
     protected Set<Class> standards = new HashSet<>();
+    /**
+     * 不建议的类
+     */
+    protected Set<Class> noRecommendations = new CopyOnWriteArraySet<>();
 
     /**
      * 构造函数
      */
     public StandardValidator() {
-        InputStream in = getClassLoader(this.getClass()).getResourceAsStream("standards");
-        if (in == null) {
-            logger.error("standards file is not found.");
-        } else {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
-                br.lines().forEach(o -> {
-                    String name = o.trim();
-                    if (!name.isEmpty()) {
-                        try {
-                            standards.add(forName(o));
-                        } catch (ClassNotFoundException e) {
-                            logger.error("class in standards file is not found ." + o);
-                        }
-                    }
-                });
-            } catch (IOException e) {
-                logger.error("Error occurs while reading standard file. ", e);
+        List<String> names = Resource.lines(new String[]{"META-INF/system_standard_type", "user_standard_type"}, true);
+        for (String name : names) {
+            name = name.trim();
+            if (!name.isEmpty()) {
+                try {
+                    standards.add(forName(name));
+                } catch (ClassNotFoundException e) {
+                    logger.error("class in standards file is not found ." + name);
+                }
             }
         }
     }
@@ -87,7 +86,7 @@ public class StandardValidator implements InterfaceValidator {
             } else {
                 return true;
             }
-        }), new MyConsumer(checker, c -> standards.contains(c)));
+        }), new MyConsumer(checker, c -> standards.contains(c), noRecommendations));
     }
 
 
@@ -115,16 +114,22 @@ public class StandardValidator implements InterfaceValidator {
          * 标准类检查
          */
         protected Function<Class, Boolean> standard;
+        /**
+         * 不建议的类
+         */
+        protected Set<Class> noRecommendations;
 
         /**
          * 构造函数
          *
          * @param checker
          * @param standard
+         * @param noRecommendations
          */
-        public MyConsumer(final GenericChecker checker, Function<Class, Boolean> standard) {
+        public MyConsumer(final GenericChecker checker, Function<Class, Boolean> standard, Set<Class> noRecommendations) {
             this.checker = checker;
             this.standard = standard;
+            this.noRecommendations = noRecommendations;
         }
 
         @Override
@@ -225,7 +230,7 @@ public class StandardValidator implements InterfaceValidator {
             if (scope == Scope.PARAMETER) {
                 return;
             }
-            throw new ValidationException(String.format("The interface is not allowed at %s. %s", scope.getName(), clazz.getName()));
+            throw new ValidationException(String.format("The interface is not allowed at %s. %s, it may cause serialization problems.", scope.getName(), clazz.getName()));
         }
 
         /**
@@ -234,7 +239,7 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onCustomAbstract(final Class clazz, final Scope scope) {
-            throw new ValidationException(String.format("The type is abstract. scope is %s, class is %s.", scope.getName(), clazz.getName()));
+            throw new ValidationException(String.format("The type is abstract at %s. %s, it may cause serialization problems.", scope.getName(), clazz.getName()));
         }
 
         /**
@@ -243,7 +248,10 @@ public class StandardValidator implements InterfaceValidator {
          * @param clazz
          */
         protected void onNotStandard(final Class clazz) {
-            logger.warn(String.format("This type is not recommended. %s", clazz));
+            if (noRecommendations.add(clazz)) {
+                //防止多次输出日志
+                logger.warn(String.format("This type is not recommended. %s", clazz));
+            }
         }
     }
 

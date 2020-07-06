@@ -66,6 +66,10 @@ public class ConnectionException extends TransportException {
         super(message, cause, errorCode, retry);
     }
 
+    public ConnectionException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace, String errorCode, boolean retry) {
+        super(message, cause, enableSuppression, writableStackTrace, errorCode, retry);
+    }
+
     public ConnectionException(Throwable cause) {
         super(cause);
     }

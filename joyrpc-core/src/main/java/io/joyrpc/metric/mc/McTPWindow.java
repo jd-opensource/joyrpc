@@ -9,9 +9,9 @@ package io.joyrpc.metric.mc;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,13 +28,13 @@ import io.joyrpc.util.MilliPeriod;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.*;
 import java.util.function.Function;
 
 /**
  * TPWindow实现
  */
-//TODO 要检查一下逻辑，本机测试有T偶发TP时间长的现象
 public class McTPWindow implements TPWindow {
 
     public static final Function<String, TPWindow> MILLI_WINDOW_FUNCTION = t -> new McTPWindow();
@@ -68,12 +68,14 @@ public class McTPWindow implements TPWindow {
 
     /**
      * 构造函数
-     * @param windowTime
-     * @param clock
+     *
+     * @param windowTimeMillis 时间窗口，单位毫秒
+     * @param clock            时钟
      */
-    public McTPWindow(final long windowTime, final Clock clock) {
-        this.windowTime = windowTime <= 0 ? 1000 : windowTime;
+    public McTPWindow(final long windowTimeMillis, final Clock clock) {
         this.clock = clock == null ? Clock.MILLI : clock;
+        //把毫秒时间窗口转换成指定时间单位的时间
+        this.windowTime = this.clock.getTimeUnit().convert(windowTimeMillis <= 0 ? 1000 : windowTimeMillis, TimeUnit.MILLISECONDS);
         this.lastSnapshotTime = this.clock.getTime();
         this.snapshot = new McTPMetric(successiveFailures, actives, distribution, false, new McTPSnapshot());
     }
@@ -101,18 +103,19 @@ public class McTPWindow implements TPWindow {
     }
 
     @Override
-    public void setLastSnapshotTime(final long lastSnapshotTime) {
-        this.lastSnapshotTime = lastSnapshotTime;
+    public void setLastSnapshotTime(final long timeMillis) {
+        //转换成当前时钟的数据
+        this.lastSnapshotTime = clock.getTimeUnit().convert(timeMillis, TimeUnit.MILLISECONDS);
     }
 
     @Override
-    public void success(final int time) {
-        success(time, 1, 0);
+    public void success(final int timeMillis) {
+        success(timeMillis, 1, 0);
     }
 
     @Override
-    public void success(final int time, final int records, final long dataSize) {
-        histogram.success(time, records, dataSize);
+    public void success(final int timeMillis, final int records, final long dataSize) {
+        histogram.success(timeMillis, records, dataSize);
         successiveFailures.set(0);
     }
 
@@ -144,7 +147,8 @@ public class McTPWindow implements TPWindow {
 
     @Override
     public long getWindowTime() {
-        return windowTime;
+        //转换成毫秒
+        return clock.getTimeUnit().toMillis(windowTime);
     }
 
     @Override
@@ -237,55 +241,47 @@ public class McTPWindow implements TPWindow {
         /**
          * 对齐时间，减少数据量
          *
-         * @param time
-         * @return
+         * @param timeMillis 时间，单位毫秒
+         * @return 时间
          */
-        protected int align(final int time) {
+        protected int align(final int timeMillis) {
             //[64,128) 2ms对齐;[128,256) 4ms对齐;[256-1024) 8ms对齐，[1024,) 16ms对齐
-            switch (time >> 6) {
+            switch (timeMillis >> 6) {
                 case 0:
-                    return time;
+                    return timeMillis;
                 case 1:
-                    return time & 0xFFFFFFFE;
+                    return timeMillis & 0xFFFFFFFE;
                 case 2:
-                    return time & 0xFFFFFFFC;
                 case 3:
-                    return time & 0xFFFFFFFC;
+                    return timeMillis & 0xFFFFFFFC;
                 case 4:
-                    return time & 0xFFFFFFF8;
                 case 5:
-                    return time & 0xFFFFFFF8;
                 case 6:
-                    return time & 0xFFFFFFF8;
                 case 7:
-                    return time & 0xFFFFFFF8;
                 case 8:
-                    return time & 0xFFFFFFF8;
                 case 9:
-                    return time & 0xFFFFFFF8;
                 case 10:
-                    return time & 0xFFFFFFF8;
                 case 11:
-                    return time & 0xFFFFFFF8;
+                    return timeMillis & 0xFFFFFFF8;
                 default:
-                    return time & 0xFFFFFFF0;
+                    return timeMillis & 0xFFFFFFF0;
             }
         }
 
         /**
          * 成功调用，批量增加统计信息，每次调用时间一样.
          *
-         * @param time    单次调用时间
-         * @param records 总共记录条数
-         * @param size    总共数据包大小
+         * @param timeMillis 单次调用时间，单位毫秒
+         * @param records    总共记录条数
+         * @param size       总共数据包大小
          */
-        public void success(final int time, final int records, final long size) {
-            if (time < 0) {
+        public void success(final int timeMillis, final int records, final long size) {
+            if (timeMillis < 0) {
                 // 做性能统计时间不可能为负数
                 return;
             }
             //数据对齐，减少存储
-            int elapse = align(time);
+            int elapse = align(timeMillis);
             elapsedTime.add(elapse);
             requests.increment();
             successes.increment();

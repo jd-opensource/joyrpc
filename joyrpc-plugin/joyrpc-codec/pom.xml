@@ -5,7 +5,7 @@
     <parent>
         <artifactId>joyrpc-plugin</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -21,12 +21,4 @@
         <module>joyrpc-compression-lzma</module>
         <module>joyrpc-compression-lz4</module>
     </modules>
-
-    <dependencies>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
 </project>

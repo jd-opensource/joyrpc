@@ -20,7 +20,6 @@ package io.joyrpc.cluster;
  * #L%
  */
 
-import io.joyrpc.context.Environment;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 
@@ -191,6 +190,11 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             }
 
             @Override
+            public boolean candidate(final BiFunction<ShardState, ShardState, Boolean> function) {
+                return function.apply(this, CANDIDATE);
+            }
+
+            @Override
             public boolean closing(final BiFunction<ShardState, ShardState, Boolean> function) {
                 return function.apply(this, CLOSING);
             }
@@ -204,6 +208,7 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             public boolean initial(final BiFunction<ShardState, ShardState, Boolean> function) {
                 return function.apply(this, INITIAL);
             }
+
         };
 
         private int type;
@@ -311,9 +316,9 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
     }
 
     /**
-     * 当前服务健康状态，0：可用，非0：不可用
+     * 当前服务健康状态
      *
-     * @return
+     * @return 健康状态
      */
     default Health getHealth() {
         switch (getState()) {
@@ -389,11 +394,11 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
          */
         public DefaultShard(final URL url) {
             this(url.getAddress(),
-                    url.getString(Environment.REGION),
-                    url.getString(Environment.DATA_CENTER),
+                    url.getString(Region.REGION),
+                    url.getString(Region.DATA_CENTER),
                     url.getProtocol(),
                     url,
-                    url.getPositiveInt(WEIGHT),
+                    url.getInteger(WEIGHT),
                     ShardState.INITIAL);
         }
 
@@ -427,7 +432,7 @@ public interface Shard extends Weighter, Region, Comparable<Shard> {
             this.dataCenter = dataCenter;
             this.protocol = protocol;
             this.url = url;
-            this.weight = weight;
+            this.weight = weight < 0 ? 0 : weight;
             this.state = state;
         }
 

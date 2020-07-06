@@ -20,5 +20,12 @@ The Snappy in Java
 Please visit this web site for more information and read notice.md of this project:
   * https://github.com/dain/snappy
 
+The Dubbo protocol implementation refers to Apache Dubbo:
+
+The Apache Dubbo
+=================
+Please visit this web site for more information and read notice.md of this project:
+  * https://github.com/apache/dubbo
+
 Licensed under Apache License, Version 2.0.
 Copyright (C) 2011 the original author or authors.

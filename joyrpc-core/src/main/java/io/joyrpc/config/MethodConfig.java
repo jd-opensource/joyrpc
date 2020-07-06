@@ -21,9 +21,12 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cache.CacheKeyGenerator;
+import io.joyrpc.cluster.distribution.ExceptionPredication;
+import io.joyrpc.cluster.distribution.FailoverSelector;
+import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.filter.cache.CacheKeyGenerator;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -48,9 +51,36 @@ public class MethodConfig extends AbstractConfig {
      */
     protected Integer timeout;
     /**
+     * 分发策略，允许在方法上设置
+     */
+    @ValidatePlugin(extensible = Router.class, name = "ROUTER", defaultValue = DEFAULT_ROUTER)
+    protected String cluster;
+    /**
      * The Retries. 失败后重试次数
      */
     protected Integer retries;
+    /**
+     * 每个节点只调用一次
+     */
+    protected Boolean retryOnlyOncePerNode;
+    /**
+     * 可以重试的逗号分隔的异常全路径类名
+     */
+    protected String failoverWhenThrowable;
+    /**
+     * 重试异常判断接口插件
+     */
+    @ValidatePlugin(extensible = ExceptionPredication.class, name = "EXCEPTION_PREDICATION")
+    protected String failoverPredication;
+    /**
+     * 异常重试目标节点选择器
+     */
+    @ValidatePlugin(extensible = FailoverSelector.class, name = "FAILOVER_SELECTOR", defaultValue = DEFAULT_FAILOVER_SELECTOR)
+    protected String failoverSelector;
+    /**
+     * 并行分发数量，在采用并行分发策略有效
+     */
+    protected Integer forks;
     /**
      * The Validation. 是否jsr303验证
      */
@@ -67,7 +97,7 @@ public class MethodConfig extends AbstractConfig {
     /**
      * cache key 生成器
      */
-    @ValidatePlugin(extensible = CacheKeyGenerator.class, name = "CACHE_KEY_GENERATOR", defaultValue = DEFAULT_CACHE_KEY_GENERATOR)
+    @ValidatePlugin(extensible = CacheKeyGenerator.class, name = "CACHE_KEY_GENERATOR", defaultValue = JSON_CACHE_KEY_GENERATOR)
     protected String cacheKeyGenerator;
     /**
      * 是否启动结果缓存
@@ -81,6 +111,10 @@ public class MethodConfig extends AbstractConfig {
      * cache最大容量
      */
     protected Integer cacheCapacity;
+    /**
+     * cache键表达式
+     */
+    protected String cacheKeyExpression;
     /**
      * 是否启动压缩
      */
@@ -120,12 +154,60 @@ public class MethodConfig extends AbstractConfig {
         this.timeout = timeout;
     }
 
+    public String getCluster() {
+        return cluster;
+    }
+
+    public void setCluster(String cluster) {
+        this.cluster = cluster;
+    }
+
     public Integer getRetries() {
         return retries;
     }
 
     public void setRetries(Integer retries) {
         this.retries = retries;
+    }
+
+    public Boolean getRetryOnlyOncePerNode() {
+        return retryOnlyOncePerNode;
+    }
+
+    public void setRetryOnlyOncePerNode(Boolean retryOnlyOncePerNode) {
+        this.retryOnlyOncePerNode = retryOnlyOncePerNode;
+    }
+
+    public String getFailoverWhenThrowable() {
+        return failoverWhenThrowable;
+    }
+
+    public void setFailoverWhenThrowable(String failoverWhenThrowable) {
+        this.failoverWhenThrowable = failoverWhenThrowable;
+    }
+
+    public String getFailoverPredication() {
+        return failoverPredication;
+    }
+
+    public void setFailoverPredication(String failoverPredication) {
+        this.failoverPredication = failoverPredication;
+    }
+
+    public String getFailoverSelector() {
+        return failoverSelector;
+    }
+
+    public void setFailoverSelector(String failoverSelector) {
+        this.failoverSelector = failoverSelector;
+    }
+
+    public Integer getForks() {
+        return forks;
+    }
+
+    public void setForks(Integer forks) {
+        this.forks = forks;
     }
 
     public Integer getConcurrency() {
@@ -184,6 +266,14 @@ public class MethodConfig extends AbstractConfig {
         this.cacheCapacity = cacheCapacity;
     }
 
+    public String getCacheKeyExpression() {
+        return cacheKeyExpression;
+    }
+
+    public void setCacheKeyExpression(String cacheKeyExpression) {
+        this.cacheKeyExpression = cacheKeyExpression;
+    }
+
     public Integer getDstParam() {
         return dstParam;
     }
@@ -234,21 +324,28 @@ public class MethodConfig extends AbstractConfig {
     @Override
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.RETRIES_OPTION.getName()), retries);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.TIMEOUT_OPTION.getName()), timeout);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.VALIDATION_OPTION.getName()), validation);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CONCURRENCY_OPTION.getName()), concurrency);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.COMPRESS_OPTION.getName()), compress);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.DST_PARAM_OPTION.getName()), dstParam);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_OPTION.getName()), cache);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_PROVIDER_OPTION.getName()), cacheProvider);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_KEY_GENERATOR_OPTION.getName()), cacheKeyGenerator);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_EXPIRE_TIME_OPTION.getName()), cacheExpireTime);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_CAPACITY_OPTION.getName()), cacheCapacity);
-        addElement2Map(params, METHOD_KEY.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.ROUTER_OPTION.getName()), cluster);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRIES_OPTION.getName()), retries);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.RETRY_ONLY_ONCE_PER_NODE_OPTION.getName()), retryOnlyOncePerNode);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_WHEN_THROWABLE_OPTION.getName()), failoverWhenThrowable);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_PREDICATION_OPTION.getName()), failoverPredication);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FAILOVER_SELECTOR_OPTION.getName()), failoverSelector);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.FORKS_OPTION.getName()), forks);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.TIMEOUT_OPTION.getName()), timeout);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.VALIDATION_OPTION.getName()), validation);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CONCURRENCY_OPTION.getName()), concurrency);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.COMPRESS_OPTION.getName()), compress);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.DST_PARAM_OPTION.getName()), dstParam);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_OPTION.getName()), cache);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_PROVIDER_OPTION.getName()), cacheProvider);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_KEY_GENERATOR_OPTION.getName()), cacheKeyGenerator);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_EXPIRE_TIME_OPTION.getName()), cacheExpireTime);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_CAPACITY_OPTION.getName()), cacheCapacity);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_NULLABLE_OPTION.getName()), cacheNullable);
+        addElement2Map(params, METHOD_KEY_FUNC.apply(name, Constants.CACHE_KEY_EXPRESSION), cacheKeyExpression);
 
         if (null != parameters) {
-            parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY.apply(name, k), v));
+            parameters.forEach((k, v) -> addElement2Map(params, METHOD_KEY_FUNC.apply(name, k), v));
         }
         return params;
     }

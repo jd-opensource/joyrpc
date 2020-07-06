@@ -29,6 +29,7 @@ import io.joyrpc.exception.GenericException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -59,10 +60,12 @@ public class GenericFilter extends AbstractProviderFilter {
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
         Invocation invocation = request.getPayLoad();
-        // 如果是generic请求，
+
         if (!invocation.isGeneric()) {
+            // 如果不是generic请求，直接执行下一filter
             return invoker.invoke(request);
         }
+
         CompletableFuture<Result> future = null;
         GenericSerializer[] serializers = new GenericSerializer[1];
         //把泛化调用进行标准化
@@ -108,6 +111,11 @@ public class GenericFilter extends AbstractProviderFilter {
             }
         });
 
+    }
+
+    @Override
+    public boolean test(URL url) {
+        return true;
     }
 
     @Override

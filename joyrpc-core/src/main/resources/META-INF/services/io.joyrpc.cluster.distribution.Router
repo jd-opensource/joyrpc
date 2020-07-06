@@ -1,1 +1,5 @@
-io.joyrpc.cluster.distribution.router.method.MethodRouter
+io.joyrpc.cluster.distribution.router.failfast.FailfastRouter
+io.joyrpc.cluster.distribution.router.failover.FailoverRouter
+io.joyrpc.cluster.distribution.router.pinpoint.PinPointRouter
+io.joyrpc.cluster.distribution.router.broadcast.BroadcastRouter
+io.joyrpc.cluster.distribution.router.forking.ForkingRouter

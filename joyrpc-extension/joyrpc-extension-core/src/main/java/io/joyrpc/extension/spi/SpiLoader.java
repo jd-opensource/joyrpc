@@ -9,9 +9,9 @@ package io.joyrpc.extension.spi;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,11 +28,11 @@ import io.joyrpc.extension.condition.Conditional;
 import io.joyrpc.extension.exception.PluginException;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.annotation.Annotation;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -40,6 +40,9 @@ import java.util.*;
  */
 public class SpiLoader implements ExtensionLoader {
 
+    /**
+     * 默认SPI加载器
+     */
     public static final ExtensionLoader INSTANCE = new SpiLoader();
 
     protected static final String PREFIX = "META-INF/services/";
@@ -62,12 +65,10 @@ public class SpiLoader implements ExtensionLoader {
                 tClass = loadPluginClass(extensible, loader, className);
                 if (tClass != null) {
                     //实例化插件
-                    result.add(new Plugin<T>(new Name(tClass), tClass.newInstance(), this));
+                    result.add(new Plugin<>(new Name<>(tClass), tClass.newInstance(), this));
                 }
             }
-        } catch (InstantiationException e) {
-            throw new PluginException(e.getMessage(), e);
-        } catch (IllegalAccessException e) {
+        } catch (InstantiationException | IllegalAccessException e) {
             throw new PluginException(e.getMessage(), e);
         } catch (IOException e) {
             throw new PluginException(extensible.getName() + ": Error reading configuration file", e);
@@ -78,10 +79,10 @@ public class SpiLoader implements ExtensionLoader {
     /**
      * 获取类加载器
      *
-     * @param service
-     * @return
+     * @param service 类
+     * @return 类加载器
      */
-    protected ClassLoader getClassLoader(final Class service) {
+    protected ClassLoader getClassLoader(final Class<?> service) {
         ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         if (classLoader == null) {
             classLoader = service.getClassLoader();
@@ -92,35 +93,28 @@ public class SpiLoader implements ExtensionLoader {
     /**
      * 获取资源名称
      *
-     * @param service
-     * @return
+     * @param service 资源名称
+     * @return 资源名称
      */
-    protected String getResource(final Class service) {
+    protected String getResource(final Class<?> service) {
         return PREFIX + service.getName();
     }
 
     /**
      * 加载插件名称
      *
-     * @param service
-     * @param loader
-     * @param resource
-     * @return
-     * @throws IOException
+     * @param service  类
+     * @param loader   类加载器
+     * @param resource 资源名称
+     * @return 插件名称
+     * @throws IOException 异常
      */
-    protected Collection<String> loadPluginName(final Class service, final ClassLoader loader, final String resource) throws IOException {
+    protected Collection<String> loadPluginName(final Class<?> service, final ClassLoader loader, final String resource) throws IOException {
         Set<String> names = new LinkedHashSet<String>();
-        Enumeration<URL> configs = loader.getResources(resource);
-
-        URL url;
-        BufferedReader reader;
-        while ((configs.hasMoreElements())) {
-            url = configs.nextElement();
-            reader = new BufferedReader(new InputStreamReader(url.openStream(), "utf-8"));
-            try {
+        Enumeration<URL> resources = loader.getResources(resource);
+        while ((resources.hasMoreElements())) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(resources.nextElement().openStream(), StandardCharsets.UTF_8))) {
                 loadPluginName(service, reader, names);
-            } finally {
-                close(reader);
             }
         }
         return names;
@@ -129,12 +123,12 @@ public class SpiLoader implements ExtensionLoader {
     /**
      * 加载插件名称
      *
-     * @param service
-     * @param reader
-     * @param names
-     * @throws IOException
+     * @param service 接口
+     * @param reader  读取器
+     * @param names   名称集合
+     * @throws IOException 异常
      */
-    protected void loadPluginName(final Class service, final BufferedReader reader, final Set<String> names) throws IOException {
+    protected void loadPluginName(final Class<?> service, final BufferedReader reader, final Set<String> names) throws IOException {
         String ln;
         int ci;
         int length;
@@ -163,32 +157,18 @@ public class SpiLoader implements ExtensionLoader {
     }
 
     /**
-     * 关闭
-     *
-     * @param closeable
-     */
-    protected void close(Closeable closeable) {
-        try {
-            if (closeable != null) {
-                closeable.close();
-            }
-        } catch (IOException y) {
-        }
-    }
-
-    /**
      * 加载插件类
      *
-     * @param service
-     * @param loader
-     * @param className
-     * @return
+     * @param service   类
+     * @param loader    类加载器
+     * @param className 插件类名
+     * @return 插件类
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    protected Class loadPluginClass(final Class service, final ClassLoader loader, final String className)
+    protected <T> Class<T> loadPluginClass(final Class<T> service, final ClassLoader loader, final String className)
             throws IllegalAccessException, InstantiationException {
-        Class result = null;
+        Class<?> result = null;
         Class<? extends Annotation> annotationType;
         try {
             result = Class.forName(className, false, loader);
@@ -207,7 +187,7 @@ public class SpiLoader implements ExtensionLoader {
                     conditional = annotationType.getAnnotation(Conditional.class);
                 }
                 if (conditional != null) {
-                    for (Class clazz : conditional.value()) {
+                    for (Class<?> clazz : conditional.value()) {
                         if (clazz != null) {
                             condition = (Condition) clazz.newInstance();
                             if (!condition.match(loader, clazz, annotation)) {
@@ -217,8 +197,8 @@ public class SpiLoader implements ExtensionLoader {
                     }
                 }
             }
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException ignored) {
         }
-        return result;
+        return (Class<T>) result;
     }
 }

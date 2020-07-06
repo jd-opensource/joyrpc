@@ -5,7 +5,7 @@
 
 2.在启动Provider时候，会自动去指定注册中心注册一条Provider信息，同时订阅接口配置。
 
->说明：下面示例中采用  **`<beans/>`** 标签 表示 JOYRPC 中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示 JOYRPC 中的schema。
 
 - 默认配置
 

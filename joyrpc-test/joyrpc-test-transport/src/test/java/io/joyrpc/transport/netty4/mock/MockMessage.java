@@ -48,12 +48,12 @@ public class MockMessage implements Message<MockMessageHeader, byte[]> {
     }
 
     @Override
-    public void setPayLoad(byte[] data) {
-        this.data = data;
+    public void setPayLoad(byte[] payload) {
+        this.data = payload;
     }
 
     @Override
-    public int getMsgId() {
+    public long getMsgId() {
         return getHeader().getMsgId();
     }
 

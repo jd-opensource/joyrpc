@@ -5,7 +5,7 @@
     <parent>
         <artifactId>joyrpc-plugin</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -16,14 +16,8 @@
         <module>joyrpc-registry-etcd</module>
         <module>joyrpc-registry-zk</module>
         <module>joyrpc-registry-broadcast</module>
+        <module>joyrpc-registry-consul</module>
+        <module>joyrpc-registry-nacos</module>
     </modules>
-
-    <dependencies>
-        <dependency>
-            <groupId>io.joyrpc</groupId>
-            <artifactId>joyrpc-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-    </dependencies>
 
 </project>

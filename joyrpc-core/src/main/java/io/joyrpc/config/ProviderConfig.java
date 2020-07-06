@@ -27,9 +27,11 @@ import io.joyrpc.config.validator.ValidateInterface;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
@@ -61,6 +63,15 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected static final AtomicReferenceFieldUpdater<ProviderConfig, Status> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(ProviderConfig.class, Status.class, "status");
     private static final Logger logger = LoggerFactory.getLogger(ProviderConfig.class);
+    /**
+     * 全局的应用服务名称提供者
+     */
+    protected static final Supplier<String> APP_SERVICE_SUPPLIER = () -> GlobalContext.getString(KEY_APPSERVICE);
+
+    /**
+     * 全局的应用分组提供者
+     */
+    protected static final Supplier<String> APP_GROUP_SUPPLIER = () -> GlobalContext.getString(KEY_APPGROUP);
 
     /**
      * 注册中心配置，可配置多个
@@ -95,7 +106,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      */
     protected String exclude;
     /**
-     * 是否动态注册，默认为true，配置为false代表不主动发布，需要到管理端进行上线操作
+     * 注册中心收到注册后主动发布服务
      */
     protected Boolean dynamic;
     /**
@@ -131,6 +142,20 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 状态
      */
     protected transient volatile Status status = Status.CLOSED;
+
+    @Override
+    public String getAlias() {
+        if (alias == null || alias.isEmpty()) {
+            //服务提供者如果没有设置别名，则可以采用应用分组
+            alias = APP_GROUP_SUPPLIER.get();
+        }
+        return alias;
+    }
+
+    @Override
+    public String getServiceName() {
+        return getServiceName(APP_SERVICE_SUPPLIER);
+    }
 
     @Override
     public void validate() {
@@ -171,6 +196,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         if (null == delay || delay <= 0) {
             future.complete(null);
         } else {
+            logger.info(String.format("Delay exporting service %s(%s) %d(ms)", getServiceName(), getAlias(), delay));
             Thread thread = new Thread(() -> {
                 try {
                     Thread.sleep(delay);
@@ -201,11 +227,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
             //延迟加载
             delay().whenComplete((v, t) -> {
                 if (status != Status.EXPORTING || future != exportFuture) {
-                    future.completeExceptionally(new InitializationException("state is illegal."));
                     logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", name()));
+                    future.completeExceptionally(new InitializationException("state is illegal."));
                 } else if (t != null) {
-                    future.completeExceptionally(t);
                     logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
+                    future.completeExceptionally(t);
                     unexport();
                 } else {
                     //开始创建服务
@@ -304,7 +330,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 取消发布
      */
     public CompletableFuture<Void> unexport() {
-        return unexport(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return unexport(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
@@ -503,7 +530,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         this.delay = delay;
     }
 
-    public Boolean isDynamic() {
+    public Boolean getDynamic() {
         return dynamic;
     }
 
@@ -599,7 +626,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                     serviceUrl = u;
                     try {
                         List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, serviceUrl)).collect(Collectors.toList());
-                        exporter = InvokerManager.export(serviceUrl, config, registries, registerUrls, configureRef, subscribeUrl, configHandler);
+                        exporter = ServiceManager.export(serviceUrl, config, registries, registerUrls, configureRef, subscribeUrl, configHandler);
                         future.complete(null);
                     } catch (Exception ex) {
                         future.completeExceptionally(ex);
@@ -627,7 +654,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          * @return
          */
         public CompletableFuture<Void> close() {
-            return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+            Parametric parametric = new MapParametric(GlobalContext.getContext());
+            return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
         }
 
         /**
@@ -711,7 +739,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 if (!isClose()) {
                     List<URL> registerUrls = registries.stream().map(registry -> buildRegisteredUrl(registry, newUrl)).collect(Collectors.toList());
                     URL newSubscribeUrl = config.subscribe ? buildSubscribedUrl(configureRef, newUrl) : null;
-                    Exporter newExporter = InvokerManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
+                    Exporter newExporter = ServiceManager.export(newUrl, config, registries, registerUrls, configureRef, newSubscribeUrl, configHandler);
                     //打开
                     chain(newExporter.open(), future, s -> {
                         //异步，再次判断是否关闭了

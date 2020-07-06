@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,22 +20,20 @@ package io.joyrpc.cluster.distribution;
  * #L%
  */
 
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.RequestMessage;
+
+import java.util.function.Predicate;
+
 /**
  * 超时策略
  */
-public interface TimeoutPolicy<T> {
-    /**
-     * 测试是否超时
-     *
-     * @param request
-     * @return
-     */
-    boolean test(T request);
+public interface TimeoutPolicy extends Predicate<RequestMessage<Invocation>> {
 
     /**
      * 重置超时时间
      *
-     * @param request
+     * @param request 请求
      */
-    void reset(T request);
+    void decline(RequestMessage<Invocation> request);
 }

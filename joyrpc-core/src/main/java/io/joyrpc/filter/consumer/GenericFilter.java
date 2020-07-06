@@ -9,9 +9,9 @@ package io.joyrpc.filter.consumer;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,7 @@ package io.joyrpc.filter.consumer;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.Constants;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractConsumerFilter;
@@ -31,6 +31,8 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.concurrent.CompletableFuture;
+
+import static io.joyrpc.constants.Constants.GENERIC_KEY;
 
 /**
  * @description: 调用端的泛化调用过滤器
@@ -43,15 +45,12 @@ public class GenericFilter extends AbstractConsumerFilter {
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
 
         Invocation invocation = request.getPayLoad();
-
-        // generic 调用 consumer不处理，服务端做转换
+        //generic 调用 consumer不处理，服务端做转换
         if (invocation.isGeneric()) {
-            Object[] args = invocation.getArgs();
-            String name = args[0].toString();
             //真实的方法名
-            invocation.setMethodName(name);
+            invocation.setMethodName(request.getMethodName());
             //设置泛化标示
-            invocation.addAttachment(Constants.GENERIC_OPTION.getName(), true);
+            invocation.addAttachment(GENERIC_KEY, true);
         }
 
         return invoker.invoke(request);
@@ -59,7 +58,12 @@ public class GenericFilter extends AbstractConsumerFilter {
 
     @Override
     public boolean test(URL url) {
-        return url.getBoolean(Constants.GENERIC_OPTION);
+        return false;
+    }
+
+    @Override
+    public boolean test(final InterfaceOption option) {
+        return option.isGeneric();
     }
 
     @Override

@@ -20,16 +20,13 @@ package io.joyrpc.spring.boot;
  * #L%
  */
 
-import io.joyrpc.spring.ConsumerBean;
-import io.joyrpc.spring.ProviderBean;
-import io.joyrpc.spring.RegistryBean;
-import io.joyrpc.spring.ServerBean;
+import io.joyrpc.spring.*;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * @description:
+ * RPC配置
  */
 public class RpcProperties {
 
@@ -45,11 +42,15 @@ public class RpcProperties {
     /**
      * 消费者
      */
-    private List<ConsumerBean> consumers;
+    private List<ConsumerBean<?>> consumers;
+    /**
+     * 消费者
+     */
+    private List<ConsumerGroupBean<?>> groups;
     /**
      * 服务提供者
      */
-    private List<ProviderBean> providers;
+    private List<ProviderBean<?>> providers;
     /**
      * 服务
      */
@@ -87,19 +88,27 @@ public class RpcProperties {
         this.registry = registry;
     }
 
-    public List<ConsumerBean> getConsumers() {
+    public List<ConsumerBean<?>> getConsumers() {
         return consumers;
     }
 
-    public void setConsumers(List<ConsumerBean> consumers) {
+    public void setConsumers(List<ConsumerBean<?>> consumers) {
         this.consumers = consumers;
     }
 
-    public List<ProviderBean> getProviders() {
+    public List<ConsumerGroupBean<?>> getGroups() {
+        return groups;
+    }
+
+    public void setGroups(List<ConsumerGroupBean<?>> groups) {
+        this.groups = groups;
+    }
+
+    public List<ProviderBean<?>> getProviders() {
         return providers;
     }
 
-    public void setProviders(List<ProviderBean> providers) {
+    public void setProviders(List<ProviderBean<?>> providers) {
         this.providers = providers;
     }
 

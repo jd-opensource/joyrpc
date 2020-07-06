@@ -5,26 +5,20 @@
     <parent>
         <artifactId>joyrpc-codec</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>joyrpc-serialization-protostuff</artifactId>
 
-    <properties>
-        <protostuff.version>1.5.9</protostuff.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-core</artifactId>
-            <version>${protostuff.version}</version>
         </dependency>
         <dependency>
             <groupId>io.protostuff</groupId>
             <artifactId>protostuff-runtime</artifactId>
-            <version>${protostuff.version}</version>
         </dependency>
     </dependencies>
 

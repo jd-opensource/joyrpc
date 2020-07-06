@@ -26,6 +26,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 @SpringBootApplication
 public class BootClient {
 
@@ -33,13 +35,15 @@ public class BootClient {
         System.setProperty("spring.profiles.active", "client");
         ConfigurableApplicationContext run = SpringApplication.run(BootClient.class, args);
         DemoService consumer = run.getBean(DemoService.class);
+        AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
-                System.out.println(consumer.sayHello("helloWold"));
-                Thread.sleep(200L);
+                String hello = consumer.generic(String.valueOf(counter.incrementAndGet()));
+                System.out.println(hello);
+                Thread.sleep(100L);
             } catch (InterruptedException e) {
                 break;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 try {
                     Thread.sleep(1000L);
                 } catch (InterruptedException ex) {

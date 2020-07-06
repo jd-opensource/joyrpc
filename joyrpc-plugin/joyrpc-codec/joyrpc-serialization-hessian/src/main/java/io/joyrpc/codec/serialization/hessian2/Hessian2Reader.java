@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.hessian2;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,10 +21,8 @@ package io.joyrpc.codec.serialization.hessian2;
  */
 
 import io.joyrpc.codec.serialization.ObjectReader;
-import io.joyrpc.com.caucho.hessian.io.Hessian2Input;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.Charset;
 
 /**
@@ -32,12 +30,10 @@ import java.nio.charset.Charset;
  */
 public class Hessian2Reader implements ObjectReader {
 
-    protected final Hessian2Input hessian2Input;
-    protected final InputStream inputStream;
+    protected final Hessian2BWLInput hessian2Input;
 
-    public Hessian2Reader(Hessian2Input hessian2Input, InputStream inputStream) {
+    public Hessian2Reader(Hessian2BWLInput hessian2Input) {
         this.hessian2Input = hessian2Input;
-        this.inputStream = inputStream;
     }
 
     @Override
@@ -48,6 +44,11 @@ public class Hessian2Reader implements ObjectReader {
     @Override
     public Object readObject() throws IOException {
         return hessian2Input.readObject();
+    }
+
+    @Override
+    public <T> T readObject(Class<T> clazz) throws IOException {
+        return (T) hessian2Input.readObject(clazz);
     }
 
     @Override
@@ -67,7 +68,7 @@ public class Hessian2Reader implements ObjectReader {
 
     @Override
     public int available() throws IOException {
-        return inputStream.available();
+        return hessian2Input.available();
     }
 
     @Override

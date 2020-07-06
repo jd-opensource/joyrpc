@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,19 +21,26 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
  */
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
+import io.joyrpc.exception.OverloadException;
 import io.joyrpc.metric.TPMetric;
 import io.joyrpc.metric.TPWindow;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.util.MilliPeriod;
 
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.TimeoutException;
 
-import static io.joyrpc.constants.Constants.DEFAULT_BROKEN_PERIOD;
-import static io.joyrpc.constants.Constants.DEFAULT_DECUBATION;
+import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.Variable.VARIABLE;
+import static io.joyrpc.util.ClassUtils.forName;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
- * 内置熔断器
+ * 熔断器
  */
 public class McCircuitBreaker implements CircuitBreaker {
     /**
@@ -68,13 +75,42 @@ public class McCircuitBreaker implements CircuitBreaker {
      */
     public McCircuitBreaker(final McCircuitBreakerConfig config) {
         Objects.requireNonNull(config, "config can not be null.");
-        this.enabled = config.enabled;
+        this.enabled = config.enabled == null ? Boolean.FALSE : config.enabled;
         this.period = config.period != null && config.period > 0 ? config.period : DEFAULT_BROKEN_PERIOD;
         this.decubation = config.decubation != null && config.decubation > 0 ? config.decubation : DEFAULT_DECUBATION;
         this.successiveFailures = config.successiveFailures != null && config.successiveFailures > 0 ? config.successiveFailures : 0;
-        //如果启用了连续失败次数，则禁用可用率
-        this.availability = successiveFailures > 0 ? 0 : (config.availability != null && config.availability > 0 ? config.availability : 0);
-        this.blackWhiteList = new ExceptionBlackWhiteList(config.whites, config.blacks, true);
+        //连续失败次数和可用率可以并存
+        this.availability = config.availability != null && config.availability > 0 ? config.availability : 0;
+        //默认加上服务端过载和超时异常，避免对所有异常进行熔断
+        Set<Class<? extends Throwable>> whites = config.whites == null ? new HashSet<>() : config.whites;
+        Set<Class<? extends Throwable>> blacks = config.blacks;
+        addWhites(whites);
+        this.blackWhiteList = new ExceptionBlackWhiteList(whites.isEmpty() ? null : whites, blacks, true);
+    }
+
+    /**
+     * 添加白名单
+     *
+     * @param whites 白名单
+     */
+    protected void addWhites(final Set<Class<? extends Throwable>> whites) {
+        //增加异常白名单
+        whites.add(OverloadException.class);
+        whites.add(TimeoutException.class);
+        //从全局配置里面添加熔断异常
+        String value = VARIABLE.getString(CIRCUIT_BREAKER_EXCEPTION);
+        String[] parts = split(value, SEMICOLON_COMMA_WHITESPACE);
+        if (parts != null) {
+            for (String part : parts) {
+                try {
+                    Class<?> aClass = forName(part);
+                    if (Throwable.class.isAssignableFrom(aClass)) {
+                        whites.add((Class<? extends Throwable>) aClass);
+                    }
+                } catch (ClassNotFoundException e) {
+                }
+            }
+        }
     }
 
     @Override

@@ -31,7 +31,7 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
-import io.joyrpc.exception.AuthorizationException;
+import io.joyrpc.exception.AuthenticationException;
 import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.exception.ProtocolException;
 import io.joyrpc.exception.ReconnectException;
@@ -121,9 +121,9 @@ public class Node implements Shard {
      */
     protected URL url;
     /**
-     * 授权认证提供者
+     * 身份认证提供者
      */
-    protected Function<URL, Message> authorization;
+    protected Function<URL, Message> authentication;
     /**
      * 仪表盘
      */
@@ -200,6 +200,7 @@ public class Node implements Shard {
      * 客户端协议
      */
     protected ClientProtocol clientProtocol;
+
     /**
      * 打开的结果
      */
@@ -223,19 +224,19 @@ public class Node implements Shard {
     /**
      * 构造函数
      *
-     * @param clusterName   集群名称
-     * @param clusterUrl    集群URL
-     * @param shard         分片
-     * @param factory       连接工程
-     * @param authorization 授权
-     * @param nodeHandler   节点事件处理器
-     * @param dashboard     当前节点指标面板
-     * @param publisher     额外的指标事件监听器
+     * @param clusterName    集群名称
+     * @param clusterUrl     集群URL
+     * @param shard          分片
+     * @param factory        连接工程
+     * @param authentication 授权
+     * @param nodeHandler    节点事件处理器
+     * @param dashboard      当前节点指标面板
+     * @param publisher      额外的指标事件监听器
      */
     public Node(final String clusterName, final URL clusterUrl,
                 final Shard shard,
                 final EndpointFactory factory,
-                final Function<URL, Message> authorization,
+                final Function<URL, Message> authentication,
                 final NodeHandler nodeHandler,
                 final Dashboard dashboard,
                 final Publisher<MetricEvent> publisher) {
@@ -253,7 +254,7 @@ public class Node implements Shard {
         this.clusterName = clusterName;
         this.shard = shard;
         this.factory = factory;
-        this.authorization = authorization;
+        this.authentication = authentication;
         this.nodeHandler = nodeHandler;
         //仪表盘
         this.dashboard = dashboard;
@@ -626,7 +627,7 @@ public class Node implements Shard {
      * @param compress 是否压缩
      * @return 协商消息
      */
-    protected Message authorize(final Session session, final Message message, final boolean compress) {
+    protected Message authenticate(final Session session, final Message message, final boolean compress) {
         if (message != null && session != null) {
             Header header = message.getHeader();
             header.setSerialization(session.getSerializationType());
@@ -645,7 +646,7 @@ public class Node implements Shard {
      * @return
      */
     protected Message negotiate(final Client client) {
-        Message message = client.getProtocol().negotiation(clusterUrl, client);
+        Message message = client.getProtocol().negotiate(clusterUrl, client);
         if (message != null) {
             //设置协商协议的序列化方式
             Header header = message.getHeader();
@@ -671,7 +672,7 @@ public class Node implements Shard {
     /**
      * 广播事件
      *
-     * @param type 事件类型
+     * @param type    事件类型
      * @param payload 载体
      */
     protected void sendEvent(final NodeEvent.EventType type, final Object payload) {
@@ -872,7 +873,23 @@ public class Node implements Shard {
     protected void negotiation(final Client client, final Consumer<AsyncResult<Response>> consumer) {
         handshake(client,
                 () -> negotiate(client),
-                o -> ((NegotiationResponse) o.getPayLoad()).isSuccess() ? null : new ProtocolException("protocol is not support."),
+                o -> {
+                    Object result = o.getPayLoad();
+                    String error = null;
+                    if (result instanceof NegotiationResponse) {
+                        NegotiationResponse response = (NegotiationResponse) result;
+                        if (response.isSuccess()) {
+                            return null;
+                        } else {
+                            error = String.format("Failed negotiating with node(%s) of shard(%s)",
+                                    client.getUrl().getAddress(), shard.getName());
+                        }
+                    } else if (result instanceof Throwable) {
+                        error = String.format("Failed negotiating with node(%s) of shard(%s),caused by %s",
+                                client.getUrl().getAddress(), shard.getName(), ((Throwable) result).getMessage());
+                    }
+                    return new ProtocolException(error == null ? "protocol is not support." : error);
+                },
                 o -> {
                     //协商成功
                     NegotiationResponse response = (NegotiationResponse) o.getPayLoad();
@@ -891,23 +908,24 @@ public class Node implements Shard {
                     session.putAll(response.getAttributes());
                     client.session(session);
                     //认证
-                    authorize(client, consumer);
+                    authenticate(client, consumer);
                 }, consumer);
     }
 
     /**
-     * 认证
+     * 身份认证
      *
      * @param client   客户端
      * @param consumer 消费者
      */
-    protected void authorize(final Client client, final Consumer<AsyncResult<Response>> consumer) {
+    protected void authenticate(final Client client, final Consumer<AsyncResult<Response>> consumer) {
         handshake(client,
-                () -> authorize(client.session(), authorization == null ? client.getProtocol().authorization(clusterUrl, client) :
-                        authorization.apply(clusterUrl), false),
+                () -> authenticate(client.session(),
+                        authentication == null ? client.getProtocol().authenticate(clusterUrl, client) :
+                                authentication.apply(clusterUrl), false),
                 o -> {
                     SuccessResponse response = (SuccessResponse) o.getPayLoad();
-                    return response.isSuccess() ? null : new AuthorizationException(response.getMessage(), clusterUrl);
+                    return response.isSuccess() ? null : new AuthenticationException(response.getMessage());
                 },
                 o -> onAuthorized(client, o == null ? null : (Response) o.getPayLoad(), consumer),
                 consumer);
@@ -1340,11 +1358,11 @@ public class Node implements Shard {
         /**
          * 面板
          */
-        protected Dashboard dashboard;
+        protected final Dashboard dashboard;
         /**
-         * 上次快照时间
+         * 窗口时间
          */
-        protected long lastSnapshotTime;
+        protected final long windowTime;
         /**
          * 下次快照时间
          */
@@ -1359,9 +1377,10 @@ public class Node implements Shard {
         public DashboardTask(final Node node, final Client client) {
             super(node, client);
             this.dashboard = node.dashboard;
+            this.windowTime = dashboard.getMetric().getWindowTime();
             //把集群指标过期分布到1秒钟以内，避免同时进行快照
-            this.lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
-            this.time = lastSnapshotTime + dashboard.getMetric().getWindowTime();
+            long lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
+            this.time = lastSnapshotTime + windowTime;
             dashboard.setLastSnapshotTime(lastSnapshotTime);
         }
 
@@ -1377,7 +1396,7 @@ public class Node implements Shard {
                 case CONNECTED:
                 case WEAK:
                     dashboard.snapshot();
-                    time = SystemClock.now() + dashboard.getMetric().getWindowTime();
+                    time = SystemClock.now() + windowTime;
                     timer().add(this);
             }
         }

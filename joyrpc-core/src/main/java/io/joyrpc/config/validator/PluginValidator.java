@@ -44,24 +44,29 @@ public class PluginValidator implements ConstraintValidator<ValidatePlugin, Stri
     @Override
     public boolean isValid(final String value, final ConstraintValidatorContext context) {
         String v = value;
+        String message = null;
         if (isEmpty(v)) {
             if (!isEmpty(plugin.defaultValue())) {
                 v = plugin.defaultValue();
+            } else if (!plugin.nullable()) {
+                message = String.format("plugin can not be empty.");
             } else {
                 return true;
             }
         }
-        String message;
-        if (extensionPoint == null) {
-            message = String.format("No such extensionPoint %s in %s", plugin.name(), plugin.definition().getName());
-        } else {
-            Object target = plugin.candidate() ? extensionPoint.getOrDefault(v) : extensionPoint.get(v);
-            if (target == null) {
-                message = String.format("No such extension \'%s\' of %s", v, plugin.extensible().getName());
-            } else if (!plugin.extensible().isInstance(target)) {
-                message = String.format("%s is not a instance of %s", target.getClass().getName(), plugin.extensible().getName());
+        //没有异常
+        if (message == null) {
+            if (extensionPoint == null) {
+                message = String.format("No such extensionPoint %s in %s", plugin.name(), plugin.definition().getName());
             } else {
-                return true;
+                Object target = plugin.candidate() ? extensionPoint.getOrDefault(v) : extensionPoint.get(v);
+                if (target == null) {
+                    message = String.format("No such extension '%s' of %s", v, plugin.extensible().getName());
+                } else if (!plugin.extensible().isInstance(target)) {
+                    message = String.format("%s is not a instance of %s", target.getClass().getName(), plugin.extensible().getName());
+                } else {
+                    return true;
+                }
             }
         }
         context.disableDefaultConstraintViolation();

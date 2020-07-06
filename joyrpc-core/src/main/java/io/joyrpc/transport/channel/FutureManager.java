@@ -23,19 +23,21 @@ package io.joyrpc.transport.channel;
 import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.SystemClock;
-import io.joyrpc.util.Timer;
+import io.joyrpc.util.Timer.TimeTask;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static io.joyrpc.constants.Constants.FUTURE_TIMEOUT_PREFIX;
 import static io.joyrpc.util.Timer.timer;
 
 /**
- * @date: 2019/1/14
+ * Future管理器，绑定到Channel上
  */
 public class FutureManager<I, M> {
     /**
@@ -81,12 +83,25 @@ public class FutureManager<I, M> {
     /**
      * 创建一个future
      *
-     * @param messageId
-     * @param timeoutMillis
-     * @return
+     * @param messageId     消息ID
+     * @param timeoutMillis 超时时间（毫秒）
+     * @return 完成状态
      */
     public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis) {
-        return create(messageId, timeoutMillis, null, null);
+        return create(messageId, timeoutMillis, null, null, null);
+    }
+
+    /**
+     * 创建一个future
+     *
+     * @param messageId     消息ID
+     * @param timeoutMillis 超时时间（毫秒）
+     * @param afterRun      结束后执行
+     * @return 完成状态
+     */
+    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis,
+                                                 final BiConsumer<M, Throwable> afterRun) {
+        return create(messageId, timeoutMillis, null, null, afterRun);
     }
 
     /**
@@ -95,17 +110,32 @@ public class FutureManager<I, M> {
      * @param messageId     消息ID
      * @param timeoutMillis 超时时间
      * @param session       会话
-     * @param requests      当前Transport正在处理的请求数
-     * @return
+     * @param requests      正在处理的请求数
+     * @return 完成状态
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis, final Session session,
-                                                 final AtomicInteger requests) {
+    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis,
+                                                 final Session session, final AtomicInteger requests) {
+        return create(messageId, timeoutMillis, session, requests, null);
+    }
+
+    /**
+     * 创建一个future
+     *
+     * @param messageId     消息ID
+     * @param timeoutMillis 超时时间
+     * @param session       会话
+     * @param requests      正在处理的请求数
+     * @param afterRun      结束后执行
+     * @return 完成状态
+     */
+    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis,
+                                                 final Session session, final AtomicInteger requests,
+                                                 final BiConsumer<M, Throwable> afterRun) {
         return futures.computeIfAbsent(messageId, o -> {
             //增加计数器
             counter.incrementAndGet();
-            return new EnhanceCompletableFuture<>(o, session,
-                    timer().add(new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, consumer)),
-                    requests);
+            TimeTask task = new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, consumer);
+            return new EnhanceCompletableFuture<>(o, session, timer().add(task), requests, afterRun);
         });
     }
 
@@ -120,20 +150,37 @@ public class FutureManager<I, M> {
     }
 
     /**
-     * 根据消息移除
+     * 正常结束
      *
-     * @param messageId
-     * @return
+     * @param messageId 消息ID
+     * @param message   消息
+     * @return 成功标识
      */
-    public EnhanceCompletableFuture<I, M> remove(final I messageId) {
+    public boolean complete(final I messageId, final M message) {
         EnhanceCompletableFuture<I, M> result = futures.remove(messageId);
         if (result != null) {
-            //放弃过期检查任务
-            result.cancel();
             //减少计数器
             counter.decrementAndGet();
+            return result.complete(message);
         }
-        return result;
+        return false;
+    }
+
+    /**
+     * 异常结束
+     *
+     * @param messageId 消息ID
+     * @param throwable 异常
+     * @return 成功标识
+     */
+    public boolean completeExceptionally(final I messageId, final Throwable throwable) {
+        EnhanceCompletableFuture<I, M> result = futures.remove(messageId);
+        if (result != null) {
+            //减少计数器
+            counter.decrementAndGet();
+            return result.completeExceptionally(throwable);
+        }
+        return false;
     }
 
     /**
@@ -144,22 +191,20 @@ public class FutureManager<I, M> {
 
     /**
      * 清空
-     *
-     * @return
      */
     public void close() {
         Map<I, EnhanceCompletableFuture<I, M>> futures = this.futures;
         this.futures = new ConcurrentHashMap<>();
         this.counter = new AtomicInteger();
         Exception exception = new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress());
-        futures.forEach((id, future) -> future.cancel(exception));
+        futures.forEach((id, future) -> future.completeExceptionally(exception));
         futures.clear();
     }
 
     /**
-     * 生成ID
+     * 生成消息ID
      *
-     * @return
+     * @return 消息ID
      */
     public I generateId() {
         return idGenerator.get();
@@ -168,16 +213,16 @@ public class FutureManager<I, M> {
     /**
      * 待应答的请求数
      *
-     * @return
+     * @return 应答的请求数
      */
     public int size() {
         return counter.get();
     }
 
     /**
-     * 是否为空
+     * 请求数是否为空
      *
-     * @return
+     * @return 请求数为空标识
      */
     public boolean isEmpty() {
         return counter.get() == 0;
@@ -188,8 +233,8 @@ public class FutureManager<I, M> {
      *
      * @param <I>
      */
-    protected static class FutureTimeoutTask<I> implements Timer.TimeTask {
-        public static final String FUTURE_TIMEOUT = "FutureTimeout-";
+    protected static class FutureTimeoutTask<I> implements TimeTask {
+
         /**
          * 消息ID
          */
@@ -206,9 +251,9 @@ public class FutureManager<I, M> {
         /**
          * 构造函数
          *
-         * @param messageId
-         * @param time
-         * @param consumer
+         * @param messageId 消息ID
+         * @param time      执行时间
+         * @param consumer  消费者
          */
         public FutureTimeoutTask(I messageId, long time, Consumer<I> consumer) {
             this.messageId = messageId;
@@ -218,7 +263,7 @@ public class FutureManager<I, M> {
 
         @Override
         public String getName() {
-            return FUTURE_TIMEOUT + messageId.toString();
+            return FUTURE_TIMEOUT_PREFIX + messageId.toString();
         }
 
         @Override

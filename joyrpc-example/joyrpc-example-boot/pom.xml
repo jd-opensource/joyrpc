@@ -5,12 +5,12 @@
     <parent>
         <artifactId>joyrpc-example</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>joyrpc-example-boot</artifactId>
-
+    <packaging>jar</packaging>
     <dependencies>
         <dependency>
             <groupId>io.joyrpc</groupId>
@@ -23,8 +23,25 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-jexl3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.javassist</groupId>
+            <artifactId>javassist</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-consul-client</artifactId>
+            <version>${vertx-consul-client}</version>
         </dependency>
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
@@ -39,6 +56,16 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
         </dependency>
     </dependencies>
 </project>

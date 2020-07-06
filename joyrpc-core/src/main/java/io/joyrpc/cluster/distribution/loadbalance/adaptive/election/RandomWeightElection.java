@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.election;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,7 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.election;
  */
 
 import io.joyrpc.cluster.distribution.loadbalance.RandomWeight;
-import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
+import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Election;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.NodeRank;
 import io.joyrpc.extension.Ordered;
@@ -35,7 +35,7 @@ import java.util.List;
 public class RandomWeightElection implements Election, Ordered {
 
     @Override
-    public NodeRank choose(final List<NodeRank> ranks, final AdaptiveConfig lbContext) {
+    public NodeRank choose(final List<NodeRank> ranks, final AdaptivePolicy policy) {
         return RandomWeight.select(ranks);
     }
 

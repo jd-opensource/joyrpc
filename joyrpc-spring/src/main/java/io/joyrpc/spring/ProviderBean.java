@@ -22,14 +22,11 @@ package io.joyrpc.spring;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.cluster.discovery.config.Configure;
-import io.joyrpc.config.ProviderConfig;
-import io.joyrpc.config.RegistryConfig;
-import io.joyrpc.config.ServerConfig;
-import io.joyrpc.config.Warmup;
-import io.joyrpc.spring.event.ConsumerReferDoneEvent;
+import io.joyrpc.config.*;
+import io.joyrpc.spring.event.ConsumerDoneEvent;
+import io.joyrpc.spring.event.ProviderDoneEvent;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.Switcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -47,10 +44,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import static io.joyrpc.spring.ConsumerSpring.REFERS;
 
 /**
  * 服务提供者
@@ -58,6 +54,10 @@ import static io.joyrpc.spring.ConsumerSpring.REFERS;
 public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBean, DisposableBean,
         ApplicationContextAware, ApplicationListener, BeanNameAware {
 
+    /**
+     * 参数配置
+     */
+    protected List<ParameterConfig> params;
     /**
      * slf4j logger for this class
      */
@@ -67,11 +67,7 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
      */
     protected transient ApplicationContext applicationContext;
 
-    protected CompletableFuture<Void> exportFuture;
-    /**
-     * 开关
-     */
-    protected Switcher switcher = new Switcher();
+    protected transient CompletableFuture<Void> exportFuture;
     /**
      * registryConfig 引用列表
      */
@@ -79,15 +75,27 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     /**
      * server引用
      */
-    protected transient String serverName;
+    protected String serverName;
     /**
      * ref引用
      */
-    protected transient String refName;
+    protected String refName;
     /**
      * 预热引用
      */
-    protected transient String warmupName;
+    protected String warmupName;
+    /**
+     * 消费者就绪开关
+     */
+    protected transient AtomicBoolean consumerDone = new AtomicBoolean();
+    /**
+     * 启动开关
+     */
+    protected transient AtomicBoolean startDone = new AtomicBoolean();
+    /**
+     * 服务bean计数器
+     */
+    protected transient Counter counter;
     /**
      * 配置中心名称
      */
@@ -111,30 +119,6 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     }
 
     @Override
-    public void onApplicationEvent(ApplicationEvent event) {
-        if (event instanceof ConsumerReferDoneEvent || (event instanceof ContextRefreshedEvent && REFERS.get() == 0)) {
-            //需要先判断条件，再打开
-            switcher.open(() -> {
-                exportFuture.whenComplete((v, t) -> {
-                    if (t != null) {
-                        logger.error(String.format("Error occurs while export provider %s", id), t);
-                        //export异常
-                        System.exit(1);
-                    } else {
-                        open().whenComplete((s, e) -> {
-                            if (e != null) {
-                                logger.error(String.format("Error occurs while open provider %s", id), t);
-                                //open异常
-                                System.exit(1);
-                            }
-                        });
-                    }
-                });
-            });
-        }
-    }
-
-    @Override
     public void afterPropertiesSet() {
         setupServer();
         setupRegistry();
@@ -142,8 +126,54 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
         setupRef();
         setupWarmup();
         validate();
-        //先输出服务，并没有打开，服务不可用
+        counter = Counter.getOrCreate(applicationContext);
+        counter.incProvider();
+        //全局参数已经注入
         exportFuture = export();
+    }
+
+    @Override
+    public void onApplicationEvent(final ApplicationEvent event) {
+        if (event instanceof ContextRefreshedEvent) {
+            if (!counter.hasConsumer()) {
+                onConsumerDone();
+            }
+            if (startDone.compareAndSet(false, true)) {
+                //主线程等待
+                counter.startAndWaitAtLast();
+            }
+        } else if (event instanceof ConsumerDoneEvent) {
+            //等待消费者初始化完成，做到优雅启动
+            //该事件通知线程不是主线程，不用startAndWait
+            onConsumerDone();
+        }
+    }
+
+    /**
+     * 消费者就绪，启动服务监听
+     */
+    protected void onConsumerDone() {
+        if (consumerDone.compareAndSet(false, true)) {
+            exportFuture.whenComplete((v, t) -> {
+                if (t != null) {
+                    logger.error(String.format("Error occurs while export provider %s", id), t);
+                    //export异常
+                    System.exit(1);
+                } else {
+                    open().whenComplete((s, e) -> {
+                        if (e != null) {
+                            logger.error(String.format("Error occurs while open provider %s", id), t);
+                            //open异常
+                            System.exit(1);
+                        } else {
+                            //启动完成，如果是最后一个，则触发打开阻塞
+                            counter.successProvider(() -> CompletableFuture.runAsync(
+                                    () -> applicationContext.publishEvent(new ProviderDoneEvent(this))));
+                        }
+                    });
+                }
+            });
+        }
     }
 
     /**
@@ -298,10 +328,10 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     /**
      * 获取接口类
      *
-     * @param supplier
-     * @return
+     * @param supplier 接口名称提供者
+     * @return 接口类
      */
-    public Class getInterfaceClass(final Supplier<Class> supplier) {
+    public Class<?> getInterfaceClass(final Supplier<Class<?>> supplier) {
         if (interfaceClass == null) {
             if (interfaceClazz == null || interfaceClazz.isEmpty()) {
                 interfaceClass = supplier.get();
@@ -316,5 +346,23 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
             }
         }
         return interfaceClass;
+    }
+
+    public List<ParameterConfig> getParams() {
+        return params;
+    }
+
+    public void setParams(List<ParameterConfig> params) {
+        this.params = params;
+        if (params != null) {
+            params.forEach(param -> {
+                if (param != null
+                        && io.joyrpc.util.StringUtils.isNotEmpty(param.getKey())
+                        && io.joyrpc.util.StringUtils.isNotEmpty(param.getValue())) {
+                    String key = param.isHide() && !param.getKey().startsWith(".") ? "." + param.getKey() : param.getKey();
+                    setParameter(key, param.getValue());
+                }
+            });
+        }
     }
 }

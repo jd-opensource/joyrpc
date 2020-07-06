@@ -1,0 +1,200 @@
+{
+  "groups": [
+    {
+      "name": "rpc",
+      "type": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    },
+    {
+      "name": "rpc.registry",
+      "type": "io.joyrpc.spring.RegistryBean",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getRegistry()"
+    },
+    {
+      "name": "rpc.server",
+      "type": "io.joyrpc.spring.ServerBean",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getServer()"
+    },
+    {
+      "name": "rpc.registries",
+      "type": "java.util.List<io.joyrpc.spring.RegistryBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getRegistries()"
+    },
+    {
+      "name": "rpc.servers",
+      "type": "java.util.List<io.joyrpc.spring.ServerBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getServers()"
+    },
+    {
+      "name": "rpc.parameters",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getParameters()"
+    },
+    {
+      "name": "rpc.providers",
+      "type": "java.util.List<io.joyrpc.spring.ProviderBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getProviders()"
+    },
+    {
+      "name": "rpc.consumers",
+      "type": "java.util.List<io.joyrpc.spring.ConsumerBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getConsumers()"
+    },
+    {
+      "name": "rpc.groups",
+      "type": "java.util.List<io.joyrpc.spring.ConsumerGroupBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties",
+      "sourceMethod": "getGroups()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "rpc.packages",
+      "type": "java.util.List<java.lang.String>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    },
+    {
+      "name": "rpc.registry.address",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.RegistryBean"
+    },
+    {
+      "name": "rpc.registry.backupPath",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.RegistryBean"
+    },
+    {
+      "name": "rpc.registry.id",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.RegistryBean"
+    },
+    {
+      "name": "rpc.registry.parameters",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "io.joyrpc.spring.RegistryBean"
+    },
+    {
+      "name": "rpc.registry.registry",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.RegistryBean"
+    },
+    {
+      "name": "rpc.registry.timeout",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.RegistryBean"
+    },
+    {
+      "name": "rpc.server.accepts",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.buffers",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.contextPath",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.coreThreads",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.endpointFactory",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.epoll",
+      "type": "java.lang.Boolean",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.host",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.id",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.ioThreads",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.maxThreads",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.parameters",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.port",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.queueType",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.queues",
+      "type": "java.lang.Integer",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.threadPool",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.server.transportFactory",
+      "type": "java.lang.String",
+      "sourceType": "io.joyrpc.spring.ServerBean"
+    },
+    {
+      "name": "rpc.servers",
+      "type": "java.util.List<io.joyrpc.spring.ServerBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    },
+    {
+      "name": "rpc.registries",
+      "type": "java.util.List<io.joyrpc.spring.RegistryBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    },
+    {
+      "name": "rpc.providers",
+      "type": "java.util.List<io.joyrpc.spring.ProviderBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    },
+    {
+      "name": "rpc.consumers",
+      "type": "java.util.List<io.joyrpc.spring.ConsumerBean>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    },
+    {
+      "name": "rpc.parameters",
+      "type": "java.util.Map<java.lang.String,java.lang.String>",
+      "sourceType": "io.joyrpc.spring.boot.RpcProperties"
+    }
+  ],
+  "hints": []
+}

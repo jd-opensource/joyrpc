@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.arbiter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,27 +25,29 @@ import io.joyrpc.extension.Ordered;
 
 import java.util.List;
 
+import static io.joyrpc.constants.Constants.DEFAULT_DECUBATION;
+
 /**
  * 计算综合得分，并调整权重
  */
 public class OverallArbiter implements Arbiter, Ordered {
 
     @Override
-    public Rank score(final NodeMetric node, final List<JudgeRank> ranks, final AdaptiveConfig config) {
+    public Rank score(final NodeMetric node, final List<JudgeRank> ranks, final AdaptivePolicy policy) {
         //计算综合得分
         Rank rank = compute(ranks);
         //调整权重
-        weight(node, rank, config);
+        weight(node, rank, policy);
         return rank;
     }
 
     /**
      * 根据评价调整权重
      *
-     * @param node
-     * @param rank
+     * @param node 节点
+     * @param rank 评价
      */
-    protected void weight(final NodeMetric node, final Rank rank, final AdaptiveConfig config) {
+    protected void weight(final NodeMetric node, final Rank rank, final AdaptivePolicy policy) {
         switch (rank) {
             case Good:
                 break;
@@ -57,13 +59,13 @@ public class OverallArbiter implements Arbiter, Ordered {
             case Poor:
                 node.setWeight(1);
                 //继续虚弱，内部处理并发频繁修改
-                node.weak(config.getDecubation());
+                node.weak(policy.getDecubation() == null || policy.getDecubation() <= 0 ? DEFAULT_DECUBATION : policy.getDecubation());
                 break;
             case Disabled:
                 node.setWeight(0);
                 if (!node.isBroken()) {
                     //虚弱，内部处理并发频繁修改
-                    node.weak(config.getDecubation());
+                    node.weak(policy.getDecubation() == null || policy.getDecubation() <= 0 ? DEFAULT_DECUBATION : policy.getDecubation());
                 }
         }
     }
@@ -71,8 +73,8 @@ public class OverallArbiter implements Arbiter, Ordered {
     /**
      * 计算综合得分
      *
-     * @param ranks
-     * @return
+     * @param ranks 评价
+     * @return 综合评价
      */
     protected Rank compute(final List<JudgeRank> ranks) {
         int score = 0;

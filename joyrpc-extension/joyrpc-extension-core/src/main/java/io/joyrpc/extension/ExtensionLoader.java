@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -72,8 +72,7 @@ public interface ExtensionLoader {
         @Override
         public <T> Collection<Plugin<T>> load(final Class<T> extensible) {
 
-            //多个插件加载器，避免加载相同的实例，做了去重
-            List<Plugin<T>> result = new LinkedList<Plugin<T>>();
+            List<Plugin<T>> result = new LinkedList<>();
 
             if (loaders != null) {
                 for (ExtensionLoader loader : loaders) {

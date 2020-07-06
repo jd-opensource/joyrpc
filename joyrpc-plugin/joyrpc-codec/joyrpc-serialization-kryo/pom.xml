@@ -5,7 +5,7 @@
     <parent>
         <artifactId>joyrpc-codec</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -13,6 +13,7 @@
 
     <properties>
         <kryo.version>4.0.2</kryo.version>
+        <kryo-serializers.version>0.45</kryo-serializers.version>
     </properties>
 
     <dependencies>
@@ -20,6 +21,11 @@
             <groupId>com.esotericsoftware</groupId>
             <artifactId>kryo</artifactId>
             <version>${kryo.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>de.javakaffee</groupId>
+            <artifactId>kryo-serializers</artifactId>
+            <version>${kryo-serializers.version}</version>
         </dependency>
     </dependencies>
 

@@ -55,9 +55,9 @@ public class JEventBus implements EventBus {
         //名称
         protected final String name;
         //发布组
-        protected final PublisherGroup group;
+        protected final PublisherGroup<E> group;
         //发布器
-        protected volatile Dispatcher polling;
+        protected volatile Dispatcher<E> polling;
         //处理器
         protected final Set<EventHandler<E>> handlers = new CopyOnWriteArraySet<>();
         /**
@@ -68,10 +68,10 @@ public class JEventBus implements EventBus {
         /**
          * 构造函数
          *
-         * @param name
-         * @param group
+         * @param name  名称
+         * @param group 分组
          */
-        public JPublisher(final String name, final PublisherGroup group) {
+        public JPublisher(final String name, final PublisherGroup<E> group) {
             this.name = name;
             this.group = group;
             this.polling = group.dispatcher;
@@ -79,12 +79,12 @@ public class JEventBus implements EventBus {
 
         @Override
         public boolean addHandler(final EventHandler<E> handler) {
-            return handler == null ? false : handlers.add(handler);
+            return handler != null && handlers.add(handler);
         }
 
         @Override
         public boolean removeHandler(final EventHandler<E> handler) {
-            return handler == null ? false : handlers.remove(handler);
+            return handler != null && handlers.remove(handler);
         }
 
         @Override
@@ -135,12 +135,12 @@ public class JEventBus implements EventBus {
 
         @Override
         public boolean offer(final E event) {
-            return event == null || polling == null ? false : polling.offer(new Message<>(event, consumer));
+            return event != null && polling != null && polling.offer(new Message<>(event, consumer));
         }
 
         @Override
         public boolean offer(final E event, final long timeout, final TimeUnit timeUnit) {
-            return event == null || polling == null ? false : polling.offer(new Message<>(event, consumer), timeout, timeUnit);
+            return event != null && polling != null && polling.offer(new Message<>(event, consumer), timeout, timeUnit);
         }
     }
 
@@ -194,26 +194,26 @@ public class JEventBus implements EventBus {
         /**
          * 提供消息
          *
-         * @param message
-         * @return
+         * @param message 消息
+         * @return 成功标识
          */
         public boolean offer(final Message<E> message) {
-            return message == null ? false : queue.offer(message);
+            return message != null && queue.offer(message);
         }
 
         /**
          * 提供消息
          *
-         * @param message
-         * @param timeout
-         * @param timeUnit
-         * @return
+         * @param message  消息
+         * @param timeout  超时时间
+         * @param timeUnit 时间单位
+         * @return 成功标识
          */
         public boolean offer(final Message<E> message, final long timeout, final TimeUnit timeUnit) {
             if (message != null) {
                 try {
                     return queue.offer(message, timeout, timeUnit == null ? TimeUnit.MILLISECONDS : timeUnit);
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                 }
             }
             return false;
@@ -234,11 +234,11 @@ public class JEventBus implements EventBus {
          */
         protected void publish() {
             try {
-                Message message = queue.poll(5000, TimeUnit.MILLISECONDS);
+                Message<E> message = queue.poll(5000, TimeUnit.MILLISECONDS);
                 if (message != null) {
                     message.publish();
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException ignored) {
             }
         }
 
@@ -280,24 +280,24 @@ public class JEventBus implements EventBus {
         /**
          * 构造函数
          *
-         * @param name
-         * @param config
+         * @param name   名称
+         * @param config 配置
          */
         public PublisherGroup(final String name, final PublisherConfig config) {
             this.name = name;
             this.config = config == null ? new PublisherConfig() : config;
-            this.dispatcher = new Dispatcher("JEventBus-" + name,
-                    this.config.getCapacity() > 0 ? new LinkedBlockingQueue<>(this.config.getCapacity()) : new LinkedTransferQueue<>());
+            int capacity = this.config.getCapacity();
+            this.dispatcher = new Dispatcher<>("JEventBus-" + name, new LinkedBlockingQueue<>(capacity > 0 ? capacity : Integer.MAX_VALUE));
         }
 
         protected boolean contains(final String name) {
-            return name == null ? false : publishers.containsKey(name);
+            return name != null && publishers.containsKey(name);
         }
 
         /**
          * 移除
          *
-         * @param name
+         * @param name 名称
          */
         protected JPublisher<E> remove(final String name) {
             return publishers.remove(name);
@@ -306,11 +306,11 @@ public class JEventBus implements EventBus {
         /**
          * 获取发布器
          *
-         * @param name
-         * @return
+         * @param name 名称
+         * @return 发布器
          */
         public JPublisher<E> getPublisher(final String name) {
-            return publishers.computeIfAbsent(name, o -> new JPublisher(name, this));
+            return publishers.computeIfAbsent(name, o -> new JPublisher<>(name, this));
         }
     }
 

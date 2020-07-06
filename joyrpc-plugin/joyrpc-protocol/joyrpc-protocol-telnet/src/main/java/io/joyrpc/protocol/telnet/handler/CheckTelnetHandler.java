@@ -20,7 +20,7 @@ package io.joyrpc.protocol.telnet.handler;
  * #L%
  */
 
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
 import org.apache.commons.cli.CommandLine;
@@ -80,7 +80,7 @@ public class CheckTelnetHandler extends AbstractTelnetHandler {
                     System.arraycopy(cmd.getArgs(), 1, nameAndId, 0, 2);
                 }
                 if (nameAndId.length == 2 && nameAndId[0] != null && nameAndId[1] != null) {
-                    String className = InvokerManager.getClassName(Long.valueOf(nameAndId[1]));
+                    String className = ServiceManager.getClassName(Long.valueOf(nameAndId[1]));
                     respMessage = nameAndId[0].equals(className) ? "1" : "0";
                 }
             }

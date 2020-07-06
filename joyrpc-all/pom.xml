@@ -5,13 +5,18 @@
     <parent>
         <artifactId>joyrpc</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.0.5-SNAPSHOT</version>
+        <version>1.1.1-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>joyrpc-all</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-core</artifactId>
@@ -104,6 +109,11 @@
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-protocol-dubbo</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-proxy-bytebuddy</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -129,12 +139,32 @@
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-registry-consul</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-registry-nacos</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-transport-netty4</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-transport-resteasy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-trace-skywalking</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-trace-jaeger</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -148,9 +178,24 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-expression-jexl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>${commons-compress.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <version>${slf4j.version}</version>
         </dependency>
     </dependencies>
 

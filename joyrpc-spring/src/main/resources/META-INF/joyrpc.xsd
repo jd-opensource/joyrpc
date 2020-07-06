@@ -11,16 +11,16 @@
         </xsd:annotation>
         <xsd:complexType>
             <xsd:sequence minOccurs="0" maxOccurs="unbounded">
-                <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
             </xsd:sequence>
             <xsd:attribute name="id" type="xsd:ID" use="required">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ Spring的BeanId ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ BeanID ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="address" type="xsd:string" use="optional">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ 注册中心地址，多个用逗号分隔 ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ 注册中心地址 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="registry" type="xsd:string" use="optional" default="broadcast">
@@ -28,9 +28,39 @@
                     <xsd:documentation><![CDATA[ 类型 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="timeout" type="xsd:string" use="optional">
+            <xsd:attribute name="timeout" type="xsd:int" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 调用注册中心的超时时间 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupEnabled" type="xsd:boolean" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 是否开启备份 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupPath" type="xsd:string" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 备份路径 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupDatum" type="xsd:int" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 备份数量 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="backupInterval" type="xsd:long" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 备份间隔 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="taskRetryInterval" type="xsd:long" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 任务重试间隔 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="maxConnectRetryTimes" type="xsd:int" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 最大连接重试次数 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
         </xsd:complexType>
@@ -38,30 +68,30 @@
     <!-- ServerBean -->
     <xsd:element name="server">
         <xsd:annotation>
-            <xsd:documentation><![CDATA[ 服务端配置（监听端口），可作为一级元素 ]]></xsd:documentation>
+            <xsd:documentation><![CDATA[ TCP服务配置，可作为一级元素 ]]></xsd:documentation>
         </xsd:annotation>
         <xsd:complexType>
             <xsd:sequence minOccurs="0" maxOccurs="unbounded">
-                <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
             </xsd:sequence>
             <xsd:attribute name="id" type="xsd:ID" use="required">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ Spring的BeanId ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ BeanID ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="protocol" type="xsd:string" use="optional">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ 服务端协议 ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ 服务协议 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="host" type="xsd:string" use="optional">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ 服务端绑定地址 ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ 服务绑定地址 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="port" type="xsd:string" use="optional">
+            <xsd:attribute name="port" type="xsd:int" use="optional">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ 服务端绑定端口（已绑定自动+1重试） ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ 服务绑定端口（已绑定自动+1重试） ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="contextPath" type="xsd:string" use="optional">
@@ -69,7 +99,7 @@
                     <xsd:documentation><![CDATA[ 发布上下文 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="ioThreads" type="xsd:string" use="optional">
+            <xsd:attribute name="ioThreads" type="xsd:int" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ IO线程池大小 ]]></xsd:documentation>
                 </xsd:annotation>
@@ -79,12 +109,12 @@
                     <xsd:documentation><![CDATA[ 业务线程池类型插件名称 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="coreThreads" type="xsd:string" use="optional">
+            <xsd:attribute name="coreThreads" type="xsd:int" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 业务线程池core大小 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="maxThreads" type="xsd:string" use="optional">
+            <xsd:attribute name="maxThreads" type="xsd:int" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 业务线程池max大小 ]]></xsd:documentation>
                 </xsd:annotation>
@@ -94,24 +124,24 @@
                     <xsd:documentation><![CDATA[  业务线程池队列类型 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="queues" type="xsd:string" use="optional">
+            <xsd:attribute name="queues" type="xsd:int" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 业务线程池队列大小 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="accepts" type="xsd:string" use="optional">
+            <xsd:attribute name="accepts" type="xsd:int" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 允许的连接数 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="buffers" type="xsd:string" use="optional">
+            <xsd:attribute name="buffers" type="xsd:int" use="optional">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ The buffer size. ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ 缓冲区大小 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="epoll" type="xsd:string" use="optional">
+            <xsd:attribute name="epoll" type="xsd:boolean" use="optional">
                 <xsd:annotation>
-                    <xsd:documentation><![CDATA[ Linux下是否启动epoll特性 ]]></xsd:documentation>
+                    <xsd:documentation><![CDATA[ 启用EPOLL ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
             <xsd:attribute name="transportFactory" type="xsd:string" use="optional">
@@ -138,18 +168,45 @@
                     <xsd:documentation><![CDATA[ 参数配置关键字 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="value" type="xsd:string" use="required">
+            <xsd:attribute name="value" type="xsd:string" use="optional">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 参数配置值 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
-            <xsd:attribute name="hide" type="xsd:string" use="optional" default="false">
+            <xsd:attribute name="ref" type="xsd:string" use="optional">
+                <xsd:annotation>
+                    <xsd:documentation><![CDATA[ 参数配置值引用 ]]></xsd:documentation>
+                </xsd:annotation>
+            </xsd:attribute>
+            <xsd:attribute name="hide" type="xsd:boolean" use="optional" default="false">
                 <xsd:annotation>
                     <xsd:documentation><![CDATA[ 是否为隐藏配置 ]]></xsd:documentation>
                 </xsd:annotation>
             </xsd:attribute>
         </xsd:complexType>
     </xsd:element>
+
+    <!-- 参数配置 -->
+    <xsd:complexType name="parameterType">
+        <xsd:annotation>
+            <xsd:documentation><![CDATA[ 参数配置，可作为二级三级元素 ]]></xsd:documentation>
+        </xsd:annotation>
+        <xsd:attribute name="key" type="xsd:string" use="required">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 参数配置关键字 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="value" type="xsd:string" use="required">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 参数配置值 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="hide" type="xsd:boolean" use="optional" default="false">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 是否为隐藏配置 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+    </xsd:complexType>
 
     <!-- AbstractInterfaceConfig -->
     <xsd:complexType name="interfaceShared">
@@ -158,22 +215,18 @@
                 <xsd:documentation><![CDATA[ 过滤器插件实现链，多个用英文逗号隔开 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="register" type="xsd:string" use="optional">
+        <xsd:attribute name="register" type="xsd:boolean" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 是否注册到注册中心 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="registry" type="xsd:string" use="optional">
-            <xsd:annotation>
-                <xsd:documentation><![CDATA[ 注册中心bean名称,多个用英文逗号分隔 ]]></xsd:documentation>
-            </xsd:annotation>
-        </xsd:attribute>
+
         <xsd:attribute name="configure" type="xsd:string" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 配置中心名称 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="subscribe" type="xsd:string" use="optional">
+        <xsd:attribute name="subscribe" type="xsd:boolean" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 是否从注册中心订阅 ]]></xsd:documentation>
             </xsd:annotation>
@@ -184,7 +237,7 @@
             </xsd:annotation>
         </xsd:attribute>
         <!-- 以下方法可覆盖-->
-        <xsd:attribute name="validation" type="xsd:string" use="optional">
+        <xsd:attribute name="validation" type="xsd:boolean" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 是否校验参数 ]]></xsd:documentation>
             </xsd:annotation>
@@ -194,39 +247,39 @@
                 <xsd:documentation><![CDATA[ 压缩算法 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="concurrency" type="xsd:string" use="optional">
+        <xsd:attribute name="concurrency" type="xsd:int" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 接口下每方法的最大可并行执行请求数 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="cache" type="xsd:string" use="optional">
+        <xsd:attribute name="cache" type="xsd:boolean" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 是否启动结果缓存 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
         <xsd:attribute name="cacheProvider" type="xsd:string" use="optional">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ 自定义结果缓存插件名称 ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ 自定义结果缓存器 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
         <xsd:attribute name="cacheKeyGenerator" type="xsd:string" use="optional">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ 结果缓存key生成器名称 ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ 缓存键生成器 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
         <xsd:attribute name="cacheExpireTime" type="xsd:long" use="optional">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ 结果缓存过期时间 ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ 缓存过期时间 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
         <xsd:attribute name="cacheNullable" type="xsd:boolean" use="optional">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ 结果缓存值是否可空 ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ 缓存值是否可空 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="cacheCapacity" type="xsd:string" use="optional">
+        <xsd:attribute name="cacheCapacity" type="xsd:int" use="optional">
             <xsd:annotation>
-                <xsd:documentation><![CDATA[ 结果缓存容量大小 ]]></xsd:documentation>
+                <xsd:documentation><![CDATA[ 缓存容量大小 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
 
@@ -243,9 +296,39 @@
                 <xsd:documentation><![CDATA[ 方法调用超时时间 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="retries" type="xsd:string" use="optional">
+        <xsd:attribute name="cluster" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 分发策略 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="retries" type="xsd:int" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 方法重试次数 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="retryOnlyOncePerNode" type="xsd:boolean" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 每个节点只调用一次 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="failoverWhenThrowable" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 可以重试的逗号分隔的异常全路径类名 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="failoverPredication" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 重试异常判断接口插件 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="failoverSelector" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 异常重试目标节点选择器 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="forks" type="xsd:int" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 并行调用数量 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
         <xsd:attribute name="validation" type="xsd:string" use="optional">
@@ -288,9 +371,14 @@
                 <xsd:documentation><![CDATA[ 结果缓存值是否可空 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
-        <xsd:attribute name="cacheCapacity" type="xsd:string" use="optional">
+        <xsd:attribute name="cacheCapacity" type="xsd:int" use="optional">
             <xsd:annotation>
                 <xsd:documentation><![CDATA[ 结果缓存容量大小 ]]></xsd:documentation>
+            </xsd:annotation>
+        </xsd:attribute>
+        <xsd:attribute name="cacheKeyExpression" type="xsd:string" use="optional">
+            <xsd:annotation>
+                <xsd:documentation><![CDATA[ 缓存键表达式 ]]></xsd:documentation>
             </xsd:annotation>
         </xsd:attribute>
     </xsd:complexType>
@@ -301,7 +389,7 @@
         <xsd:complexContent>
             <xsd:extension base="methodShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
             </xsd:extension>
         </xsd:complexContent>
@@ -313,7 +401,7 @@
         <xsd:complexContent>
             <xsd:extension base="methodShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
                 <xsd:attribute name="dstParam" type="xsd:string" use="optional">
                     <xsd:annotation>
@@ -327,6 +415,11 @@
     <xsd:complexType name="consumerShared" abstract="true">
         <xsd:complexContent>
             <xsd:extension base="interfaceShared">
+                <xsd:attribute name="registry" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 注册中心名称 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
                 <xsd:attribute name="timeout" type="xsd:string" use="optional" default="5000">
                     <xsd:annotation>
                         <xsd:documentation><![CDATA[ 调用超时时间 ]]></xsd:documentation>
@@ -334,77 +427,27 @@
                 </xsd:attribute>
                 <xsd:attribute name="url" type="xsd:string" use="optional">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 直连地址，配置了此地址就不再从注册中心获取 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 直连地址 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
-                <xsd:attribute name="generic" type="xsd:string" use="optional">
+                <xsd:attribute name="generic" type="xsd:boolean" use="optional">
                     <xsd:annotation>
                         <xsd:documentation><![CDATA[ 是否泛化调用 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
                 <xsd:attribute name="cluster" type="xsd:string" use="optional">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 集群策略插件名称 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 集群策略 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
-                <xsd:attribute name="retries" type="xsd:string" use="optional">
+                <xsd:attribute name="retries" type="xsd:int" use="optional">
                     <xsd:annotation>
                         <xsd:documentation><![CDATA[ 失败后重试次数 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
-                <xsd:attribute name="loadbalance" type="xsd:string" use="optional">
+                <xsd:attribute name="retryOnlyOncePerNode" type="xsd:boolean" use="optional">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 负载均衡算法插件名称 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="sticky" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 是否粘滞连接 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="injvm" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 是否走injvm调用 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="check" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 是否强依赖服务端 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="serialization" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 序列化方式插件名称 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="router" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 路由规则插件名称 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="initSize" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 初始化连接数 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="minSize" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 最小连接数 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="candidature" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 候选者算法插件名称 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="warmupWeight" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 预热权重 ]]></xsd:documentation>
-                    </xsd:annotation>
-                </xsd:attribute>
-                <xsd:attribute name="warmupDuration" type="xsd:string" use="optional">
-                    <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 预热时间 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 每个节点只调用一次 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
                 <xsd:attribute name="failoverWhenThrowable" type="xsd:string" use="optional">
@@ -417,6 +460,71 @@
                         <xsd:documentation><![CDATA[ 重试异常判断接口插件 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
+                <xsd:attribute name="failoverSelector" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 异常重试目标节点选择器 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="forks" type="xsd:int" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 并行调用数量 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="loadbalance" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 负载均衡算法插件名称 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="sticky" type="xsd:boolean" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 是否粘滞连接 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="injvm" type="xsd:boolean" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 优先调用本虚拟机内的服务提供者 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="check" type="xsd:boolean" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 没有服务节点是否启动失败 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="serialization" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 序列化方式 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="nodeSelector" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 节点选择器算法 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="initSize" type="xsd:int" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 初始化连接数 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="minSize" type="xsd:int" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 最小连接数 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="candidature" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 候选者算法 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="warmupWeight" type="xsd:int" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 预热权重 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="warmupDuration" type="xsd:int" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 预热时间 ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
             </xsd:extension>
         </xsd:complexContent>
     </xsd:complexType>
@@ -425,11 +533,16 @@
             <xsd:extension base="consumerShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
                     <xsd:element name="method" type="joyrpc:method" minOccurs="0" maxOccurs="unbounded"/>
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
                 <xsd:attribute name="id" type="xsd:ID" use="required">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ Spring的BeanId ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ BeanID ]]></xsd:documentation>
+                    </xsd:annotation>
+                </xsd:attribute>
+                <xsd:attribute name="serviceName" type="xsd:string" use="optional">
+                    <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 服务名称 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
                 <xsd:attribute name="interface" type="xsd:string" use="required">
@@ -439,7 +552,7 @@
                 </xsd:attribute>
                 <xsd:attribute name="alias" type="xsd:string" use="required">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 服务别名分组信息 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 服务分组 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
             </xsd:extension>
@@ -450,11 +563,11 @@
             <xsd:extension base="consumerShared">
                 <xsd:choice minOccurs="0" maxOccurs="unbounded">
                     <xsd:element name="method" type="joyrpc:method" minOccurs="0" maxOccurs="unbounded"/>
-                    <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                    <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                 </xsd:choice>
                 <xsd:attribute name="alias" type="xsd:string" use="required">
                     <xsd:annotation>
-                        <xsd:documentation><![CDATA[ 服务别名分组信息 ]]></xsd:documentation>
+                        <xsd:documentation><![CDATA[ 服务分组 ]]></xsd:documentation>
                     </xsd:annotation>
                 </xsd:attribute>
             </xsd:extension>
@@ -477,7 +590,7 @@
                     <xsd:choice minOccurs="0" maxOccurs="unbounded">
                         <xsd:element name="consumer" type="joyrpc:nodeConsumer" minOccurs="0" maxOccurs="unbounded"/>
                         <xsd:element name="method" type="joyrpc:nodeMethod" minOccurs="0" maxOccurs="unbounded"/>
-                        <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                        <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                     </xsd:choice>
                     <xsd:attribute name="groupRouter" type="xsd:string" use="optional">
                         <xsd:annotation>
@@ -487,11 +600,6 @@
                     <xsd:attribute name="dstParam" type="xsd:string" use="optional">
                         <xsd:annotation>
                             <xsd:documentation><![CDATA[ 目标参数（机房/分组等）索引，从0开始计数 ]]></xsd:documentation>
-                        </xsd:annotation>
-                    </xsd:attribute>
-                    <xsd:attribute name="aliasAdaptive" type="xsd:string" use="optional">
-                        <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 是否自动适配alias，即当没有alias时自动引入 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                 </xsd:extension>
@@ -508,11 +616,11 @@
                 <xsd:extension base="interfaceShared">
                     <xsd:choice minOccurs="0" maxOccurs="unbounded">
                         <xsd:element name="method" type="joyrpc:method" minOccurs="0" maxOccurs="unbounded"/>
-                        <xsd:element ref="parameter" minOccurs="0" maxOccurs="unbounded"/>
+                        <xsd:element name="parameter" type="joyrpc:parameterType" minOccurs="0" maxOccurs="unbounded"/>
                     </xsd:choice>
                     <xsd:attribute name="id" type="xsd:ID" use="required">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ Spring的BeanId ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ BeanID ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                     <xsd:attribute name="interface" type="xsd:string" use="required">
@@ -520,32 +628,37 @@
                             <xsd:documentation><![CDATA[ 接口名称 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
-                    <xsd:attribute name="alias" type="xsd:string" use="required">
+                    <xsd:attribute name="alias" type="xsd:string" use="optional">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 服务别名分组信息 ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ 服务分组 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                     <xsd:attribute name="ref" type="xsd:string" use="required">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 接口实现类  ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ 接口实现对象 ]]></xsd:documentation>
+                        </xsd:annotation>
+                    </xsd:attribute>
+                    <xsd:attribute name="registry" type="xsd:string" use="optional">
+                        <xsd:annotation>
+                            <xsd:documentation><![CDATA[ 注册中心名称,多个用英文逗号分隔 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                     <xsd:attribute name="server" type="xsd:string" use="optional">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 需要发布服务到的Server，多个用英文逗号隔开 ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ TCP服务名称 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
-                    <xsd:attribute name="timeout" type="xsd:string" use="optional">
+                    <xsd:attribute name="timeout" type="xsd:int" use="optional">
                         <xsd:annotation>
                             <xsd:documentation><![CDATA[ 服务端执行超时时间 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
-                    <xsd:attribute name="delay" type="xsd:string" use="optional">
+                    <xsd:attribute name="delay" type="xsd:int" use="optional">
                         <xsd:annotation>
                             <xsd:documentation><![CDATA[ 延迟发布服务时间 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
-                    <xsd:attribute name="weight" type="xsd:string" use="optional">
+                    <xsd:attribute name="weight" type="xsd:int" use="optional">
                         <xsd:annotation>
                             <xsd:documentation><![CDATA[ 服务提供者权重 ]]></xsd:documentation>
                         </xsd:annotation>
@@ -560,19 +673,19 @@
                             <xsd:documentation><![CDATA[ 不发布的方法列表 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
-                    <xsd:attribute name="dynamic" type="xsd:string" use="optional" default="true">
+                    <xsd:attribute name="dynamic" type="xsd:boolean" use="optional" default="true">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 是否动态注册Provider ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ 注册中心收到注册后主动发布服务 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                     <xsd:attribute name="warmup" type="xsd:string" use="optional">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 预热插件名称 ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ 预热器 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                     <xsd:attribute name="interfaceValidator" type="xsd:string" use="optional">
                         <xsd:annotation>
-                            <xsd:documentation><![CDATA[ 接口验证器插件名称 ]]></xsd:documentation>
+                            <xsd:documentation><![CDATA[ 接口验证器 ]]></xsd:documentation>
                         </xsd:annotation>
                     </xsd:attribute>
                     <xsd:attribute name="enableValidator" type="xsd:boolean" use="optional">

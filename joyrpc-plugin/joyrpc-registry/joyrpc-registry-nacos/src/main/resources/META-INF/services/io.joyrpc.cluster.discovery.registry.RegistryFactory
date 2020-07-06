@@ -1,0 +1,2 @@
+io.joyrpc.cluster.discovery.registry.nacos.NacosRegistryFactory
+io.joyrpc.cluster.discovery.registry.nacos.dubbo.DubboNacosRegistryFactory

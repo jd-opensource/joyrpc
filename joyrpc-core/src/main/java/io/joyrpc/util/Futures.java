@@ -209,4 +209,44 @@ public class Futures {
         });
     }
 
+    /**
+     * 捕获异常
+     *
+     * @param executor 消费者
+     * @param <T>
+     * @return
+     */
+    public static <T> CompletableFuture<T> call(final Executor<T> executor) {
+        CompletableFuture<T> future = new CompletableFuture<>();
+        try {
+            executor.execute(future);
+        } catch (Exception e) {
+            executor.onException(e);
+            future.completeExceptionally(e);
+        }
+        return future;
+    }
+
+    @FunctionalInterface
+    public static interface Executor<T> {
+
+        /**
+         * 执行
+         *
+         * @param future
+         * @throws Exception
+         */
+        void execute(CompletableFuture<T> future) throws Exception;
+
+        /**
+         * 异常
+         *
+         * @param e
+         */
+        default void onException(final Exception e) {
+
+        }
+
+    }
+
 }

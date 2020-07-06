@@ -28,27 +28,29 @@ import io.joyrpc.context.injection.RespInjection;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.*;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.session.Session.ServerSession;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.RESPONSE_INJECTION;
 import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_TASK_SESSION_EXPIRED;
-import static io.joyrpc.util.ClassUtils.forName;
-import static io.joyrpc.util.ClassUtils.getPublicMethod;
+import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**
  * @date: 2019/3/14
@@ -77,11 +79,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             return;
         }
         RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
-        //绑定上下文
-        request.setContext(RequestContext.getContext());
-        Invocation invocation = request.getPayLoad();
         Channel channel = context.getChannel();
-
         if (request.isTimeout(request::getReceiveTime)) {
             // 客户端已经超时的请求
             logger.warn(ExceptionCode.format(ExceptionCode.PROVIDER_DISCARD_TIMEOUT_MESSAGE)
@@ -94,33 +92,22 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             return;
         }
 
+        //绑定上下文
+        request.setContext(RequestContext.getContext());
         Exporter exporter = null;
         try {
             //从会话恢复
-            restore(request, channel);
-            //根据请求参数获取输出的服务，依赖于会话恢复的信息
-            exporter = InvokerManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
-            if (exporter == null) {
-                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
-                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
-            }
-
-            ChannelTransport transport = channel.getAttribute(Channel.CHANNEL_TRANSPORT);
-            InvokerManager.getProducerCallback().addCallback(request, transport);
-            //执行调用，包括过滤器链
-            CompletableFuture<Result> future = exporter.invoke(request);
-
+            exporter = restore(request, channel);
             final Exporter service = exporter;
-            future.whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
+            //执行调用，包括过滤器链
+            exporter.invoke(request).whenComplete((r, throwable) -> onComplete(r, throwable, request, service, channel));
 
         } catch (ClassNotFoundException e) {
-            sendException(channel, new RpcException(error(invocation, channel, e.getMessage())), request, null);
-        } catch (NoSuchMethodException e) {
-            sendException(channel, new RpcException(error(invocation, channel, e.getMessage())), request, null);
+            sendException(channel, new RpcException(error(request.getPayLoad(), channel, e.getMessage())), request, null);
         } catch (LafException e) {
             sendException(channel, e, request, exporter);
-        } catch (Exception e) {
-            sendException(channel, new RpcException(error(invocation, channel, e.getMessage()), e), request, exporter);
+        } catch (Throwable e) {
+            sendException(channel, new RpcException(error(request.getPayLoad(), channel, e.getMessage()), e), request, exporter);
         } finally {
             //清理上下文
             RequestContext.remove();
@@ -130,11 +117,11 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 调用完成
      *
-     * @param result
-     * @param throwable
-     * @param request
-     * @param exporter
-     * @param channel
+     * @param result    结果
+     * @param throwable 异常
+     * @param request   请求
+     * @param exporter  服务
+     * @param channel   通道
      */
     protected void onComplete(final Result result,
                               final Throwable throwable,
@@ -152,18 +139,21 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         //构造响应Msg
         MessageHeader header = request.getHeader();
         Session session = request.getSession();
-        Supplier<ResponseMessage> supplier = request.getResponseSupplier();
+        Supplier<ResponseMessage<ResponsePayload>> supplier = request.getResponseSupplier();
         ResponseMessage<ResponsePayload> response = supplier != null ? supplier.get() :
                 new ResponseMessage<>(header.response(MsgType.BizResp.getType(),
                         session == null ? Compression.NONE : session.getCompressionType()));
+        GenericMethod genericMethod = invocation == null ? null : invocation.getGenericMethod();
+        GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
+        Type type = returnType == null ? null : returnType.getGenericType();
         if (result.getContext().isAsync() && !result.isException()) {
             //异步
             ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
-                response.setPayLoad(new ResponsePayload(obj, th));
+                response.setPayLoad(new ResponsePayload(obj, th, type));
                 channel.send(response, sendFailed);
             });
         } else {
-            response.setPayLoad(new ResponsePayload(result.getValue(), result.getException()));
+            response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), type));
             channel.send(response, sendFailed);
         }
     }
@@ -171,53 +161,86 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 补充信息
      *
-     * @param request
-     * @param channel
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws MethodOverloadException
+     * @param request 请求
+     * @param channel 通道
+     * @return 服务
+     * @throws ClassNotFoundException 类没有找到异常
      */
-    protected void restore(final RequestMessage<Invocation> request, final Channel channel)
-            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        DefaultSession session = (DefaultSession) request.getSession();
+    protected Exporter restore(final RequestMessage<Invocation> request, final Channel channel) throws ClassNotFoundException {
+        Exporter exporter = null;
+        ServerSession session = (ServerSession) request.getSession();
+        //从会话恢复接口和别名
         Invocation invocation = request.getPayLoad();
-        transmits.forEach(o -> o.restore(request, session));
-        invocation.apply(session);
-        //类名，如果不存在则从会话里面获取
+        if (session != null) {
+            if (isEmpty(invocation.getClassName())) {
+                invocation.setClassName(session.getInterfaceName());
+            }
+            if (isEmpty(invocation.getAlias())) {
+                invocation.setAlias(session.getAlias());
+            }
+            request.setLocalAddress(session.getLocalAddress());
+            request.setRemoteAddress(session.getRemoteAddress());
+            request.setTransport(session.getTransport());
+            exporter = (Exporter) session.getProvider();
+        }
+        if (request.getLocalAddress() == null) {
+            request.setLocalAddress(channel.getLocalAddress());
+        }
+        if (request.getRemoteAddress() == null) {
+            request.setRemoteAddress(channel.getRemoteAddress());
+        }
+        if (request.getTransport() == null) {
+            request.setTransport(channel.getAttribute(Channel.CHANNEL_TRANSPORT));
+        }
+
         String className = invocation.getClassName();
-        if (className == null || className.isEmpty()) {
+        if (isEmpty(className)) {
             //session 为空，类名也为空，可能是session超时并被清理
-            throw new SessionException(error(invocation, channel, " session has been cleared, may be the session has expired",
+            throw new SessionException(error(invocation, channel, " may be the session has expired",
                     PROVIDER_TASK_SESSION_EXPIRED));
         }
         //检查接口ID，兼容老版本
         checkInterfaceId(invocation, className);
-        //处理调用类
-        if (invocation.getClazz() == null) {
-            invocation.setClazz(forName(invocation.getClassName()));
+        //恢复上下文
+        transmits.forEach(o -> o.restoreOnReceive(request, session));
+        //直接使用会话上的Exporter，加快性能
+        if (exporter == null) {
+            exporter = ServiceManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
+            if (exporter == null) {
+                //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
+                throw new ShutdownExecption(error(invocation, channel, " exporter is not found"));
+            }
         }
-        //处理调用方法
-        if (invocation.getMethod() == null) {
-            invocation.setMethod(getPublicMethod(invocation.getClassName(), invocation.getMethodName()));
+        //构建请求
+        exporter.setup(request);
+        //对应服务端协议，设置认证信息
+        if (exporter.getAuthentication() != null) {
+            ServerProtocol protocol = null;
+            if (session != null) {
+                protocol = session.getProtocol();
+            }
+            if (protocol == null) {
+                protocol = channel.getAttribute(Channel.PROTOCOL);
+            }
+            if (protocol != null) {
+                request.setAuthenticated(protocol::authenticate);
+            }
         }
-        request.setLocalAddress(channel.getLocalAddress());
-        request.setRemoteAddress(channel.getRemoteAddress());
-        request.getContext().setLocalAddress(channel.getLocalAddress());
-        request.getContext().setRemoteAddress(channel.getRemoteAddress());
+        return exporter;
     }
 
     /**
      * 检查接口ID，兼容老版本
      *
-     * @param invocation
-     * @param className
-     * @throws ClassNotFoundException
+     * @param invocation 调用信息
+     * @param className  类
+     * @throws ClassNotFoundException 类没有找到
      */
     protected void checkInterfaceId(final Invocation invocation, String className) throws ClassNotFoundException {
         if (Character.isDigit(className.charAt(0))) {
             //处理接口ID，兼容老版本调用
             try {
-                className = InvokerManager.getClassName(Long.parseLong(className));
+                className = ServiceManager.getClassName(Long.parseLong(className));
                 if (className == null) {
                     throw new ClassNotFoundException("class is not found by interfaceId " + invocation.getClassName());
                 }
@@ -232,10 +255,10 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 获取错误信息
      *
-     * @param request
-     * @param channel
-     * @param cause
-     * @return
+     * @param request 请求
+     * @param channel 通道
+     * @param cause   异常
+     * @return 异常
      */
     protected String error(final Invocation request, final Channel channel, final String cause) {
         return error(request, channel, cause, ExceptionCode.PROVIDER_TASK_FAIL);
@@ -244,11 +267,11 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 获取错误信息
      *
-     * @param request
-     * @param channel
-     * @param cause
-     * @param code
-     * @return
+     * @param request 请求
+     * @param channel 通道
+     * @param cause   异常信息
+     * @param code    异常代码
+     * @return 异常
      */
     protected String error(final Invocation request, final Channel channel, final String cause, final String code) {
         return String.format(ExceptionCode.format(code == null ? ExceptionCode.PROVIDER_TASK_FAIL : code)
@@ -262,17 +285,16 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     }
 
     /**
-     * @param channel
-     * @param ex
-     * @param request
+     * @param channel  通道
+     * @param ex       异常
+     * @param request  请求
      * @param exporter 发送异常信息
      */
-    protected void sendException(final Channel channel, final Throwable ex, final RequestMessage request, final Exporter exporter) {
+    protected void sendException(final Channel channel, final Throwable ex,
+                                 final RequestMessage<Invocation> request, final Exporter exporter) {
         //构建异常应答消息，不压缩
-        ResponseMessage response = new ResponseMessage(
-                request.getHeader().response(
-                        MsgType.BizResp.getType(), Compression.NONE),
-                new ResponsePayload(ex));
+        ResponseMessage<ResponsePayload> response = new ResponseMessage<>(request.getHeader().response(
+                MsgType.BizResp.getType(), Compression.NONE), new ResponsePayload(ex));
         //注入异常信息
         inject(request, response, exporter);
         channel.send(response, sendFailed);
@@ -281,11 +303,12 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
     /**
      * 注入应答
      *
-     * @param request
-     * @param response
-     * @param exporter
+     * @param request  请求
+     * @param response 应答
+     * @param exporter 服务
      */
-    protected void inject(final RequestMessage request, final ResponseMessage<ResponsePayload> response, final Exporter exporter) {
+    protected void inject(final RequestMessage<Invocation> request, final ResponseMessage<ResponsePayload> response,
+                          final Exporter exporter) {
         for (RespInjection injection : injections) {
             injection.inject(request, response, exporter);
         }

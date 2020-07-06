@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,8 +22,9 @@ package io.joyrpc.protocol.handler;
 
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.InvokerManager;
-import io.joyrpc.permission.Authenticator;
+import io.joyrpc.invoker.ServiceManager;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
@@ -31,10 +32,10 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.authentication.AuthenticationRequest;
 import io.joyrpc.protocol.message.authentication.AuthenticationResponse;
-import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.session.DefaultSession;
+import io.joyrpc.transport.session.Session;
+import io.joyrpc.transport.session.Session.RpcSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +63,7 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         RequestMessage request = (RequestMessage) message;
         Channel channel = context.getChannel();
 
-        DefaultSession session = (DefaultSession) request.getSession();
+        RpcSession session = (RpcSession) request.getSession();
         if (session == null) {
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
                     new AuthenticationResponse(NOT_PASS, "Session is not exists.")), sendFailed);
@@ -73,7 +74,7 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         int port = channel.getLocalAddress().getPort();
         String className = session.getInterfaceName();
         String alias = session.getAlias();
-        Exporter exporter = InvokerManager.getExporter(className, alias, port);
+        Exporter exporter = ServiceManager.getExporter(className, alias, port);
         if (exporter == null) {
             //抛出异常
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
@@ -83,24 +84,28 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
             return;
         }
         //判断认证算法是否一致
-        Authenticator authenticator = exporter.getAuthenticator();
-        if (!authenticator.type().equals(authReq.getType())) {
+        Identification identification = exporter.getIdentification();
+        Authentication authenticator = exporter.getAuthentication();
+        if (identification == null || authenticator == null) {
+            //没有配置认证
+            session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
+            channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), new AuthenticationResponse(PASS)), sendFailed);
+        } else if (!identification.type().equals(authReq.getType())) {
+            //身份类型不对
             channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
                     new AuthenticationResponse(NOT_PASS,
-                            String.format("authenticator must be %s. class=%s,alias=%s,port=%d",
-                                    authenticator.type(), className, alias, port))),
+                            String.format("identification must be %s. class=%s,alias=%s,port=%d",
+                                    identification.type(), className, alias, port))),
                     sendFailed);
-            return;
-        }
-        try {
-            AuthenticationResponse response = authenticator == null ? new AuthenticationResponse(PASS, null) :
-                    authenticator.authenticate(exporter.getUrl(), authReq);
-            session.setAuthenticated(response.isSuccess());
-
-            channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), response), sendFailed);
-        } catch (Exception e) {
-            channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
-                    new AuthenticationResponse(NOT_PASS, e.getMessage())), sendFailed);
+        } else {
+            try {
+                AuthenticationResponse response = authenticator.authenticate(authReq);
+                session.setAuthenticated(response.isSuccess() ? Session.AUTH_SESSION_SUCCESS : Session.AUTH_SESSION_FAIL);
+                channel.send(ResponseMessage.build(request, AuthenticationResp.getType(), response), sendFailed);
+            } catch (Exception e) {
+                channel.send(ResponseMessage.build(request, AuthenticationResp.getType(),
+                        new AuthenticationResponse(NOT_PASS, e.getMessage())), sendFailed);
+            }
         }
 
     }

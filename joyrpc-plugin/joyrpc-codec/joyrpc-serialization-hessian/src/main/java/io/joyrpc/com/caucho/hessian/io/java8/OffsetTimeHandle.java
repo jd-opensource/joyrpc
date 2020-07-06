@@ -9,9 +9,9 @@ package io.joyrpc.com.caucho.hessian.io.java8;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,8 +20,6 @@ package io.joyrpc.com.caucho.hessian.io.java8;
  * #L%
  */
 
-import io.joyrpc.com.caucho.hessian.io.HessianHandle;
-
 import java.time.LocalTime;
 import java.time.OffsetTime;
 import java.time.ZoneOffset;
@@ -29,7 +27,7 @@ import java.time.ZoneOffset;
 /**
  *
  */
-public class OffsetTimeHandle implements Java8TimeWrapper<OffsetTime>, HessianHandle {
+public class OffsetTimeHandle implements Java8TimeWrapper<OffsetTime> {
 
     private static final long serialVersionUID = -1701639933686935988L;
     protected LocalTime localTime;
@@ -44,10 +42,8 @@ public class OffsetTimeHandle implements Java8TimeWrapper<OffsetTime>, HessianHa
 
     @Override
     public void wrap(final OffsetTime offsetTime) {
-        if (offsetTime != null) {
-            this.zoneOffset = offsetTime.getOffset();
-            this.localTime = offsetTime.toLocalTime();
-        }
+        this.zoneOffset = offsetTime.getOffset();
+        this.localTime = offsetTime.toLocalTime();
     }
 
     @Override

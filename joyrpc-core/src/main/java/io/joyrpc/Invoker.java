@@ -22,6 +22,8 @@ package io.joyrpc;
 
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
@@ -44,12 +46,22 @@ public interface Invoker {
     CompletableFuture<Result> invoke(RequestMessage<Invocation> request);
 
     /**
+     * 初始化请求
+     *
+     * @param request 请求
+     */
+    default void setup(final RequestMessage<Invocation> request) {
+
+    }
+
+    /**
      * 关闭
      *
      * @return
      */
     default CompletableFuture<Void> close() {
-        return close(GlobalContext.asParametric().getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**

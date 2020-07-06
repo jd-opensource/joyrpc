@@ -9,9 +9,9 @@ package io.joyrpc.transport.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -59,16 +59,10 @@ public interface ChannelTransport extends Transport {
      */
     default Message sync(final Message message, final int timeoutMillis) throws RpcException, TimeoutException {
         try {
-            int timeout = timeoutMillis <= 0 ? Constants.SEND_TIMEOUT_OPTION.get() : timeoutMillis;
+            int timeout = timeoutMillis <= 0 ? Constants.DEFAULT_TIMEOUT : timeoutMillis;
             return message == null ? null : async(message, timeout).get((long) timeout, TimeUnit.MILLISECONDS);
-        } catch (TimeoutException e) {
+        } catch (TimeoutException | RpcException e) {
             throw e;
-        } catch (RpcException e) {
-            throw e;
-        } catch (InterruptedException e) {
-            throw new RpcException(e);
-        } catch (CancellationException e) {
-            throw new RpcException(e);
         } catch (ExecutionException e) {
             throw new RpcException(e.getMessage(), e.getCause());
         } catch (Exception e) {

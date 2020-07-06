@@ -9,9 +9,9 @@ package io.joyrpc.cluster.distribution.limiter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,15 +31,17 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class LeakyBucketRateLimiter implements RateLimiter {
 
-    //最开始时间
-    protected final long startTimeNanos = System.nanoTime();
-    //每秒最大允许次数
-    protected int maxPermissions;
-    //限流周期，单位：纳秒
-    protected long limitPeriodNanos;
-    //每次许可微妙
-    protected double oncePermissionMicros;
-    //当前时间，及许可次数
+    /**
+     * 启动时间=限流器生效时间-限流周期
+     */
+    protected volatile long startTimeNanos;
+    /**
+     * 限流配置
+     */
+    protected volatile LeakyBucketLimiterConfig limiter;
+    /**
+     * 当前时间，及许可次数
+     */
     protected final AtomicReference<Cycle> curCycle = new AtomicReference<>(new Cycle(0.0d, 0L, true));
 
     @Override
@@ -71,6 +73,7 @@ public class LeakyBucketRateLimiter implements RateLimiter {
         boolean permitted;
         long curMicros;
         double newPermissions;
+        LeakyBucketLimiterConfig config;
         do {
             current = curCycle.get();
             curPermissions = current.curPermissions;
@@ -78,13 +81,14 @@ public class LeakyBucketRateLimiter implements RateLimiter {
             //运行持续微妙时间
             curMicros = duration();
             if (curMicros > lastPermissionMicros) {
+                config = limiter;
                 //按照时间计算许可，时间越长，许可越多
-                newPermissions = (curMicros - lastPermissionMicros) / oncePermissionMicros;
-                curPermissions = Math.min((double) maxPermissions, curPermissions + newPermissions);
+                newPermissions = (curMicros - lastPermissionMicros) / config.intervalMicros;
+                //最大限制，防止长时间没有调用，上面的算法累积了很多许可
+                curPermissions = Math.min(config.limitCount, curPermissions + newPermissions);
                 lastPermissionMicros = curMicros;
             }
-
-            if (curPermissions > 1) {
+            if (curPermissions >= 1) {
                 permitted = true;
                 curPermissions--;
             } else {
@@ -103,6 +107,7 @@ public class LeakyBucketRateLimiter implements RateLimiter {
         boolean permitted;
         long curMicros;
         double newPermissions;
+        LeakyBucketLimiterConfig config;
         do {
             current = curCycle.get();
             curMicros = duration();
@@ -110,8 +115,9 @@ public class LeakyBucketRateLimiter implements RateLimiter {
             lastPermissionMicros = current.lastPermissionMicros;
             permitted = current.permitted;
             if (curMicros > lastPermissionMicros) {
-                newPermissions = (curMicros - lastPermissionMicros) / oncePermissionMicros;
-                curPermissions = Math.min((double) maxPermissions, curPermissions + newPermissions);
+                config = limiter;
+                newPermissions = (curMicros - lastPermissionMicros) / config.intervalMicros;
+                curPermissions = Math.min(config.limitCount, curPermissions + newPermissions);
                 lastPermissionMicros = curMicros;
             }
             next = new Cycle(curPermissions, lastPermissionMicros, permitted);
@@ -158,17 +164,38 @@ public class LeakyBucketRateLimiter implements RateLimiter {
     protected boolean reload(final RateLimiterConfig config, final boolean sync) {
         if (config == null) {
             return false;
-        } else if (config.getLimitCount() == maxPermissions && config.getLimitPeriodNanos() == limitPeriodNanos) {
+        } else if (limiter != null && config.limitCount == limiter.limitCount && config.limitPeriodNanos == limiter.limitPeriodNanos) {
             //配置没有发生变化
             return true;
         }
-        if (sync) {
+        if (startTimeNanos > 0 && sync) {
             syncPermission();
         }
-        this.maxPermissions = config.getLimitCount();
-        this.limitPeriodNanos = config.getLimitPeriodNanos();
-        this.oncePermissionMicros = TimeUnit.NANOSECONDS.toMicros(limitPeriodNanos) / (double) maxPermissions;
+        this.limiter = new LeakyBucketLimiterConfig(config);
+        //初始化启动时间，确保刚创建的时候就有maxPermissions个许可
+        if (startTimeNanos == 0) {
+            startTimeNanos = System.nanoTime() - limiter.limitPeriodNanos;
+        }
         return true;
+    }
+
+    /**
+     * 限流配置
+     */
+    protected static class LeakyBucketLimiterConfig extends RateLimiterConfig {
+        /**
+         * 产生一个许可的微秒数
+         */
+        protected transient double intervalMicros = -1;
+
+        public LeakyBucketLimiterConfig(RateLimiterConfig config) {
+            super(config.type, config.limitPeriodNanos, config.waitTimeoutNanos, config.limitCount);
+            this.intervalMicros = TimeUnit.NANOSECONDS.toMicros(limitPeriodNanos) / (double) limitCount;
+        }
+
+        public double getIntervalMicros() {
+            return intervalMicros;
+        }
     }
 
     /**

@@ -22,6 +22,8 @@ package io.joyrpc.protocol.telnet;
 
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.MapParametric;
+import io.joyrpc.extension.Parametric;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
@@ -41,7 +43,8 @@ public class TelnetServerProtocol implements ServerProtocol {
      * 构造函数
      */
     public TelnetServerProtocol() {
-        this.codec = new TelnetCodec(GlobalContext.asParametric().getString(TELNET_PROMPT_OPTION));
+        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        this.codec = new TelnetCodec(parametric.getString(TELNET_PROMPT_OPTION));
     }
 
     /**

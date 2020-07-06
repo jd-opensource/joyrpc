@@ -64,12 +64,12 @@ public abstract class BaseMessage<T> implements Message<T>, Serializable {
     }
 
     @Override
-    public int getMsgId() {
+    public long getMsgId() {
         return header == null ? -1 : header.msgId;
     }
 
     @Override
-    public void setMsgId(final int id) {
+    public void setMsgId(final long id) {
         header.msgId = id;
     }
 

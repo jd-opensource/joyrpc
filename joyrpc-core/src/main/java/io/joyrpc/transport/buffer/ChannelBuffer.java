@@ -9,9 +9,9 @@ package io.joyrpc.transport.buffer;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,6 +35,13 @@ public interface ChannelBuffer {
     int capacity();
 
     ChannelBuffer capacity(int newCapacity);
+
+    /**
+     * 确保数据容量
+     *
+     * @param minWritableBytes 最小可写字节数
+     */
+    void ensureWritable(int minWritableBytes);
 
     void clear();
 
@@ -131,18 +138,29 @@ public interface ChannelBuffer {
     }
 
     default int writeString(final String value, final Charset charset, final boolean zeroNull, final boolean shortLength) {
-        byte[] bytes = null;
-        int length = value == null ? (zeroNull ? 0 : -1) : value.length();
+        byte[] bytes = value == null ? null : value.getBytes(charset == null ? StandardCharsets.UTF_8 : charset);
+        int length = bytes == null ? (zeroNull ? 0 : -1) : bytes.length;
+        int result = (shortLength ? 2 : 4) + (length > 0 ? length : 0);
+        //申请容量
+        ensureWritable(result);
+        //保存位置
+        int pos = writerIndex();
+        //写入长度
         if (shortLength) {
-            writeShort(length);
+            setShort(pos, length);
+            pos += 2;
         } else {
-            writeInt(length);
+            setInt(pos, length);
+            pos += 4;
         }
+        //写入数据
         if (length > 0) {
-            bytes = value.getBytes(charset == null ? StandardCharsets.UTF_8 : charset);
-            writeBytes(bytes);
+            setBytes(pos, bytes);
+            pos += bytes.length;
         }
-        return 4 + (bytes == null ? 0 : bytes.length);
+        //定位写入位置
+        writerIndex(pos);
+        return result;
     }
 
     default String readString() {

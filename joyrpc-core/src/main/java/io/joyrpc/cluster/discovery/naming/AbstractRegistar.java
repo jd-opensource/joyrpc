@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.naming;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,6 +31,7 @@ import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.exception.ProtocolException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
+import io.joyrpc.util.Maps;
 import io.joyrpc.util.Switcher;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
@@ -53,7 +54,7 @@ import static io.joyrpc.cluster.event.ClusterEvent.ShardEventType.ADD;
  */
 public class AbstractRegistar implements Registar {
     protected static final Logger logger = LoggerFactory.getLogger(AbstractRegistar.class);
-    public static final URLOption<Long> UPDATE_INTERVAL = new URLOption("updateInterval", 0L);
+    public static final URLOption<Long> UPDATE_INTERVAL = new URLOption<>("updateInterval", 10000L);
     /**
      * 目录服务名称
      */
@@ -113,7 +114,7 @@ public class AbstractRegistar implements Registar {
     /**
      * 等待锁
      */
-    protected Object mutex = new Object();
+    protected final Object mutex = new Object();
     /**
      * 开关
      */
@@ -177,7 +178,16 @@ public class AbstractRegistar implements Registar {
                 publisher.start();
             }
             if (publisher.addHandler(handler)) {
-                ClusterMeta meta = clusters.computeIfAbsent(key, o -> create(url, key));
+                ClusterMeta meta = Maps.computeIfAbsent(clusters, key, k -> create(url, key), (v, added) -> {
+                    if (added) {
+                        deque.offerFirst(v);
+                        //通知等待线程，有新的待更新数据
+                        synchronized (mutex) {
+                            mutex.notifyAll();
+                        }
+                    }
+                });
+
                 List<Shard> shards = meta.getShards();
                 if (shards != null && !shards.isEmpty()) {
                     List<ShardEvent> events = new ArrayList<>(shards.size());
@@ -190,6 +200,17 @@ public class AbstractRegistar implements Registar {
         });
     }
 
+    /**
+     * 构建集群元数据
+     *
+     * @param url  url
+     * @param name 名称
+     * @return
+     */
+    protected ClusterMeta create(final URL url, final String name) {
+        return new ClusterMeta(url, name);
+    }
+
     @Override
     public boolean unsubscribe(final URL url, final ClusterHandler handler) {
         if (url == null || handler == null) {
@@ -197,7 +218,7 @@ public class AbstractRegistar implements Registar {
         }
         return switcher.reader().quietAnyway(() -> {
             Publisher<ClusterEvent> publisher = publishers.get(getKey(url));
-            return publisher == null ? false : publisher.removeHandler(handler);
+            return publisher != null && publisher.removeHandler(handler);
         });
     }
 
@@ -233,9 +254,9 @@ public class AbstractRegistar implements Registar {
      */
     public CompletableFuture<Void> open() {
         //多次调用也能拿到正确的Future
-        return switcher.open(f->{
+        return switcher.open(f -> {
             //启动事件监听器
-            publishers.values().forEach(o -> o.start());
+            publishers.values().forEach(Publisher::start);
             dispatcher = new Thread(AbstractRegistar.this::schedule, getClass().getSimpleName());
             dispatcher.setDaemon(true);
             dispatcher.start();
@@ -255,31 +276,13 @@ public class AbstractRegistar implements Registar {
                 dispatcher.interrupt();
             }
             //关闭事件监听器
-            publishers.values().forEach(o -> o.close());
+            publishers.values().forEach(Publisher::close);
             // 备份一下数据
             if (dirty.compareAndSet(true, false)) {
                 backup();
             }
             return CompletableFuture.completedFuture(null);
         });
-    }
-
-    /**
-     * 创建集群
-     *
-     * @param url
-     * @param name
-     * @return
-     */
-    protected ClusterMeta create(final URL url, final String name) {
-        //创建集群元数据，添加到任务队列
-        ClusterMeta meta = new ClusterMeta(url, name);
-        deque.offerFirst(meta);
-        //通知等待线程，有新的待更新数据
-        synchronized (mutex) {
-            mutex.notifyAll();
-        }
-        return meta;
     }
 
     /**
@@ -304,7 +307,7 @@ public class AbstractRegistar implements Registar {
             synchronized (mutex) {
                 try {
                     mutex.wait(Math.max(waitTime, 500L));
-                } catch (InterruptedException e) {
+                } catch (InterruptedException ignored) {
                 }
             }
         }
@@ -375,7 +378,7 @@ public class AbstractRegistar implements Registar {
             targets = provider.apply(url, meta.getUrl());
         } catch (ProtocolException e) {
             //协议异常
-            logger.error(String.format("Unrecoverable error occurs while updating %s cluster %s.", name, meta.getName(), time), e);
+            logger.error(String.format("Unrecoverable error occurs while updating %s cluster %s.", name, meta.getName()), e);
             time = 0;
         } catch (Throwable e) {
             error = true;
@@ -386,7 +389,7 @@ public class AbstractRegistar implements Registar {
             if (meta.getUpdates() == 1 && backups != null) {
                 //第一次调用失败，尝试使用备份恢复的数据
                 targets = backups.get(meta.getName());
-                logger.warn(String.format("Error occurs while updating %s cluster %s. using backup data. retry in %d(ms)", name, meta.getName()), time, e);
+                logger.warn(String.format("Error occurs while updating %s cluster %s. using backup data. retry in %d(ms)", name, meta.getName(), time), e);
             } else {
                 logger.error(String.format("Error occurs while updating %s cluster %s. retry in %d(ms)", name, meta.getName(), time), e);
             }

@@ -9,9 +9,9 @@ package io.joyrpc.com.caucho.hessian.io.java8;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,14 +20,12 @@ package io.joyrpc.com.caucho.hessian.io.java8;
  * #L%
  */
 
-import io.joyrpc.com.caucho.hessian.io.HessianHandle;
-
 import java.time.Instant;
 
 /**
  * Instant包装器
  */
-public class InstantHandle implements Java8TimeWrapper<Instant>, HessianHandle {
+public class InstantHandle implements Java8TimeWrapper<Instant> {
 
     private static final long serialVersionUID = -1023781102104772052L;
     protected long seconds;

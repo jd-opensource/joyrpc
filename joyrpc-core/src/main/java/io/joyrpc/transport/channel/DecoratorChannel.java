@@ -90,7 +90,7 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
-    public FutureManager<Integer, Message> getFutureManager() {
+    public FutureManager<Long, Message> getFutureManager() {
         return channel.getFutureManager();
     }
 

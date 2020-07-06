@@ -36,28 +36,30 @@ public interface Registry extends Registar, Configure {
     /**
      * 打开
      *
-     * @return
+     * @return 异步Future
      */
     CompletableFuture<Void> open();
 
     /**
      * 关闭
      *
-     * @return
+     * @return 异步Future
      */
     CompletableFuture<Void> close();
 
     /**
      * 注册接口
      *
-     * @param url
+     * @param url url
+     * @return 异步Future
      */
     CompletableFuture<URL> register(URL url);
 
     /**
      * 反注册接口
      *
-     * @param url
+     * @param url url
+     * @return 异步Future
      */
     default CompletableFuture<URL> deregister(URL url) {
         return deregister(url, 0);
@@ -66,7 +68,12 @@ public interface Registry extends Registar, Configure {
     /**
      * 反注册接口
      *
-     * @param url
+     * @param url           url
+     * @param maxRetryTimes 最大重试次数<br/>
+     *                      <li>>0 最大重试次数</li>
+     *                      <li>=0 不重试</li>
+     *                      <li><0 无限重试</li>
+     * @return 异步Future
      */
     CompletableFuture<URL> deregister(URL url, int maxRetryTimes);
 

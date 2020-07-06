@@ -9,9 +9,9 @@ package io.joyrpc.protocol;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,6 +24,9 @@ import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.transport.session.Session;
+
+import static io.joyrpc.transport.session.Session.AUTH_SESSION_NONE;
 
 /**
  * 服务协议
@@ -57,12 +60,21 @@ public interface ServerProtocol extends Protocol {
     }
 
     /**
+     * 认证会话
+     *
+     * @return 判断会话是否认证成功
+     */
+    default int authenticate(final Session session) {
+        return AUTH_SESSION_NONE;
+    }
+
+    /**
      * 下线消息
      *
      * @param url url
      * @return Message
      */
-    default Message offline(URL url) {
+    default Message offline(final URL url) {
         return null;
     }
 }

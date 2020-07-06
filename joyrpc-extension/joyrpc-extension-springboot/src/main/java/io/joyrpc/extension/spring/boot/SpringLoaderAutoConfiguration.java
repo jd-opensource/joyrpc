@@ -36,7 +36,7 @@ public class SpringLoaderAutoConfiguration {
 
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
-    public static SpringLoader springLoader() {
+    public static SpringLoader springExtensionLoader() {
         return new SpringLoader();
     }
 }

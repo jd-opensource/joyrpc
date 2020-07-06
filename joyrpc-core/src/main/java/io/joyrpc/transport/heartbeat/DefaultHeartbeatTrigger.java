@@ -31,8 +31,6 @@ import io.joyrpc.transport.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 
@@ -59,10 +57,6 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
      */
     protected final Publisher<TransportEvent> publisher;
     /**
-     * 失败次数
-     */
-    protected AtomicInteger fails;
-    /**
      * 心跳应答
      */
     protected final BiConsumer<Message, Throwable> afterRun;
@@ -80,13 +74,10 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
         this.url = url;
         this.strategy = strategy;
         this.publisher = publisher;
-        this.fails = channel.getAttribute(Channel.HEARTBEAT_FAILED_COUNT, name -> new AtomicInteger(0));
         this.afterRun = (msg, err) -> {
             if (err != null) {
-                fails.incrementAndGet();
                 publisher.offer(new HeartbeatEvent(channel, url, err));
             } else {
-                fails.set(0);
                 publisher.offer(new HeartbeatEvent(msg, channel, url));
             }
         };
@@ -103,17 +94,16 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
         Supplier<Message> heartbeat = strategy.getHeartbeat();
         if (heartbeat != null && (hbMsg = heartbeat.get()) != null) {
             if (channel.isActive()) {
-                FutureManager<Integer, Message> futureManager = channel.getFutureManager();
+                FutureManager<Long, Message> futureManager = channel.getFutureManager();
                 //设置id
                 hbMsg.setMsgId(futureManager.generateId());
                 //创建future
-                CompletableFuture<Message> future = futureManager.create(hbMsg.getMsgId(), strategy.getTimeout()).whenComplete(afterRun);
+                futureManager.create(hbMsg.getMsgId(), strategy.getTimeout(), afterRun);
                 //发送消息
                 channel.send(hbMsg, r -> {
-                    //心跳有应答消息，会触发future的complete
+                    //心跳有应答消息
                     if (!r.isSuccess()) {
-                        futureManager.remove(hbMsg.getMsgId());
-                        future.completeExceptionally(r.getThrowable());
+                        futureManager.completeExceptionally(hbMsg.getMsgId(), r.getThrowable());
                         logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:",
                                 Channel.toString(channel.getRemoteAddress())), r.getThrowable());
                     }

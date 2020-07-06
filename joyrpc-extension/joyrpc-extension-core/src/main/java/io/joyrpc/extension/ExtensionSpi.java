@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,7 +50,7 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
     //缓存默认插件单例实例
     protected T target;
     //比较器
-    protected Comparator<ExtensionMeta<T, M>> comparator;
+    protected Comparator<ExtensionMeta<?, ?>> comparator;
     //分类器
     protected Classify<T, M> classify;
     //是否都是单例
@@ -62,7 +62,7 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
     protected volatile List<T> reverses;
 
     public ExtensionSpi(final Name<T, String> name, final List<ExtensionMeta<T, M>> metas,
-                        final Comparator<ExtensionMeta<T, M>> comparator, final Classify<T, M> classify) {
+                        final Comparator<ExtensionMeta<?, ?>> comparator, final Classify<T, M> classify) {
         this.name = name;
         this.metas = new LinkedList<>();
         this.names = new ConcurrentHashMap<>(metas.size());
@@ -88,7 +88,7 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
             //防止被覆盖
             names.putIfAbsent(name, meta);
             //相同名称，不同供应商的插件集合
-            List<ExtensionMeta<T, M>> metas = Maps.computeIfAbsent(multiNames, name, t -> new CopyOnWriteArrayList<>());
+            List<ExtensionMeta<T, M>> metas = multiNames.computeIfAbsent(name, t -> new CopyOnWriteArrayList<>());
             metas.add(meta);
 
             if (name instanceof String && meta.getProvider() != null && !meta.getProvider().isEmpty()) {

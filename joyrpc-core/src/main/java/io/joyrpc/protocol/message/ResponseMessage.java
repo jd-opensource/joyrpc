@@ -54,7 +54,7 @@ public class ResponseMessage<T> extends BaseMessage<T> implements Response {
      * @param msgType
      * @param msgId
      */
-    public ResponseMessage(byte msgType, int msgId) {
+    public ResponseMessage(byte msgType, long msgId) {
         this(new MessageHeader(msgType, msgId));
     }
 
@@ -119,8 +119,8 @@ public class ResponseMessage<T> extends BaseMessage<T> implements Response {
     }
 
     @Override
-    public void setPayLoad(T data) {
-        this.response = data;
+    public void setPayLoad(T payload) {
+        this.response = payload;
     }
 
     @Override

@@ -1,0 +1,2 @@
+io.joyrpc.protocol.dubbo.serialization.protostuff.DubboProtostuffSerialization
+io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization

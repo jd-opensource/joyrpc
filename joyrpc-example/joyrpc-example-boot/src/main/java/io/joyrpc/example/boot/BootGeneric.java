@@ -25,6 +25,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @SpringBootApplication
 public class BootGeneric {
 
@@ -32,7 +35,29 @@ public class BootGeneric {
         System.setProperty("spring.profiles.active", "generic");
         ConfigurableApplicationContext run = SpringApplication.run(BootGeneric.class, args);
         GenericService consumer = run.getBean(GenericService.class);
-        while (true) {
+
+        Map<String, Object> param = new HashMap<>();
+        //header
+        Map<String, Object> header = new HashMap<>();
+        Map<String, Object> headerAttrs = new HashMap<>();
+        headerAttrs.put("type", "generic");
+        headerAttrs.put("bodyType", "EchoData");
+        header.put("attrs", headerAttrs);
+        //body
+        Map<String, Object> body = new HashMap<>();
+        body.put("code", 1);
+        body.put("message", "this is body");
+        //body.put("class", "io.joyrpc.example.service.vo.EchoData");
+        //param
+        param.put("header", header);
+        param.put("body", body);
+
+        Object res1 = consumer.$invoke("echoRequest", null, new Object[]{param});
+        Object res2 = consumer.$invoke("echoRequestGeneric", null, new Object[]{param});
+        Object res3 = consumer.$invoke("echoDataRequest", null, new Object[]{param});
+
+        System.out.println("generic test is end, res is " + res1 + ", " + res2 + ", " + res3);
+        /*while (true) {
             try {
                 System.out.println(consumer.$invoke("sayHello", null, new Object[]{"helloWold"}));
                 Thread.sleep(1000L);
@@ -45,7 +70,7 @@ public class BootGeneric {
                 }
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 }
 

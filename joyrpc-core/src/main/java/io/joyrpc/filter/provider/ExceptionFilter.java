@@ -9,9 +9,9 @@ package io.joyrpc.filter.provider;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,10 +22,10 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.HeadKey;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.URL;
 import io.joyrpc.filter.AbstractProviderFilter;
 import io.joyrpc.filter.ProviderFilter;
 import io.joyrpc.protocol.message.Invocation;
@@ -37,6 +37,7 @@ import java.lang.reflect.Method;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.JSON;
+import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.getCodeBase;
 import static io.joyrpc.util.ClassUtils.isJavaClass;
 
@@ -72,9 +73,9 @@ public class ExceptionFilter extends AbstractProviderFilter {
 
         // 跨语言 特殊处理。
         MessageHeader header = request.getHeader();
-        if (header.removeAttribute(HeadKey.srcLanguage) != null) {
+        if (header.removeAttribute(HEAD_SRC_LANGUAGE) != null) {
             // 标记结果为错误
-            header.addAttribute(HeadKey.responseCode, (byte) 1);
+            header.addAttribute(HEAD_RESPONSE_CODE, (byte) 1);
             // 转为字符串
             String json = JSON.get().toJSONString(result.getException());
             return new Result(request.getContext(), json);
@@ -84,8 +85,11 @@ public class ExceptionFilter extends AbstractProviderFilter {
         } else if (exception instanceof LafException) {
             // 是本身的异常，直接抛出
             return result;
-        } else if (invocation.isGeneric() || header.getAttribute(HeadKey.generic.getKey(), (byte) 0) > 0) {
+        } else if (invocation.isGeneric()) {
             // 泛化调用调用
+            return new Result(request.getContext(), new RpcException(StringUtils.toString(exception)));
+        } else if (header.getAttribute(HEAD_GENERIC.getKey(), (byte) 0) > 0) {
+            // 兼容老版本的网关调用
             return new Result(request.getContext(), new RpcException(StringUtils.toString(exception)));
         } else if (!(exception instanceof RuntimeException) && (exception instanceof Exception)) {
             // 如果是checked异常，直接抛出
@@ -130,6 +134,11 @@ public class ExceptionFilter extends AbstractProviderFilter {
             }
         }
         return false;
+    }
+
+    @Override
+    public boolean test(URL url) {
+        return true;
     }
 
     @Override

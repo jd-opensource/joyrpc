@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  *
  * @param <T>
  */
-public class URLBiOption<T> extends Option<T> {
+public class URLBiOption<T> extends Option<T> implements Cloneable {
     /**
      * 配置项名称
      */
@@ -107,5 +107,14 @@ public class URLBiOption<T> extends Option<T> {
             value = supplier.get();
         }
         return value;
+    }
+
+    @Override
+    public URLBiOption<T> clone() {
+        try {
+            return (URLBiOption<T>) super.clone();
+        } catch (CloneNotSupportedException ignored) {
+            return null;
+        }
     }
 }

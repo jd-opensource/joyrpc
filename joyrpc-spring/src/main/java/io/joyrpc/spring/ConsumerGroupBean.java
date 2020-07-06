@@ -26,15 +26,19 @@ import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.*;
-import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
+
+import java.util.concurrent.ExecutionException;
 
 
 /**
  * 消费组
  */
 public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
 
     /**
      * spring处理器
@@ -54,17 +58,12 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     }
 
     @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
-        spring.setApplicationEventPublisher(publisher);
-    }
-
-    @Override
     public void setApplicationContext(ApplicationContext context) {
         spring.setApplicationContext(context);
     }
 
     @Override
-    public T getObject() {
+    public T getObject() throws ExecutionException, InterruptedException {
         return spring.getObject();
     }
 
@@ -84,13 +83,17 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
-        spring.onApplicationEvent(contextRefreshedEvent);
+    public void onApplicationEvent(final ApplicationEvent event) {
+        spring.onApplicationEvent(event);
     }
 
     @Override
     public void afterPropertiesSet() {
         spring.afterPropertiesSet();
+    }
+
+    public String getName() {
+        return id;
     }
 
     public String getRegistryName() {
@@ -110,4 +113,5 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     public void setConfigureName(String configureName) {
         spring.setConfigureName(configureName);
     }
+
 }

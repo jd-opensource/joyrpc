@@ -41,8 +41,8 @@ public class ExtensionSelector<T, M, C, K> {
     /**
      * 构造函数
      *
-     * @param extensionPoint
-     * @param selector
+     * @param extensionPoint 扩展点
+     * @param selector 选择器
      */
     public ExtensionSelector(ExtensionPoint<T, M> extensionPoint, Selector<T, M, C, K> selector) {
         this.extensionPoint = extensionPoint;

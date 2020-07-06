@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,11 +22,11 @@ package io.joyrpc.extension;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.function.BiConsumer;
 
 /**
  * 参数化接口
  * 用于获取参数配置信息
- *
  *
  * @date 2019-04-24 18:14
  */
@@ -700,5 +700,12 @@ public interface Parametric {
      * @return
      */
     Byte getPositiveByte(URLBiOption<Byte> option);
+
+    /**
+     * 迭代消费
+     *
+     * @param consumer
+     */
+    void foreach(BiConsumer<String, Object> consumer);
 
 }

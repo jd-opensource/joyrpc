@@ -9,9 +9,9 @@ package io.joyrpc.util.network;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,6 +22,7 @@ package io.joyrpc.util.network;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
@@ -93,11 +94,23 @@ public class Lan {
         if (ip == null || ip.isEmpty()) {
             return false;
         }
-        if (segments != null) {
-            for (Segment segment : segments) {
-                if (segment.contains(ip)) {
-                    return true;
-                }
+        return contains(segment -> segment.contains(ip));
+    }
+
+    /**
+     * 是否包含指定IP
+     *
+     * @param predicate 断言
+     * @return 布尔值
+     */
+    protected boolean contains(final Predicate<Segment> predicate) {
+        if (segments.isEmpty()) {
+            //没有指定，则是全网
+            return true;
+        }
+        for (Segment segment : segments) {
+            if (predicate.test(segment)) {
+                return true;
             }
         }
         return false;
@@ -110,14 +123,7 @@ public class Lan {
      * @return 布尔值
      */
     public boolean contains(long ip) {
-        if (segments != null) {
-            for (Segment segment : segments) {
-                if (segment.contains(ip)) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        return contains(segment -> segment.contains(ip));
     }
 
     @Override
@@ -134,7 +140,7 @@ public class Lan {
         if (id != lan.id) {
             return false;
         }
-        if (segments != null ? !segments.equals(lan.segments) : lan.segments != null) {
+        if (!segments.equals(lan.segments)) {
             return false;
         }
         return name != null ? name.equals(lan.name) : lan.name == null;
@@ -143,7 +149,7 @@ public class Lan {
 
     @Override
     public int hashCode() {
-        int result = segments != null ? segments.hashCode() : 0;
+        int result = segments.hashCode();
         result = 31 * result + id;
         result = 31 * result + (name != null ? name.hashCode() : 0);
         return result;

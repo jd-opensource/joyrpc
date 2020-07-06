@@ -1,0 +1,7 @@
+#内部做了小写处理
+拒绝连接
+connection refused
+没有到主机的路由
+no route to host
+连接超时
+connection timed out

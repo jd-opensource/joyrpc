@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,25 +22,30 @@ package io.joyrpc.protocol.handler;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.constants.HeadKey;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.message.Header;
+import io.joyrpc.util.Futures;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
+import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
+
 /**
- * @date: 2019/3/14
+ * 回调消息处理器
  */
 public class CallbackReqHandler implements MessageHandler {
 
@@ -49,32 +54,34 @@ public class CallbackReqHandler implements MessageHandler {
     @Override
     public void handle(final ChannelContext context, final Message message) throws HandlerException {
         // handle the callback Request
-        RequestMessage request = (RequestMessage) message;
-        String callbackInsId = (String) request.getHeader().getAttribute(HeadKey.callbackInsId);
-        Invoker invoker = InvokerManager.getConsumerCallback().getInvoker(callbackInsId);
-        if (invoker == null) {
-            logger.warn("Can't find callback invoker, invoker id: {}", callbackInsId);
-            return;
-        }
-        //TODO sync
+        RequestMessage<Invocation> request = (RequestMessage<Invocation>) message;
+        String callbackInsId = (String) request.getHeader().getAttribute(HEAD_CALLBACK_INSID);
+        Invoker invoker = ServiceManager.getConsumerCallback().getInvoker(callbackInsId);
         Channel channel = context.getChannel();
         Header header = message.getHeader();
-        InvokerManager.getCallbackThreadPool().execute(() -> {
+        ServiceManager.getCallbackThreadPool().execute(() -> {
             try {
-                CompletableFuture<Result> future = invoker.invoke(request);
+                //TODO 参数恢复
+                CompletableFuture<Result> future = invoker != null ? invoker.invoke(request) :
+                        Futures.completeExceptionally(new RpcException(header, "Can't find callback invoker, callback id:" + callbackInsId));
                 future.whenComplete((result, throwable) -> {
                     if (throwable != null) {
                         logger.error("Error occurs while invoking callback in channel " + Channel.toString(channel)
                                 + ", error message is :" + throwable.getMessage(), throwable);
-                        sendResponse(channel, header, new ResponsePayload(new RpcException(header, throwable)));
+                        sendResponse(channel, header, new ResponsePayload(
+                                throwable instanceof RpcException ? throwable :
+                                        new RpcException(header, throwable)));
                     }
+                    GenericMethod genericMethod = request.getPayLoad().getGenericMethod();
+                    GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
+                    Type type = returnType == null ? null : returnType.getGenericType();
                     boolean isAsync = Optional.ofNullable(result.getContext()).orElse(RequestContext.getContext()).isAsync();
                     if (isAsync) {
                         ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
-                            sendResponse(channel, header, new ResponsePayload(obj, th));
+                            sendResponse(channel, header, new ResponsePayload(obj, th, type));
                         });
                     } else {
-                        sendResponse(channel, header, new ResponsePayload(result.getValue(), result.getException()));
+                        sendResponse(channel, header, new ResponsePayload(result.getValue(), result.getException(), type));
                     }
                 });
 
@@ -89,12 +96,12 @@ public class CallbackReqHandler implements MessageHandler {
     /**
      * 发送应答消息
      *
-     * @param channel
-     * @param header
-     * @param payload
+     * @param channel 通道
+     * @param header  请求 头部
+     * @param payload 包体
      */
-    protected void sendResponse(final Channel channel, final Header header, final Object payload) {
-        ResponseMessage response = new ResponseMessage((MessageHeader) header.clone(), MsgType.CallbackResp.getType());
+    protected void sendResponse(final Channel channel, final Header header, final ResponsePayload payload) {
+        ResponseMessage<ResponsePayload> response = new ResponseMessage<>((MessageHeader) header.clone(), MsgType.CallbackResp.getType());
         //write the callback response to the serverside
         response.setPayLoad(payload);
 

@@ -20,9 +20,12 @@ package io.joyrpc.spring;
  * #L%
  */
 
-import io.joyrpc.config.ParameterConfig;
+import io.joyrpc.config.AbstractConfig;
 import io.joyrpc.context.GlobalContext;
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
 
@@ -31,10 +34,66 @@ import static io.joyrpc.constants.Constants.HIDE_KEY_PREFIX;
  *
  * @description:
  */
-public class GlobalParameterBean extends ParameterConfig implements InitializingBean {
+public class GlobalParameterBean extends AbstractConfig implements InitializingBean, ApplicationContextAware {
+
+
+    public static final String KEY = "key";
+    public static final String VALUE = "value";
+    public static final String HIDE = "hide";
+    public static final String REF = "ref";
+
+    /**
+     * 关键字
+     */
+    protected String key;
+
+    /**
+     * 值
+     */
+    protected Object value;
+    /**
+     * 是否隐藏（是的话，业务代码不能获取到）
+     */
+    protected boolean hide = false;
+    /**
+     * 服务bean计数器
+     */
+    protected transient Counter counter;
+
+    protected transient ApplicationContext applicationContext;
+
+    public String getKey() {
+        return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public Object getValue() {
+        return value;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
+
+    public boolean isHide() {
+        return hide;
+    }
+
+    public void setHide(boolean hide) {
+        this.hide = hide;
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
 
     @Override
     public void afterPropertiesSet() {
+        counter = Counter.getOrCreate(applicationContext);
         validate();
         if (key != null && !key.isEmpty() && value != null) {
             if (hide) {
@@ -48,4 +107,5 @@ public class GlobalParameterBean extends ParameterConfig implements Initializing
             }
         }
     }
+
 }

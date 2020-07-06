@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,7 +38,7 @@ public interface Selector<T, M, C, K> {
      *
      * @param extensions 排序的扩展点集合
      * @param condition  条件
-     * @return
+     * @return 选择的对象
      */
     K select(ExtensionPoint<T, M> extensions, C condition);
 
@@ -65,9 +65,9 @@ public interface Selector<T, M, C, K> {
         /**
          * 判断是否匹配
          *
-         * @param target
-         * @param condition
-         * @return
+         * @param target    目标扩展实现
+         * @param condition 条件
+         * @return 匹配标识
          */
         protected abstract boolean match(T target, C condition);
     }
@@ -96,9 +96,9 @@ public interface Selector<T, M, C, K> {
         /**
          * 判断是否匹配
          *
-         * @param target
-         * @param condition
-         * @return
+         * @param target    目标扩展实现
+         * @param condition 条件
+         * @return 匹配标识
          */
         protected abstract boolean match(T target, C condition);
     }
@@ -130,9 +130,9 @@ public interface Selector<T, M, C, K> {
         /**
          * 进行转换
          *
-         * @param target
-         * @param condition
-         * @return
+         * @param target    目标扩展实现
+         * @param condition 条件
+         * @return 转换对象
          */
         protected abstract K convert(T target, C condition);
     }
@@ -187,7 +187,7 @@ public interface Selector<T, M, C, K> {
          * 缓存获取之前，便于根据条件直接返回固定常量
          *
          * @param condition 条件
-         * @return
+         * @return 目标对象
          */
         protected K before(final C condition) {
             return null;
@@ -197,7 +197,7 @@ public interface Selector<T, M, C, K> {
          * 失败，没有选择到合适的插件进行处理
          *
          * @param condition 条件
-         * @return
+         * @return 目标对象
          */
         protected K fail(final C condition) {
             return null;

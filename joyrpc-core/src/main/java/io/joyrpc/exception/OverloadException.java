@@ -9,9 +9,9 @@ package io.joyrpc.exception;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,69 +33,22 @@ public class OverloadException extends RejectException {
     protected boolean isServer;
 
     public OverloadException() {
+        super(null, null, false, false, null, true);
     }
 
     public OverloadException(String message) {
-        super(message);
-    }
-
-    public OverloadException(String message, String errorCode) {
-        super(message, errorCode);
-    }
-
-    public OverloadException(String message, Throwable cause) {
-        super(message, cause);
-    }
-
-    public OverloadException(String message, Throwable cause, String errorCode) {
-        super(message, cause, errorCode);
-    }
-
-    public OverloadException(Throwable cause) {
-        super(cause);
-    }
-
-    public OverloadException(Throwable cause, String errorCode) {
-        super(cause, errorCode);
-    }
-
-    public OverloadException(int tps, boolean isServer) {
-        this.tps = tps;
-        this.isServer = isServer;
+        super(message, null, false, false, null, true);
     }
 
     public OverloadException(String message, int tps, boolean isServer) {
-        super(message);
+        super(message, null, false, false, null, true);
         this.tps = tps;
         this.isServer = isServer;
     }
 
     public OverloadException(String message, String errorCode, int tps, boolean isServer) {
-        super(message, errorCode);
-        this.tps = tps;
-        this.isServer = isServer;
-    }
-
-    public OverloadException(String message, Throwable cause, int tps, boolean isServer) {
-        super(message, cause);
-        this.tps = tps;
-        this.isServer = isServer;
-    }
-
-    public OverloadException(String message, Throwable cause, String errorCode, int tps, boolean isServer) {
-        super(message, cause, errorCode);
-        this.tps = tps;
-        this.isServer = isServer;
-    }
-
-    public OverloadException(Throwable cause, int tps, boolean isServer) {
-        super(cause);
-        this.tps = tps;
-        this.isServer = isServer;
-    }
-
-    public OverloadException(Throwable cause, String errorCode, int tps, boolean isServer) {
-        super(cause, errorCode);
+        //不输出堆栈，减少限流造成的CPU过高
+        super(message, null, false, false, errorCode, true);
         this.tps = tps;
         this.isServer = isServer;
     }

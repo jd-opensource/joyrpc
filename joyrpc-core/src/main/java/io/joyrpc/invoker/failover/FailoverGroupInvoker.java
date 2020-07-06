@@ -21,13 +21,16 @@ package io.joyrpc.invoker.failover;
  */
 
 import io.joyrpc.Result;
+import io.joyrpc.cluster.distribution.ExceptionPolicy;
 import io.joyrpc.cluster.distribution.FailoverPolicy;
+import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.config.ConsumerConfig;
+import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.invoker.AbstractGroupInvoker;
-import io.joyrpc.invoker.MethodOption;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.Futures;
@@ -36,7 +39,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static io.joyrpc.cluster.distribution.Route.FAIL_FAST;
+import static io.joyrpc.cluster.distribution.Router.FAIL_FAST;
 
 /**
  * Failover分组路由
@@ -51,23 +54,15 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
     /**
      * 负责均衡没有选择出合适的节点
      */
-    protected static final BiFunction<Integer, Boolean, Throwable> emptyFunction = (count, retry) -> new FailoverException(String.format("there is not any node after retrying %d", count), retry);
+    protected static final BiFunction<Integer, Boolean, Throwable> emptyFunction = (count, retry) -> new FailoverException(String.format("there is no another group after retrying %d", count), retry);
     /**
      * 分组配置
      */
     protected ConsumerConfig<?>[] configs;
     /**
-     * 方法透传参数
+     * 接口参数
      */
-    protected MethodOption options;
-
-    @Override
-    public void setup() {
-        super.setup();
-        //不支持动态别名
-        aliasAdaptive = false;
-        options = new MethodOption(clazz, className, url);
-    }
+    protected InterfaceOption intfOption;
 
     @Override
     public CompletableFuture<Void> refer() {
@@ -84,17 +79,20 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
             configMap.put(alias, configs[i]);
             i++;
         }
-        return CompletableFuture.allOf(futures);
+        return CompletableFuture.allOf(futures).thenAccept(v -> {
+            if (configs.length > 0) {
+                intfOption = configs[0].getRefer().getOption();
+            }
+        });
     }
 
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-        Invocation invocation = request.getPayLoad();
-        MethodOption.Option option = options.getOption(invocation.getMethodName());
-        request.setFailoverPolicy(option.getFailoverPolicy());
+        ConsumerMethodOption option = (ConsumerMethodOption) intfOption.getOption(request.getMethodName());
+        request.setTimeout(option.getTimeout());
         request.getHeader().setTimeout(option.getTimeout());
         CompletableFuture<Result> future = new CompletableFuture<>();
-        retry(request, 0, request.getFailoverPolicy(), future);
+        retry(request, 0, option.getFailoverPolicy(), future);
         return future;
     }
 
@@ -110,7 +108,10 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
                          final int retry,
                          final FailoverPolicy policy,
                          final CompletableFuture<Result> future) {
-
+        if (retry > 0) {
+            //便于向服务端注入重试次数
+            request.setRetryTimes(retry);
+        }
         //调用，如果节点不存在，则抛出Failover异常。
         ConsumerConfig<?> config = configs[retry % configs.length];
         CompletableFuture<Result> result = config.getRefer().invoke(request);
@@ -118,28 +119,32 @@ public class FailoverGroupInvoker extends AbstractGroupInvoker {
             t = t == null ? r.getException() : t;
             if (t == null) {
                 future.complete(r);
-            } else if (request.isTimeout()) {
-                //请求超时了
-                future.completeExceptionally(t);
-            } else if ((!(t instanceof LafException) || !((LafException) t).isRetry()) && !policy.getExceptionPolicy().test(t)) {
-                //不需要重试的异常
-                future.completeExceptionally(t);
-            } else if (retry >= policy.getMaxRetry()) {
-                //超过重试次数
-                future.completeExceptionally(overloadFunction.apply(policy.getMaxRetry()));
             } else {
-                //删除失败的节点进行重试
-                int size = configs.length;
-                if (size == 1 && policy.isOnlyOncePerNode()) {
-                    //每个节点只重试一次
-                    Futures.completeExceptionally(future, emptyFunction.apply(retry, false));
+                ExceptionPolicy exceptionPolicy = policy.getExceptionPolicy();
+                TimeoutPolicy timeoutPolicy = policy.getTimeoutPolicy();
+                if (timeoutPolicy != null && timeoutPolicy.test(request)) {
+                    //请求超时了
+                    future.completeExceptionally(t);
+                } else if ((!(t instanceof LafException) || !((LafException) t).isRetry())
+                        && (exceptionPolicy == null || !exceptionPolicy.test(t))) {
+                    //不需要重试的异常
+                    future.completeExceptionally(t);
+                } else if (retry >= policy.getMaxRetry()) {
+                    //超过重试次数
+                    future.completeExceptionally(overloadFunction.apply(policy.getMaxRetry()));
                 } else {
-                    Invocation invocation = request.getPayLoad();
-                    //重新设置剩余超时时间
-                    policy.getTimeoutPolicy().reset(request);
-                    //TODO 考虑不同的环境和协议版本需要不同的参数，切换分组的时候重新生成一份对象（是否合理）
-                    request.setPayLoad(new Invocation(invocation.getClazz(), invocation.getMethod(), invocation.getArgs()));
-                    retry(request, retry + 1, policy, future);
+                    int size = configs.length;
+                    if (retry == size - 1 && policy.isOnlyOncePerNode()) {
+                        //每个节点只重试一次
+                        Futures.completeExceptionally(future, emptyFunction.apply(retry, false));
+                    } else {
+                        Invocation invocation = request.getPayLoad();
+                        //重新设置剩余超时时间
+                        policy.getTimeoutPolicy().decline(request);
+                        //TODO 考虑不同的环境和协议版本需要不同的参数，切换分组的时候重新生成一份对象（是否合理）
+                        request.setPayLoad(new Invocation(invocation.getClazz(), invocation.getMethod(), invocation.getArgs()));
+                        retry(request, retry + 1, policy, future);
+                    }
                 }
             }
         });

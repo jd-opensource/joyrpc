@@ -21,6 +21,7 @@ package io.joyrpc;
  */
 
 import io.joyrpc.cache.CacheFactory;
+import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cluster.MetricHandler;
 import io.joyrpc.cluster.candidate.Candidature;
 import io.joyrpc.cluster.discovery.config.Configure;
@@ -38,30 +39,37 @@ import io.joyrpc.codec.crypto.Encryptor;
 import io.joyrpc.codec.crypto.Signature;
 import io.joyrpc.codec.digester.Digester;
 import io.joyrpc.codec.serialization.*;
+import io.joyrpc.config.InterfaceOptionFactory;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.Configurator;
+import io.joyrpc.context.ContextSupplier;
 import io.joyrpc.context.Environment;
 import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.context.injection.RespInjection;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventBus;
+import io.joyrpc.expression.ExpressionProvider;
 import io.joyrpc.extension.*;
 import io.joyrpc.filter.ConsumerFilter;
 import io.joyrpc.filter.ProviderFilter;
-import io.joyrpc.filter.cache.CacheKeyGenerator;
 import io.joyrpc.health.Doctor;
 import io.joyrpc.invoker.ExceptionHandler;
+import io.joyrpc.invoker.FilterChainFactory;
 import io.joyrpc.invoker.GroupInvoker;
 import io.joyrpc.metric.DashboardFactory;
-import io.joyrpc.permission.Authenticator;
+import io.joyrpc.permission.Authentication;
+import io.joyrpc.permission.Authorization;
+import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.Protocol.ProtocolVersion;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.proxy.GrpcFactory;
+import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.trace.TraceFactory;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.transport.http.HttpClient;
@@ -88,6 +96,11 @@ public interface Plugin {
     ExtensionSelector<MessageHandler, Integer, Integer, MessageHandler> MESSAGE_HANDLER_SELECTOR = new MessageHandlerSelector(MESSAGE_HANDLER);
 
     /**
+     * 过滤链构建器
+     */
+    ExtensionPoint<FilterChainFactory, String> FILTER_CHAIN_FACTORY = new ExtensionPointLazy<>(FilterChainFactory.class);
+
+    /**
      * 消费者过滤器插件
      */
     ExtensionPoint<ConsumerFilter, String> CONSUMER_FILTER = new ExtensionPointLazy<>(ConsumerFilter.class);
@@ -104,6 +117,11 @@ public interface Plugin {
      * 业务线程插件.
      */
     ExtensionPoint<ThreadPool, String> THREAD_POOL = new ExtensionPointLazy<>(ThreadPool.class);
+
+    /**
+     * 跟踪工厂
+     */
+    ExtensionPoint<TraceFactory, String> TRACE_FACTORY = new ExtensionPointLazy<>(TraceFactory.class);
 
     /**
      * 上下文传递扩展
@@ -133,7 +151,7 @@ public interface Plugin {
     /**
      * 路由插件
      */
-    ExtensionPoint<Router, String> ROUTER = new ExtensionPointLazy<>(Router.class);
+    ExtensionPoint<NodeSelector, String> NODE_SELECTOR = new ExtensionPointLazy<>(NodeSelector.class);
 
     /**
      * 注册中心全局配置变更事件通知插件
@@ -155,6 +173,15 @@ public interface Plugin {
      */
     ExtensionPoint<GenericSerializer, String> GENERIC_SERIALIZER = new ExtensionPointLazy<>(GenericSerializer.class);
 
+    /**
+     * 表达式插件
+     */
+    ExtensionPoint<ExpressionProvider, String> EXPRESSION_PROVIDER = new ExtensionPointLazy<>(ExpressionProvider.class);
+
+    /**
+     * 接口选项工厂类
+     */
+    ExtensionPoint<InterfaceOptionFactory, String> INTERFACE_OPTION_FACTORY = new ExtensionPointLazy<>(InterfaceOptionFactory.class);
 
     /**
      * 编解码插件选择器
@@ -199,6 +226,12 @@ public interface Plugin {
     ExtensionPoint<Environment, String> ENVIRONMENT = new ExtensionPointLazy<>(Environment.class);
 
     /**
+     * 全局变量提供者插件
+     */
+    ExtensionPoint<ContextSupplier, String> CONTEXT_SUPPLIER = new ExtensionPointLazy<>(ContextSupplier.class);
+
+
+    /**
      * 事件总线
      */
     ExtensionPoint<EventBus, String> EVENT_BUS = new ExtensionPointLazy<>(EventBus.class);
@@ -214,9 +247,18 @@ public interface Plugin {
     ExtensionPoint<Serialization, String> SERIALIZATION = new ExtensionPointLazy<>(Serialization.class);
 
     /**
-     * 认证插件
+     * 身份认证插件
      */
-    ExtensionPoint<Authenticator, String> AUTHENTICATOR = new ExtensionPointLazy<>(Authenticator.class);
+    ExtensionPoint<Authentication, String> AUTHENTICATOR = new ExtensionPointLazy<>(Authentication.class);
+
+    /**
+     * 身份插件
+     */
+    ExtensionPoint<Identification, String> IDENTIFICATION = new ExtensionPointLazy<>(Identification.class);
+    /**
+     * 权限认证
+     */
+    ExtensionPoint<Authorization, String> AUTHORIZATION = new ExtensionPointLazy<>(Authorization.class);
 
     /**
      * JSON提供者
@@ -264,6 +306,11 @@ public interface Plugin {
     ExtensionPoint<ProxyFactory, String> PROXY = new ExtensionPointLazy<>(ProxyFactory.class);
 
     /**
+     * 编译器
+     */
+    ExtensionPoint<JCompiler, String> COMPILER = new ExtensionPointLazy<>(JCompiler.class);
+
+    /**
      * GRPC工厂插件
      */
     ExtensionPoint<GrpcFactory, String> GRPC_FACTORY = new ExtensionPointLazy<>(GrpcFactory.class);
@@ -287,10 +334,15 @@ public interface Plugin {
      * 客户端协议选择器，匹配最优的协议
      */
     ExtensionSelector<ClientProtocol, String, ProtocolVersion, ClientProtocol> CLIENT_PROTOCOL_SELECTOR = new ExtensionSelector<>(CLIENT_PROTOCOL,
-            new Selector.CacheSelector<>((extensions, version) -> {
-                String name = version.getName();
+            new Selector.CacheSelector<>((extensions, protocolVersion) -> {
+                String name = protocolVersion.getName();
+                String version = protocolVersion.getVersion();
+                //协议版本为空，直接根据协议名称获取
+                if (version == null || version.isEmpty()) {
+                    return extensions.get(name);
+                }
                 //根据版本获取
-                ClientProtocol protocol = extensions.get(version.getVersion());
+                ClientProtocol protocol = extensions.get(version);
                 if (protocol == null && name != null && !name.isEmpty()) {
                     String n;
                     //版本没有找到，则按照名称取优先级最高的版本
@@ -369,9 +421,9 @@ public interface Plugin {
     ExtensionPoint<RateLimiter, String> LIMITER = new ExtensionPointLazy<>(RateLimiter.class);
 
     /**
-     * 集群分发策略插件
+     * 路由策略
      */
-    ExtensionPoint<Route, String> ROUTE = new ExtensionPointLazy<>(Route.class);
+    ExtensionPoint<Router, String> ROUTER = new ExtensionPointLazy<>(Router.class);
 
     /**
      * 重试目标节点选择器

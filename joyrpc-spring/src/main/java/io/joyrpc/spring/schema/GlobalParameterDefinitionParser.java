@@ -20,40 +20,80 @@ package io.joyrpc.spring.schema;
  * #L%
  */
 
+import io.joyrpc.spring.Counter;
 import io.joyrpc.spring.GlobalParameterBean;
-import org.springframework.beans.MutablePropertyValues;
 import org.springframework.beans.factory.config.BeanDefinition;
-import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.factory.config.RuntimeBeanReference;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
+import org.springframework.beans.factory.support.BeanDefinitionBuilder;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.io.ResourceLoader;
 import org.w3c.dom.Element;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import static io.joyrpc.spring.GlobalParameterBean.*;
+import static org.springframework.beans.factory.support.BeanDefinitionBuilder.rootBeanDefinition;
 
 /**
  * 全局解析
  */
 public class GlobalParameterDefinitionParser implements BeanDefinitionParser {
 
-    private static final AtomicInteger COUNTER = new AtomicInteger();
+    private Counter counter;
 
-    @Override
-    public BeanDefinition parse(Element element, ParserContext parserContext) {
-        RootBeanDefinition definition = new RootBeanDefinition();
-        definition.setBeanClass(GlobalParameterBean.class);
-        definition.setLazyInit(false);
+    /**
+     * 注册全局参数
+     *
+     * @param registry 注册表
+     * @param key      键
+     * @param value    值
+     */
+    public static BeanDefinition register(final BeanDefinitionRegistry registry, final Counter counter, final String key,
+                                          final Object value) {
+        return register(registry, counter, key, value, null, null);
+    }
 
-        String key = element.getAttribute("key");
-        String value = element.getAttribute("value");
-        String hide = element.getAttribute("hide");
-
-        MutablePropertyValues values = definition.getPropertyValues();
-        values.addPropertyValue("key", key);
-        values.addPropertyValue("value", value);
-        values.addPropertyValue("hide", hide);
-
-        String beanName = "global-parameter-" + COUNTER.getAndIncrement();
-        parserContext.getRegistry().registerBeanDefinition(beanName, definition);
+    /**
+     * 注册全局参数
+     *
+     * @param registry 注册表
+     * @param key      键
+     * @param value    值
+     * @param ref      引用
+     * @param hide     是否隐藏
+     */
+    public static BeanDefinition register(final BeanDefinitionRegistry registry, final Counter counter, final String key,
+                                          final Object value, final String ref, final String hide) {
+        BeanDefinitionBuilder builder = rootBeanDefinition(GlobalParameterBean.class).setLazyInit(false);
+        builder.addPropertyValue(KEY, key);
+        if (value != null) {
+            builder.addPropertyValue(VALUE, value);
+        } else if (ref != null && !ref.isEmpty()) {
+            builder.addPropertyValue(VALUE, new RuntimeBeanReference(ref));
+        }
+        if (hide != null && !hide.isEmpty()) {
+            builder.addPropertyValue(HIDE, hide);
+        }
+        AbstractBeanDefinition definition = builder.getBeanDefinition();
+        registry.registerBeanDefinition(counter.computeContextName(), definition);
         return definition;
     }
+
+    @Override
+    public BeanDefinition parse(final Element element, final ParserContext parserContext) {
+        if (counter == null) {
+            ResourceLoader resourceLoader = parserContext.getReaderContext().getReader().getResourceLoader();
+            ApplicationContext applicationContext = (ApplicationContext) resourceLoader;
+            counter = Counter.getOrCreate(applicationContext);
+        }
+        return register(parserContext.getRegistry(),
+                counter,
+                element.getAttribute(KEY),
+                element.getAttribute(VALUE),
+                element.getAttribute(REF),
+                element.getAttribute(HIDE));
+    }
+
 }

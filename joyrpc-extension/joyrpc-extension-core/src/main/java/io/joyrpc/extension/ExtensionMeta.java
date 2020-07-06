@@ -9,9 +9,9 @@ package io.joyrpc.extension;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,30 +27,48 @@ import java.util.Comparator;
  */
 public class ExtensionMeta<T, M> {
 
-    //实例元数据
-    protected Name<? extends T, String> name;
-    //实例化接口
-    protected Instantiation instantiation;
-    //是否是单例
-    protected boolean singleton = true;
-    //单例
-    protected T target;
-    //扩展点名称
+    /**
+     * 扩展点元数据名称
+     */
+    protected Name<T, String> name;
+    /**
+     * 扩展点名称
+     */
     protected Name<T, String> extensible;
-    //扩展实现名称
-    protected Name<? extends T, M> extension;
-    //顺序
-    protected int order;
-    //加载器
+    /**
+     * 扩展实现名称
+     */
+    protected Name<T, M> extension;
+    /**
+     * 扩展点加载器
+     */
     protected Object loader;
-    //供应商
+    /**
+     * 扩展实现构造器
+     */
+    protected Instantiation instantiation;
+    /**
+     * 是否是单例
+     */
+    protected boolean singleton = true;
+    /**
+     * 顺序
+     */
+    protected int order;
+    /**
+     * 供应商
+     */
     protected String provider;
+    /**
+     * 单例扩展实现
+     */
+    protected T target;
 
-    public Name<? extends T, String> getName() {
+    public Name<T, String> getName() {
         return name;
     }
 
-    public void setName(Name<? extends T, String> name) {
+    public void setName(Name<T, String> name) {
         this.name = name;
     }
 
@@ -100,7 +118,7 @@ public class ExtensionMeta<T, M> {
         return extension;
     }
 
-    public void setExtension(Name<? extends T, M> extension) {
+    public void setExtension(Name<T, M> extension) {
         this.extension = extension;
     }
 
@@ -131,12 +149,12 @@ public class ExtensionMeta<T, M> {
     /**
      * 升序排序
      */
-    static class AscendingComparator implements Comparator<ExtensionMeta> {
+    static class AscendingComparator implements Comparator<ExtensionMeta<?, ?>> {
 
-        public static final Comparator INSTANCE = new AscendingComparator();
+        protected static final AscendingComparator INSTANCE = new AscendingComparator();
 
         @Override
-        public int compare(ExtensionMeta o1, ExtensionMeta o2) {
+        public int compare(ExtensionMeta<?, ?> o1, ExtensionMeta<?, ?> o2) {
             return o1.getOrder() - o2.getOrder();
         }
     }

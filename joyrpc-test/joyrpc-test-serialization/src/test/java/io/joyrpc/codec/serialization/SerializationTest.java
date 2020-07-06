@@ -24,8 +24,10 @@ package io.joyrpc.codec.serialization;
 import io.joyrpc.cluster.discovery.backup.BackupDatum;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.model.*;
+import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -160,9 +162,19 @@ public class SerializationTest {
     }
 
     @Test
+    public void testArrayObject() {
+        ArrayObject wrap = new ArrayObject();
+        wrap.strArray = new String[]{"hello", null, "world"};
+        wrap.fooArray = new Foo[]{null, new Foo("0", 0), null};
+        wrap.objArray = new Object[]{new Foo("hello", 0), new Foo("world", 1), null};
+        serializeAndDeserialize("protostuff", wrap);
+        serializeAndDeserialize("protobuf", wrap);
+    }
+
+    @Test
     public void testLinkedHashMap() {
         MapObj obj = new MapObj();
-        LinkedHashSet<String> set=new LinkedHashSet<>();
+        LinkedHashSet<String> set = new LinkedHashSet<>();
         set.add("1");
         set.add("2");
         obj.setSet(set);
@@ -184,13 +196,20 @@ public class SerializationTest {
         serializer.serialize(baos, phoneNumber);
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
 
-        Method method = ClassUtils.getPublicMethod(HelloGrpc.class, "hello");
-        GrpcType grpcType = ClassUtils.getGrpcType(HelloGrpc.class, method.getName(), (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        GrpcMethod grpcMethod = ClassUtils.getPublicMethod(HelloGrpc.class, "hello", (c, m) -> GRPC_FACTORY.get().generate(c, m));
+        Method method = grpcMethod.getMethod();
+        GrpcType grpcType = grpcMethod.getType();
         Object obj = serializer.deserialize(bais, grpcType.getRequest().getClazz());
         List<Field> fields = ClassUtils.getFields(grpcType.getRequest().getClazz());
         fields.forEach(o -> o.setAccessible(true));
         Assert.assertEquals(phoneNumber.getNumber(), fields.get(0).get(obj));
         Assert.assertEquals(phoneNumber.getType(), fields.get(1).get(obj));
+    }
+
+    @Test
+    public void testOverrideField() {
+        MyEmployee person = new MyEmployee(0, "china", 20, 161, 65);
+        serializeAndDeserialize("hessian", person);
     }
 
     @Test

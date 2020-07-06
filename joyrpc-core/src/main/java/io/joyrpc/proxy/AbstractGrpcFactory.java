@@ -39,53 +39,20 @@ import static io.joyrpc.util.ClassUtils.isJavaClass;
 public abstract class AbstractGrpcFactory implements GrpcFactory {
 
     public static final String REQUEST_SUFFIX = "Request";
-    public static final String RESPONSE_SUFFIX = "ResponsePayload";
+    public static final String RESPONSE_SUFFIX = "Response";
 
     @Override
-    public GrpcType generate(final Class<?> clz, final Method method) throws ProxyException {
+    public GrpcType generate(final Class<?> clz, final Method method, final Supplier<String> suffix) throws ProxyException {
         try {
-            ClassWrapper request = getRequestWrapper(clz, method, () -> getRequestClassName(clz, method));
-            ClassWrapper response = getResponseWrapper(clz, method, () -> getResponseClassName(clz, method));
+            ClassWrapper request = getRequestWrapper(clz, method, new Naming(clz, method, REQUEST_SUFFIX, suffix));
+            ClassWrapper response = getResponseWrapper(clz, method, new Naming(clz, method, RESPONSE_SUFFIX, suffix));
             return new GrpcType(request, response);
         } catch (ProxyException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             throw new ProxyException(String.format("Error occurs while building grpcType of %s.%s",
                     clz.getName(), method.getName()), e);
         }
-    }
-
-    /**
-     * 构建请求对象类名
-     *
-     * @param clz    类
-     * @param method 方法
-     * @return 请求对象类名
-     */
-    protected String getRequestClassName(final Class<?> clz, final Method method) {
-        String methodName = method.getName();
-        return new StringBuilder(100)
-                .append(clz.getName()).append('$')
-                .append(Character.toUpperCase(methodName.charAt(0)))
-                .append(methodName.substring(1))
-                .append(REQUEST_SUFFIX)
-                .toString();
-    }
-
-    /**
-     * 构建应答对象类名
-     *
-     * @param clz    类
-     * @param method 方法
-     * @return 应答对象类名
-     */
-    protected String getResponseClassName(final Class<?> clz, final Method method) {
-        String methodName = method.getName();
-        return new StringBuilder(100)
-                .append(clz.getName()).append('$')
-                .append(Character.toUpperCase(methodName.charAt(0)))
-                .append(methodName.substring(1))
-                .append(RESPONSE_SUFFIX).toString();
     }
 
     /**
@@ -97,7 +64,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      * @return
      * @throws Exception
      */
-    protected ClassWrapper getResponseWrapper(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected ClassWrapper getResponseWrapper(final Class<?> clz, final Method method, final Naming naming) throws Exception {
         Class clazz = method.getReturnType();
         if (CompletableFuture.class.isAssignableFrom(clz)) {
             //异步支持
@@ -112,6 +79,12 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
         }
         if (clazz == void.class) {
             return null;
+        } else if (clazz.isPrimitive()) {
+            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+        } else if (clazz.isEnum()) {
+            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+        } else if (clazz.isArray()) {
+            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
         } else if (isPojo(clazz)) {
             return new ClassWrapper(clazz, false);
         } else {
@@ -127,18 +100,18 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      * @return
      * @throws Exception
      */
-    protected abstract Class<?> buildResponseClass(Class<?> clz, Method method, Supplier<String> naming) throws Exception;
+    protected abstract Class<?> buildResponseClass(Class<?> clz, Method method, Naming naming) throws Exception;
 
     /**
      * 构建请求包装类型
      *
      * @param clz    类
      * @param method 方法
-     * @param naming 方法名称提供者
+     * @param naming 方法名提供者
      * @return 包装的类
      * @throws Exception 异常
      */
-    protected ClassWrapper getRequestWrapper(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception {
+    protected ClassWrapper getRequestWrapper(final Class<?> clz, final Method method, final Naming naming) throws Exception {
         Parameter[] parameters = method.getParameters();
         switch (parameters.length) {
             case 0:
@@ -156,21 +129,95 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
     /**
      * 构建请求类型
      *
+     * @param clz    类
      * @param method 方法
-     * @param naming 方法名称提供者
+     * @param naming 方法名提供者
      * @return
      * @throws Exception
      */
-    protected abstract Class<?> buildRequestClass(final Class<?> clz, final Method method, final Supplier<String> naming) throws Exception;
+    protected abstract Class<?> buildRequestClass(final Class<?> clz, final Method method, final Naming naming) throws Exception;
 
     /**
      * 是否是POJO类
      *
      * @param clazz 类
-     * @return
+     * @retrn
      */
     protected boolean isPojo(final Class<?> clazz) {
         return !isJavaClass(clazz);
+    }
+
+    /**
+     * 名称
+     */
+    protected static class Naming {
+
+        /**
+         * 类
+         */
+        protected final Class<?> clazz;
+        /**
+         * 方法
+         */
+        protected final Method method;
+        /**
+         * 固定后缀名
+         */
+        protected final String fixSuffix;
+        /**
+         * 随机后缀名提供者
+         */
+        protected final Supplier<String> randomSuffix;
+        /**
+         * 随机后缀名
+         */
+        protected String random;
+
+        public Naming(Class<?> clazz, Method method, String fixSuffix, Supplier<String> randomSuffix) {
+            this.clazz = clazz;
+            this.method = method;
+            this.fixSuffix = fixSuffix;
+            this.randomSuffix = randomSuffix;
+        }
+
+        protected String getRandom() {
+            if (random == null) {
+                random = randomSuffix == null ? "" : randomSuffix.get();
+                if (random == null) {
+                    random = "";
+                }
+            }
+            return random;
+        }
+
+        /**
+         * 获取全路径名称
+         *
+         * @return 全路径名称
+         */
+        public String getFullName() {
+            String methodName = method.getName();
+            return new StringBuilder(100).
+                    append(clazz.getName()).append('$').
+                    append(Character.toUpperCase(methodName.charAt(0))).append(methodName.substring(1)).
+                    append(fixSuffix).append(getRandom()).
+                    toString();
+        }
+
+        /**
+         * 获取简单名称
+         *
+         * @return 简单名称
+         */
+        public String getSimpleName() {
+            String methodName = method.getName();
+            return new StringBuilder(100).
+                    append(clazz.getSimpleName()).append('$').
+                    append(Character.toUpperCase(methodName.charAt(0))).append(methodName.substring(1)).
+                    append(fixSuffix).append(getRandom()).
+                    toString();
+        }
+
     }
 
 }

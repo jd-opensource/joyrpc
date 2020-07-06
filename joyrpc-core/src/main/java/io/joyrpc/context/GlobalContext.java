@@ -22,23 +22,19 @@ package io.joyrpc.context;
 
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
-import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
-import io.joyrpc.util.Timer;
+import io.joyrpc.util.Resource;
+import io.joyrpc.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
-import static io.joyrpc.Plugin.ENVIRONMENT;
-import static io.joyrpc.cluster.Region.DATA_CENTER;
-import static io.joyrpc.cluster.Region.REGION;
+import static io.joyrpc.Plugin.CONTEXT_SUPPLIER;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.PropertiesUtils.read;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 
 /**
  * 全局参数
@@ -57,6 +53,7 @@ public class GlobalContext {
      * 接口配置map<接口名，<key,value>>，
      */
     protected final static Map<String, Map<String, String>> interfaceConfigs = new ConcurrentHashMap<>();
+    protected static final Predicate<String> EXPRESSION = v -> v != null && v.startsWith("[") && v.endsWith("]");
 
     /**
      * 构造上下文
@@ -67,33 +64,41 @@ public class GlobalContext {
         if (context == null) {
             synchronized (GlobalContext.class) {
                 if (context == null) {
-                    //加载环境变量
-                    Environment environment = ENVIRONMENT.get();
-                    Collection<Property> properties = environment.properties();
-                    Map<String, Object> map = new ConcurrentHashMap<>(Math.max(properties.size(), 200));
+                    //上下文变量识别插件
+                    List<ContextSupplier> suppliers = new LinkedList<>();
+                    CONTEXT_SUPPLIER.extensions().forEach(suppliers::add);
+                    //变量识别函数
+                    Function<String, Object> recognizer = key -> {
+                        Object result = null;
+                        for (ContextSupplier supplier : suppliers) {
+                            result = supplier.recognize(key);
+                            if (result != null) {
+                                if (result instanceof CharSequence) {
+                                    if (((CharSequence) result).length() > 0) {
+                                        return result.toString();
+                                    }
+                                } else {
+                                    return result;
+                                }
+                            }
+                        }
+                        return null;
+                    };
+                    Map<String, Object> target = new ConcurrentHashMap<>(100);
                     //允许用户在配置文件里面修改协议版本和名称
-                    doPut(map, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
-                    doPut(map, PROTOCOL_KEY, Version.PROTOCOL);
-                    doPut(map, BUILD_VERSION_KEY, Version.BUILD_VERSION);
-                    //优先读取系统内置的配置
-                    loadResource(map, "META-INF/system_context.properties");
-                    //环境变量覆盖
-                    properties.forEach(o -> map.put(o.getKey(), o.getValue()));
-                    //变量兼容
-                    doPut(map, KEY_APPAPTH, map.get(Environment.APPLICATION_PATH));
-                    doPut(map, KEY_APPID, map.get(Environment.APPLICATION_ID));
-                    doPut(map, KEY_APPNAME, map.get(Environment.APPLICATION_NAME));
-                    doPut(map, KEY_APPINSID, map.get(Environment.APPLICATION_INSTANCE));
-                    //读取用户的配置
-                    loadResource(map, environment.getString(CONTEXT_RESOURCE, "global_context.properties"));
+                    doPut(target, PROTOCOL_VERSION_KEY, Version.PROTOCOL_VERSION);
+                    doPut(target, PROTOCOL_KEY, Version.PROTOCOL);
+                    doPut(target, BUILD_VERSION_KEY, Version.BUILD_VERSION);
+                    //读取系统内置的和用户的配置
+                    loadConfig(new String[]{"META-INF/system_context", "user_context"}, target, recognizer);
                     //打印默认的上下文
                     if (logger.isInfoEnabled()) {
                         String line = System.getProperty("line.separator");
                         StringBuilder builder = new StringBuilder(1000).append("default context:").append(line);
-                        map.forEach((k, v) -> builder.append("\t").append(k).append('=').append(v.toString()).append(line));
+                        target.forEach((k, v) -> builder.append("\t").append(k).append('=').append(v.toString()).append(line));
                         logger.info(builder.toString());
                     }
-                    context = map;
+                    context = target;
                 }
             }
         }
@@ -101,16 +106,53 @@ public class GlobalContext {
     }
 
     /**
-     * 从资源文件加载
+     * 加载配置
      *
-     * @param map
-     * @param resource
+     * @param resources
+     * @param target
+     * @param supplier
      */
-    protected static void loadResource(final Map<String, Object> map, final String resource) {
-        try {
-            read(resource, (k, v) -> doPut(map, k, v));
-        } catch (Exception e) {
-            logger.error("Error occurs while reading global config from " + resource, e);
+    protected static void loadConfig(final String[] resources, final Map<String, Object> target, final Function<String, Object> supplier) {
+        List<String> lines = Resource.lines(resources, true);
+        for (String line : lines) {
+            int pos = line.indexOf('=');
+            String key = line;
+            String value = null;
+            Object result;
+            if (pos >= 0) {
+                key = line.substring(0, pos);
+                value = line.substring(pos + 1);
+            }
+            boolean el = EXPRESSION.test(key);
+            if (el) {
+                key = key.substring(1, key.length() - 1);
+            }
+            if (value == null || value.isEmpty()) {
+                if (el) {
+                    result = supplier.apply(key);
+                    if (result != null) {
+                        target.put(key, result);
+                    }
+                }
+            } else if (!el) {
+                target.put(key, value);
+            } else {
+                String[] parts = StringUtils.split(value, SEMICOLON_COMMA_WHITESPACE);
+                for (String part : parts) {
+                    if (EXPRESSION.test(part)) {
+                        part = part.substring(1, part.length() - 1);
+                        result = supplier.apply(part);
+                        if (result != null) {
+                            target.put(key, result);
+                            break;
+                        }
+                    } else {
+                        target.put(key, part);
+                        break;
+                    }
+                }
+            }
+
         }
     }
 
@@ -121,7 +163,14 @@ public class GlobalContext {
      */
     public static Integer getPid() {
         if (pid == null) {
-            pid = ENVIRONMENT.get().getInteger(Environment.PID);
+            Object value = get(KEY_PID);
+            if (value != null) {
+                if (value instanceof Number) {
+                    pid = ((Number) value).intValue();
+                } else if (value instanceof CharSequence) {
+                    pid = Integer.parseInt(value.toString());
+                }
+            }
         }
         return pid;
     }
@@ -143,8 +192,19 @@ public class GlobalContext {
      * @return String
      */
     public static String getString(final String key) {
+        return getString(key, null);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @param def the def
+     * @return String
+     */
+    public static String getString(final String key, final String def) {
         Object value = get(key);
-        return value == null ? null : value.toString();
+        return value == null ? def : value.toString();
     }
 
     /**
@@ -154,7 +214,18 @@ public class GlobalContext {
      * @return Integer
      */
     public static Integer getInteger(final String key) {
-        return Converts.getInteger(get(key), 0);
+        return getInteger(key, 0);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @param def the def
+     * @return Integer
+     */
+    public static Integer getInteger(final String key, final Integer def) {
+        return Converts.getInteger(get(key), def);
     }
 
     /**
@@ -164,7 +235,38 @@ public class GlobalContext {
      * @return Long
      */
     public static Long getLong(final String key) {
-        return Converts.getLong(get(key), 0L);
+        return getLong(key, 0L);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @return Long
+     */
+    public static Boolean getBoolean(final String key) {
+        return getBoolean(key, false);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @param def the def
+     * @return Long
+     */
+    public static Boolean getBoolean(final String key, final Boolean def) {
+        return Converts.getBoolean(get(key), def);
+    }
+
+    /**
+     * 得到上下文信息
+     *
+     * @param key the key
+     * @return Long
+     */
+    public static Long getLong(final String key, final Long def) {
+        return Converts.getLong(get(key), def);
     }
 
     /**
@@ -224,45 +326,12 @@ public class GlobalContext {
     }
 
     /**
-     * 重置region上下文信息
-     *
-     * @param region
-     */
-    public static void updateRegion(final String region) {
-        if (region != null && !region.isEmpty()) {
-            ENVIRONMENT.get().put(Environment.REGION, region);
-            getOrCreate().put(REGION, region);
-        }
-    }
-
-    /**
-     * 重置dataCenter上下文信息
-     *
-     * @param dataCenter
-     */
-    public static void updateDataCenter(final String dataCenter) {
-        if (dataCenter != null && !dataCenter.isEmpty()) {
-            ENVIRONMENT.get().put(Environment.DATA_CENTER, dataCenter);
-            getOrCreate().put(DATA_CENTER, dataCenter);
-        }
-    }
-
-    /**
      * 上下文信息
      *
      * @return the context
      */
     public static Map<String, Object> getContext() {
         return getOrCreate();
-    }
-
-    /**
-     * 作为参数对象，便于获取值
-     *
-     * @return
-     */
-    public static Parametric asParametric() {
-        return new MapParametric(getOrCreate());
     }
 
     /**
@@ -344,11 +413,11 @@ public class GlobalContext {
     }
 
     /**
-     * 作为参数对象，便于获取值
+     * 获取全局动态配置
      *
-     * @return
+     * @return 全局动态配置
      */
-    public static Parametric asParametric(final String interfaceId) {
-        return new MapParametric(getInterfaceConfig(interfaceId));
+    public static Map<String, String> getGlobalSetting() {
+        return getInterfaceConfig(GLOBAL_SETTING);
     }
 }

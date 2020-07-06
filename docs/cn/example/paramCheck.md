@@ -3,7 +3,7 @@
 参数校验功能是基于 JSR303 实现的，用户只需标识 JSR303 标准的验证 annotation。
 Provider和Consumer都可以独立开启参数校验功能。两者配置无关联性。
 支持接口级和方法级的配置。
->说明：下面示例中采用  **`<beans/>`** 标签 表示JOYRPC中的schema。
+>说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
 ### 1.参数bean配置jsr303的annotation
 

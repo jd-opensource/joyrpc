@@ -20,11 +20,8 @@ package io.joyrpc.cluster.discovery.registry.fix;
  * #L%
  */
 
-import io.joyrpc.cluster.discovery.config.ConfigHandler;
-import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.naming.fix.FixRegistar;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
-import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.event.ConfigEvent;
 import io.joyrpc.extension.URL;
 
@@ -36,52 +33,69 @@ import java.util.concurrent.CompletableFuture;
  */
 public class FixRegistry extends AbstractRegistry {
 
-    protected FixRegistar registar;
 
     /**
      * 构造函数
      *
-     * @param url
+     * @param url url
      */
     public FixRegistry(URL url) {
         super(url);
-        registar = new FixRegistar(url);
     }
 
     @Override
-    protected void doOpen(CompletableFuture<Void> future) {
-        connected.set(true);
-        registar.open().whenComplete((v, err) -> {
-            if (err == null) {
-                future.complete(v);
-            } else {
-                future.completeExceptionally(err);
-            }
-        });
+    protected RegistryController<? extends AbstractRegistry> create() {
+        return new FixController(this);
     }
 
-    @Override
-    protected CompletableFuture<Void> doSubscribe(final URLKey url, final ClusterHandler handler) {
-        registar.subscribe(url.getUrl(), handler);
-        return CompletableFuture.completedFuture(null);
+    /**
+     * 控制器
+     */
+    protected static class FixController extends RegistryController<FixRegistry> {
+
+        /**
+         * 注册中心
+         */
+        protected FixRegistar registar;
+
+        /**
+         * 构造函数
+         *
+         * @param registry 注册中心
+         */
+        public FixController(final FixRegistry registry) {
+            super(registry);
+            registar = new FixRegistar(registry.getUrl());
+        }
+
+        @Override
+        protected CompletableFuture<Void> doConnect() {
+            return registar.open();
+        }
+
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
+            registar.subscribe(booking.getUrl(), booking);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doUnsubscribe(final ClusterBooking booking) {
+            registar.unsubscribe(booking.getUrl(), booking);
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doSubscribe(final ConfigBooking booking) {
+            booking.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
+            return CompletableFuture.completedFuture(null);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doUnsubscribe(final ConfigBooking booking) {
+            return CompletableFuture.completedFuture(null);
+        }
     }
 
-    @Override
-    protected CompletableFuture<Void> doUnsubscribe(final URLKey url, final ClusterHandler handler) {
-        registar.unsubscribe(url.getUrl(), handler);
-        return CompletableFuture.completedFuture(null);
-    }
-
-    @Override
-    public boolean subscribe(URL url, ConfigHandler handler) {
-        handler.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
-        return true;
-    }
-
-    @Override
-    public boolean unsubscribe(URL url, ConfigHandler handler) {
-        handler.handle(new ConfigEvent(this, null, -1, new HashMap<>()));
-        return true;
-    }
 
 }

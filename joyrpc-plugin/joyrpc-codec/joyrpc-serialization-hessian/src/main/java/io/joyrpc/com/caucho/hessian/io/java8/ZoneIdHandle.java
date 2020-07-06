@@ -9,9 +9,9 @@ package io.joyrpc.com.caucho.hessian.io.java8;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,14 +20,12 @@ package io.joyrpc.com.caucho.hessian.io.java8;
  * #L%
  */
 
-import io.joyrpc.com.caucho.hessian.io.HessianHandle;
-
 import java.time.ZoneId;
 
 /**
  * ZoneId包装器
  */
-public class ZoneIdHandle implements Java8TimeWrapper<ZoneId>, HessianHandle {
+public class ZoneIdHandle implements Java8TimeWrapper<ZoneId> {
 
     private static final long serialVersionUID = -2920446760568797907L;
     protected String zoneId;
@@ -41,9 +39,6 @@ public class ZoneIdHandle implements Java8TimeWrapper<ZoneId>, HessianHandle {
 
     @Override
     public void wrap(ZoneId zoneId) {
-        if (zoneId == null) {
-            return;
-        }
         this.zoneId = zoneId.getId();
     }
 

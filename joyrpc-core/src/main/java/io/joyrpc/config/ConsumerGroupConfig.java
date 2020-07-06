@@ -30,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GROUP_ROUTE;
 import static io.joyrpc.constants.Constants.DEFAULT_GROUP_ROUTER;
-import static io.joyrpc.constants.Constants.FROM_GROUP_OPTION;
 
 /**
  * 消费组配置
@@ -41,10 +40,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
      * 目标参数（机房/分组）索引，第一个参数从0开始
      */
     protected Integer dstParam;
-    /**
-     * alias自适应，当没有分组时，可以自动增加
-     */
-    protected boolean aliasAdaptive;
     /**
      * 分组路由插件配置
      */
@@ -59,14 +54,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         this.dstParam = dstParam;
     }
 
-    public boolean isAliasAdaptive() {
-        return aliasAdaptive;
-    }
-
-    public void setAliasAdaptive(boolean aliasAdaptive) {
-        this.aliasAdaptive = aliasAdaptive;
-    }
-
     public String getGroupRouter() {
         return groupRouter;
     }
@@ -79,7 +66,8 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     protected Map<String, String> addAttribute2Map(final Map<String, String> params) {
         super.addAttribute2Map(params);
         addElement2Map(params, Constants.DST_PARAM_OPTION, dstParam);
-        addElement2Map(params, Constants.ALIAS_ADAPTIVE_OPTION, aliasAdaptive);
+        // 注册的时候标记属于分组调用的group
+        addElement2Map(params, Constants.FROM_GROUP_OPTION, Boolean.TRUE);
         return params;
     }
 
@@ -91,14 +79,11 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     /**
      * 创建分组配置
      *
-     * @param alias
-     * @return
+     * @param alias 分组
+     * @return 消费者配置
      */
     protected ConsumerConfig<T> createGroupConfig(final String alias) {
-        ConsumerConfig<T> result = new ConsumerConfig<>(this, alias);
-        // 注册的时候标记属于分组调用的group
-        result.setParameter(FROM_GROUP_OPTION.getName(), "true");
-        return result;
+        return new ConsumerConfig<>(this, alias);
     }
 
     /**
@@ -118,7 +103,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         protected CompletableFuture<Void> doOpen() {
             CompletableFuture<Void> future = new CompletableFuture<>();
             route = GROUP_ROUTE.get(config.groupRouter, Constants.GROUP_ROUTER_OPTION.getValue());
-            route.setAliasAdaptive(config.aliasAdaptive);
             route.setUrl(serviceUrl);
             route.setAlias(config.alias);
             route.setClass(config.getProxyClass());
@@ -127,6 +111,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
             route.setup();
             //创建桩
             invokeHandler = new ConsumerInvokeHandler(route, config.getProxyClass(), serviceUrl);
+            latch.countDown();
             config.proxy();
             //创建消费者
             route.refer().whenComplete((v, t) -> {
@@ -143,6 +128,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         public CompletableFuture<Void> close(boolean gracefully) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             invokeHandler = null;
+            latch = null;
             if (route != null) {
                 route.close().whenComplete((v, t) -> future.complete(null));
             } else {

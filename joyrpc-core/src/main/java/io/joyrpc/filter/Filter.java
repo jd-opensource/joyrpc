@@ -9,9 +9,9 @@ package io.joyrpc.filter;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,6 +23,7 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
+import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.extension.Prototype;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -57,6 +58,11 @@ public interface Filter extends InvokerAware, Prototype {
     int INNER = 7;
 
     /**
+     * 跟踪顺序
+     */
+    int TRACE_ORDER = -65535;
+
+    /**
      * 调用过滤链，返回值对Result，便于线程变量切换恢复
      *
      * @param invoker 调用器
@@ -66,7 +72,7 @@ public interface Filter extends InvokerAware, Prototype {
     CompletableFuture<Result> invoke(Invoker invoker, RequestMessage<Invocation> request);
 
     /**
-     * 关闭
+     * 关闭，用于资源释放
      *
      * @return
      */
@@ -77,11 +83,21 @@ public interface Filter extends InvokerAware, Prototype {
     /**
      * 判断是否要开启
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 开启标识
      */
     default boolean test(URL url) {
         return true;
+    }
+
+    /**
+     * 判断是否要开启
+     *
+     * @param option 选项
+     * @return 开启标识
+     */
+    default boolean test(InterfaceOption option) {
+        return false;
     }
 
     /**

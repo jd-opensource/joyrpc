@@ -9,9 +9,9 @@ package io.joyrpc.transport.message;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,26 +30,26 @@ import io.joyrpc.transport.session.Session;
 public interface Header extends Cloneable {
 
     /**
-     * 获取ID
+     * 获取ID为了兼容其它协议改成了long
      *
-     * @return
+     * @return 消息ID
      */
-    default int getMsgId() {
+    default long getMsgId() {
         return 0;
     }
 
     /**
      * 设置ID
      *
-     * @param id
+     * @param id 消息ID
      */
-    default void setMsgId(int id) {
+    default void setMsgId(long id) {
     }
 
     /**
      * 获取类型
      *
-     * @return
+     * @return 消息类型
      */
     default int getMsgType() {
         return 0;
@@ -58,7 +58,7 @@ public interface Header extends Cloneable {
     /**
      * 设置类型
      *
-     * @param type
+     * @param type 消息类型
      */
     default void setMsgType(final int type) {
 
@@ -67,7 +67,7 @@ public interface Header extends Cloneable {
     /**
      * 获取会话ID
      *
-     * @return
+     * @return 会话ID
      */
     default int getSessionId() {
         return 0;
@@ -76,7 +76,7 @@ public interface Header extends Cloneable {
     /**
      * 设置会话ID
      *
-     * @param sessionId
+     * @param sessionId 会话ID
      */
     default void setSessionId(int sessionId) {
 
@@ -85,7 +85,7 @@ public interface Header extends Cloneable {
     /**
      * 获取压缩方式
      *
-     * @return
+     * @return 压缩方式
      */
     default byte getCompression() {
         return 0;
@@ -94,7 +94,7 @@ public interface Header extends Cloneable {
     /**
      * 设置压缩方式
      *
-     * @param compression
+     * @param compression 压缩方式
      */
     default void setCompression(byte compression) {
     }
@@ -102,7 +102,7 @@ public interface Header extends Cloneable {
     /**
      * 获取校验和
      *
-     * @return
+     * @return 校验和
      */
     default byte getChecksum() {
         return 0;
@@ -111,7 +111,7 @@ public interface Header extends Cloneable {
     /**
      * 设置校验和
      *
-     * @param checksum
+     * @param checksum 校验和
      */
     default void setChecksum(byte checksum) {
     }
@@ -119,7 +119,7 @@ public interface Header extends Cloneable {
     /**
      * 获取序列化方式
      *
-     * @return
+     * @return 序列化方式
      */
     default byte getSerialization() {
         return 0;
@@ -128,7 +128,7 @@ public interface Header extends Cloneable {
     /**
      * 设置序列化方式
      *
-     * @param serialization
+     * @param serialization 序列化方式
      */
     default void setSerialization(byte serialization) {
     }
@@ -136,7 +136,7 @@ public interface Header extends Cloneable {
     /**
      * 获取超时时间
      *
-     * @return
+     * @return 超时时间
      */
     default int getTimeout() {
         return 5000;
@@ -145,7 +145,7 @@ public interface Header extends Cloneable {
     /**
      * 设置超时时间
      *
-     * @param timeout
+     * @param timeout 超时时间
      */
     default void setTimeout(int timeout) {
 
@@ -154,7 +154,7 @@ public interface Header extends Cloneable {
     /**
      * 获取数据长度
      *
-     * @return
+     * @return 数据包长度
      */
     default Integer getLength() {
         return null;
@@ -163,7 +163,7 @@ public interface Header extends Cloneable {
     /**
      * 设置数据包长度，去掉魔法头
      *
-     * @param length
+     * @param length 数据包长度
      */
     default void setLength(Integer length) {
     }

@@ -25,7 +25,7 @@ import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
-import io.joyrpc.invoker.InvokerManager;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.invoker.Refer;
 
 import java.io.Serializable;
@@ -110,7 +110,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                 registerUrl = config.register ? buildRegisteredUrl(registryRef, url) : null;
                 resubscribe(buildSubscribedUrl(configureRef, url), false);
                 try {
-                    refer = InvokerManager.refer(url, config, registryRef, registerUrl, configureRef, subscribeUrl, configHandler);
+                    refer = ServiceManager.refer(url, config, registryRef, registerUrl, configureRef, subscribeUrl, configHandler);
                     //打开
                     chain(refer.open(), future, s -> {
                         //构建调用器
@@ -121,6 +121,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                     future.completeExceptionally(ex);
                 }
             }));
+            future.whenComplete((v, err) -> latch.countDown());
             return future;
         }
 
@@ -129,6 +130,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
             CompletableFuture<Void> future = new CompletableFuture<>();
             //拒绝新请求
             invokeHandler = null;
+            latch = null;
             if (refer != null) {
                 refer.close(gracefully).whenComplete((v, t) -> future.complete(null));
             } else {
@@ -159,7 +161,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
             Refer oldRefer = refer;
             URL newRegisterUrl = config.register ? buildRegisteredUrl(registryRef, newUrl) : null;
             URL newSubscribeUrl = config.subscribe ? buildSubscribedUrl(configureRef, newUrl) : null;
-            Refer newRefer = InvokerManager.refer(newUrl, config, registryRef, newRegisterUrl, configureRef, newSubscribeUrl, configHandler);
+            Refer newRefer = ServiceManager.refer(newUrl, config, registryRef, newRegisterUrl, configureRef, newSubscribeUrl, configHandler);
             chain(newRefer.open(), future, v -> {
                 if (!isClose()) {
                     //检查动态配置是否修改了别名，需要重新订阅

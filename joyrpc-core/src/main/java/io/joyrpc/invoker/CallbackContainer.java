@@ -9,9 +9,9 @@ package io.joyrpc.invoker;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,32 +35,32 @@ public interface CallbackContainer extends Closeable {
     /**
      * 消费者回调请求
      *
-     * @param request
-     * @param transport
+     * @param request   请求
+     * @param transport 通道
      */
     void addCallback(RequestMessage<Invocation> request, final ChannelTransport transport);
 
     /**
      * 移除Channel上的回调
      *
-     * @param transport
-     * @return
+     * @param transport 通道
+     * @return 回调集合
      */
     List<CallbackInvoker> removeCallback(ChannelTransport transport);
 
     /**
      * 移除回调
      *
-     * @param callbackId
-     * @return
+     * @param callbackId 回调ID
+     * @return 回调对象
      */
     CallbackInvoker removeCallback(String callbackId);
 
     /**
      * 获取调用
      *
-     * @param callbackId
-     * @return
+     * @param callbackId 回调ID
+     * @return 回调对象
      */
     CallbackInvoker getInvoker(String callbackId);
 

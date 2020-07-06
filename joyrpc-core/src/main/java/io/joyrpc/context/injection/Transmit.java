@@ -9,9 +9,9 @@ package io.joyrpc.context.injection;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,7 @@ package io.joyrpc.context.injection;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.session.DefaultSession;
+import io.joyrpc.transport.session.Session.RpcSession;
 
 /**
  * 上下文透传接口，包括注入和恢复
@@ -32,11 +32,21 @@ import io.joyrpc.transport.session.DefaultSession;
 public interface Transmit extends ReqInjection {
 
     /**
-     * 从调用对象恢复上下文
+     * 服务提供者收到调用请求对象时候，恢复上下文
      *
-     * @param request
-     * @param session
+     * @param request 请求
+     * @param session 会话
      */
-    void restore(RequestMessage<Invocation> request, DefaultSession session);
+    void restoreOnReceive(RequestMessage<Invocation> request, RpcSession session);
+
+    /**
+     * 服务消费者异步调用完成后，在线程切换的时候进行恢复
+     *
+     * @param request 请求
+     */
+    @Deprecated
+    default void restoreOnComplete(RequestMessage<Invocation> request) {
+
+    }
 
 }

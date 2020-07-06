@@ -9,9 +9,9 @@ package io.joyrpc.metric;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,37 +22,33 @@ package io.joyrpc.metric;
 
 /**
  * 快照
- *
- * @date 2019年2月19日 下午2:20:22
  */
 public interface Snapshot<T extends Metric> {
 
     /**
      * 创建指标快照
-     *
-     * @return
      */
     void snapshot();
 
     /**
      * 获取最近周期创建的指标快照
      *
-     * @return
+     * @return 指标快照
      */
     T getSnapshot();
 
     /**
      * 判断是否过期
      *
-     * @return
+     * @return 过期标识
      */
     boolean isExpired();
 
     /**
-     * 设置上次快照时间
+     * 设置上次快照时间，单位毫秒
      *
-     * @param lastSnapshotTime
+     * @param timeMillis 上次快照时间，单位毫秒
      */
-    void setLastSnapshotTime(long lastSnapshotTime);
+    void setLastSnapshotTime(long timeMillis);
 
 }

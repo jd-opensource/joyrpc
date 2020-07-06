@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -65,11 +65,21 @@ public interface Serialization extends CodecType {
 
     int XML_ID = 100;
 
+    int ADVANCE_JAVA_ID = 30;
+
+    int DUBBO_PROTOSTUFF_ID = 31;
+
+    int DUBBO_HESSIAN_ID = 32;
+
     int ORDER_PROTOSTUFF = 100;
+
+    int ORDER_DUBBO_PROTOSTUFF = ORDER_PROTOSTUFF + 1;
 
     int ORDER_HESSIAN_LITE = ORDER_PROTOSTUFF + 10;
 
     int ORDER_HESSIAN = ORDER_HESSIAN_LITE + 10;
+
+    int ORDER_DUBBO_HESSIAN = ORDER_HESSIAN + 1;
 
     int ORDER_DSLJSON = ORDER_HESSIAN + 10;
 
@@ -78,6 +88,8 @@ public interface Serialization extends CodecType {
     int ORDER_JACKSON = ORDER_FASTJSON + 10;
 
     int ORDER_JAVA = ORDER_JACKSON + 10;
+
+    int ORDER_ADVANCE_JAVA = ORDER_JAVA + 1;
 
     int ORDER_FST = ORDER_JAVA + 10;
 
@@ -106,11 +118,11 @@ public interface Serialization extends CodecType {
     Serializer getSerializer();
 
     /**
-     * 是否允许数组空元素
+     * 是否自动识别类型信息
      *
-     * @return
+     * @return 支持自动识别类型
      */
-    default boolean allowArrayNullElement() {
+    default boolean autoType() {
         return true;
     }
 

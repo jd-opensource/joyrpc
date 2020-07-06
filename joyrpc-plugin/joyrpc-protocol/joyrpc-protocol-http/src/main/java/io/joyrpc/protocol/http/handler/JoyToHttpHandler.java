@@ -52,8 +52,8 @@ public class JoyToHttpHandler extends AbstractHttpHandler {
 
     @Override
     public Object wrote(final ChannelContext context, final Object message) {
-        if (message != null && message instanceof ResponseMessage) {
-            return convert((ResponseMessage) message);
+        if (message instanceof ResponseMessage) {
+            return convert((ResponseMessage<ResponsePayload>) message);
         }
         return message;
     }
@@ -64,10 +64,10 @@ public class JoyToHttpHandler extends AbstractHttpHandler {
      * @param message
      * @return
      */
-    protected HttpResponseMessage convert(final ResponseMessage message) {
+    protected HttpResponseMessage convert(final ResponseMessage<ResponsePayload> message) {
         byte[] content;
         int status;
-        ResponsePayload responsePayload = (ResponsePayload) message.getPayLoad();
+        ResponsePayload responsePayload = message.getPayLoad();
         if (!responsePayload.isError()) {
             status = 200;
             content = JSON.get().toJSONBytes(responsePayload.getResponse());

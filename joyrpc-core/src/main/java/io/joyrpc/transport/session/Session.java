@@ -20,11 +20,15 @@ package io.joyrpc.transport.session;
  * #L%
  */
 
+import io.joyrpc.Invoker;
 import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.protocol.ServerProtocol;
+import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.SystemClock;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 
@@ -37,6 +41,21 @@ public interface Session {
      * 远程节点启动时间key
      */
     String REMOTE_START_TIMESTAMP = "remoteStartTime";
+
+    /**
+     * 会话认证成功
+     */
+    int AUTH_SESSION_SUCCESS = 1;
+
+    /**
+     * 会话认证失败
+     */
+    int AUTH_SESSION_FAIL = -1;
+
+    /**
+     * 没有进行会话认证
+     */
+    int AUTH_SESSION_NONE = 0;
 
     /**
      * 获取会话ID
@@ -107,14 +126,14 @@ public interface Session {
      *
      * @return
      */
-    boolean isAuthenticated();
+    int getAuthenticated();
 
     /**
      * 设置认证
      *
      * @param authenticated
      */
-    void setAuthenticated(boolean authenticated);
+    void setAuthenticated(int authenticated);
 
     /**
      * 获取序列化
@@ -271,25 +290,25 @@ public interface Session {
     /**
      * 添加扩展属性
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 老的值
      */
     String put(final String key, final String value);
 
     /**
      * 不存在的时候添加扩展属性
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 老的值
      */
     String putIfAbsent(final String key, final String value);
 
     /**
      * 添加扩展属性
      *
-     * @param attrs
+     * @param attrs 属性
      */
     void putAll(final Map<String, String> attrs);
 
@@ -297,8 +316,112 @@ public interface Session {
      * 删除扩展属性
      *
      * @param key
-     * @return
+     * @return 值
      */
     String remove(final String key);
+
+    /**
+     * RPC会话
+     */
+    interface RpcSession extends Session {
+        /**
+         * 返回接口名称
+         *
+         * @return 接口名称
+         */
+        String getInterfaceName();
+
+        /**
+         * 返回分组
+         *
+         * @return 分组
+         */
+        String getAlias();
+
+        /**
+         * 返回远端java版本
+         *
+         * @return 远端java版本
+         */
+        String getRemoteJavaVersion();
+
+        /**
+         * 返回远端构建版本
+         *
+         * @return 远端构建版本
+         */
+        Short getRemoteBuildVersion();
+
+        /**
+         * 返回远端应用ID
+         *
+         * @return 远端应用ID
+         */
+        String getRemoteAppId();
+
+        /**
+         * 获取远端应用名称
+         *
+         * @return 远端应用名称
+         */
+        String getRemoteAppName();
+
+        /**
+         * 获取远端应用实例
+         *
+         * @return 远端应用实例
+         */
+        String getRemoteAppIns();
+
+        /**
+         * 获取远端应用分组
+         *
+         * @return 远端应用分组
+         */
+        String getRemoteAppGroup();
+    }
+
+    /**
+     * 服务端会话
+     */
+    interface ServerSession extends RpcSession {
+
+        /**
+         * 获取服务提供者
+         *
+         * @return 服务提供者
+         */
+        Invoker getProvider();
+
+        /**
+         * 获取远程地址
+         *
+         * @return 远程地址
+         */
+        InetSocketAddress getRemoteAddress();
+
+        /**
+         * 获取本地地址
+         *
+         * @return 本地地址
+         */
+        InetSocketAddress getLocalAddress();
+
+        /**
+         * 获取通道
+         *
+         * @return 通道
+         */
+        ChannelTransport getTransport();
+
+        /**
+         * 服务端协议
+         *
+         * @return 服务端协议
+         */
+        ServerProtocol getProtocol();
+
+    }
+
 
 }

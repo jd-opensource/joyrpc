@@ -22,18 +22,30 @@ package io.joyrpc.spring;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerConfig;
+import io.joyrpc.config.ParameterConfig;
+import io.joyrpc.util.StringUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.context.*;
-import org.springframework.context.event.ContextRefreshedEvent;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.context.ApplicationEvent;
+import org.springframework.context.ApplicationListener;
+
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /**
  * 消费者
  */
 public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBean, FactoryBean,
-        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener<ContextRefreshedEvent>, ApplicationEventPublisherAware {
+        ApplicationContextAware, DisposableBean, BeanNameAware, ApplicationListener {
+
+    /**
+     * 参数配置
+     */
+    protected List<ParameterConfig> params;
 
     /**
      * spring处理器
@@ -44,17 +56,13 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
      * 默认构造函数，不允许从外部new
      */
     public ConsumerBean() {
-        spring = new ConsumerSpring(this);
+        spring = new ConsumerSpring<>(this);
     }
+
 
     @Override
     public void setBeanName(String name) {
         spring.setBeanName(name);
-    }
-
-    @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher publisher) {
-        spring.setApplicationEventPublisher(publisher);
     }
 
     @Override
@@ -63,7 +71,7 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public T getObject() {
+    public T getObject() throws ExecutionException, InterruptedException {
         return spring.getObject();
     }
 
@@ -83,18 +91,13 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     }
 
     @Override
-    public synchronized void onApplicationEvent(final ContextRefreshedEvent contextRefreshedEvent) {
-        spring.onApplicationEvent(contextRefreshedEvent);
+    public void onApplicationEvent(final ApplicationEvent event) {
+        spring.onApplicationEvent(event);
     }
 
     @Override
     public void afterPropertiesSet() {
         spring.afterPropertiesSet();
-    }
-
-    public ConsumerBean<T> applicationEventPublisher(ApplicationEventPublisher publisher) {
-        setApplicationEventPublisher(publisher);
-        return this;
     }
 
     @Override
@@ -127,4 +130,23 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
     public void setConfigureName(String configureName) {
         spring.setConfigureName(configureName);
     }
+
+    public List<ParameterConfig> getParams() {
+        return params;
+    }
+
+    public void setParams(List<ParameterConfig> params) {
+        this.params = params;
+        if (params != null) {
+            params.forEach(param -> {
+                if (param != null
+                        && StringUtils.isNotEmpty(param.getKey())
+                        && StringUtils.isNotEmpty(param.getValue())) {
+                    String key = param.isHide() && !param.getKey().startsWith(".") ? "." + param.getKey() : param.getKey();
+                    setParameter(key, param.getValue());
+                }
+            });
+        }
+    }
+
 }

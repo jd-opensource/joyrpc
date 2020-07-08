@@ -428,8 +428,6 @@
                             <report>index</report>
                             <report>team</report>
                             <report>mailing-lists</report>
-                            <report>ci-management</report>
-                            <report>issue-management</report>
                             <report>licenses</report>
                             <report>scm</report>
                         </reports>

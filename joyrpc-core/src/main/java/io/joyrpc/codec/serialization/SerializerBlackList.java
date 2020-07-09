@@ -50,7 +50,7 @@ public class SerializerBlackList implements BlackList<String> {
      *
      * @return 黑白名单
      */
-    public synchronized BlackList<String> load() {
+    public synchronized SerializerBlackList load() {
         locals = add(new HashSet<>(200), Resource.lines(blackListFiles, false));
         blacks = merge(locals, remotes);
         return this;

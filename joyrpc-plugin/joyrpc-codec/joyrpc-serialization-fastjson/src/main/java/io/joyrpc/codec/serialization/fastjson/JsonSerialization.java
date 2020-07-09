@@ -34,6 +34,7 @@ import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
+import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 
@@ -127,7 +128,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
 
     @Override
     public void updateBlack(final Collection<String> blackList) {
-        JsonSerializer.BLACK_LIST.updateBlack(blackList);
+        JsonSerializer.BLACK_WHITE_LIST.updateBlack(blackList);
     }
 
     /**
@@ -135,8 +136,9 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
      */
     protected static class JsonSerializer implements Serializer, Json {
 
-        protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/fastjson.blacklist",
-                "META-INF/permission/fastjson.blacklist").load();
+        protected static final BlackWhiteList<String> BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/fastjson.blacklist",
+                "META-INF/permission/fastjson.blacklist");
+
         protected static final JsonSerializer INSTANCE = new JsonSerializer();
 
         protected JsonConfig parserConfig;
@@ -177,7 +179,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
          * @return
          */
         protected JsonConfig createParserConfig() {
-            JsonConfig config = new JsonConfig(BLACK_LIST);
+            JsonConfig config = new JsonConfig(BLACK_WHITE_LIST);
             config.setSafeMode(VARIABLE.getBoolean(ParserConfig.SAFE_MODE_PROPERTY, true));
             config.putDeserializer(MonthDay.class, MonthDaySerialization.INSTANCE);
             config.putDeserializer(YearMonth.class, YearMonthSerialization.INSTANCE);

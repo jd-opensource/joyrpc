@@ -21,7 +21,6 @@ package io.joyrpc.codec.serialization.java;
  */
 
 import io.joyrpc.exception.SerializerException;
-import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.BlackWhiteList;
 
 import java.io.*;
@@ -31,21 +30,21 @@ import java.io.*;
  */
 public class JavaInputStream extends ObjectInputStream implements ObjectInput, ObjectStreamConstants {
 
-    protected BlackList<String> blackList;
+    protected BlackWhiteList<String> blackWhiteList;
 
-    public JavaInputStream(final InputStream in, final BlackList<String> blackList) throws IOException {
+    public JavaInputStream(final InputStream in, final BlackWhiteList<String> blackWhiteList) throws IOException {
         super(in);
-        this.blackList = blackList;
+        this.blackWhiteList = blackWhiteList;
     }
 
-    public JavaInputStream(final BlackWhiteList blackList) throws IOException, SecurityException {
-        this.blackList = blackList;
+    public JavaInputStream(final BlackWhiteList blackWhiteList) throws IOException, SecurityException {
+        this.blackWhiteList = blackWhiteList;
     }
 
     @Override
     protected Class<?> resolveClass(final ObjectStreamClass desc) throws IOException, ClassNotFoundException, SerializerException {
-        if (blackList != null && blackList.isBlack(desc.getName())) {
-            throw new SerializerException("Failed to decode class " + desc.getName() + " by java serialization, it is in blacklist");
+        if (blackWhiteList != null && !blackWhiteList.isValid(desc.getName())) {
+            throw new SerializerException("Failed to decode class " + desc.getName() + " by java serialization, it is not passed through blackWhiteList.");
         }
         return super.resolveClass(desc);
     }

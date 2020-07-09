@@ -29,7 +29,9 @@ import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
+import io.joyrpc.codec.serialization.SerializerWhiteList;
 import io.joyrpc.constants.ExceptionCode;
+import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.Parametric;
@@ -39,10 +41,8 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.util.*;
 import io.joyrpc.util.GenericClass;
-import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GenericClass;
-import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 
 import javax.validation.Validation;
@@ -51,8 +51,12 @@ import javax.validation.metadata.BeanDescriptor;
 import javax.validation.metadata.MethodDescriptor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
@@ -532,6 +536,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 参数描述
          */
         protected String description;
+        /**
+         * 序列化白名单
+         */
+        protected SerializerWhiteList whiteList;
 
         /**
          * 构造函数
@@ -574,6 +582,9 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.traceSpanId = method == null ? null : getTraceSpanId(grpcMethod.getClazz().getName(), method.getName());
             this.callback = callback;
             this.description = getDesc(types);
+            this.whiteList = SerializerWhiteList.getGlobalWhitelist();
+            this.whiteList.setEnabled(GlobalContext.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED));
+            this.updateGlobalSerializerWhiteList();
         }
 
         @Override
@@ -663,6 +674,43 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public CallbackMethod getCallback() {
             return callback;
+        }
+
+        /**
+         * 更新全局白名单
+         */
+        protected void updateGlobalSerializerWhiteList() {
+            if (genericMethod == null) {
+                return;
+            }
+            Set<String> whites = new HashSet<>();
+            //返回值
+            updateWhiteList(genericMethod.getReturnType(), whites);
+            //入参
+            GenericType[] paramTypes = genericMethod.getParameters();
+            if (paramTypes != null) {
+                for (GenericType paramType : paramTypes) {
+                    updateWhiteList(paramType, whites);
+                }
+            }
+            //加入白名单
+            whiteList.updateWhite(whites);
+        }
+
+        /**
+         * 更新白名单列表
+         *
+         * @param genericType
+         * @param whites
+         */
+        protected void updateWhiteList(GenericType genericType, Set<String> whites) {
+            if (genericType != null) {
+                whites.add(genericType.getType().getName());
+                Type returnGenericType = genericType.getGenericType();
+                if (returnGenericType instanceof ParameterizedType) {
+                    whites.add(genericType.getGenericType().getTypeName());
+                }
+            }
         }
     }
 

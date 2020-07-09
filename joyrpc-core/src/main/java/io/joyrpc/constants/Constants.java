@@ -476,6 +476,10 @@ public class Constants {
 
     public static final String TYPE_KEY = "type";
 
+    public static final String SERIALIZER_WHITELIST_ENABLED = "serializer.whitelist.enabled";
+
+    public static final boolean DEFAULT_SERIALIZER_WHITELIST_ENABLED = true;
+
     /**
      * 服务名称函数
      */

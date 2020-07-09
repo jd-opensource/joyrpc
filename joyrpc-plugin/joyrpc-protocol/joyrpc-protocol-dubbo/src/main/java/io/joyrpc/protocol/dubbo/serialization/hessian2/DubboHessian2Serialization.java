@@ -30,7 +30,7 @@ import io.joyrpc.com.caucho.hessian.io.AutowiredObjectSerializer;
 import io.joyrpc.com.caucho.hessian.io.Hessian2Output;
 import io.joyrpc.com.caucho.hessian.io.SerializerFactory;
 import io.joyrpc.extension.Extension;
-import io.joyrpc.permission.BlackList;
+import io.joyrpc.permission.BlackWhiteList;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -53,8 +53,8 @@ public class DubboHessian2Serialization extends Hessian2Serialization {
      */
     protected static final class DubboHessian2Serializer extends AbstractSerializer {
 
-        protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/hessian.blacklist",
-                "META-INF/permission/hessian.blacklist").load();
+        protected static final BlackWhiteList<String> BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/hessian.blacklist",
+                "META-INF/permission/hessian.blacklist");
 
         protected static final SerializerFactory SERIALIZER_FACTORY = new SerializerFactory(Thread.currentThread().getContextClassLoader());
 
@@ -74,7 +74,7 @@ public class DubboHessian2Serialization extends Hessian2Serialization {
          * 线程缓存，优化性能
          */
         protected static final ThreadLocal<Hessian2BWLInput> HESSIAN_INPUT = ThreadLocal.withInitial(() -> {
-            Hessian2BWLInput result = new Hessian2BWLInput(BLACK_LIST);
+            Hessian2BWLInput result = new Hessian2BWLInput(BLACK_WHITE_LIST);
             result.setSerializerFactory(SERIALIZER_FACTORY);
             result.setCloseStreamOnClose(true);
             return result;

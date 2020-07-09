@@ -21,24 +21,24 @@ package io.joyrpc.codec.serialization.hessian2;
  */
 
 import io.joyrpc.com.caucho.hessian.io.Hessian2Input;
-import io.joyrpc.permission.BlackList;
+import io.joyrpc.permission.BlackWhiteList;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 public class Hessian2BWLInput extends Hessian2Input {
 
-    protected BlackList<String> blackList;
+    protected BlackWhiteList<String> blackWhiteList;
 
     protected InputStream inputStream;
 
-    public Hessian2BWLInput(BlackList<String> blackList) {
-        this.blackList = blackList;
+    public Hessian2BWLInput(BlackWhiteList<String> blackWhiteList) {
+        this.blackWhiteList = blackWhiteList;
     }
 
-    public Hessian2BWLInput(InputStream is, BlackList<String> blackList) {
+    public Hessian2BWLInput(InputStream is, BlackWhiteList<String> blackWhiteList) {
         super(is);
-        this.blackList = blackList;
+        this.blackWhiteList = blackWhiteList;
     }
 
     @Override
@@ -49,9 +49,9 @@ public class Hessian2BWLInput extends Hessian2Input {
 
     @Override
     protected void validateType(final String type) throws IOException {
-        if (blackList != null) {
-            if (blackList.isBlack(type)) {
-                throw new IOException("Failed to decode class " + type + " by hessian serialization, it is in blacklist");
+        if (blackWhiteList != null) {
+            if (!blackWhiteList.isValid(type)) {
+                throw new IOException("Failed to decode class " + type + " by hessian serialization, it is not passed through blackWhiteList.");
             }
         }
     }

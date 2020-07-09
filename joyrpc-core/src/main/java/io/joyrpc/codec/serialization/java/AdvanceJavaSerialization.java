@@ -62,7 +62,7 @@ public class AdvanceJavaSerialization extends JavaSerialization {
 
         @Override
         protected ObjectReader createReader(final InputStream is, final Class clazz) throws IOException {
-            return new AdvanceObjectInputReader(new JavaInputStream(is, BLACK_LIST));
+            return new AdvanceObjectInputReader(new JavaInputStream(is, BLACK_WHITE_LIST));
         }
 
     }

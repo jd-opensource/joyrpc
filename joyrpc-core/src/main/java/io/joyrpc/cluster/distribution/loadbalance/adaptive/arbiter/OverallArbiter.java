@@ -44,8 +44,8 @@ public class OverallArbiter implements Arbiter, Ordered {
     /**
      * 根据评价调整权重
      *
-     * @param node
-     * @param rank
+     * @param node 节点
+     * @param rank 评价
      */
     protected void weight(final NodeMetric node, final Rank rank, final AdaptivePolicy policy) {
         switch (rank) {
@@ -73,8 +73,8 @@ public class OverallArbiter implements Arbiter, Ordered {
     /**
      * 计算综合得分
      *
-     * @param ranks
-     * @return
+     * @param ranks 评价
+     * @return 综合评价
      */
     protected Rank compute(final List<JudgeRank> ranks) {
         int score = 0;

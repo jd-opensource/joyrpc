@@ -51,6 +51,9 @@ public class DubboInvocation extends Invocation implements Codec {
     public static String DUBBO_SERVICE_VERSION_KEY = "version";
     public static String DUBBO_TIMEOUT_KEY = "timeout";
     public static String DUBBO_GENERIC_KEY = "generic";
+    public static String DUBBO_CALLBACK_ARG_PRE = "sys_callback_arg-";
+    public static String DUBBO_CALLBACK_INSID_KEY = "callback.service.instid";
+    public static String DUBBO_IS_CALLBACK_INVOKE_KEY = "_isCallBackServiceInvoke";
     protected static Set<String> GENERIC_METHODS = new HashSet<>();
 
     private String parameterTypesDesc;

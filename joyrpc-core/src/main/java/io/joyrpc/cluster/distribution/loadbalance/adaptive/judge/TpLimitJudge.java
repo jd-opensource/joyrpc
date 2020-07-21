@@ -24,12 +24,12 @@ import io.joyrpc.cluster.distribution.loadbalance.adaptive.*;
 import io.joyrpc.metric.TPSnapshot;
 
 /**
- * TP99评分
+ * TP评分
  */
-public class Tp99LimitJudge extends AbstractJudge implements MetricAware {
+public class TpLimitJudge extends AbstractJudge implements MetricAware {
 
-    public Tp99LimitJudge() {
-        super(JudgeType.Tp99Limit);
+    public TpLimitJudge() {
+        super(JudgeType.TpLimit);
     }
 
     @Override
@@ -39,8 +39,8 @@ public class Tp99LimitJudge extends AbstractJudge implements MetricAware {
         Rank result;
         Rank score;
         if (nodeTp.getRequests() == 0 && metric.isWeak()) {
-            //当虚弱的时候，由于没有数据，容易判断出Good，进行修正
-            result = Rank.Fair;
+            //当虚弱的时候，由于没有数据，TP为0，可用率为100，容易判断出Good，进行修正
+            return Rank.Fair;
         } else {
             result = score(policy.getTpScore(), metric.getNodeFunction().apply(nodeTp), RankScore.INT_DESCENDING);
         }

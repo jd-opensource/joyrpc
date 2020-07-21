@@ -56,9 +56,9 @@ public class ZoneAwareJudge extends AbstractJudge {
     /**
      * 匹配
      *
-     * @param source
-     * @param target
-     * @return
+     * @param source 源字符串
+     * @param target 目标字符串
+     * @return 匹配类型
      */
     protected MatchType match(final String source, final String target) {
         if (source == null || source.isEmpty() || target == null || target.isEmpty()) {

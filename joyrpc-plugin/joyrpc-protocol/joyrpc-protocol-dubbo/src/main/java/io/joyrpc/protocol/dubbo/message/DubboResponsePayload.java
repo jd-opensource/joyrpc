@@ -25,8 +25,10 @@ import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
 import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.ResponsePayload;
+import io.joyrpc.util.GenericType;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -67,8 +69,8 @@ public class DubboResponsePayload extends ResponsePayload implements Codec {
         this.heartbeat = heartbeat;
     }
 
-    public DubboResponsePayload(Object response, Throwable exception, String dubboVersion) {
-        super(response, exception);
+    public DubboResponsePayload(Object response, Throwable exception, Type type, String dubboVersion) {
+        super(response, exception, type);
         this.dubboVersion = dubboVersion;
     }
 

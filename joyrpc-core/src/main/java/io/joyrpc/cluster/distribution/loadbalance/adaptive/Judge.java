@@ -48,7 +48,7 @@ public interface Judge extends Type<String> {
     enum JudgeType {
         ServerStatus("ServerStatus", 10, 55),
         ZoneAware("ZoneAware", 20, 55),
-        Tp99Limit("Tp99Limit", 30, 30),
+        TpLimit("TpLimit", 30, 30),
         ConcurrencyLimit("ConcurrencyLimit", 40, 20),
         QpsLimit("QpsLimit", 50, 20);
 

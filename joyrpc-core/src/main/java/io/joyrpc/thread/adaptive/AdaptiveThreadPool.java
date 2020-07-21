@@ -9,9 +9,9 @@ package io.joyrpc.thread.adaptive;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ package io.joyrpc.thread.adaptive;
  * #L%
  */
 
-import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.extension.Extension;
@@ -31,6 +30,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.*;
 import java.util.function.Function;
+
+import static io.joyrpc.constants.Constants.*;
 
 
 /**
@@ -43,23 +44,16 @@ public class AdaptiveThreadPool implements ThreadPool {
 
     @Override
     public ThreadPoolExecutor get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function) {
-        Integer maxSize = url.getPositive(Constants.MAX_SIZE_OPTION.getName(), (Integer) null);
-        Integer coreSize = url.getPositive(Constants.CORE_SIZE_OPTION.getName(), (Integer) null);
-        Integer keepAliveTime = url.getPositive(Constants.KEEP_ALIVE_TIME_OPTION.getName(), (Integer) null);
-        if (maxSize == null && coreSize == null) {
-            maxSize = Constants.MAX_SIZE_OPTION.getValue();
-            coreSize = Constants.MAX_SIZE_OPTION.getValue();
+        Integer maxSize = url.getPositiveInt(MAX_SIZE_OPTION);
+        Integer coreSize = url.getPositive(CORE_SIZE_OPTION.getName(), maxSize);
+        Integer keepAliveTime = url.getPositive(KEEP_ALIVE_TIME_OPTION.getName(), (Integer) null);
+        if (maxSize == coreSize) {
             keepAliveTime = keepAliveTime == null ? 0 : keepAliveTime;
-        } else if (maxSize != null && coreSize == null) {
-            coreSize = maxSize;
-            keepAliveTime = keepAliveTime == null ? 0 : keepAliveTime;
-        } else if (coreSize != null) {
-            maxSize = Constants.MAX_SIZE_OPTION.getValue();
-            keepAliveTime = keepAliveTime == null ? Constants.KEEP_ALIVE_TIME_OPTION.getValue() : keepAliveTime;
-        } else if (maxSize == coreSize) {
+        } else if (maxSize < coreSize) {
+            maxSize = coreSize;
             keepAliveTime = keepAliveTime == null ? 0 : keepAliveTime;
         } else {
-            keepAliveTime = keepAliveTime == null ? Constants.KEEP_ALIVE_TIME_OPTION.getValue() : keepAliveTime;
+            keepAliveTime = keepAliveTime == null ? KEEP_ALIVE_TIME_OPTION.getValue() : keepAliveTime;
         }
         return new ThreadPoolExecutor(coreSize, maxSize, keepAliveTime, TimeUnit.MILLISECONDS,
                 function.apply(url),

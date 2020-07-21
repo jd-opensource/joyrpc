@@ -20,6 +20,7 @@ package io.joyrpc.example.service;
  * #L%
  */
 
+import io.joyrpc.annotation.CallbackArg;
 import io.joyrpc.example.service.vo.*;
 
 import javax.validation.constraints.NotNull;
@@ -57,5 +58,12 @@ public interface DemoService {
 
     static String hello(String v) {
         return v;
+    }
+
+    void echoCallback(@CallbackArg EchoCallback callback);
+
+    public static interface EchoCallback {
+
+        boolean echo(String str);
     }
 }

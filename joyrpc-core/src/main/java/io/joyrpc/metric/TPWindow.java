@@ -113,5 +113,4 @@ public interface TPWindow extends Metric, Snapshot<TPMetric> {
      */
     MilliPeriod getWeakPeriod();
 
-
 }

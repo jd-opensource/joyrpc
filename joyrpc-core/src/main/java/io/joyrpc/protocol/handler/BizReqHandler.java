@@ -37,10 +37,13 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.Session.ServerSession;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
@@ -140,14 +143,17 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
         ResponseMessage<ResponsePayload> response = supplier != null ? supplier.get() :
                 new ResponseMessage<>(header.response(MsgType.BizResp.getType(),
                         session == null ? Compression.NONE : session.getCompressionType()));
+        GenericMethod genericMethod = invocation == null ? null : invocation.getGenericMethod();
+        GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
+        Type type = returnType == null ? null : returnType.getGenericType();
         if (result.getContext().isAsync() && !result.isException()) {
             //异步
             ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
-                response.setPayLoad(new ResponsePayload(obj, th));
+                response.setPayLoad(new ResponsePayload(obj, th, type));
                 channel.send(response, sendFailed);
             });
         } else {
-            response.setPayLoad(new ResponsePayload(result.getValue(), result.getException()));
+            response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), type));
             channel.send(response, sendFailed);
         }
     }

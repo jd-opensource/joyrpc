@@ -270,8 +270,8 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         GrpcMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         EnableTrace enableTrace = method == null ? null : method.getAnnotation(EnableTrace.class);
-        Map<String, Map<String, Object>> methodMocks = mockConfig.get();
-        McIntfCircuitBreakerConfig icbCfg = breakerConfigs.get();
+        Map<String, Map<String, Object>> methodMocks = mockConfig == null ? null : mockConfig.get();
+        McIntfCircuitBreakerConfig icbCfg = breakerConfigs == null ? null : breakerConfigs.get();
         return new InnerConsumerMethodOption(
                 grpcMethod,
                 genericClass.get(method),

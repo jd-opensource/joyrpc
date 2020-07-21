@@ -1,4 +1,4 @@
-package io.joyrpc.constants;
+package io.joyrpc.codec.serialization.fastjson;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.constants;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,30 +21,10 @@ package io.joyrpc.constants;
  */
 
 /**
- * RPC 版本
- *
+ * 应答序列化
  */
-public class Version {
-    /**
-     * 当前RPC版本，例如：<br>
-     * 2.0.1-SNAPSHOT对应2010<br>
-     * 2.0.1正式版对应2011
-     */
-    public static final short BUILD_VERSION = 2110;
+public class ResponsePayloadCodec extends AbstractResponsePayloadCodec {
 
-    /**
-     * 当前Build版本，每次发布修改
-     */
-    public static final String BUILD_VERSION_TIME = "2.1.1_202007031700";
-
-    /**
-     * 当前协议版本
-     */
-    public static final String PROTOCOL_VERSION = "joy1";
-
-    /**
-     * 当前的协议
-     */
-    public static final String PROTOCOL = "joy";
+    public static final ResponsePayloadCodec INSTANCE = new ResponsePayloadCodec();
 
 }

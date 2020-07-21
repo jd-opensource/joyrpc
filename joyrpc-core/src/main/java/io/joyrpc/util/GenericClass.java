@@ -330,10 +330,12 @@ public class GenericClass {
                 //类变量
                 if (declaringType != null) {
                     Variable variable = declaringType.getVariable(name);
-                    genericType.addVariable(variable);
-                    if (variable.getGenericType() != type) {
-                        //把解析好的变量，重新包装生成Type
-                        return variable.getGenericType();
+                    if (variable != null) {
+                        genericType.addVariable(variable);
+                        if (variable.getGenericType() != type) {
+                            //把解析好的变量，重新包装生成Type
+                            return variable.getGenericType();
+                        }
                     }
                 }
             } else if (gd instanceof Executable) {

@@ -21,7 +21,10 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.config.InterfaceOption.MethodOption;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.extension.URL;
+import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
@@ -35,11 +38,11 @@ import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
+import io.joyrpc.util.StringUtils;
 
 import java.util.function.Function;
 
-import static io.joyrpc.constants.Constants.KEY_APPNAME;
-import static io.joyrpc.constants.Constants.SERVICE_VERSION_OPTION;
+import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.protocol.dubbo.DubboStatus.getStatus;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 import static io.joyrpc.protocol.dubbo.serialization.hessian2.DubboHessian2Serialization.DUBBO_HESSIAN_ID;
@@ -145,7 +148,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
                         case BizReq:
                         case CallbackReq:
                         case HbReq:
-                            return outputRequest((RequestMessage<Invocation>) message);
+                            return outputRequest((RequestMessage<Invocation>) message, type);
                         case BizResp:
                         case CallbackResp:
                         case HbResp:
@@ -163,7 +166,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
      *
      * @param message
      */
-    protected Object outputRequest(final RequestMessage<Invocation> message) {
+    protected Object outputRequest(final RequestMessage<Invocation> message, MsgType type) {
         Invocation payLoad = message.getPayLoad();
         if (payLoad != null && message.getMsgType() != MsgType.HbReq.getType()) {
             boolean generic = payLoad.isGeneric();
@@ -171,25 +174,47 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
             invocation.setClassName(payLoad.getClassName());
             invocation.setMethodName(generic ? GENERIC_INVOKE_METHOD : payLoad.getMethodName());
             invocation.setAlias(payLoad.getAlias());
-            invocation.setParameterTypesDesc(generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : message.getOption().getDescription());
+            MethodOption option = message.getOption();
+            invocation.setParameterTypesDesc(generic ? GENERIC_INVOKE_PARAM_TYPES_DESC : option.getDescription());
             invocation.setArgs(payLoad.getArgs());
             Session session = message.getSession();
             if (session != null && session.getAttributes() != null) {
                 String serviceVersion = session.getOrDefault(SERVICE_VERSION_OPTION.getName(), "");
                 invocation.setVersion(serviceVersion);
             }
-            invocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName());
-            invocation.addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName());
-            invocation.addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias());
-            invocation.addAttachment(DUBBO_SERVICE_VERSION_KEY, invocation.getVersion());
-            invocation.addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()));
-            String appName = GlobalContext.getString(KEY_APPNAME);
-            if (appName != null && !appName.isEmpty()) {
-                invocation.addAttachment(DUBBO_APPLICATION_KEY, appName);
+            invocation.addAttachment(DUBBO_PATH_KEY, payLoad.getClassName())
+                    .addAttachment(DUBBO_INTERFACE_KEY, payLoad.getClassName())
+                    .addAttachment(DUBBO_GROUP_KEY, payLoad.getAlias())
+                    .addAttachment(DUBBO_SERVICE_VERSION_KEY, invocation.getVersion())
+                    .addAttachment(DUBBO_TIMEOUT_KEY, String.valueOf(message.getTimeout()))
+                    .addAttachment(DUBBO_APPLICATION_KEY, GlobalContext.getString(KEY_APPNAME), (key, value) -> !StringUtils.isEmpty((String) value))
+                    .addAttachment(DUBBO_GENERIC_KEY, "true", (key, value) -> generic);
+
+            switch (type) {
+                case BizReq: {
+                    CallbackMethod callbackMethod = option.getCallback();
+                    if (callbackMethod != null) {
+                        int paramIndex = callbackMethod.getIndex();
+                        Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
+                        if (callbackInsId != null) {
+                            invocation.addAttachment(DUBBO_CALLBACK_ARG_PRE + paramIndex, callbackInsId.toString());
+                        }
+                    }
+                    break;
+                }
+                case CallbackReq: {
+                    Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);
+                    URL url = message.getUrl();
+                    if (url != null) {
+                        invocation.computeIfAbsent(DUBBO_GROUP_KEY, o -> url.getString(ALIAS_OPTION));
+                        invocation.computeIfAbsent(DUBBO_SERVICE_VERSION_KEY, o -> url.getString(SERVICE_VERSION_OPTION));
+                    }
+                    invocation.addAttachment(DUBBO_CALLBACK_INSID_KEY, callbackInsId);
+                    invocation.addAttachment(DUBBO_IS_CALLBACK_INVOKE_KEY, true);
+                    break;
+                }
             }
-            if (generic) {
-                invocation.addAttachment(DUBBO_GENERIC_KEY, "true");
-            }
+
             message.setPayLoad(invocation);
         }
         return message;
@@ -222,9 +247,11 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
         //创建dubbo payload
         DubboResponsePayload dubboPayload = responsePayload == null
                 ? new DubboResponsePayload(dubboVersion)
-                : new DubboResponsePayload(responsePayload.getResponse(), responsePayload.getException(), dubboVersion);
+                : new DubboResponsePayload(responsePayload.getResponse(), responsePayload.getException(),
+                responsePayload.getType(), dubboVersion);
         message.setPayLoad(dubboPayload);
 
         return message;
     }
+
 }

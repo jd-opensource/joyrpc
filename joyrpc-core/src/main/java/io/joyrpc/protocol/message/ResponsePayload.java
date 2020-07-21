@@ -9,9 +9,9 @@ package io.joyrpc.protocol.message;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,6 +21,7 @@ package io.joyrpc.protocol.message;
  */
 
 import java.io.Serializable;
+import java.lang.reflect.Type;
 
 /**
  * 应答消息
@@ -44,7 +45,11 @@ public class ResponsePayload implements Serializable {
     /**
      * 异常信息
      */
-    protected Throwable exception; //error when the error has been declare in the interface
+    protected Throwable exception;
+    /**
+     * 返回值泛型
+     */
+    protected transient Type type;
 
     /**
      * 默认构造函数
@@ -52,11 +57,30 @@ public class ResponsePayload implements Serializable {
     public ResponsePayload() {
     }
 
+
+    /**
+     * 构造返回值消息
+     *
+     * @param response 返回值
+     */
+    public ResponsePayload(Object response) {
+        this.response = response;
+    }
+
+    /**
+     * 构造异常应答
+     *
+     * @param exception 异常
+     */
+    public ResponsePayload(Throwable exception) {
+        this.exception = exception;
+    }
+
     /**
      * 构造函数
      *
-     * @param response
-     * @param exception
+     * @param response  返回值
+     * @param exception 异常
      */
     public ResponsePayload(Object response, Throwable exception) {
         this.response = response;
@@ -64,21 +88,16 @@ public class ResponsePayload implements Serializable {
     }
 
     /**
-     * 构造函数
+     * 构造方法
      *
-     * @param response
+     * @param response  返回值
+     * @param exception 异常
+     * @param type      返回值类型
      */
-    public ResponsePayload(Object response) {
+    public ResponsePayload(Object response, Throwable exception, Type type) {
         this.response = response;
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param exception
-     */
-    public ResponsePayload(Throwable exception) {
         this.exception = exception;
+        this.type = type;
     }
 
     public Object getResponse() {
@@ -95,6 +114,14 @@ public class ResponsePayload implements Serializable {
 
     public void setException(Throwable exception) {
         this.exception = exception;
+    }
+
+    public Type getType() {
+        return type;
+    }
+
+    public void setType(Type type) {
+        this.type = type;
     }
 
     /**

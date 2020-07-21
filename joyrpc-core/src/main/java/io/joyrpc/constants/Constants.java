@@ -611,10 +611,15 @@ public class Constants {
      * 默认序列化算法
      */
     public static final String DEFAULT_SERIALIZATION = "hessian";
+    public static final String SERIALIZATION_KEY = "serialization";
     /**
      * 序列化选项
      */
-    public static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>("serialization", DEFAULT_SERIALIZATION);
+    public static final URLOption<String> SERIALIZATION_OPTION = new URLOption<>(SERIALIZATION_KEY, DEFAULT_SERIALIZATION);
+    /**
+     * 服务端序列化方式优先选项
+     */
+    public static final URLOption<Boolean> SERIALIZATION_PREFER_PROVIDER_OPTION = new URLOption<>("serialization.prefer.provider", true);
     /**
      * 代理工厂默认值
      */
@@ -823,6 +828,15 @@ public class Constants {
     public static final int DEFAULT_DECUBATION = 10 * 1000;
 
     /**
+     * 区域感知算法，是否排除其它机房
+     */
+    public static final URLOption<Boolean> REGION_DCEXCLUSIVE = new URLOption<>("region.dcExclusive", Boolean.FALSE);
+    /**
+     * 区域感知算法，本区域其它机房的热备节点数量
+     */
+    public static final URLOption<Integer> REGION_STANDBYPERDC = new URLOption<>("region.standbyPerDc", 0);
+
+    /**
      * 自适应负载均衡，综合评分算法
      */
     public static final URLOption<String> ADAPTIVE_ARBITER = new URLOption<>("adaptive.arbiter", "weight");
@@ -886,6 +900,14 @@ public class Constants {
      * 自适应负载均衡，节点TP
      */
     public static final URLOption<String> ADAPTIVE_NODE_TP = new URLOption<>("adaptive.nodeTp", "tp90");
+    /**
+     * 自适应负载均衡，集群评分抽样的数量
+     */
+    public static final URLOption<Integer> ADAPTIVE_SAMPLING_SIZE = new URLOption<>("adaptive.samplingSize", 100);
+    /**
+     * 自适应负载均衡，记录日志
+     */
+    public static final URLOption<Boolean> ADAPTIVE_LOG = new URLOption<>("adaptive.log", Boolean.FALSE);
     /**
      * 自适应负载均衡，集群TP
      */

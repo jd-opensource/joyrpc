@@ -819,6 +819,7 @@ public class Cluster {
             //热备节点建立连接
             //TODO 热备节点没有流量，影响自适应评分
             candidate(result.getStandbys(), (s, n) -> connect(n), s -> 0);
+            //TODO 平滑关闭，过滤出连接正常的备份节点，候选者每产生一个新的连接，则关闭一个没有流量的备份节点
             candidate(result.getBackups(), (s, n) -> backup(n), Node::getWeight);
             //丢弃的节点
             candidate(result.getDiscards(), (s, n) -> discard(n), null);

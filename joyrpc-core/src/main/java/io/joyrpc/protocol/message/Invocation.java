@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -259,11 +260,7 @@ public class Invocation implements Call {
         return argsType;
     }
 
-    /**
-     * 设置参数类型
-     *
-     * @param argsType 参数类名
-     */
+    @Override
     public void setArgsType(String[] argsType) {
         this.argsType = argsType;
         // 清空缓存
@@ -302,6 +299,7 @@ public class Invocation implements Call {
         return args;
     }
 
+    @Override
     public void setArgs(Object[] args) {
         this.args = args;
     }
@@ -328,6 +326,7 @@ public class Invocation implements Call {
         return className;
     }
 
+    @Override
     public void setClassName(String className) {
         this.className = className;
     }
@@ -337,6 +336,7 @@ public class Invocation implements Call {
         return methodName;
     }
 
+    @Override
     public void setMethodName(String methodName) {
         this.methodName = methodName;
     }
@@ -346,6 +346,7 @@ public class Invocation implements Call {
         return alias;
     }
 
+    @Override
     public void setAlias(String alias) {
         this.alias = alias;
     }
@@ -463,11 +464,7 @@ public class Invocation implements Call {
         this.genericTypes = genericTypes;
     }
 
-    /**
-     * 如果参数类型不存在，则进行计算
-     *
-     * @return
-     */
+    @Override
     public String[] computeArgsType() {
         if (argsType == null) {
             //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
@@ -483,12 +480,24 @@ public class Invocation implements Call {
     /**
      * 添加扩展信息
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 调用对象
      */
     public Invocation addAttachment(final String key, final Object value) {
-        if (key != null && value != null) {
+        return addAttachment(key, value, null);
+    }
+
+    /**
+     * 添加扩展信息
+     *
+     * @param key       键
+     * @param value     值
+     * @param predicate 断言
+     * @return 调用对象
+     */
+    public Invocation addAttachment(final String key, final Object value, final BiPredicate<String, Object> predicate) {
+        if (key != null && value != null && (predicate == null || predicate.test(key, value))) {
             if (attachments == null) {
                 attachments = new HashMap<>();
             }
@@ -497,11 +506,7 @@ public class Invocation implements Call {
         return this;
     }
 
-    /**
-     * 添加扩展属性
-     *
-     * @param map 参数
-     */
+    @Override
     public void addAttachments(final Map<String, ?> map) {
         if (map != null) {
             if (attachments == null) {
@@ -523,7 +528,7 @@ public class Invocation implements Call {
         if (key == null) {
             return null;
         }
-        if (attachments != null) {
+        if (attachments == null) {
             attachments = new HashMap<>();
         }
         return (T) (function == null ? attachments.get(key) : attachments.computeIfAbsent(key, function));

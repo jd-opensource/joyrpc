@@ -31,13 +31,17 @@ import io.joyrpc.protocol.dubbo.message.DubboInvocation;
 import io.joyrpc.protocol.dubbo.message.DubboMessageHeader;
 import io.joyrpc.protocol.dubbo.message.DubboResponseErrorPayload;
 import io.joyrpc.protocol.dubbo.message.DubboResponsePayload;
-import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 
+import java.util.Iterator;
+import java.util.Map.Entry;
+
+import static io.joyrpc.constants.Constants.HEAD_CALLBACK_INSID;
+import static io.joyrpc.protocol.MsgType.CallbackReq;
 import static io.joyrpc.protocol.dubbo.DubboStatus.OK;
 import static io.joyrpc.protocol.dubbo.message.DubboInvocation.*;
 
@@ -70,12 +74,14 @@ public class DubboCodec extends AbstractCodec {
         //byte status = ((MessageHeader) header).getAttribute(HEAD_STATUS.getKey(), (byte) 0);
         switch (msgType) {
             case BizReq:
+            case CallbackReq:
                 flag = (byte) (FLAG_REQUEST | header.getSerialization() | FLAG_TWOWAY);
                 break;
             case HbReq:
                 flag = (byte) (FLAG_REQUEST | header.getSerialization() | FLAG_TWOWAY | FLAG_EVENT);
                 break;
             case BizResp:
+            case CallbackResp:
                 flag = header.getSerialization();
                 break;
             case HbResp:
@@ -143,12 +149,13 @@ public class DubboCodec extends AbstractCodec {
     }
 
     @Override
-    protected Class getPayloadClass(final MessageHeader header) {
-        MsgType type = MsgType.valueOf(header.getMsgType());
+    protected Class getPayloadClass(final Header header, final MsgType type) {
         switch (type) {
             case BizReq:
+            case CallbackReq:
                 return DubboInvocation.class;
             case BizResp:
+            case CallbackResp:
                 return ((DubboMessageHeader) header).getStatus() != OK ? DubboResponseErrorPayload.class : DubboResponsePayload.class;
             default:
                 return type.getPayloadClz();
@@ -169,6 +176,27 @@ public class DubboCodec extends AbstractCodec {
                     try {
                         ((RequestMessage) message).setTimeout(Integer.parseInt(timeout));
                     } catch (NumberFormatException e) {
+                    }
+                }
+                //处理callback的创建的请求消息
+                boolean isCallbackBizReq = false;
+                Iterator<Entry<String, Object>> iterator = invocation.getAttachments().entrySet().iterator();
+                while (iterator.hasNext()) {
+                    Entry<String, Object> entry = iterator.next();
+                    if (entry.getKey().startsWith(DUBBO_CALLBACK_ARG_PRE)) {
+                        header.addAttribute(HEAD_CALLBACK_INSID, entry.getValue().toString());
+                        iterator.remove();
+                        isCallbackBizReq = true;
+                    }
+                }
+                //处理callback请求消息
+                if (!isCallbackBizReq) {
+                    //Object isCallbackInvoke = invocation.removeAttachment(DUBBO_IS_CALLBACK_INVOKE_KEY);
+                    Object callbackInsId = invocation.removeAttachment(DUBBO_CALLBACK_INSID_KEY);
+                    //if (isCallbackInvoke != null && Boolean.parseBoolean(isCallbackInvoke.toString()) && callbackInsId != null) {
+                    if (callbackInsId != null) {
+                        header.addAttribute(HEAD_CALLBACK_INSID, callbackInsId.toString());
+                        header.setMsgType(CallbackReq.getType());
                     }
                 }
             }

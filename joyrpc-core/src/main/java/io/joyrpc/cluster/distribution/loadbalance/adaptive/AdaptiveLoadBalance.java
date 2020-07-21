@@ -29,23 +29,29 @@ import io.joyrpc.cluster.distribution.LoadBalance;
 import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
-import io.joyrpc.metric.*;
+import io.joyrpc.metric.Dashboard;
+import io.joyrpc.metric.DashboardAware;
+import io.joyrpc.metric.TPSnapshot;
+import io.joyrpc.metric.TPWindow;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static io.joyrpc.constants.Constants.ADAPTIVE_CLUSTER_TP;
-import static io.joyrpc.constants.Constants.ADAPTIVE_NODE_TP;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 自适应负载均衡
  */
 @Extension(value = "adaptive")
 public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, DashboardAware, AdaptiveScorer {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdaptiveLoadBalance.class);
 
     public static final Function<TPSnapshot, Integer> TP30_FUNCTION = TPSnapshot::getTp30;
     public static final Function<TPSnapshot, Integer> TP50_FUNCTION = TPSnapshot::getTp50;
@@ -70,12 +76,14 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
      * 节点TP函数
      */
     protected Function<TPSnapshot, Integer> nodeFunction;
-
+    /**
+     * 集群评分抽样数量
+     */
+    protected int samplingSize;
     /**
      * 接口
      */
     protected String className;
-
 
     @Override
     public void setClassName(String className) {
@@ -91,6 +99,26 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
     public void setup() {
         clusterFunction = getTpFunction(url.getString(ADAPTIVE_CLUSTER_TP), TP30_FUNCTION);
         nodeFunction = getTpFunction(url.getString(ADAPTIVE_NODE_TP), TP90_FUNCTION);
+        samplingSize = url.getInteger(ADAPTIVE_SAMPLING_SIZE);
+        if (url.getBoolean(ADAPTIVE_LOG)) {
+            recorder = ranks -> {
+                StringBuilder builder = new StringBuilder();
+                builder.append('[');
+                ranks.forEach(o -> builder.append('{')
+                        .append("\"name\":\"").append(o.getNode().getName()).append('\"')
+                        .append(",\"weight\":").append(o.getWeight())
+                        .append(",\"rank\":").append(o.getRank())
+                        .append(",\"ranks\":").append(o.getRanks())
+                        .append(",\"weak\":").append(o.isWeak())
+                        .append(",\"broken\":").append(o.isBroken())
+                        .append("},"));
+                if (!ranks.isEmpty()) {
+                    builder.deleteCharAt(builder.length() - 1);
+                }
+                builder.append(']');
+                logger.info(builder.toString());
+            };
+        }
     }
 
     protected Function<TPSnapshot, Integer> getTpFunction(final String type, final Function<TPSnapshot, Integer> def) {
@@ -112,50 +140,8 @@ public class AdaptiveLoadBalance implements LoadBalance, InvokerAware, Dashboard
 
     @Override
     public AdaptiveConfig score(final Cluster cluster, final String method, final AdaptiveConfig config) {
-        AdaptiveConfig result = new AdaptiveConfig();
-        List<Node> nodes = cluster.getNodes();
-        int size = nodes.size();
-        long[] actives = config.concurrencyScore == null ? new long[size] : null;
-        long[] requests = config.qpsScore == null ? new long[size] : null;
-        long[] availability = config.availabilityScore == null ? new long[size] : null;
-
-        int i = 0;
-        TPWindow window;
-        TPMetric snapshot;
-        //采样数量
-        int max = 100;
-        for (Node node : nodes) {
-            window = node.getDashboard().getMethod(method);
-            snapshot = window.getSnapshot();
-            if (actives != null) {
-                actives[i] = window.actives().get();
-            }
-            if (requests != null) {
-                requests[i] = window.distribution().get() + snapshot.getSnapshot().getRequests();
-            }
-            if (availability != null) {
-                //保留3位小数
-                availability[i] = (long) (snapshot.getSnapshot().getAvailability() * 1000);
-            }
-            if (++i > max) {
-                //控制循环数量
-                break;
-            }
-        }
-        if (requests != null) {
-            result.setQpsScore(AdaptiveConfig.computeQpsScore(requests));
-        }
-        if (actives != null) {
-            result.setConcurrencyScore(AdaptiveConfig.computeConcurrencyScore(actives));
-        }
-        if (availability != null) {
-            result.setAvailabilityScore(AdaptiveConfig.computeAvailabilityScore(actives));
-        }
-        if (config.tpScore == null) {
-            result.setTpScore(AdaptiveConfig.computeTpScore(clusterFunction.apply(
-                    cluster.getDashboard().getMethod(method).getSnapshot().getSnapshot())));
-        }
-        return result;
+        AdaptiveEvaluator evaluator = new AdaptiveEvaluator(config, clusterFunction, samplingSize);
+        return evaluator.compute(cluster, method);
     }
 
     @Override

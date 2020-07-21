@@ -32,4 +32,11 @@ public interface DemoService {
     static String hello(String v) {
         return v;
     }
+
+    void echoCallback(EchoCallback callback);
+
+    public static interface EchoCallback {
+
+        boolean echo(String str);
+    }
 }

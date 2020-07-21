@@ -573,7 +573,7 @@ public class Cluster {
                         () -> ready.accept(new AsyncResult<>(this)),
                         () -> ready.accept(new AsyncResult<>(this,
                                 new InitializationException(
-                                        String.format("initialization timeout, used %d ms, may be no has enough provider nodes.", SystemClock.now() - beginTime)))));
+                                        String.format("initialization timeout, used %d ms, maybe has no enough provider nodes.", SystemClock.now() - beginTime)))));
             }
         }
 

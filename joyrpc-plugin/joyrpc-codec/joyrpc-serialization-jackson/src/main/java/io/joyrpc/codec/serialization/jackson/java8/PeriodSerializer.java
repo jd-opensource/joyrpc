@@ -36,6 +36,6 @@ public class PeriodSerializer extends JsonSerializer<Period> {
 
     @Override
     public void serialize(final Period value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
-        gen.writeRaw(value.toString());
+        gen.writeString(value.toString());
     }
 }

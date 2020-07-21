@@ -36,6 +36,6 @@ public class LocalDateTimeSerializer extends JsonSerializer<LocalDateTime> {
 
     @Override
     public void serialize(LocalDateTime value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        gen.writeRaw(value.toString());
+        gen.writeString(value.toString());
     }
 }

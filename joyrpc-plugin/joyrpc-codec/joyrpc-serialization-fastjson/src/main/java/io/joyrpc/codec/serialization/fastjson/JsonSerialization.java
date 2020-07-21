@@ -25,6 +25,7 @@ import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONReader;
 import com.alibaba.fastjson.parser.Feature;
 import com.alibaba.fastjson.parser.ParserConfig;
+import com.alibaba.fastjson.serializer.CalendarCodec;
 import com.alibaba.fastjson.serializer.SerializeConfig;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
@@ -44,6 +45,7 @@ import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.util.Collection;
+import java.util.GregorianCalendar;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.BiFunction;
@@ -187,6 +189,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
             config.putDeserializer(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             config.putDeserializer(Invocation.class, InvocationCodec.INSTANCE);
             config.putDeserializer(ResponsePayload.class, ResponsePayloadCodec.INSTANCE);
+            config.putDeserializer(GregorianCalendar.class, CalendarCodec.instance);
             return config;
         }
 

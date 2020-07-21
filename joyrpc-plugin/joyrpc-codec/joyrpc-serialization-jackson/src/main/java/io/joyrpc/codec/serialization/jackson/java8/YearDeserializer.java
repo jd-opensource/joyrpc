@@ -26,25 +26,25 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import io.joyrpc.exception.SerializerException;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.util.OptionalInt;
+import java.time.Year;
+import java.time.YearMonth;
 
 /**
- * OptionalInt反序列化
+ * Year反序列化
  */
-public class OptionalIntDeserializer extends JsonDeserializer<OptionalInt> {
+public class YearDeserializer extends JsonDeserializer<Year> {
 
-    public static final JsonDeserializer INSTANCE = new OptionalIntDeserializer();
+    public static final JsonDeserializer INSTANCE = new YearDeserializer();
 
     @Override
-    public OptionalInt deserialize(final JsonParser parser, final DeserializationContext ctx) throws IOException {
+    public Year deserialize(final JsonParser parser, final DeserializationContext ctx) throws IOException {
         switch (parser.currentToken()) {
             case VALUE_NULL:
                 return null;
-            case VALUE_NUMBER_INT:
-                return OptionalInt.of(parser.getIntValue());
+            case VALUE_STRING:
+                return Year.parse(parser.getText());
             default:
-                throw new SerializerException("Error occurs while parsing OptionalInt");
+                throw new SerializerException("Error occurs while parsing Year");
         }
     }
 }

@@ -36,6 +36,6 @@ public class ZonedDateTimeSerializer extends JsonSerializer<ZonedDateTime> {
 
     @Override
     public void serialize(final ZonedDateTime value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
-        gen.writeRaw(value.toString());
+        gen.writeString(value.toString());
     }
 }

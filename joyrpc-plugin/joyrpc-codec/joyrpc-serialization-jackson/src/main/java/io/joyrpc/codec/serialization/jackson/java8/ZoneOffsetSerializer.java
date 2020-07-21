@@ -36,6 +36,6 @@ public class ZoneOffsetSerializer extends JsonSerializer<ZoneOffset> {
 
     @Override
     public void serialize(final ZoneOffset value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
-        gen.writeRaw(value.toString());
+        gen.writeString(value.toString());
     }
 }

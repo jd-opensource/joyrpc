@@ -23,6 +23,7 @@ package io.joyrpc.codec.serialization.jackson.java8;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import io.joyrpc.exception.SerializerException;
 
 import java.io.IOException;
 import java.time.Period;
@@ -42,7 +43,7 @@ public class PeriodDeserializer extends JsonDeserializer<Period> {
             case VALUE_STRING:
                 return Period.parse(parser.getText());
             default:
-                throw new IOException("Error occurs while parsing Period");
+                throw new SerializerException("Error occurs while parsing Period");
         }
     }
 }

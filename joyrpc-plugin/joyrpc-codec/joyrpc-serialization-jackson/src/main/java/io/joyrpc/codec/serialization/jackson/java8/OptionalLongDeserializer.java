@@ -23,6 +23,7 @@ package io.joyrpc.codec.serialization.jackson.java8;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import io.joyrpc.exception.SerializerException;
 
 import java.io.IOException;
 import java.util.OptionalLong;
@@ -42,7 +43,7 @@ public class OptionalLongDeserializer extends JsonDeserializer<OptionalLong> {
             case VALUE_NUMBER_INT:
                 return OptionalLong.of(parser.getLongValue());
             default:
-                throw new IOException("Error occurs while parsing OptionalLong");
+                throw new SerializerException("Error occurs while parsing OptionalLong");
         }
     }
 }

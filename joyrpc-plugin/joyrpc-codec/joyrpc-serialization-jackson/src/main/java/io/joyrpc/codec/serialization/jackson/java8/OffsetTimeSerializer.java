@@ -36,6 +36,6 @@ public class OffsetTimeSerializer extends JsonSerializer<OffsetTime> {
 
     @Override
     public void serialize(final OffsetTime value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
-        gen.writeRaw(value.toString());
+        gen.writeString(value.toString());
     }
 }

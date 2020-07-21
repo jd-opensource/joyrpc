@@ -25,17 +25,17 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
-import java.time.Duration;
+import java.time.Year;
 
 /**
- * Duration序列化
+ * Year序列化
  */
-public class DurationSerializer extends JsonSerializer<Duration> {
+public class YearSerializer extends JsonSerializer<Year> {
 
-    public static final JsonSerializer INSTANCE = new DurationSerializer();
+    public static final JsonSerializer INSTANCE = new YearSerializer();
 
     @Override
-    public void serialize(final Duration value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
+    public void serialize(final Year value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
         gen.writeString(value.toString());
     }
 }

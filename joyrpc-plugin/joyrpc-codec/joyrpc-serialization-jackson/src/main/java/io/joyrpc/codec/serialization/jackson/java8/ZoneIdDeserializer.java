@@ -26,25 +26,24 @@ import com.fasterxml.jackson.databind.JsonDeserializer;
 import io.joyrpc.exception.SerializerException;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.util.OptionalInt;
+import java.time.ZoneId;
 
 /**
- * OptionalInt反序列化
+ * ZoneId反序列化
  */
-public class OptionalIntDeserializer extends JsonDeserializer<OptionalInt> {
+public class ZoneIdDeserializer extends JsonDeserializer<ZoneId> {
 
-    public static final JsonDeserializer INSTANCE = new OptionalIntDeserializer();
+    public static final JsonDeserializer INSTANCE = new ZoneIdDeserializer();
 
     @Override
-    public OptionalInt deserialize(final JsonParser parser, final DeserializationContext ctx) throws IOException {
+    public ZoneId deserialize(final JsonParser parser, final DeserializationContext ctx) throws IOException {
         switch (parser.currentToken()) {
             case VALUE_NULL:
                 return null;
-            case VALUE_NUMBER_INT:
-                return OptionalInt.of(parser.getIntValue());
+            case VALUE_STRING:
+                return ZoneId.of(parser.getText());
             default:
-                throw new SerializerException("Error occurs while parsing OptionalInt");
+                throw new SerializerException("Error occurs while parsing ZoneId");
         }
     }
 }

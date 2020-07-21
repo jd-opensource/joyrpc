@@ -22,6 +22,7 @@ package io.joyrpc.codec.serialization.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
@@ -41,10 +42,7 @@ import java.io.OutputStream;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.time.*;
-import java.util.Collection;
-import java.util.OptionalDouble;
-import java.util.OptionalInt;
-import java.util.OptionalLong;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -135,6 +133,12 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         protected ObjectMapper mapper = new ObjectMapper();
 
         public JacksonnSerializer() {
+            ZoneId zoneId = null;
+            try {
+                zoneId = ZoneId.of("UTC");
+                //ZoneRegion对象
+            } catch (Throwable e) {
+            }
             SimpleModule module = new SimpleModule();
             //TODO 增加java8的序列化
             module.addSerializer(Invocation.class, InvocationSerializer.INSTANCE);
@@ -154,6 +158,10 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             module.addSerializer(Period.class, PeriodSerializer.INSTANCE);
             module.addSerializer(ZonedDateTime.class, ZonedDateTimeSerializer.INSTANCE);
             module.addSerializer(ZoneOffset.class, ZoneOffsetSerializer.INSTANCE);
+            module.addSerializer(ZoneId.class, ZoneIdSerializer.INSTANCE);
+            module.addSerializer(MonthDay.class, MonthDaySerializer.INSTANCE);
+            module.addSerializer(YearMonth.class, YearMonthSerializer.INSTANCE);
+            module.addSerializer(Year.class, YearSerializer.INSTANCE);
             module.addDeserializer(Invocation.class, InvocationDeserializer.INSTANCE);
             module.addDeserializer(ResponsePayload.class, ResponsePayloadDeserializer.INSTANCE);
             module.addDeserializer(Duration.class, DurationDeserializer.INSTANCE);
@@ -170,6 +178,17 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             module.addDeserializer(Period.class, PeriodDeserializer.INSTANCE);
             module.addDeserializer(ZonedDateTime.class, ZonedDateTimeDeserializer.INSTANCE);
             module.addDeserializer(ZoneOffset.class, ZoneOffsetDeserializer.INSTANCE);
+            module.addDeserializer(ZoneId.class, ZoneIdDeserializer.INSTANCE);
+            if (zoneId != null) {
+                module.addDeserializer(zoneId.getClass(), ZoneIdDeserializer.INSTANCE);
+            }
+            module.addDeserializer(MonthDay.class, MonthDayDeserializer.INSTANCE);
+            module.addDeserializer(YearMonth.class, YearMonthDeserializer.INSTANCE);
+            module.addDeserializer(Year.class, YearDeserializer.INSTANCE);
+            module.addDeserializer(Calendar.class, CalendarDeserializer.INSTANCE);
+            JsonDeserializer<?> deserializer = new CalendarDeserializer(GregorianCalendar.class);
+            module.addDeserializer(GregorianCalendar.class, (JsonDeserializer<GregorianCalendar>) deserializer);
+            mapper.setTimeZone(TimeZone.getDefault());
             mapper.registerModule(module);
         }
 

@@ -25,17 +25,18 @@ import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
 
 import java.io.IOException;
-import java.time.Duration;
+import java.time.MonthDay;
+import java.time.ZonedDateTime;
 
 /**
- * Duration序列化
+ * MonthDay序列化
  */
-public class DurationSerializer extends JsonSerializer<Duration> {
+public class MonthDaySerializer extends JsonSerializer<MonthDay> {
 
-    public static final JsonSerializer INSTANCE = new DurationSerializer();
+    public static final JsonSerializer INSTANCE = new MonthDaySerializer();
 
     @Override
-    public void serialize(final Duration value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
+    public void serialize(final MonthDay value, final JsonGenerator gen, final SerializerProvider serializers) throws IOException {
         gen.writeString(value.toString());
     }
 }

@@ -23,6 +23,7 @@ package io.joyrpc.codec.serialization.jackson.java8;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import io.joyrpc.exception.SerializerException;
 
 import java.io.IOException;
 import java.time.LocalTime;
@@ -42,7 +43,7 @@ public class LocalTimeDeserializer extends JsonDeserializer<LocalTime> {
             case VALUE_STRING:
                 return LocalTime.parse(parser.getText());
             default:
-                throw new IOException("Error occurs while parsing LocalTime");
+                throw new SerializerException("Error occurs while parsing LocalTime");
         }
     }
 }

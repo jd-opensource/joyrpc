@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.jackson.java8.*;
 import io.joyrpc.exception.SerializerException;
@@ -32,6 +33,7 @@ import io.joyrpc.extension.Option;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.ResponsePayload;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -136,6 +138,8 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             SimpleModule module = new SimpleModule();
             //TODO 增加java8的序列化
             module.addSerializer(Invocation.class, InvocationSerializer.INSTANCE);
+            module.addSerializer(ResponsePayload.class, ResponsePayloadSerializer.INSTANCE);
+            module.addSerializer(BackupShard.class, BackupShardSerializer.INSTANCE);
             module.addSerializer(Duration.class, DurationSerializer.INSTANCE);
             module.addSerializer(Instant.class, InstantSerializer.INSTANCE);
             module.addSerializer(LocalDateTime.class, LocalDateTimeSerializer.INSTANCE);
@@ -151,6 +155,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             module.addSerializer(ZonedDateTime.class, ZonedDateTimeSerializer.INSTANCE);
             module.addSerializer(ZoneOffset.class, ZoneOffsetSerializer.INSTANCE);
             module.addDeserializer(Invocation.class, InvocationDeserializer.INSTANCE);
+            module.addDeserializer(ResponsePayload.class, ResponsePayloadDeserializer.INSTANCE);
             module.addDeserializer(Duration.class, DurationDeserializer.INSTANCE);
             module.addDeserializer(Instant.class, InstantDeserializer.INSTANCE);
             module.addDeserializer(LocalDateTime.class, LocalDateTimeDeserializer.INSTANCE);

@@ -25,8 +25,8 @@ import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.exception.SerializerException;
 import io.joyrpc.protocol.message.Invocation;
 
 import java.io.IOException;
@@ -52,7 +52,7 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
             case START_OBJECT:
                 return parse(parser);
             default:
-                throw new CodecException("Error occurs while parsing invocation");
+                throw new SerializerException("Error occurs while parsing invocation");
         }
 
     }
@@ -85,7 +85,7 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
                 }
             }
         } catch (ClassNotFoundException | NoSuchMethodException | MethodOverloadException e) {
-            throw new IOException(e.getMessage(), e);
+            throw new SerializerException(e.getMessage(), e);
         }
         return invocation;
     }
@@ -102,7 +102,7 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
             case VALUE_NULL:
                 return null;
             default:
-                throw new IOException("Error occurs while parsing invocation");
+                throw new SerializerException("Error occurs while parsing invocation");
         }
     }
 
@@ -119,7 +119,7 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
             case VALUE_NULL:
                 return null;
             default:
-                throw new IOException("Error occurs while parsing invocation");
+                throw new SerializerException("Error occurs while parsing invocation");
         }
     }
 
@@ -138,11 +138,11 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
                 break;
             case VALUE_NULL:
                 if (!nullable) {
-                    throw new CodecException("syntax error:" + field + " can not be null");
+                    throw new SerializerException("syntax error:" + field + " can not be null");
                 }
                 break;
             default:
-                throw new CodecException("syntax error:" + field + " can not be null");
+                throw new SerializerException("syntax error:" + field + " can not be null");
         }
     }
 
@@ -162,17 +162,17 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
                     objects[i] = parser.readValueAs(new SimpleTypeReference(types[i]));
                 }
                 if (parser.nextToken() != END_ARRAY) {
-                    throw new IOException("The argument size must be " + types.length);
+                    throw new SerializerException("The argument size must be " + types.length);
                 }
                 return objects;
             case VALUE_NULL:
                 if (types.length == 0) {
                     return new Object[0];
                 } else {
-                    throw new IOException("syntax error: args can not be null");
+                    throw new SerializerException("syntax error: args can not be null");
                 }
             default:
-                throw new IOException("Error occurs while parsing invocation");
+                throw new SerializerException("Error occurs while parsing invocation");
         }
     }
 }

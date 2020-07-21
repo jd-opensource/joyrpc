@@ -40,7 +40,7 @@ import static io.joyrpc.protocol.message.Invocation.*;
 /**
  * Invocation反序列化
  */
-public class InvocationDeserializer extends JsonDeserializer<Invocation> {
+public class InvocationDeserializer extends AbstractDeserializer<Invocation> {
 
     public static final JsonDeserializer INSTANCE = new InvocationDeserializer();
 
@@ -120,29 +120,6 @@ public class InvocationDeserializer extends JsonDeserializer<Invocation> {
                 return null;
             default:
                 throw new SerializerException("Error occurs while parsing invocation");
-        }
-    }
-
-    /**
-     * 读取字符串
-     *
-     * @param parser   解析器
-     * @param field    字段
-     * @param nullable 是否可以null
-     * @param consumer 值消费者
-     */
-    protected void readString(final JsonParser parser, String field, boolean nullable, Consumer<String> consumer) throws IOException {
-        switch (parser.nextToken()) {
-            case VALUE_STRING:
-                consumer.accept(parser.getText());
-                break;
-            case VALUE_NULL:
-                if (!nullable) {
-                    throw new SerializerException("syntax error:" + field + " can not be null");
-                }
-                break;
-            default:
-                throw new SerializerException("syntax error:" + field + " can not be null");
         }
     }
 

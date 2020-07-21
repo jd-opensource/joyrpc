@@ -22,9 +22,10 @@ package io.joyrpc.codec.serialization.jackson;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.*;
+import com.fasterxml.jackson.databind.module.SimpleDeserializers;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.databind.module.SimpleSerializers;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.codec.serialization.jackson.java8.*;
@@ -68,71 +69,71 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
 
     @Override
     public Serializer getSerializer() {
-        return JacksonnSerializer.INSTANCE;
+        return JacksonSerializer.INSTANCE;
     }
 
     @Override
     public void writeJSONString(final OutputStream os, final Object object) throws SerializerException {
-        JacksonnSerializer.INSTANCE.writeJSONString(os, object);
+        JacksonSerializer.INSTANCE.writeJSONString(os, object);
     }
 
     @Override
     public String toJSONString(final Object object) throws SerializerException {
-        return JacksonnSerializer.INSTANCE.toJSONString(object);
+        return JacksonSerializer.INSTANCE.toJSONString(object);
     }
 
     @Override
     public byte[] toJSONBytes(final Object object) throws SerializerException {
-        return JacksonnSerializer.INSTANCE.toJSONBytes(object);
+        return JacksonSerializer.INSTANCE.toJSONBytes(object);
     }
 
     @Override
     public <T> T parseObject(final String text, final Type type) throws SerializerException {
-        return JacksonnSerializer.INSTANCE.parseObject(text, type);
+        return JacksonSerializer.INSTANCE.parseObject(text, type);
     }
 
     @Override
     public <T> T parseObject(final String text, final TypeReference<T> reference) throws SerializerException {
-        return JacksonnSerializer.INSTANCE.parseObject(text, reference);
+        return JacksonSerializer.INSTANCE.parseObject(text, reference);
     }
 
     @Override
     public <T> T parseObject(final InputStream is, final Type type) throws SerializerException {
-        return JacksonnSerializer.INSTANCE.parseObject(is, type);
+        return JacksonSerializer.INSTANCE.parseObject(is, type);
     }
 
     @Override
     public <T> T parseObject(final InputStream is, final TypeReference<T> reference) throws SerializerException {
-        return JacksonnSerializer.INSTANCE.parseObject(is, reference);
+        return JacksonSerializer.INSTANCE.parseObject(is, reference);
     }
 
     @Override
     public void parseArray(final Reader reader, final Function<Function<Type, Object>, Boolean> function) throws SerializerException {
-        JacksonnSerializer.INSTANCE.parseArray(reader, function);
+        JacksonSerializer.INSTANCE.parseArray(reader, function);
     }
 
     @Override
     public void parseObject(final Reader reader, final BiFunction<String, Function<Type, Object>, Boolean> function) throws SerializerException {
-        JacksonnSerializer.INSTANCE.parseObject(reader, function);
+        JacksonSerializer.INSTANCE.parseObject(reader, function);
     }
 
     @Override
     public void updateBlack(final Collection<String> blackList) {
-        JacksonnSerializer.BLACK_LIST.updateBlack(blackList);
+        JacksonSerializer.BLACK_LIST.updateBlack(blackList);
     }
 
     /**
      * JSON序列化和反序列化实现
      */
-    protected static class JacksonnSerializer implements Serializer, Json {
+    protected static class JacksonSerializer implements Serializer, Json {
 
         protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/jackson.blacklist",
                 "META-INF/permission/jackson.blacklist").load();
-        protected static final JacksonnSerializer INSTANCE = new JacksonnSerializer();
+        protected static final JacksonSerializer INSTANCE = new JacksonSerializer();
 
         protected ObjectMapper mapper = new ObjectMapper();
 
-        public JacksonnSerializer() {
+        public JacksonSerializer() {
             ZoneId zoneId = null;
             try {
                 zoneId = ZoneId.of("UTC");
@@ -140,6 +141,8 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             } catch (Throwable e) {
             }
             SimpleModule module = new SimpleModule();
+            module.setSerializers(new MySimpleSerializers());
+            module.setDeserializers(new MySimpleDeserializers());
             //TODO 增加java8的序列化
             module.addSerializer(Invocation.class, InvocationSerializer.INSTANCE);
             module.addSerializer(ResponsePayload.class, ResponsePayloadSerializer.INSTANCE);
@@ -335,6 +338,32 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
+        }
+    }
+
+    protected static class MySimpleSerializers extends SimpleSerializers {
+        @Override
+        public JsonSerializer<?> findSerializer(SerializationConfig config, JavaType type, BeanDescription beanDesc) {
+            JsonSerializer<?> result = super.findSerializer(config, type, beanDesc);
+            if (result != null) {
+                return result;
+            } else if (type.isThrowable()) {
+                return ThrowableSerializer.INSTANCE;
+            }
+            return null;
+        }
+    }
+
+    protected static class MySimpleDeserializers extends SimpleDeserializers {
+        @Override
+        public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config, BeanDescription beanDesc) throws JsonMappingException {
+            JsonDeserializer<?> result = super.findBeanDeserializer(type, config, beanDesc);
+            if (result != null) {
+                return result;
+            } else if (type.isThrowable()) {
+                return ThrowableDeserializer.INSTANCE;
+            }
+            return null;
         }
     }
 

@@ -30,6 +30,12 @@ import java.io.Serializable;
  */
 public class BackupShard implements Serializable {
     private static final long serialVersionUID = -1479600922503780968L;
+    public static final String NAME = "name";
+    public static final String REGION = "region";
+    public static final String DATA_CENTER = "dataCenter";
+    public static final String PROTOCOL = "protocol";
+    public static final String ADDRESS = "address";
+    public static final String WEIGHT = "weight";
     /**
      * The Name.
      */

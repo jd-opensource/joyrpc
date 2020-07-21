@@ -367,6 +367,11 @@ public class Constants {
      */
     public final static String KEY_TOKEN = "token";
 
+    public final static String FIELD_MESSAGE="message";
+    public final static String FIELD_CAUSE="cause";
+    public final static String FIELD_STACKTRACE="stackTrace";
+    public final static String ANNOTATION_TYPE="@type";
+
     /*======================= RPC Context Parameter Key name =======================*/
     /**
      * 内部使用的key前缀，防止和自定义key冲突

@@ -40,12 +40,12 @@ public class BackupShardSerializer extends JsonSerializer<BackupShard> {
             gen.writeNull();
         } else {
             gen.writeStartObject();
-            gen.writeStringField("name", shard.getName());
-            gen.writeStringField("region", shard.getRegion());
-            gen.writeStringField("dataCenter", shard.getDataCenter());
-            gen.writeStringField("protocol", shard.getProtocol());
-            gen.writeStringField("address", shard.getAddress());
-            gen.writeNumberField("weight", shard.getWeight());
+            gen.writeStringField(BackupShard.NAME, shard.getName());
+            gen.writeStringField(BackupShard.REGION, shard.getRegion());
+            gen.writeStringField(BackupShard.DATA_CENTER, shard.getDataCenter());
+            gen.writeStringField(BackupShard.PROTOCOL, shard.getProtocol());
+            gen.writeStringField(BackupShard.ADDRESS, shard.getAddress());
+            gen.writeNumberField(BackupShard.WEIGHT, shard.getWeight());
             gen.writeEndObject();
         }
     }

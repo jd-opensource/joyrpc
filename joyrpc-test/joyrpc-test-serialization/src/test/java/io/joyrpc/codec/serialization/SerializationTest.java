@@ -162,6 +162,22 @@ public class SerializationTest {
     }
 
     @Test
+    public void testThrowable() {
+
+        Json fastJson = JSON.get("json@fastjson");
+        Json jackson = JSON.get("json@jackson");
+        try {
+            Integer.parseInt("String");
+        } catch (NumberFormatException e) {
+            RuntimeException runtimeException = new RuntimeException(e);
+            String serializedException = jackson.toJSONString(runtimeException);
+            System.out.println(serializedException);
+            Throwable throwable = fastJson.parseObject(serializedException, Throwable.class);
+            throwable.printStackTrace();
+        }
+    }
+
+    @Test
     public void testLocale() {
         serializeAndDeserialize(new Locale("zh", "CN", ""));
     }

@@ -30,7 +30,6 @@ import io.joyrpc.util.ClassUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.function.Consumer;
 
 import static io.joyrpc.protocol.message.Invocation.CLASS_NAME;
 import static io.joyrpc.protocol.message.ResponsePayload.EXCEPTION;
@@ -40,7 +39,7 @@ import static io.joyrpc.util.GenericMethod.getReturnGenericType;
 /**
  * ResponsePayload反序列化
  */
-public class ResponsePayloadDeserializer extends JsonDeserializer<ResponsePayload> {
+public class ResponsePayloadDeserializer extends AbstractDeserializer<ResponsePayload> {
 
     public static final JsonDeserializer INSTANCE = new ResponsePayloadDeserializer();
 
@@ -52,7 +51,7 @@ public class ResponsePayloadDeserializer extends JsonDeserializer<ResponsePayloa
             case START_OBJECT:
                 return parse(parser);
             default:
-                throw new SerializerException("Error occurs while parsing invocation");
+                throw new SerializerException("Error occurs while parsing responsePayload");
         }
 
     }
@@ -67,16 +66,16 @@ public class ResponsePayloadDeserializer extends JsonDeserializer<ResponsePayloa
     protected ResponsePayload parse(final JsonParser parser) throws IOException {
         ResponsePayload payload = new ResponsePayload();
         String key;
-        String[] typeNames = new String[0];
+        String typeName = null;
         try {
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 key = parser.currentName();
                 if (CLASS_NAME.equals(key)) {
-                    readString(parser, CLASS_NAME, false, v -> typeNames[0] = v);
+                    typeName = readString(parser, CLASS_NAME, false);
                 } else if (RESPONSE.equals(key)) {
-                    payload.setResponse(readResponse(parser, typeNames[0]));
+                    payload.setResponse(readResponse(parser, typeName));
                 } else if (EXCEPTION.equals(key)) {
-                    payload.setException(readException(parser, typeNames[0]));
+                    payload.setException(readException(parser, typeName));
                 }
             }
         } catch (ClassNotFoundException e) {
@@ -125,29 +124,6 @@ public class ResponsePayloadDeserializer extends JsonDeserializer<ResponsePayloa
                 return null;
             default:
                 throw new SerializerException("Error occurs while parsing responsePayload");
-        }
-    }
-
-    /**
-     * 读取字符串
-     *
-     * @param parser   解析器
-     * @param field    字段
-     * @param nullable 是否可以null
-     * @param consumer 值消费者
-     */
-    protected void readString(final JsonParser parser, String field, boolean nullable, Consumer<String> consumer) throws IOException {
-        switch (parser.nextToken()) {
-            case VALUE_STRING:
-                consumer.accept(parser.getText());
-                break;
-            case VALUE_NULL:
-                if (!nullable) {
-                    throw new SerializerException("syntax error:" + field + " can not be null");
-                }
-                break;
-            default:
-                throw new SerializerException("syntax error:" + field + " can not be null");
         }
     }
 

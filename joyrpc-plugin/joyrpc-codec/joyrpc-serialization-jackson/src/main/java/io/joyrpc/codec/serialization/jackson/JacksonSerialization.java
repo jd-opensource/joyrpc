@@ -128,7 +128,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
     protected static class JacksonSerializer implements Serializer, Json {
 
         protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/jackson.blacklist",
-                "META-INF/permission/jackson.blacklist").load();
+                "META-INF/permission/jackson.blacklist");
         protected static final JacksonSerializer INSTANCE = new JacksonSerializer();
 
         protected ObjectMapper mapper = new ObjectMapper();

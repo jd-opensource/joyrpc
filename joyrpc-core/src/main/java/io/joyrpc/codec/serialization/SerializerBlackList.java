@@ -43,7 +43,7 @@ public class SerializerBlackList implements BlackList<String> {
 
     public SerializerBlackList(String... blackListFiles) {
         this.blackListFiles = blackListFiles;
-        this.locals = add(new HashSet<>(200), Resource.lines(blackListFiles, false));
+        this.locals = add(new HashSet<>(200), Resource.lines(blackListFiles, true));
         this.blacks = merge(locals, remotes);
     }
 

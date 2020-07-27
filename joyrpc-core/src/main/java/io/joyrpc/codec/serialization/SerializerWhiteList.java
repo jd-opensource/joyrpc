@@ -55,7 +55,7 @@ public class SerializerWhiteList implements WhiteList<String> {
         this.enabled = VARIABLE.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED);
         this.whiteListFiles = whiteListFiles;
         if (whiteListFiles != null) {
-            updateWhite(Resource.lines(whiteListFiles, false));
+            updateWhite(Resource.lines(whiteListFiles, true, true));
         }
     }
 

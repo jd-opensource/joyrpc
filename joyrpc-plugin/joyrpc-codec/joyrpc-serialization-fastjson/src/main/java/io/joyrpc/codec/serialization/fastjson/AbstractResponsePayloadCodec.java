@@ -190,11 +190,11 @@ public abstract class AbstractResponsePayloadCodec extends AbstractSerializer im
                 Throwable exception = payload.getException();
                 Object response = payload.getResponse();
                 if (response != null) {
-                    write(serializer, RES_CLASS, getTypeName(response, payload.getType()), AFTER);
-                    write(serializer, RESPONSE, response, NONE);
+                    write(serializer, RES_CLASS, getTypeName(response, payload.getType()), NONE);
+                    write(serializer, RESPONSE, response, BEFORE);
                 } else if (exception != null) {
-                    write(serializer, RES_CLASS, getCanonicalName(exception.getClass()), AFTER);
-                    write(serializer, EXCEPTION, exception, NONE);
+                    write(serializer, RES_CLASS, getCanonicalName(exception.getClass()), NONE);
+                    write(serializer, EXCEPTION, exception, BEFORE);
                 }
             }
             writeObjectEnd(serializer);

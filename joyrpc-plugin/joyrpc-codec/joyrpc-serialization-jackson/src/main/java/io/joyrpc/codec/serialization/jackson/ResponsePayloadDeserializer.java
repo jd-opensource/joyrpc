@@ -31,9 +31,7 @@ import io.joyrpc.util.ClassUtils;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
-import static io.joyrpc.protocol.message.Invocation.CLASS_NAME;
-import static io.joyrpc.protocol.message.ResponsePayload.EXCEPTION;
-import static io.joyrpc.protocol.message.ResponsePayload.RESPONSE;
+import static io.joyrpc.protocol.message.ResponsePayload.*;
 import static io.joyrpc.util.GenericMethod.getReturnGenericType;
 
 /**
@@ -70,8 +68,8 @@ public class ResponsePayloadDeserializer extends AbstractDeserializer<ResponsePa
         try {
             while (parser.nextToken() != JsonToken.END_OBJECT) {
                 key = parser.currentName();
-                if (CLASS_NAME.equals(key)) {
-                    typeName = readString(parser, CLASS_NAME, false);
+                if (RES_CLASS.equals(key)) {
+                    typeName = readString(parser, RES_CLASS, false);
                 } else if (RESPONSE.equals(key)) {
                     payload.setResponse(readResponse(parser, typeName));
                 } else if (EXCEPTION.equals(key)) {

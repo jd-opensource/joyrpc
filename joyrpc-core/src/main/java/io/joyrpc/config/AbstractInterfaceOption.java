@@ -739,6 +739,14 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             }
             //处理返回值
             handleGenericType(genericMethod.getReturnType(), genericMethod.getMethod().getGenericReturnType(), whiteList);
+            //处理异常类
+            Type[] exceptionTypes = genericMethod.getMethod().getGenericExceptionTypes();
+            if (exceptionTypes != null) {
+                GenericType[] genericExceptionTypes = genericMethod.getExceptions();
+                for (int i = 0; i < exceptionTypes.length; i++) {
+                    handleGenericType(genericExceptionTypes[i], paramTypes[i], whiteList);
+                }
+            }
         }
 
         /**

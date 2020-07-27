@@ -28,6 +28,7 @@ import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.Name;
+import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcMethod;
@@ -196,6 +197,22 @@ public class SerializationTest {
         target = jackson.parseObject(value, ResponsePayload.class);
         Assert.assertNotNull(target.getResponse());
         Assert.assertEquals(target.getResponse().getClass(), Apple.class);
+    }
+
+    @Test
+    public void testInvocation() {
+        Json fastJson = JSON.get("json@fastjson");
+        Json jackson = JSON.get("json@jackson");
+        Invocation invocation = new Invocation();
+        invocation.setClassName(HelloGrpc.class.getName());
+        invocation.setMethodName("hello");
+        invocation.setAlias("test");
+        invocation.setArgs(new Object[]{"111", PhoneType.HOME});
+        invocation.addAttachment("test", Boolean.TRUE);
+        String value = fastJson.toJSONString(invocation);
+        Invocation target = jackson.parseObject(value, Invocation.class);
+        Assert.assertNotNull(target.getArgs());
+        Assert.assertArrayEquals(target.getArgs(), new Object[]{"111", PhoneType.HOME});
     }
 
     @Test

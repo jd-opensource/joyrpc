@@ -78,7 +78,7 @@ public class SerializerWhiteList implements WhiteList<String> {
         if (targets != null && !targets.isEmpty()) {
             targets.forEach(target -> {
                 if (target != null && !target.isEmpty()) {
-                    whites.put(target, Boolean.TRUE);
+                    whites.putIfAbsent(target, Boolean.TRUE);
                 }
             });
         }

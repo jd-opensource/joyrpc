@@ -21,8 +21,8 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.Callback;
-import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.annotation.CallbackArg;
+import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
@@ -31,7 +31,6 @@ import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.codec.serialization.SerializerWhiteList;
 import io.joyrpc.constants.ExceptionCode;
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.Parametric;
@@ -41,8 +40,10 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.*;
 import io.joyrpc.util.GenericClass;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 
 import javax.validation.Validation;
@@ -583,7 +584,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.callback = callback;
             this.description = getDesc(types);
             this.whiteList = SerializerWhiteList.getGlobalWhitelist();
-            this.whiteList.setEnabled(GlobalContext.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED));
             this.updateGlobalSerializerWhiteList();
         }
 

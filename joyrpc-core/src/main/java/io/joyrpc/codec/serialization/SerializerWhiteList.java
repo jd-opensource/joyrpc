@@ -20,44 +20,43 @@ package io.joyrpc.codec.serialization;
  * #L%
  */
 
-import io.joyrpc.context.GlobalContext;
 import io.joyrpc.permission.WhiteList;
 import io.joyrpc.util.Resource;
 
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.constants.Constants.DEFAULT_SERIALIZER_WHITELIST_ENABLED;
 import static io.joyrpc.constants.Constants.SERIALIZER_WHITELIST_ENABLED;
+import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
  * 序列化白名单，处理安全漏洞
  */
 public class SerializerWhiteList implements WhiteList<String> {
 
-    protected static final SerializerWhiteList GLOBAL_WHITELIST = new SerializerWhiteList(
-            "META-INF/system_serialization_type", "META-INF/permission/serializer.whitelist").load();
-
+    /**
+     * 是否启用
+     */
     protected boolean enabled;
 
-    protected Set<String> whites = new HashSet<>();
+    /**
+     * 白名单
+     */
+    protected Map<String, Boolean> whites = new ConcurrentHashMap<>();
 
+    /**
+     * 白名单文件
+     */
     protected String[] whiteListFiles;
 
     public SerializerWhiteList(String... whiteListFiles) {
-        this.enabled = GlobalContext.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED);
+        this.enabled = VARIABLE.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED);
         this.whiteListFiles = whiteListFiles;
-    }
-
-    /**
-     * 加载本地白名单
-     *
-     * @return 黑白名单
-     */
-    public synchronized SerializerWhiteList load() {
-        updateWhite(Resource.lines(whiteListFiles, false));
-        return this;
+        if (whiteListFiles != null) {
+            updateWhite(Resource.lines(whiteListFiles, false));
+        }
     }
 
     /**
@@ -71,21 +70,37 @@ public class SerializerWhiteList implements WhiteList<String> {
 
     @Override
     public boolean isWhite(String target) {
-        return !enabled || whites.contains(target);
+        return !enabled || whites.containsKey(target);
     }
 
     @Override
-    public void updateWhite(Collection<String> targets) {
+    public synchronized void updateWhite(final Collection<String> targets) {
         if (targets != null && !targets.isEmpty()) {
             targets.forEach(target -> {
                 if (target != null && !target.isEmpty()) {
-                    whites.add(target);
+                    whites.put(target, Boolean.TRUE);
                 }
             });
         }
     }
 
+    /**
+     * 全局配置的序列化白名单
+     *
+     * @return 全局配置的序列化白名单
+     */
     public static SerializerWhiteList getGlobalWhitelist() {
-        return GLOBAL_WHITELIST;
+        return GlobalSerializerWhiteList.GLOBAL_WHITELIST;
+    }
+
+    /**
+     * 全局序列化白名单
+     */
+    protected static class GlobalSerializerWhiteList {
+        /**
+         * 全局的白名单
+         */
+        protected static final SerializerWhiteList GLOBAL_WHITELIST = new SerializerWhiteList(
+                "META-INF/system_serialization_type", "user_serialization_type");
     }
 }

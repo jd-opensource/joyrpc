@@ -33,27 +33,18 @@ import java.util.Set;
 public class SerializerBlackList implements BlackList<String> {
 
     //合并后的黑名单
-    protected volatile Set<String> blacks = new HashSet<>(0);
+    protected volatile Set<String> blacks;
     //本地黑名单
-    protected Set<String> locals = new HashSet<>(0);
+    protected Set<String> locals;
     //远程黑名单
-    protected Set<String> remotes = new HashSet<>(0);
+    protected Set<String> remotes;
     //本地黑名单文件候选者
     protected String[] blackListFiles;
 
     public SerializerBlackList(String... blackListFiles) {
         this.blackListFiles = blackListFiles;
-    }
-
-    /**
-     * 加载本地黑名单
-     *
-     * @return 黑白名单
-     */
-    public synchronized SerializerBlackList load() {
-        locals = add(new HashSet<>(200), Resource.lines(blackListFiles, false));
-        blacks = merge(locals, remotes);
-        return this;
+        this.locals = add(new HashSet<>(200), Resource.lines(blackListFiles, false));
+        this.blacks = merge(locals, remotes);
     }
 
     @Override
@@ -70,9 +61,18 @@ public class SerializerBlackList implements BlackList<String> {
      * @return
      */
     protected Set<String> merge(final Set<String> locals, final Set<String> remotes) {
-        Set<String> result = new HashSet<>(remotes.size() + locals.size());
-        result.addAll(locals);
-        result.addAll(remotes);
+        int capacity = remotes != null ? remotes.size() : 0;
+        capacity += locals != null ? locals.size() : 0;
+        if (capacity == 0) {
+            return null;
+        }
+        Set<String> result = new HashSet<>(capacity);
+        if (locals != null) {
+            result.addAll(locals);
+        }
+        if (remotes != null) {
+            result.addAll(remotes);
+        }
         return result;
     }
 
@@ -96,6 +96,6 @@ public class SerializerBlackList implements BlackList<String> {
 
     @Override
     public boolean isBlack(final String clazz) {
-        return blacks.contains(clazz);
+        return blacks != null && blacks.contains(clazz);
     }
 }

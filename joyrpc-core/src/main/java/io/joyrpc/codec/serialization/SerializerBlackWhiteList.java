@@ -21,6 +21,7 @@ package io.joyrpc.codec.serialization;
  */
 
 import io.joyrpc.permission.BlackWhiteList;
+
 import java.util.Collection;
 
 /**
@@ -44,16 +45,7 @@ public class SerializerBlackWhiteList implements BlackWhiteList<String> {
      * @param blackListFiles 黑名单文件
      */
     public SerializerBlackWhiteList(String... blackListFiles) {
-        this(new SerializerBlackList(blackListFiles).load());
-    }
-
-    /**
-     * 构造方法
-     *
-     * @param blackList 黑名单
-     */
-    public SerializerBlackWhiteList(SerializerBlackList blackList) {
-        this(blackList, SerializerWhiteList.getGlobalWhitelist());
+        this(new SerializerBlackList(blackListFiles), SerializerWhiteList.getGlobalWhitelist());
     }
 
     /**

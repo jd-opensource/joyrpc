@@ -20,5 +20,6 @@
         <module>joyrpc-compression-snappy</module>
         <module>joyrpc-compression-lzma</module>
         <module>joyrpc-compression-lz4</module>
+        <module>joyrpc-serialization-jackson</module>
     </modules>
 </project>

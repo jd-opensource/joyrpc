@@ -41,6 +41,11 @@
         </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-jackson</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-kryo</artifactId>
             <version>${project.version}</version>
         </dependency>

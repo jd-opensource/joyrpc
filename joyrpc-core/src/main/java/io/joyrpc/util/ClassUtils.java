@@ -80,6 +80,8 @@ public class ClassUtils {
      */
     protected final static Map<Class<?>, ClassMeta> classMetas = new ConcurrentHashMap<>(5000);
 
+    protected static Map<Class, Optional<ThrowableCreation>> throwableCreations = new ConcurrentHashMap<>();
+
     static {
         //这些类型不能用类加载器加载
         nameTypes.put("void", void.class);
@@ -797,6 +799,87 @@ public class ClassUtils {
     public static GrpcConversion getGrpcConversion(final Class<?> clazz) throws CreationException {
         ClassMeta meta = getClassMeta(clazz);
         return meta == null ? null : meta.getConversion();
+    }
+
+    /**
+     * 构建异常信息
+     *
+     * @param exClass    异常类
+     * @param message    错误信息
+     * @param cause      原因
+     * @param stackTrace 堆栈
+     * @return
+     * @throws CreationException
+     */
+    public static Throwable createException(final Class<?> exClass, final String message, final Throwable cause, StackTraceElement[] stackTrace) throws CreationException {
+        Throwable result = null;
+        if (exClass == null) {
+            result = new Exception(message, cause);
+        } else {
+            if (!Throwable.class.isAssignableFrom(exClass)) {
+                throw new CreationException("type not match, not Throwable. " + exClass.getName());
+            }
+            Optional<ThrowableCreation> optional = throwableCreations.computeIfAbsent(exClass, o -> {
+                Constructor<?> constructor0 = null;
+                Constructor<?> constructor1 = null;
+                Constructor<?> constructor2 = null;
+                Constructor<?> constructorNull = null;
+                Class<?>[] types;
+                boolean nullable;
+                //遍历构造函数
+                for (Constructor<?> constructor : o.getConstructors()) {
+                    types = constructor.getParameterTypes();
+                    if (types.length == 0) {
+                        //无参构造函数
+                        constructor0 = constructor;
+                    } else if (types.length == 1 && types[0] == String.class) {
+                        //只带消息参数的构造函数
+                        constructor1 = constructor;
+                    } else if (types.length == 2 && types[0] == String.class && types[1] == Throwable.class) {
+                        //带消息和异常参数的构造函数
+                        constructor2 = constructor;
+                        break;
+                    } else if (constructorNull == null) {
+                        //参数都可以为空的构造函数
+                        nullable = true;
+                        for (Class<?> type : types) {
+                            if (type.isPrimitive()) {
+                                nullable = false;
+                                break;
+                            }
+                        }
+                        if (nullable) {
+                            constructorNull = constructor;
+                        }
+                    }
+                }
+
+                if (constructor2 != null) {
+                    return Optional.of(new ThrowableConstructor2(constructor2));
+                } else if (constructor1 != null) {
+                    return Optional.of(new ThrowableConstructor1(constructor1));
+                } else if (constructor0 != null) {
+                    return Optional.of(new ThrowableConstructor0(constructor0));
+                } else if (constructorNull != null) {
+                    return Optional.of(new ThrowableConstructorNull(constructorNull));
+                }
+
+                return Optional.empty();
+            });
+
+            ThrowableCreation instantiation = optional.get();
+            try {
+
+                result = instantiation == null ? new Exception(message, cause) : instantiation.newInstance(message, cause);
+            } catch (Exception e) {
+                throw new CreationException("create instance error", e);
+            }
+        }
+        if (stackTrace != null) {
+            result.setStackTrace(stackTrace);
+        }
+        return result;
+
     }
 
     /**
@@ -2190,6 +2273,93 @@ public class ClassUtils {
             }
         }
 
+    }
+
+    /**
+     * 实例化接口
+     */
+    @FunctionalInterface
+    protected interface ThrowableCreation {
+
+        /**
+         * 构造
+         *
+         * @return
+         * @throws CreationException
+         */
+        Throwable newInstance(String message, Throwable cause) throws InstantiationException, IllegalAccessException,
+                IllegalArgumentException, InvocationTargetException;
+    }
+
+    /**
+     * 无参数构造函数实
+     */
+    protected static class ThrowableConstructor0 implements ThrowableCreation {
+
+        protected Constructor constructor;
+
+        public ThrowableConstructor0(final Constructor constructor) {
+            this.constructor = constructor;
+            if (!constructor.isAccessible()) {
+                constructor.setAccessible(true);
+            }
+        }
+
+        public Throwable newInstance(final String message, final Throwable cause) throws InstantiationException, IllegalAccessException,
+                IllegalArgumentException, InvocationTargetException {
+            return (Throwable) constructor.newInstance();
+        }
+    }
+
+    /**
+     * 参数为消息的构造函数
+     */
+    protected static class ThrowableConstructor1 extends ThrowableConstructor0 {
+
+        public ThrowableConstructor1(Constructor constructor) {
+            super(constructor);
+        }
+
+        @Override
+        public Throwable newInstance(final String message, final Throwable cause) throws InstantiationException, IllegalAccessException,
+                IllegalArgumentException, InvocationTargetException {
+            return (Throwable) constructor.newInstance(message);
+        }
+    }
+
+    /**
+     * 参数为消息和异常的构造函数
+     */
+    protected static class ThrowableConstructor2 extends ThrowableConstructor0 {
+
+        public ThrowableConstructor2(Constructor constructor) {
+            super(constructor);
+        }
+
+        @Override
+        public Throwable newInstance(final String message, final Throwable cause) throws InstantiationException, IllegalAccessException,
+                IllegalArgumentException, InvocationTargetException {
+            return (Throwable) constructor.newInstance(message, cause);
+        }
+    }
+
+    /**
+     * 参数全部可为空的构造函数
+     */
+    protected static class ThrowableConstructorNull extends ThrowableConstructor0 {
+
+        protected Object[] params;
+
+        public ThrowableConstructorNull(Constructor constructor) {
+            super(constructor);
+            params = new Object[constructor.getParameterCount()];
+        }
+
+        @Override
+        public Throwable newInstance(final String message, final Throwable cause) throws InstantiationException, IllegalAccessException,
+                IllegalArgumentException, InvocationTargetException {
+            return (Throwable) constructor.newInstance(params);
+        }
     }
 
 }

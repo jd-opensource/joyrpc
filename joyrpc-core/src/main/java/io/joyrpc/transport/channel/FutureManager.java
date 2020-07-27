@@ -71,6 +71,7 @@ public class FutureManager<I, M> {
         this.channel = channel;
         this.idGenerator = idGenerator;
         this.consumer = id -> {
+            //TODO 这个是timer的线程触发，需要确保future的链式处理很快。如果长时间占用线程，会影响其它的定时逻辑
             EnhanceCompletableFuture<I, M> future = futures.remove(id);
             if (future != null) {
                 counter.decrementAndGet();

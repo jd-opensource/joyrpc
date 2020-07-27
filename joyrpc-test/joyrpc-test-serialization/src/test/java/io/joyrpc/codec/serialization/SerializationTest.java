@@ -29,6 +29,7 @@ import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,8 +49,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
 
-import static io.joyrpc.Plugin.GRPC_FACTORY;
-import static io.joyrpc.Plugin.SERIALIZATION;
+import static io.joyrpc.Plugin.*;
 
 public class SerializationTest {
 
@@ -137,6 +137,44 @@ public class SerializationTest {
         };
 
         serializeAndDeserialize(times);
+    }
+
+    @Test
+    public void testJsonTime() {
+        ZoneId zoneId = ZoneId.of("UTC");
+        Object[] times = new Object[]{new java.util.Date(), new Date(SystemClock.now()), Calendar.getInstance(),
+                Duration.ofMillis(1000), Instant.now(), LocalDateTime.now(),
+                LocalDate.now(), LocalTime.now(), MonthDay.now(), OffsetTime.now(),
+                Period.of(0, 1, 1), YearMonth.of(0, 1), Year.of(2000),
+                ZonedDateTime.of(LocalDateTime.now(zoneId), zoneId), zoneId, ZoneOffset.ofTotalSeconds(0)
+        };
+        Json fastJson = JSON.get("json@fastjson");
+        Json jackson = JSON.get("json@jackson");
+        for (Object time : times) {
+            String value1 = fastJson.toJSONString(time);
+            String value2 = jackson.toJSONString(time);
+            System.out.println(time.getClass() + ":" + value1);
+            Object time1 = jackson.parseObject(value1, time.getClass());
+            Object time2 = fastJson.parseObject(value2, time.getClass());
+            Assert.assertEquals(time, time1);
+            Assert.assertEquals(time, time2);
+        }
+    }
+
+    @Test
+    public void testThrowable() {
+
+        Json fastJson = JSON.get("json@fastjson");
+        Json jackson = JSON.get("json@jackson");
+        try {
+            Integer.parseInt("String");
+        } catch (NumberFormatException e) {
+            RuntimeException runtimeException = new RuntimeException(e);
+            String serializedException = jackson.toJSONString(runtimeException);
+            System.out.println(serializedException);
+            Throwable throwable = fastJson.parseObject(serializedException, Throwable.class);
+            throwable.printStackTrace();
+        }
     }
 
     @Test

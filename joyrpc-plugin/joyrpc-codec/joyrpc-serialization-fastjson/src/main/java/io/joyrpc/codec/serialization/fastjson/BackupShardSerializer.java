@@ -52,12 +52,12 @@ public class BackupShardSerializer extends AbstractSerializer implements Autowir
             SerializeWriter out = serializer.getWriter();
             out.write('{');
             BackupShard backupShard = (BackupShard) object;
-            writeString(out, "name", backupShard.getName());
-            writeString(out, "region", backupShard.getRegion());
-            writeString(out, "dataCenter", backupShard.getDataCenter());
-            writeString(out, "protocol", backupShard.getProtocol());
-            writeString(out, "address", backupShard.getAddress());
-            out.writeFieldName("weight");
+            writeString(out, BackupShard.NAME, backupShard.getName());
+            writeString(out, BackupShard.REGION, backupShard.getRegion());
+            writeString(out, BackupShard.DATA_CENTER, backupShard.getDataCenter());
+            writeString(out, BackupShard.PROTOCOL, backupShard.getProtocol());
+            writeString(out, BackupShard.ADDRESS, backupShard.getAddress());
+            out.writeFieldName(BackupShard.WEIGHT);
             out.writeInt(backupShard.getWeight());
             out.write('}');
         }

@@ -67,5 +67,12 @@ java.time.Period
 java.time.Year
 java.time.YearMonth
 java.time.DayOfWeek
-
-
+io.joyrpc.protocol.message.negotiation.AbstractNegotiation
+io.joyrpc.protocol.message.negotiation.NegotiationRequest
+io.joyrpc.protocol.message.negotiation.NegotiationResponse
+io.joyrpc.protocol.message.Invocation
+io.joyrpc.protocol.message.ResponsePayload
+io.joyrpc.protocol.message.session.Sessionbeat
+io.joyrpc.protocol.message.heartbeat.DefaultHeartbeatResponse
+io.joyrpc.protocol.message.authentication.AuthenticationRequest
+io.joyrpc.protocol.message.authentication.AuthenticationResponse

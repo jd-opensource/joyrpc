@@ -55,6 +55,8 @@ import java.util.function.Predicate;
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
+import static io.joyrpc.codec.serialization.SerializerWhiteList.getGlobalWhitelist;
+import static io.joyrpc.config.AbstractInterfaceOption.SerializerWhiteListGetter.getGlobalWhitelistGetter;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.*;
@@ -579,7 +581,8 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.traceSpanId = method == null ? null : getTraceSpanId(grpcMethod.getClazz().getName(), method.getName());
             this.callback = callback;
             this.description = getDesc(types);
-            this.whiteList = SerializerWhiteList.getGlobalWhitelist();
+            this.whiteList = getGlobalWhitelist();
+            this.whiteListGetter = getGlobalWhitelistGetter();
             this.updateGlobalSerializerWhiteList();
         }
 
@@ -705,9 +708,14 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     }
 
     /**
-     * 白名单获取
+     * 白名单获取器
      */
     protected static class SerializerWhiteListGetter {
+
+        /**
+         * 全局 whiteListGetter
+         */
+        protected static final SerializerWhiteListGetter GLOBAL_WHITELIST_GETTER = new SerializerWhiteListGetter();
 
         /**
          * 唯一
@@ -781,15 +789,26 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             Class cl = clazz.isArray() ? clazz.getComponentType() : clazz;
             //加入白名单
             whiteList.add(cl.getName());
-            //处理字段
-            GenericClass genericClass = getGenericClass(cl);
-            //逐一处理字段
-            List<Field> fields = getFields(genericClass.getClazz());
-            for (Field field : fields) {
-                if (NONE_STATIC_FINAL_TRANSIENT_FIELD.test(field)) {
-                    handleGenericType(genericClass.get(field), field.getGenericType(), whiteList);
+            //非基础类型，处理字段
+            if (!isPrimitive(cl, null)) {
+                GenericClass genericClass = getGenericClass(cl);
+                //逐一处理字段
+                List<Field> fields = getFields(genericClass.getClazz());
+                for (Field field : fields) {
+                    if (NONE_STATIC_FINAL_TRANSIENT_FIELD.test(field)) {
+                        handleGenericType(genericClass.get(field), field.getGenericType(), whiteList);
+                    }
                 }
             }
+        }
+
+        /**
+         * 获取全局的白名单获取器
+         *
+         * @return
+         */
+        public static SerializerWhiteListGetter getGlobalWhitelistGetter() {
+            return GLOBAL_WHITELIST_GETTER;
         }
 
     }

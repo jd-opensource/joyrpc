@@ -26,6 +26,8 @@ import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.model.*;
 import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.extension.ExtensionMeta;
+import io.joyrpc.extension.Name;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
@@ -255,16 +257,18 @@ public class SerializationTest {
 
         Employee person = new Employee(0, "china", 20, 161, 65);
 
-        List<String> types = SERIALIZATION.names();
-        types.remove("xml");
-
         long count = 1000000;
         int threads = 4;
         ExecutorService service = Executors.newFixedThreadPool(threads);
         Future<SerializationTime>[] futures = new Future[threads];
 
-        for (String type : types) {
-            Serialization serialization = SERIALIZATION.get(type);
+        Name<? extends Serialization, String> name;
+        for (ExtensionMeta<Serialization, String> meta : SERIALIZATION.metas()) {
+            name = meta.getExtension();
+            if (name.getName().equals("xml")) {
+                continue;
+            }
+            Serialization serialization = meta.getTarget();
             if (serialization instanceof Registration) {
                 ((Registration) serialization).register(Employee.class);
             }
@@ -300,7 +304,7 @@ public class SerializationTest {
                 total.size += time.size;
             }
             long totalCount = count * threads;
-            System.out.println(String.format("%s encode_tps %d decode_tps %d size %d in %d threads", type,
+            System.out.println(String.format("%s@%s encode_tps %d decode_tps %d size %d in %d threads", name.getName(),meta.getProvider(),
                     totalCount * 1000000000L / total.encodeTime, totalCount * 1000000000L / total.decodeTime, total.size / totalCount, threads));
         }
     }

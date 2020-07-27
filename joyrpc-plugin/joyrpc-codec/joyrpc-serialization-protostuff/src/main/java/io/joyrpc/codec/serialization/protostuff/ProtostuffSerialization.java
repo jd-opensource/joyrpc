@@ -101,8 +101,7 @@ public class ProtostuffSerialization implements Serialization {
 
         @Override
         protected ObjectWriter createWriter(final OutputStream os, final Object object) throws IOException {
-            LinkedBuffer buffer = local.get();
-            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), new ProtostuffOutput(buffer, os), os);
+            return new ProtostuffWriter(RuntimeSchema.getSchema(object.getClass(), STRATEGY), new ProtostuffOutput(local.get(), os), os);
         }
 
         @Override

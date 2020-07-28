@@ -65,17 +65,22 @@ public class SerializerBlackWhiteList implements BlackWhiteList<String> {
             return false;
         } else if (target.contains("<")) {
             String[] names = target.split("<|>|,\\s+|,");
-            return isValid(names);
-        } else {
-            return (blackList == null || !blackList.isBlack(target))
-                    && (whiteList == null || whiteList.isWhite(target));
+            return validNames(names);
         }
+        return validName(target);
     }
 
-    protected boolean isValid(String... targetNames) {
+    protected boolean validName(String target) {
+        if (target.endsWith("[]")) {
+            target = target.substring(0, target.length() - 2);
+        }
+        return (blackList == null || !blackList.isBlack(target))
+                && (whiteList == null || whiteList.isWhite(target));
+    }
+
+    protected boolean validNames(String... targetNames) {
         for (String name : targetNames) {
-            if ((blackList != null && blackList.isBlack(name))
-                    || (whiteList != null && !whiteList.isWhite(name))) {
+            if (!validName(name)) {
                 return false;
             }
         }

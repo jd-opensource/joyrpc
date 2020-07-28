@@ -21,6 +21,11 @@ java.lang.String
 java.lang.Void
 java.math.BigDecimal
 java.util.Currency
+java.util.Collection
+java.util.List
+java.util.Map
+java.util.Set
+java.util.Queue
 java.util.ArrayList
 java.util.Date
 java.util.EnumMap
@@ -81,6 +86,9 @@ sun.util.calendar.ZoneInfoFile
 ##
 #### joyrpc
 ##
+io.joyrpc.cluster.discovery.backup.BackupCluster
+io.joyrpc.cluster.discovery.backup.BackupDatum
+io.joyrpc.cluster.discovery.backup.BackupShard
 io.joyrpc.Result
 io.joyrpc.protocol.message.negotiation.AbstractNegotiation
 io.joyrpc.protocol.message.negotiation.NegotiationRequest

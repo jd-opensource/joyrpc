@@ -26,6 +26,10 @@ import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.serialization.model.*;
 import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
+import io.joyrpc.extension.ExtensionMeta;
+import io.joyrpc.extension.Name;
+import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
@@ -162,7 +166,7 @@ public class SerializationTest {
     }
 
     @Test
-    public void testThrowable() {
+    public void testJsonThrowable() {
 
         Json fastJson = JSON.get("json@fastjson");
         Json jackson = JSON.get("json@jackson");
@@ -175,6 +179,40 @@ public class SerializationTest {
             Throwable throwable = fastJson.parseObject(serializedException, Throwable.class);
             throwable.printStackTrace();
         }
+    }
+
+    @Test
+    public void testJsonResponsePayload() {
+        Json fastJson = JSON.get("json@fastjson");
+        Json jackson = JSON.get("json@jackson");
+        ResponsePayload payload = new ResponsePayload();
+        payload.setException(new NumberFormatException());
+        String value = fastJson.toJSONString(payload);
+        ResponsePayload target = jackson.parseObject(value, ResponsePayload.class);
+        Assert.assertNotNull(target.getException());
+        Assert.assertEquals(target.getException().getClass(), NumberFormatException.class);
+        payload.setException(null);
+        payload.setResponse(new Apple());
+        value = fastJson.toJSONString(payload);
+        target = jackson.parseObject(value, ResponsePayload.class);
+        Assert.assertNotNull(target.getResponse());
+        Assert.assertEquals(target.getResponse().getClass(), Apple.class);
+    }
+
+    @Test
+    public void testInvocation() {
+        Json fastJson = JSON.get("json@fastjson");
+        Json jackson = JSON.get("json@jackson");
+        Invocation invocation = new Invocation();
+        invocation.setClassName(HelloGrpc.class.getName());
+        invocation.setMethodName("hello");
+        invocation.setAlias("test");
+        invocation.setArgs(new Object[]{"111", PhoneType.HOME});
+        invocation.addAttachment("test", Boolean.TRUE);
+        String value = fastJson.toJSONString(invocation);
+        Invocation target = jackson.parseObject(value, Invocation.class);
+        Assert.assertNotNull(target.getArgs());
+        Assert.assertArrayEquals(target.getArgs(), new Object[]{"111", PhoneType.HOME});
     }
 
     @Test
@@ -255,16 +293,18 @@ public class SerializationTest {
 
         Employee person = new Employee(0, "china", 20, 161, 65);
 
-        List<String> types = SERIALIZATION.names();
-        types.remove("xml");
-
         long count = 1000000;
         int threads = 4;
         ExecutorService service = Executors.newFixedThreadPool(threads);
         Future<SerializationTime>[] futures = new Future[threads];
 
-        for (String type : types) {
-            Serialization serialization = SERIALIZATION.get(type);
+        Name<? extends Serialization, String> name;
+        for (ExtensionMeta<Serialization, String> meta : SERIALIZATION.metas()) {
+            name = meta.getExtension();
+            if (name.getName().equals("xml")) {
+                continue;
+            }
+            Serialization serialization = meta.getTarget();
             if (serialization instanceof Registration) {
                 ((Registration) serialization).register(Employee.class);
             }
@@ -300,7 +340,7 @@ public class SerializationTest {
                 total.size += time.size;
             }
             long totalCount = count * threads;
-            System.out.println(String.format("%s encode_tps %d decode_tps %d size %d in %d threads", type,
+            System.out.println(String.format("%s@%s encode_tps %d decode_tps %d size %d in %d threads", name.getName(), meta.getProvider(),
                     totalCount * 1000000000L / total.encodeTime, totalCount * 1000000000L / total.decodeTime, total.size / totalCount, threads));
         }
     }

@@ -37,8 +37,8 @@ import java.util.Map;
 public class AbstractSerializer {
 
     protected static final int NONE = 0;
-    protected static final int BEFORE = 0;
-    protected static final int AFTER = 0;
+    protected static final int BEFORE = NONE + 1;
+    protected static final int AFTER = NONE + 2;
 
     /**
      * 写值

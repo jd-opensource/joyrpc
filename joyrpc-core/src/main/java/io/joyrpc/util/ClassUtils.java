@@ -1153,6 +1153,19 @@ public class ClassUtils {
     }
 
     /**
+     * 获取数组类型的最终单元class
+     *
+     * @param clazz
+     * @return
+     */
+    public static Class<?> getFinalComponentType(Class<?> clazz) {
+        if (clazz.isArray()) {
+            return getFinalComponentType(clazz.getComponentType());
+        }
+        return clazz;
+    }
+
+    /**
      * 类元数据
      */
     protected static class ClassMeta {

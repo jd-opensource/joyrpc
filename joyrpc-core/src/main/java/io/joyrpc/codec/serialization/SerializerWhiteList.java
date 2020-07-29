@@ -21,11 +21,9 @@ package io.joyrpc.codec.serialization;
  */
 
 import io.joyrpc.permission.WhiteList;
-import io.joyrpc.util.GenericClass;
-import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GenericType;
-import io.joyrpc.util.Resource;
+import io.joyrpc.util.*;
 
+import java.io.IOException;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -76,7 +74,28 @@ public class SerializerWhiteList implements WhiteList<String> {
 
     @Override
     public boolean isWhite(String target) {
-        return !enabled || whites.containsKey(target);
+        if (!enabled) {
+            return true;
+        }
+        //入参在白名单张，且为java原生异常类，加入白名单
+        if (!whites.containsKey(target)) {
+            if (target.endsWith("Exception") && target.startsWith("java.")) {
+                try {
+                    Class clazz = ClassUtils.forName(target);
+                    if (clazz.isAssignableFrom(RuntimeException.class)
+                            || clazz.isAssignableFrom(IOException.class)
+                            || clazz.isAssignableFrom(ReflectiveOperationException.class)) {
+                        whites.putIfAbsent(target, Boolean.TRUE);
+                        return true;
+                    }
+                    return false;
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -249,14 +268,7 @@ public class SerializerWhiteList implements WhiteList<String> {
             }
         }
 
-        /**
-         * 获取全局的白名单获取器
-         *
-         * @return
-         */
-        public static SerializerWhiteListGetter getGlobalWhitelistGetter() {
-            return GLOBAL_WHITELIST_GETTER;
-        }
-
     }
+
+
 }

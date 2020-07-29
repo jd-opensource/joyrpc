@@ -1,13 +1,21 @@
 #### java
 ##
 int
+[I
 byte
+[B
 short
+[S
 long
+[L
 float
+[F
 double
+[D
 boolean
+[Z
 char
+[C
 void
 java.lang.Integer
 java.lang.Byte

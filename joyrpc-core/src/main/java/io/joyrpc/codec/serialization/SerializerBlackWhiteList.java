@@ -61,30 +61,9 @@ public class SerializerBlackWhiteList implements BlackWhiteList<String> {
 
     @Override
     public boolean isValid(String target) {
-        if (target == null) {
-            return false;
-        } else if (target.contains("<")) {
-            String[] names = target.split("<|>|,\\s+|,");
-            return validNames(names);
-        }
-        return validName(target);
-    }
-
-    protected boolean validName(String target) {
-        if (target.endsWith("[]")) {
-            target = target.substring(0, target.length() - 2);
-        }
-        return (blackList == null || !blackList.isBlack(target))
+        return target != null
+                && (blackList == null || !blackList.isBlack(target))
                 && (whiteList == null || whiteList.isWhite(target));
-    }
-
-    protected boolean validNames(String... targetNames) {
-        for (String name : targetNames) {
-            if (!validName(name)) {
-                return false;
-            }
-        }
-        return true;
     }
 
     @Override

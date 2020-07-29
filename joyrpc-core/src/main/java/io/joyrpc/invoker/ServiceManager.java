@@ -30,6 +30,8 @@ import io.joyrpc.cluster.distribution.loadbalance.StickyLoadBalance;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.codec.serialization.Registration;
 import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.codec.serialization.SerializerWhiteList;
+import io.joyrpc.codec.serialization.SerializerWhiteList.SerializerWhiteListGetter;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.constants.Constants;
@@ -66,16 +68,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.cluster.Cluster.EVENT_PUBLISHER_CLUSTER;
 import static io.joyrpc.cluster.Cluster.EVENT_PUBLISHER_CLUSTER_CONF;
+import static io.joyrpc.codec.serialization.SerializerWhiteList.getGlobalWhitelist;
+import static io.joyrpc.codec.serialization.SerializerWhiteList.getGlobalWhitelistGetter;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_DUPLICATE_REFER;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_DUPLICATE_EXPORT;
+import static io.joyrpc.util.ClassUtils.getGenericClass;
 
 /**
  * 服务管理器
+ *
  * @date: 9/1/2019
  */
 public class ServiceManager {
@@ -120,6 +127,15 @@ public class ServiceManager {
      * 接口ID对照表，兼容老版本数据结构
      */
     protected Map<Long, String> interfaceIds = new ConcurrentHashMap<>();
+
+    /**
+     * 序列化白名单
+     */
+    protected SerializerWhiteList whiteList = getGlobalWhitelist();
+    /**
+     * 序列化白名单获取
+     */
+    protected SerializerWhiteListGetter whiteListGetter = getGlobalWhitelistGetter();
 
     protected ServiceManager() {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
@@ -511,7 +527,11 @@ public class ServiceManager {
      * @param clazz 类
      */
     protected void serializationRegister(final Class<?> clazz) {
-
+        //扫描接口类，将入参、返回值、异常 加入白名单
+        Set<String> whites = new LinkedHashSet<>();
+        whiteListGetter.handleGenericClass(getGenericClass(clazz), whites);
+        whiteList.updateWhite(whites);
+        //注册序列化逻辑
         List<Registration> registrations = new LinkedList<>();
         Iterable<Serialization> itr = SERIALIZATION.extensions();
         for (Serialization ser : itr) {
@@ -522,7 +542,6 @@ public class ServiceManager {
         if (registrations.isEmpty()) {
             return;
         }
-
         //遍历接口方法进行注册
         Set<Class<?>> registerClass = new LinkedHashSet<>();
         GenericChecker checker = new GenericChecker();
@@ -531,6 +550,7 @@ public class ServiceManager {
                 registerClass.add(cls);
             }
         });
+        //注册
         registrations.forEach(r -> r.register(registerClass));
     }
 

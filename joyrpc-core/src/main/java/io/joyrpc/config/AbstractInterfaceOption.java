@@ -30,6 +30,7 @@ import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.codec.serialization.SerializerWhiteList;
+import io.joyrpc.codec.serialization.SerializerWhiteList.SerializerWhiteListGetter;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
@@ -56,11 +57,10 @@ import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
 import static io.joyrpc.codec.serialization.SerializerWhiteList.getGlobalWhitelist;
-import static io.joyrpc.config.AbstractInterfaceOption.SerializerWhiteListGetter.getGlobalWhitelistGetter;
+import static io.joyrpc.codec.serialization.SerializerWhiteList.getGlobalWhitelistGetter;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.*;
-import static io.joyrpc.util.GenericChecker.NONE_STATIC_FINAL_TRANSIENT_FIELD;
 
 /**
  * 内部的接口选项
@@ -707,118 +707,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         }
     }
 
-    /**
-     * 白名单获取器
-     */
-    protected static class SerializerWhiteListGetter {
 
-        /**
-         * 全局 whiteListGetter
-         */
-        protected static final SerializerWhiteListGetter GLOBAL_WHITELIST_GETTER = new SerializerWhiteListGetter();
-
-        /**
-         * 唯一
-         */
-        protected Set<Type> uniques = new HashSet<>();
-
-        /**
-         * 处理方法的入参与返回值的白名单
-         *
-         * @param genericMethod
-         * @param whiteList
-         */
-        public void handleGenericMethod(GenericMethod genericMethod, Set<String> whiteList) {
-            //处理入参
-            Type[] paramTypes = genericMethod.getMethod().getGenericParameterTypes();
-            if (paramTypes != null) {
-                GenericType[] genericParamTypes = genericMethod.getParameters();
-                for (int i = 0; i < paramTypes.length; i++) {
-                    handleGenericType(genericParamTypes[i], paramTypes[i], whiteList);
-                }
-            }
-            //处理返回值
-            handleGenericType(genericMethod.getReturnType(), genericMethod.getMethod().getGenericReturnType(), whiteList);
-            //处理异常类
-            Type[] exceptionTypes = genericMethod.getMethod().getGenericExceptionTypes();
-            if (exceptionTypes != null) {
-                GenericType[] genericExceptionTypes = genericMethod.getExceptions();
-                for (int i = 0; i < exceptionTypes.length; i++) {
-                    handleGenericType(genericExceptionTypes[i], paramTypes[i], whiteList);
-                }
-            }
-        }
-
-        /**
-         * 处理 genericType 的白名单
-         *
-         * @param genericType
-         * @param type
-         * @param whiteList
-         */
-        public void handleGenericType(GenericType genericType, Type type, Set<String> whiteList) {
-            if (!uniques.add(type)) {
-                //已经处理过
-                return;
-            } else if (type instanceof Class) {
-                handleClass((Class) type, whiteList);
-            } else if (type instanceof ParameterizedType) {
-                ParameterizedType parameterizedType = (ParameterizedType) type;
-                //rawType
-                Type rawType = parameterizedType.getRawType();
-                handleGenericType(genericType, rawType, whiteList);
-                //actualTypeArguments
-                Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-                if (actualTypeArguments != null && actualTypeArguments.length > 0) {
-                    for (Type actualTypeArgument : actualTypeArguments) {
-                        handleGenericType(genericType, actualTypeArgument, whiteList);
-                    }
-                }
-            } else if (type instanceof TypeVariable) {
-                //变量
-                GenericType.Variable variable = genericType.getVariable(((TypeVariable) type).getName());
-                handleGenericType(genericType, variable.getGenericType(), whiteList);
-            } else if (type instanceof GenericArrayType) {
-                //泛型数组
-                handleGenericType(genericType, ((GenericArrayType) type).getGenericComponentType(), whiteList);
-            } else if (type instanceof WildcardType) {
-
-            }
-        }
-
-        /**
-         * 处理 class 的白名单
-         *
-         * @param clazz
-         * @param whiteList
-         */
-        public void handleClass(Class clazz, Set<String> whiteList) {
-            //如果是数组，获取真正的class
-            Class cl = clazz.isArray() ? clazz.getComponentType() : clazz;
-            //加入白名单
-            whiteList.add(cl.getName());
-            //非基础类型，处理字段
-            if (!isPrimitive(cl, null)) {
-                GenericClass genericClass = getGenericClass(cl);
-                //逐一处理字段
-                List<Field> fields = getFields(genericClass.getClazz());
-                for (Field field : fields) {
-                    if (NONE_STATIC_FINAL_TRANSIENT_FIELD.test(field)) {
-                        handleGenericType(genericClass.get(field), field.getGenericType(), whiteList);
-                    }
-                }
-            }
-        }
-
-        /**
-         * 获取全局的白名单获取器
-         *
-         * @return
-         */
-        public static SerializerWhiteListGetter getGlobalWhitelistGetter() {
-            return GLOBAL_WHITELIST_GETTER;
-        }
-
-    }
 
 }

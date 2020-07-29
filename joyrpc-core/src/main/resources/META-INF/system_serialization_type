@@ -82,6 +82,7 @@ java.time.Period
 java.time.Year
 java.time.YearMonth
 java.time.DayOfWeek
+java.lang.StackTraceElement
 sun.util.calendar.CalendarDate
 sun.util.calendar.CalendarSystem
 sun.util.calendar.Era

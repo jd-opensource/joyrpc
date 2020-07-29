@@ -82,7 +82,12 @@ java.time.Period
 java.time.Year
 java.time.YearMonth
 java.time.DayOfWeek
+java.lang.Throwable
+java.lang.Error
+java.lang.Exception
+java.lang.Object
 java.lang.StackTraceElement
+java.util.Collections$UnmodifiableList
 sun.util.calendar.CalendarDate
 sun.util.calendar.CalendarSystem
 sun.util.calendar.Era

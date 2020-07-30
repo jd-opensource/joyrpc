@@ -185,9 +185,12 @@ public class GenericChecker {
      * @param scope    作用域
      * @param consumer 消费者
      */
-    public void checkClass(final Class clazz, final Scope scope, final BiConsumer<Class, Scope> consumer) {
-        //参数允许是Callback
-        consumer.accept(clazz.isArray() ? clazz.getComponentType() : clazz, scope);
+    public void checkClass(Class clazz, final Scope scope, final BiConsumer<Class, Scope> consumer) {
+        //处理数组类型
+        while (clazz.isArray()) {
+            clazz = clazz.getComponentType();
+        }
+        consumer.accept(clazz, scope);
     }
 
     /**

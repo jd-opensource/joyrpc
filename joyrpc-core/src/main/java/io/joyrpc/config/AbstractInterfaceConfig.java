@@ -92,11 +92,11 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     @Valid
     protected Map<String, MethodConfig> methods;
     /**
-     * 是否注册，如果是false只订阅不注册，默认为true
+     * 是否注册
      */
     protected boolean register = true;
     /**
-     * 是否订阅服务，默认为true
+     * 是否订阅配置
      */
     protected boolean subscribe = true;
     /**

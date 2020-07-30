@@ -28,6 +28,7 @@ import io.joyrpc.com.caucho.hessian.io.SerializerFactory;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.BlackWhiteList;
+import io.joyrpc.permission.SerializerBlackWhiteList;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -64,7 +65,7 @@ public class Hessian2Serialization implements Serialization, BlackList.BlackList
      */
     protected static final class Hessian2Serializer extends AbstractSerializer {
 
-        protected static final BlackWhiteList<String> BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/hessian.blacklist",
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/hessian.blacklist",
                 "META-INF/permission/hessian.blacklist");
 
         protected static final SerializerFactory SERIALIZER_FACTORY = new SerializerFactory(Thread.currentThread().getContextClassLoader());

@@ -1,4 +1,4 @@
-package io.joyrpc.codec.serialization;
+package io.joyrpc.permission;
 
 /*-
  * #%L
@@ -20,10 +20,11 @@ package io.joyrpc.codec.serialization;
  * #L%
  */
 
-import io.joyrpc.permission.WhiteList;
-import io.joyrpc.util.*;
+import io.joyrpc.util.GenericClass;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GenericType;
+import io.joyrpc.util.Resource;
 
-import java.io.IOException;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,7 +39,7 @@ import static io.joyrpc.util.GenericChecker.NONE_STATIC_METHOD;
 /**
  * 序列化白名单，处理安全漏洞
  */
-public class SerializerWhiteList implements WhiteList<String> {
+public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.WhiteListAware {
 
     /**
      * 是否启用
@@ -48,7 +49,7 @@ public class SerializerWhiteList implements WhiteList<String> {
     /**
      * 白名单
      */
-    protected Map<String, Boolean> whites = new ConcurrentHashMap<>();
+    protected Map<Class<?>, Boolean> whites = new ConcurrentHashMap<>();
 
     /**
      * 白名单文件
@@ -73,25 +74,15 @@ public class SerializerWhiteList implements WhiteList<String> {
     }
 
     @Override
-    public boolean isWhite(String target) {
+    public boolean isWhite(Class<?> target) {
         if (!enabled) {
             return true;
         }
-        //入参在白名单张，且为java原生异常类，加入白名单
         if (!whites.containsKey(target)) {
-            if (target.endsWith("Exception") && target.startsWith("java.")) {
-                try {
-                    Class clazz = ClassUtils.forName(target);
-                    if (clazz.isAssignableFrom(RuntimeException.class)
-                            || clazz.isAssignableFrom(IOException.class)
-                            || clazz.isAssignableFrom(ReflectiveOperationException.class)) {
-                        whites.putIfAbsent(target, Boolean.TRUE);
-                        return true;
-                    }
-                    return false;
-                } catch (Exception e) {
-                    return false;
-                }
+            if (Throwable.class.isAssignableFrom(target)) {
+                //异常
+                whites.putIfAbsent(target, Boolean.TRUE);
+                return true;
             }
             return false;
         }
@@ -100,14 +91,11 @@ public class SerializerWhiteList implements WhiteList<String> {
 
     @Override
     public synchronized void updateWhite(final Collection<String> targets) {
-        if (targets != null && !targets.isEmpty()) {
+        if (targets != null) {
             targets.forEach(target -> {
-                if (target != null && !target.isEmpty()) {
-                    whites.putIfAbsent(target, Boolean.TRUE);
-                    //内部类，修改下类名，再加一下
-                    if (target.contains("$")) {
-                        whites.putIfAbsent(target.replace('$', '.'), Boolean.TRUE);
-                    }
+                try {
+                    whites.putIfAbsent(Class.forName(target), Boolean.TRUE);
+                } catch (Throwable e) {
                 }
             });
         }

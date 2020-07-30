@@ -36,6 +36,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.BlackWhiteList;
+import io.joyrpc.permission.SerializerBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 
@@ -138,7 +139,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
      */
     protected static class JsonSerializer implements Serializer, Json {
 
-        protected static final BlackWhiteList<String> BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/fastjson.blacklist",
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/fastjson.blacklist",
                 "META-INF/permission/fastjson.blacklist");
 
         protected static final JsonSerializer INSTANCE = new JsonSerializer();

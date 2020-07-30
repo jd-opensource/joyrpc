@@ -23,7 +23,7 @@ package io.joyrpc.codec.serialization.java;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.permission.BlackList;
-import io.joyrpc.permission.BlackWhiteList;
+import io.joyrpc.permission.SerializerBlackWhiteList;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -62,7 +62,7 @@ public class JavaSerialization implements Serialization, BlackList.BlackListAwar
      */
     protected static class JavaSerializer extends AbstractSerializer {
 
-        protected static final BlackWhiteList<String> BLACK_WHITE_LIST = new SerializerBlackWhiteList(
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList(
                 "permission/java.blacklist", "META-INF/permission/java.blacklist");
 
         protected static final JavaSerializer INSTANCE = new JavaSerializer();

@@ -1,4 +1,4 @@
-package io.joyrpc.codec.serialization;
+package io.joyrpc.permission;
 
 /*-
  * #%L
@@ -20,14 +20,12 @@ package io.joyrpc.codec.serialization;
  * #L%
  */
 
-import io.joyrpc.permission.BlackWhiteList;
-
 import java.util.Collection;
 
 /**
  * 序列化黑白名单
  */
-public class SerializerBlackWhiteList implements BlackWhiteList<String> {
+public class SerializerBlackWhiteList implements BlackWhiteList<Class<?>>, BlackList.BlackListAware, WhiteList.WhiteListAware {
 
     /**
      * 黑名单
@@ -60,14 +58,16 @@ public class SerializerBlackWhiteList implements BlackWhiteList<String> {
     }
 
     @Override
-    public boolean isValid(String target) {
-        return target != null
-                && (blackList == null || !blackList.isBlack(target))
+    public boolean isValid(Class<?> target) {
+        while (target.isArray()) {
+            target = target.getComponentType();
+        }
+        return (blackList == null || !blackList.isBlack(target))
                 && (whiteList == null || whiteList.isWhite(target));
     }
 
     @Override
-    public boolean isBlack(String target) {
+    public boolean isBlack(Class<?> target) {
         return blackList.isBlack(target);
     }
 
@@ -77,7 +77,7 @@ public class SerializerBlackWhiteList implements BlackWhiteList<String> {
     }
 
     @Override
-    public boolean isWhite(String target) {
+    public boolean isWhite(Class<?> target) {
         return whiteList.isWhite(target);
     }
 

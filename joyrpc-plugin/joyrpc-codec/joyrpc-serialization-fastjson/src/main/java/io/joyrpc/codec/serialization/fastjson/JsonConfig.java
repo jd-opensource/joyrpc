@@ -29,33 +29,31 @@ import io.joyrpc.permission.BlackWhiteList;
 
 import java.lang.reflect.Type;
 
-import static io.joyrpc.util.ClassUtils.getComponentType;
-
 public class JsonConfig extends ParserConfig {
 
-    protected BlackWhiteList<String> blackWhiteList;
+    protected BlackWhiteList<Class<?>> blackWhiteList;
 
-    public JsonConfig(BlackWhiteList<String> blackWhiteList) {
+    public JsonConfig(BlackWhiteList<Class<?>> blackWhiteList) {
         this.blackWhiteList = blackWhiteList;
     }
 
-    public JsonConfig(boolean fieldBase, BlackWhiteList<String> blackWhiteList) {
+    public JsonConfig(boolean fieldBase, BlackWhiteList<Class<?>> blackWhiteList) {
         super(fieldBase);
         this.blackWhiteList = blackWhiteList;
     }
 
-    public JsonConfig(ClassLoader parentClassLoader, BlackWhiteList<String> blackWhiteList) {
+    public JsonConfig(ClassLoader parentClassLoader, BlackWhiteList<Class<?>> blackWhiteList) {
         super(parentClassLoader);
         this.blackWhiteList = blackWhiteList;
     }
 
-    public JsonConfig(ASMDeserializerFactory asmFactory, BlackWhiteList<String> blackWhiteList) {
+    public JsonConfig(ASMDeserializerFactory asmFactory, BlackWhiteList<Class<?>> blackWhiteList) {
         super(asmFactory);
         this.blackWhiteList = blackWhiteList;
     }
 
     public ObjectDeserializer getDeserializer(final Class<?> clazz, final Type type) {
-        if (blackWhiteList != null && !blackWhiteList.isValid(getComponentType(clazz).getName())) {
+        if (blackWhiteList != null && !blackWhiteList.isValid(clazz)) {
             throw new JSONException("Failed to decode class " + type + " by json serialization, it is not passed through blackWhiteList.");
         }
         ObjectDeserializer deserializer = super.getDeserializer(clazz, type);

@@ -25,16 +25,14 @@ import io.joyrpc.permission.BlackWhiteList;
 
 import java.io.*;
 
-import static io.joyrpc.util.ClassUtils.getComponentType;
-
 /**
  * Java输入流
  */
 public class JavaInputStream extends ObjectInputStream implements ObjectInput, ObjectStreamConstants {
 
-    protected BlackWhiteList<String> blackWhiteList;
+    protected BlackWhiteList<Class<?>> blackWhiteList;
 
-    public JavaInputStream(final InputStream in, final BlackWhiteList<String> blackWhiteList) throws IOException {
+    public JavaInputStream(final InputStream in, final BlackWhiteList<Class<?>> blackWhiteList) throws IOException {
         super(in);
         this.blackWhiteList = blackWhiteList;
     }
@@ -46,7 +44,7 @@ public class JavaInputStream extends ObjectInputStream implements ObjectInput, O
     @Override
     protected Class<?> resolveClass(final ObjectStreamClass desc) throws IOException, ClassNotFoundException, SerializerException {
         Class<?> result = super.resolveClass(desc);
-        if (blackWhiteList != null && !blackWhiteList.isValid(getComponentType(result).getName())) {
+        if (blackWhiteList != null && !blackWhiteList.isValid(result)) {
             throw new SerializerException("Failed to decode class " + result.getName() + " by java serialization, it is not passed through blackWhiteList.");
         }
         return result;

@@ -25,12 +25,11 @@ import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.parser.deserializer.ASMDeserializerFactory;
 import com.alibaba.fastjson.parser.deserializer.ObjectDeserializer;
 import com.alibaba.fastjson.parser.deserializer.ThrowableDeserializer;
-import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.BlackWhiteList;
 
 import java.lang.reflect.Type;
 
-import static io.joyrpc.util.ClassUtils.getFinalComponentType;
+import static io.joyrpc.util.ClassUtils.getComponentType;
 
 public class JsonConfig extends ParserConfig {
 
@@ -56,8 +55,7 @@ public class JsonConfig extends ParserConfig {
     }
 
     public ObjectDeserializer getDeserializer(final Class<?> clazz, final Type type) {
-        Class finalClazz = getFinalComponentType(clazz);
-        if (blackWhiteList != null && !blackWhiteList.isValid(finalClazz.getName())) {
+        if (blackWhiteList != null && !blackWhiteList.isValid(getComponentType(clazz).getName())) {
             throw new JSONException("Failed to decode class " + type + " by json serialization, it is not passed through blackWhiteList.");
         }
         ObjectDeserializer deserializer = super.getDeserializer(clazz, type);

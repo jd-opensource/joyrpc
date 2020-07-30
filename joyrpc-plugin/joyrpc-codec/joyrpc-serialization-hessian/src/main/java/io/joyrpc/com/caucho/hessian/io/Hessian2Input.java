@@ -2908,13 +2908,13 @@ public class Hessian2Input
      */
     private void readObjectDefinition(Class<?> cl) throws IOException {
         String type = readString();
-        //验证黑名单，并完成新类与旧类映射
-        validateType(type);
         int len = readInt();
 
         SerializerFactory factory = findSerializerFactory();
 
         Deserializer reader = factory.getObjectDeserializer(type, null);
+        //验证序列化黑名单
+        validateType(reader.getType());
 
         Object[] fields = reader.createFields(len);
         String[] fieldNames = new String[len];
@@ -2932,7 +2932,7 @@ public class Hessian2Input
         _classDefs.add(def);
     }
 
-    protected void validateType(final String type) throws IOException {
+    protected void validateType(final Class<?> type) throws IOException {
     }
 
     private Object readObjectInstance(Class<?> cl,

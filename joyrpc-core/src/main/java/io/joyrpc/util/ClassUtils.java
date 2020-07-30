@@ -1158,9 +1158,9 @@ public class ClassUtils {
      * @param clazz
      * @return
      */
-    public static Class<?> getFinalComponentType(Class<?> clazz) {
-        if (clazz.isArray()) {
-            return getFinalComponentType(clazz.getComponentType());
+    public static Class<?> getComponentType(Class<?> clazz) {
+        while (clazz.isArray()) {
+            clazz = clazz.getComponentType();
         }
         return clazz;
     }

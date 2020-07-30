@@ -22,9 +22,10 @@ package io.joyrpc.codec.serialization.java;
 
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.permission.BlackWhiteList;
-import io.joyrpc.util.ClassUtils;
 
 import java.io.*;
+
+import static io.joyrpc.util.ClassUtils.getComponentType;
 
 /**
  * Java输入流
@@ -44,24 +45,12 @@ public class JavaInputStream extends ObjectInputStream implements ObjectInput, O
 
     @Override
     protected Class<?> resolveClass(final ObjectStreamClass desc) throws IOException, ClassNotFoundException, SerializerException {
-        String clazzName = componentClassName(desc.getName());
-        if (blackWhiteList != null && !blackWhiteList.isValid(clazzName)) {
-            throw new SerializerException("Failed to decode class " + clazzName + " by java serialization, it is not passed through blackWhiteList.");
+        Class<?> result = super.resolveClass(desc);
+        if (blackWhiteList != null && !blackWhiteList.isValid(getComponentType(result).getName())) {
+            throw new SerializerException("Failed to decode class " + result.getName() + " by java serialization, it is not passed through blackWhiteList.");
         }
-        return super.resolveClass(desc);
+        return result;
     }
 
-    /**
-     * 匹配类名
-     *
-     * @param oriName
-     * @return
-     */
-    protected String componentClassName(String oriName) {
-        if (oriName.endsWith(";")) {
-            oriName = oriName.substring(oriName.indexOf("L") + 1, oriName.length() - 1);
-        }
-        return oriName;
-    }
 
 }

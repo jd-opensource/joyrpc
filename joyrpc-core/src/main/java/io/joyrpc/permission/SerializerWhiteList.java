@@ -140,11 +140,6 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
     public static class SerializerWhiteListGetter {
 
         /**
-         * 全局 whiteListGetter
-         */
-        protected static final SerializerWhiteListGetter GLOBAL_WHITELIST_GETTER = new SerializerWhiteListGetter();
-
-        /**
          * 唯一
          */
         protected Set<Type> uniques = new HashSet<>();
@@ -254,6 +249,5 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
         }
 
     }
-
 
 }

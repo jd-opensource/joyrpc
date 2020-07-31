@@ -1,21 +1,13 @@
 #### java
 ##
 int
-[I
 byte
-[B
 short
-[S
 long
-[L
 float
-[F
 double
-[D
 boolean
-[Z
 char
-[C
 void
 java.lang.Integer
 java.lang.Byte
@@ -41,7 +33,6 @@ java.lang.Error
 java.lang.Exception
 java.lang.Object
 java.lang.StackTraceElement
-java.util.Collections$UnmodifiableList
 sun.util.calendar.CalendarDate
 sun.util.calendar.CalendarSystem
 sun.util.calendar.Era

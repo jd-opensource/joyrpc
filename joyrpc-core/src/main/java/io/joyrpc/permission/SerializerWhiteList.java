@@ -20,10 +20,7 @@ package io.joyrpc.permission;
  * #L%
  */
 
-import io.joyrpc.util.GenericClass;
-import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GenericType;
-import io.joyrpc.util.Resource;
+import io.joyrpc.util.*;
 
 import java.lang.reflect.*;
 import java.util.*;
@@ -94,7 +91,7 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
         if (targets != null) {
             targets.forEach(target -> {
                 try {
-                    whites.putIfAbsent(Class.forName(target), Boolean.TRUE);
+                    whites.putIfAbsent(ClassUtils.forName(target), Boolean.TRUE);
                 } catch (Throwable e) {
                 }
             });

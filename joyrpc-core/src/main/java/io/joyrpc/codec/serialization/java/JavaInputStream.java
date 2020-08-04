@@ -35,31 +35,6 @@ public class JavaInputStream extends ObjectInputStream implements ObjectInput, O
     protected BlackWhiteList<Class<?>> blackWhiteList;
 
     private final static Set<String> javaWhiteList = new HashSet<String>() {{
-        add("java.util.Collections$UnmodifiableCollection");
-        add("java.util.Collections$UnmodifiableRandomAccessList");
-        add("java.util.Collections$UnmodifiableSet");
-        add("java.util.Collections$UnmodifiableSortedSet");
-        add("java.util.Collections$UnmodifiableNavigableSet");
-        add("java.util.Collections$UnmodifiableList");
-        add("java.util.Collections$UnmodifiableSortedMap");
-        add("java.util.Collections$UnmodifiableNavigableMap");
-        add("java.util.Collections$SynchronizedCollection");
-        add("java.util.Collections$SynchronizedSet");
-        add("java.util.Collections$SynchronizedSortedSet");
-        add("java.util.Collections$SynchronizedNavigableSet");
-        add("java.util.Collections$SynchronizedList");
-        add("java.util.Collections$SynchronizedRandomAccessList");
-        add("java.util.Collections$SynchronizedSortedMap");
-        add("java.util.Collections$SynchronizedNavigableMap");
-        add("java.util.Collections$CheckedCollection");
-        add("java.util.Collections$CheckedQueue");
-        add("java.util.Collections$CheckedSet");
-        add("java.util.Collections$CheckedSortedSet");
-        add("java.util.Collections$CheckedNavigableSet");
-        add("java.util.Collections$CheckedList");
-        add("java.util.Collections$CheckedRandomAccessList");
-        add("java.util.Collections$CheckedSortedMap");
-        add("java.util.Collections$CheckedNavigableMap");
         add("java.time.Ser");
     }};
 

@@ -22,7 +22,10 @@ package io.joyrpc.permission;
 
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.time.Year;
@@ -32,11 +35,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import static io.joyrpc.constants.Constants.DEFAULT_SERIALIZER_WHITELIST_ENABLED;
 import static io.joyrpc.constants.Constants.SERIALIZER_WHITELIST_ENABLED;
 import static io.joyrpc.context.Variable.VARIABLE;
+import static io.joyrpc.util.ClassUtils.scan;
 
 /**
  * 序列化白名单，处理安全漏洞
  */
 public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.WhiteListAware {
+
+    private static final Logger logger = LoggerFactory.getLogger(SerializerWhiteList.class);
 
     /**
      * 是否启用
@@ -91,8 +97,15 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
         if (targets != null) {
             targets.forEach(target -> {
                 try {
-                    whites.putIfAbsent(ClassUtils.forName(target), Boolean.TRUE);
-                } catch (Throwable e) {
+                    if (target.endsWith(".*")) {
+                        Set<Class<?>> set = scan(target.substring(0, target.length() - 2));
+                        set.forEach(o -> whites.putIfAbsent(o, Boolean.TRUE));
+                    } else {
+                        whites.putIfAbsent(ClassUtils.forName(target), Boolean.TRUE);
+                    }
+                } catch (IOException e) {
+                    logger.error("Error occurs while scanning package " + target);
+                } catch (ClassNotFoundException e) {
                 }
             });
         }

@@ -198,10 +198,8 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             //根据streamKey,获取缓存的bizId
             long bizMsgId = 0;
             try {
-
                 bizMsgId = http2Stream.getProperty(streamKey);
             }catch (Throwable e){
-                e.printStackTrace();
             }
             Http2Headers headers = http2Stream.getProperty(headerKey);
             handleRequest(ctx, streamId, bizMsgId, headers, data);

@@ -58,31 +58,6 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
         if (whiteListFiles != null) {
             updateWhite(Resource.lines(whiteListFiles, true, true));
         }
-        whites.putIfAbsent(Collections.unmodifiableCollection(new ArrayList<>(0)).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableList(new ArrayList(0)).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableSet(new HashSet<>(0)).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableSortedSet(new TreeSet<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableNavigableSet(new TreeSet<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableList(new LinkedList<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableSortedMap(new TreeMap<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.unmodifiableNavigableMap(new TreeMap<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedCollection(new ArrayList<>(0)).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedSet(new HashSet<>(0)).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedSortedSet(new TreeSet<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedNavigableSet(new TreeSet<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedList(new ArrayList<>(0)).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedList(new LinkedList<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedSortedMap(new TreeMap<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.synchronizedNavigableMap(new TreeMap<>()).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedCollection(new ArrayList<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedQueue(new LinkedList<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedSet(new HashSet<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedSortedSet(new TreeSet<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedNavigableSet(new TreeSet<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedList(new ArrayList<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedList(new LinkedList<>(), Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedSortedMap(new TreeMap<>(), Object.class, Object.class).getClass(), Boolean.TRUE);
-        whites.putIfAbsent(Collections.checkedNavigableMap(new TreeMap<>(), Object.class, Object.class).getClass(), Boolean.TRUE);
     }
 
     /**

@@ -23,7 +23,9 @@ package io.joyrpc.codec.serialization;
 import io.joyrpc.codec.serialization.exception.NotFoundException;
 import io.joyrpc.codec.serialization.model.MyBook;
 
+import java.util.concurrent.CompletableFuture;
+
 public interface HelloWold {
 
-    void update(MyBook book) throws NotFoundException;
+    CompletableFuture<Integer> update(MyBook book) throws NotFoundException;
 }

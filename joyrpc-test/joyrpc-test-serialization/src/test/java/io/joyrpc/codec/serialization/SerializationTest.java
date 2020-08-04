@@ -49,10 +49,7 @@ import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 
 import static io.joyrpc.Plugin.*;
@@ -306,6 +303,8 @@ public class SerializationTest {
         Assert.assertTrue(set.contains(String.class));
         Assert.assertTrue(set.contains(PhoneType.class));
         Assert.assertTrue(set.contains(NotFoundException.class));
+        Assert.assertTrue(set.contains(Integer.class));
+        Assert.assertFalse(set.contains(CompletableFuture.class));
     }
 
     @Test

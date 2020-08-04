@@ -21,6 +21,7 @@ package io.joyrpc.permission;
  */
 
 import io.joyrpc.util.GenericChecker;
+import io.joyrpc.util.GenericChecker.Scope;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -29,13 +30,13 @@ import java.util.function.BiConsumer;
 
 import static io.joyrpc.util.ClassUtils.getGenericClass;
 import static io.joyrpc.util.ClassUtils.isJavaClass;
-import static io.joyrpc.util.GenericChecker.NONE_STATIC_TRANSIENT_FIELD;
 import static io.joyrpc.util.GenericChecker.NONE_STATIC_METHOD;
+import static io.joyrpc.util.GenericChecker.NONE_STATIC_TRANSIENT_FIELD;
 
 /**
  * 序列化类型扫描器
  */
-public class SerializerTypeScanner {
+public class SerializerTypeScanner implements BiConsumer<Class, Scope> {
 
     protected Class<?> clazz;
     protected GenericChecker checker;
@@ -52,27 +53,27 @@ public class SerializerTypeScanner {
      * @return 序列化白名单
      */
     public Set<Class<?>> scan() {
-        checker.checkMethods(clazz, NONE_STATIC_METHOD, new BiConsumer<Class, GenericChecker.Scope>() {
-            @Override
-            public void accept(final Class clazz, final GenericChecker.Scope scope) {
-                if (Void.class == clazz || void.class == clazz || CompletionStage.class.isAssignableFrom(clazz)) {
-                    //不能序列化的
-                } else if (clazz.isEnum()) {
-                    uniques.add(clazz);
-                } else if (Throwable.class.isAssignableFrom(clazz)) {
-                    //异常
-                    uniques.add(clazz);
-                } else if (isJavaClass(clazz)) {
-                    uniques.add(clazz);
-                } else if (clazz.isInterface()) {
-                    //自定义接口
-                    checker.checkMethods(clazz, NONE_STATIC_METHOD, this);
-                } else {
-                    uniques.add(clazz);
-                    checker.checkFields(getGenericClass(clazz), NONE_STATIC_TRANSIENT_FIELD, this);
-                }
-            }
-        });
+        checker.checkMethods(clazz, NONE_STATIC_METHOD, this);
         return uniques;
+    }
+
+    @Override
+    public void accept(final Class clazz, final Scope scope) {
+        if (Void.class == clazz || void.class == clazz || CompletionStage.class.isAssignableFrom(clazz)) {
+            //不能序列化的
+        } else if (clazz.isEnum()) {
+            uniques.add(clazz);
+        } else if (Throwable.class.isAssignableFrom(clazz)) {
+            //异常
+            uniques.add(clazz);
+        } else if (isJavaClass(clazz)) {
+            uniques.add(clazz);
+        } else if (clazz.isInterface()) {
+            //自定义接口
+            checker.checkMethods(clazz, NONE_STATIC_METHOD, this);
+        } else {
+            uniques.add(clazz);
+            checker.checkFields(getGenericClass(clazz), NONE_STATIC_TRANSIENT_FIELD, this);
+        }
     }
 }

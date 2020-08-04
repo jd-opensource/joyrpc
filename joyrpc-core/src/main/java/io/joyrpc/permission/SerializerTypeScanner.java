@@ -36,15 +36,18 @@ import static io.joyrpc.util.GenericChecker.NONE_STATIC_TRANSIENT_FIELD;
 /**
  * 序列化类型扫描器
  */
-public class SerializerTypeScanner implements BiConsumer<Class, Scope> {
+public class SerializerTypeScanner {
 
     protected Class<?> clazz;
     protected GenericChecker checker;
-    protected Set<Class<?>> uniques = new HashSet<>();
+    protected Set<Class<?>> uniques;
+    protected BiConsumer<Class, Scope> consumer;
 
     public SerializerTypeScanner(Class<?> clazz) {
         this.clazz = clazz;
         this.checker = new GenericChecker();
+        this.uniques = new HashSet<>();
+        this.consumer = this::accept;
     }
 
     /**
@@ -53,12 +56,17 @@ public class SerializerTypeScanner implements BiConsumer<Class, Scope> {
      * @return 序列化白名单
      */
     public Set<Class<?>> scan() {
-        checker.checkMethods(clazz, NONE_STATIC_METHOD, this);
+        checker.checkMethods(clazz, NONE_STATIC_METHOD, consumer);
         return uniques;
     }
 
-    @Override
-    public void accept(final Class clazz, final Scope scope) {
+    /**
+     * 接受
+     *
+     * @param clazz 类型
+     * @param scope 作用域
+     */
+    protected void accept(final Class clazz, final Scope scope) {
         if (Void.class == clazz || void.class == clazz || CompletionStage.class.isAssignableFrom(clazz)) {
             //不能序列化的
         } else if (clazz.isEnum()) {
@@ -70,10 +78,10 @@ public class SerializerTypeScanner implements BiConsumer<Class, Scope> {
             uniques.add(clazz);
         } else if (clazz.isInterface()) {
             //自定义接口
-            checker.checkMethods(clazz, NONE_STATIC_METHOD, this);
+            checker.checkMethods(clazz, NONE_STATIC_METHOD, consumer);
         } else {
             uniques.add(clazz);
-            checker.checkFields(getGenericClass(clazz), NONE_STATIC_TRANSIENT_FIELD, this);
+            checker.checkFields(getGenericClass(clazz), NONE_STATIC_TRANSIENT_FIELD, consumer);
         }
     }
 }

@@ -23,11 +23,13 @@ package io.joyrpc.codec.serialization;
 
 import io.joyrpc.cluster.discovery.backup.BackupDatum;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
+import io.joyrpc.codec.serialization.exception.NotFoundException;
 import io.joyrpc.codec.serialization.model.*;
 import io.joyrpc.codec.serialization.model.ArrayObject.Foo;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.Name;
+import io.joyrpc.permission.SerializerTypeScanner;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.ClassUtils;
@@ -286,6 +288,24 @@ public class SerializationTest {
     public void testOverrideField() {
         MyEmployee person = new MyEmployee(0, "china", 20, 161, 65);
         serializeAndDeserialize("hessian", person);
+    }
+
+    @Test
+    public void testScan() {
+        SerializerTypeScanner scanner = new SerializerTypeScanner(HelloWold.class);
+        Set<Class<?>> set = scanner.scan();
+        Assert.assertTrue(set.contains(MyBook.class));
+        Assert.assertTrue(set.contains(Map.class));
+        Assert.assertTrue(set.contains(Employee.class));
+        Assert.assertTrue(set.contains(List.class));
+        Assert.assertTrue(set.contains(Person.class));
+        Assert.assertTrue(set.contains(PhoneNumber.class));
+        Assert.assertTrue(set.contains(int.class));
+        Assert.assertTrue(set.contains(long.class));
+        Assert.assertTrue(set.contains(double.class));
+        Assert.assertTrue(set.contains(String.class));
+        Assert.assertTrue(set.contains(PhoneType.class));
+        Assert.assertTrue(set.contains(NotFoundException.class));
     }
 
     @Test

@@ -155,6 +155,18 @@ io.joyrpc.com.caucho.hessian.io.java8.ZonedDateTimeHandle
 io.joyrpc.com.caucho.hessian.io.java8.ZoneIdHandle
 io.joyrpc.com.caucho.hessian.io.java8.ZoneOffsetHandle
 io.joyrpc.com.caucho.hessian.io.LocaleHandle
+io.joyrpc.com.caucho.hessian.io.AnnotationInvocationHandler
+io.joyrpc.com.caucho.hessian.io.ByteHandle
+io.joyrpc.com.caucho.hessian.io.CalendarHandle
+io.joyrpc.com.caucho.hessian.io.FloatHandle
+io.joyrpc.com.caucho.hessian.io.HessianHandle
+io.joyrpc.com.caucho.hessian.io.HessianMethodSerializationException
+io.joyrpc.com.caucho.hessian.io.HessianProtocolException
+io.joyrpc.com.caucho.hessian.io.HessianServiceException
+io.joyrpc.com.caucho.hessian.io.InetAddressHandle
+io.joyrpc.com.caucho.hessian.io.IOExceptionWrapper
+io.joyrpc.com.caucho.hessian.io.ShortHandle
+
 ##
 #### joyrpc-protocol-dubbo
 ##

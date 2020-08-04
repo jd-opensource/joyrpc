@@ -122,6 +122,8 @@ public class ServiceManager {
      */
     protected Map<Long, String> interfaceIds = new ConcurrentHashMap<>();
 
+    protected Map<Class<?>, Boolean> registers = new ConcurrentHashMap<>();
+
     protected ServiceManager() {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_GROUP, EVENT_PUBLISHER_NAME, EVENT_PUBLISHER_CONF);
@@ -512,15 +514,17 @@ public class ServiceManager {
      * @param clazz 类
      */
     protected void serializationRegister(final Class<?> clazz) {
-        //扫描接口类，将入参、返回值、异常 加入白名单
-        Set<Class<?>> targets = new SerializerTypeScanner(clazz).scan();
-        addGlobalWhite(targets);
-        //注册序列化逻辑
-        Iterable<Serialization> itr = SERIALIZATION.extensions();
-        for (Serialization ser : itr) {
-            if (Registration.class.isAssignableFrom(ser.getClass())) {
-                //TODO 不需要递归
-                ((Registration) ser).register(targets);
+        //多个消费者指向同一个类，避免重复扫描注册类
+        if (registers.putIfAbsent(clazz, Boolean.TRUE)) {
+            //扫描接口类，将入参、返回值、异常 加入白名单
+            Set<Class<?>> targets = new SerializerTypeScanner(clazz).scan();
+            addGlobalWhite(targets);
+            //注册序列化逻辑
+            Iterable<Serialization> itr = SERIALIZATION.extensions();
+            for (Serialization ser : itr) {
+                if (Registration.class.isAssignableFrom(ser.getClass())) {
+                    ((Registration) ser).register(targets);
+                }
             }
         }
     }

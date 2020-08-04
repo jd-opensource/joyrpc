@@ -42,9 +42,9 @@ public class GenericChecker {
     /**
      * 可序列化字段
      */
-    public static final Predicate<Field> NONE_STATIC_FINAL_TRANSIENT_FIELD = (field -> {
+    public static final Predicate<Field> NONE_STATIC_TRANSIENT_FIELD = (field -> {
         int modifiers = field.getModifiers();
-        return !Modifier.isStatic(modifiers) && !Modifier.isFinal(modifiers) && !Modifier.isTransient(modifiers);
+        return !Modifier.isStatic(modifiers) && !Modifier.isTransient(modifiers);
     });
 
     /**

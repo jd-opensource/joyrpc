@@ -24,8 +24,6 @@ import io.joyrpc.exception.SerializerException;
 import io.joyrpc.permission.BlackWhiteList;
 
 import java.io.*;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Java输入流
@@ -33,10 +31,6 @@ import java.util.Set;
 public class JavaInputStream extends ObjectInputStream implements ObjectInput, ObjectStreamConstants {
 
     protected BlackWhiteList<Class<?>> blackWhiteList;
-
-    private final static Set<String> javaWhiteList = new HashSet<String>() {{
-        add("java.time.Ser");
-    }};
 
     public JavaInputStream(final InputStream in, final BlackWhiteList<Class<?>> blackWhiteList) throws IOException {
         super(in);
@@ -50,8 +44,7 @@ public class JavaInputStream extends ObjectInputStream implements ObjectInput, O
     @Override
     protected Class<?> resolveClass(final ObjectStreamClass desc) throws IOException, ClassNotFoundException, SerializerException {
         Class<?> result = super.resolveClass(desc);
-        if ((blackWhiteList != null && !blackWhiteList.isValid(result))
-                && !javaWhiteList.contains(desc.getName())) {
+        if (blackWhiteList != null && !blackWhiteList.isValid(result)) {
             throw new SerializerException("Failed to decode class " + result.getName() + " by java serialization, it is not passed through blackWhiteList.");
         }
         return result;

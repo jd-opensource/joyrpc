@@ -156,7 +156,7 @@ public class StandardValidator implements InterfaceValidator {
                     //没有序列化
                     onNotSerializable(clazz);
                 }
-                checker.checkFields(getGenericClass(clazz), GenericChecker.NONE_STATIC_FINAL_TRANSIENT_FIELD, this);
+                checker.checkFields(getGenericClass(clazz), GenericChecker.NONE_STATIC_TRANSIENT_FIELD, this);
             }
         }
 

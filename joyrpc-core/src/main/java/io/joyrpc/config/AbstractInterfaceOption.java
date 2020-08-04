@@ -29,8 +29,6 @@ import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
-import io.joyrpc.permission.SerializerWhiteList;
-import io.joyrpc.permission.SerializerWhiteList.SerializerWhiteListGetter;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
@@ -39,27 +37,31 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
+import io.joyrpc.permission.SerializerWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.*;
+import io.joyrpc.util.GenericClass;
+import io.joyrpc.util.GenericMethod;
+import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.metadata.BeanDescriptor;
 import javax.validation.metadata.MethodDescriptor;
-import java.lang.reflect.*;
-import java.util.*;
+import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
-import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelist;
-import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelistGetter;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Variable.VARIABLE;
+import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelist;
 import static io.joyrpc.util.ClassUtils.*;
 
 /**
@@ -535,10 +537,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 序列化白名单
          */
         protected SerializerWhiteList whiteList;
-        /**
-         * 序列化白名单获取
-         */
-        protected SerializerWhiteListGetter whiteListGetter;
 
         /**
          * 构造函数
@@ -582,8 +580,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.callback = callback;
             this.description = getDesc(types);
             this.whiteList = getGlobalWhitelist();
-            this.whiteListGetter = getGlobalWhitelistGetter();
-            this.updateGlobalSerializerWhiteList();
         }
 
         @Override
@@ -675,20 +671,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             return callback;
         }
 
-        /**
-         * 更新全局白名单
-         */
-        protected void updateGlobalSerializerWhiteList() {
-            if (genericMethod == null) {
-                return;
-            }
-            Set<String> whites = new HashSet<>();
-            //获取白名单
-            whiteListGetter.handleGenericMethod(genericMethod, whites);
-            //加入白名单
-            whiteList.updateWhite(whites);
-        }
-
     }
 
     /**
@@ -706,7 +688,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             request.decline();
         }
     }
-
 
 
 }

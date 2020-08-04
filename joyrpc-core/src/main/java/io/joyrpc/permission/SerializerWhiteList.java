@@ -20,18 +20,17 @@ package io.joyrpc.permission;
  * #L%
  */
 
-import io.joyrpc.util.*;
+import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.Resource;
 
-import java.lang.reflect.*;
+import java.lang.reflect.InvocationTargetException;
+import java.time.Year;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.constants.Constants.DEFAULT_SERIALIZER_WHITELIST_ENABLED;
 import static io.joyrpc.constants.Constants.SERIALIZER_WHITELIST_ENABLED;
 import static io.joyrpc.context.Variable.VARIABLE;
-import static io.joyrpc.util.ClassUtils.*;
-import static io.joyrpc.util.GenericChecker.NONE_STATIC_FINAL_TRANSIENT_FIELD;
-import static io.joyrpc.util.GenericChecker.NONE_STATIC_METHOD;
 
 /**
  * 序列化白名单，处理安全漏洞
@@ -124,6 +123,26 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
     }
 
     /**
+     * 添加白名单
+     *
+     * @param targets 白名单列表
+     */
+    public void addWhite(final Collection<Class<?>> targets) {
+        if (targets != null) {
+            targets.forEach(target -> whites.putIfAbsent(target, Boolean.TRUE));
+        }
+    }
+
+    /**
+     * 添加全局白名单
+     *
+     * @param targets 白名单列表
+     */
+    public static void addGlobalWhite(final Collection<Class<?>> targets) {
+        getGlobalWhitelist().addWhite(targets);
+    }
+
+    /**
      * 全局配置的序列化白名单
      *
      * @return 全局配置的序列化白名单
@@ -141,138 +160,43 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
          */
         protected static final SerializerWhiteList GLOBAL_WHITELIST = new SerializerWhiteList(
                 "META-INF/system_serialization_type", "user_serialization_type");
-    }
 
-    /**
-     * 全局白名单获取器
-     *
-     * @return
-     */
-    public static SerializerWhiteListGetter getGlobalWhitelistGetter() {
-        return GlobalSerializerWhiteListGetter.GLOBAL_WHITELIST_GETTER;
-    }
-
-    /**
-     * 全局白名单获取器
-     */
-    protected static class GlobalSerializerWhiteListGetter {
-        protected static final SerializerWhiteListGetter GLOBAL_WHITELIST_GETTER = new SerializerWhiteListGetter();
-    }
-
-    /**
-     * 白名单获取器
-     */
-    public static class SerializerWhiteListGetter {
-
-        /**
-         * 唯一
-         */
-        protected Set<Type> uniques = new HashSet<>();
-
-        /**
-         * 处理接口类的白名单
-         *
-         * @param genericClass
-         * @param whiteList
-         */
-        public void handleGenericClass(GenericClass genericClass, Set<String> whiteList) {
-            Class clazz = genericClass.getClazz();
-            List<Method> methods = getPublicMethod(clazz);
-            methods.forEach(method -> {
-                if (NONE_STATIC_METHOD.test(method)) {
-                    handleGenericMethod(genericClass.get(method), whiteList);
-                }
-            });
-        }
-
-        /**
-         * 处理方法的入参与返回值的白名单
-         *
-         * @param genericMethod
-         * @param whiteList
-         */
-        public void handleGenericMethod(GenericMethod genericMethod, Set<String> whiteList) {
-            //处理入参
-            Type[] paramTypes = genericMethod.getMethod().getGenericParameterTypes();
-            if (paramTypes != null) {
-                GenericType[] genericParamTypes = genericMethod.getParameters();
-                for (int i = 0; i < paramTypes.length; i++) {
-                    handleGenericType(genericParamTypes[i], paramTypes[i], whiteList);
-                }
-            }
-            //处理返回值
-            handleGenericType(genericMethod.getReturnType(), genericMethod.getMethod().getGenericReturnType(), whiteList);
-            //处理异常类
-            Type[] exceptionTypes = genericMethod.getMethod().getGenericExceptionTypes();
-            if (exceptionTypes != null) {
-                GenericType[] genericExceptionTypes = genericMethod.getExceptions();
-                for (int i = 0; i < exceptionTypes.length; i++) {
-                    handleGenericType(genericExceptionTypes[i], paramTypes[i], whiteList);
-                }
+        static {
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableCollection(new ArrayList<>(0)).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableList(new ArrayList<>(0)).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableList(new LinkedList<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableMap(new HashMap<>(0)).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableNavigableMap(new TreeMap<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableNavigableSet(new TreeSet<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableSortedMap(new TreeMap<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableSortedSet(new TreeSet<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.unmodifiableSet(new HashSet<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedCollection(new ArrayList<>(0)).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedList(new ArrayList<>(0)).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedList(new LinkedList<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedMap(new HashMap<>(0)).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedNavigableMap(new TreeMap<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedNavigableSet(new TreeSet<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedSet(new HashSet<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedSortedMap(new TreeMap<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.synchronizedSortedSet(new TreeSet<>()).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedCollection(new ArrayList<>(0), Integer.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedList(new ArrayList<>(0), Integer.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedList(new LinkedList<>(), Integer.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedMap(new HashMap<>(0), String.class, String.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedNavigableMap(new TreeMap<>(), String.class, String.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedNavigableSet(new TreeSet<>(), String.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedSet(new HashSet<>(), String.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedSortedMap(new TreeMap<>(), String.class, String.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedSortedSet(new TreeSet<>(), String.class).getClass(), Boolean.TRUE);
+            GLOBAL_WHITELIST.whites.put(Collections.checkedQueue(new LinkedList<>(), String.class).getClass(), Boolean.TRUE);
+            try {
+                GLOBAL_WHITELIST.whites.put(Year.class.getMethod("writeReplace").invoke(Year.of(2000)).getClass(), Boolean.TRUE);
+            } catch (IllegalAccessException e) {
+            } catch (InvocationTargetException e) {
+            } catch (NoSuchMethodException e) {
             }
         }
-
-        /**
-         * 处理 genericType 的白名单
-         *
-         * @param genericType
-         * @param type
-         * @param whiteList
-         */
-        public void handleGenericType(GenericType genericType, Type type, Set<String> whiteList) {
-            if (!uniques.add(type)) {
-                //已经处理过
-                return;
-            } else if (type instanceof Class) {
-                handleClass((Class) type, whiteList);
-            } else if (type instanceof ParameterizedType) {
-                ParameterizedType parameterizedType = (ParameterizedType) type;
-                //rawType
-                Type rawType = parameterizedType.getRawType();
-                handleGenericType(genericType, rawType, whiteList);
-                //actualTypeArguments
-                Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-                if (actualTypeArguments != null && actualTypeArguments.length > 0) {
-                    for (Type actualTypeArgument : actualTypeArguments) {
-                        handleGenericType(genericType, actualTypeArgument, whiteList);
-                    }
-                }
-            } else if (type instanceof TypeVariable) {
-                //变量
-                GenericType.Variable variable = genericType.getVariable(((TypeVariable) type).getName());
-                handleGenericType(genericType, variable.getGenericType(), whiteList);
-            } else if (type instanceof GenericArrayType) {
-                //泛型数组
-                handleGenericType(genericType, ((GenericArrayType) type).getGenericComponentType(), whiteList);
-            } else if (type instanceof WildcardType) {
-
-            }
-        }
-
-        /**
-         * 处理 class 的白名单
-         *
-         * @param clazz
-         * @param whiteList
-         */
-        public void handleClass(Class clazz, Set<String> whiteList) {
-            //如果是数组，获取真正的class
-            Class cl = clazz.isArray() ? clazz.getComponentType() : clazz;
-            //加入白名单
-            whiteList.add(cl.getName());
-            //非基础类型，处理字段
-            if (!isPrimitive(cl, null)) {
-                GenericClass genericClass = getGenericClass(cl);
-                //逐一处理字段
-                List<Field> fields = getFields(genericClass.getClazz());
-                for (Field field : fields) {
-                    if (NONE_STATIC_FINAL_TRANSIENT_FIELD.test(field)) {
-                        handleGenericType(genericClass.get(field), field.getGenericType(), whiteList);
-                    }
-                }
-            }
-        }
-
     }
 
 }

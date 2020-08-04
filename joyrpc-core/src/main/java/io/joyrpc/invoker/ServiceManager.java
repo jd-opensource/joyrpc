@@ -30,8 +30,6 @@ import io.joyrpc.cluster.distribution.loadbalance.StickyLoadBalance;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.codec.serialization.Registration;
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.permission.SerializerWhiteList;
-import io.joyrpc.permission.SerializerWhiteList.SerializerWhiteListGetter;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.constants.Constants;
@@ -44,6 +42,7 @@ import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.DashboardAware;
 import io.joyrpc.metric.DashboardFactory;
+import io.joyrpc.permission.SerializerTypeScanner;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.handler.DefaultProtocolAdapter;
 import io.joyrpc.thread.NamedThreadFactory;
@@ -56,14 +55,12 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
@@ -72,12 +69,10 @@ import java.util.function.Consumer;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.cluster.Cluster.EVENT_PUBLISHER_CLUSTER;
 import static io.joyrpc.cluster.Cluster.EVENT_PUBLISHER_CLUSTER_CONF;
-import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelist;
-import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelistGetter;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_DUPLICATE_REFER;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_DUPLICATE_EXPORT;
-import static io.joyrpc.util.ClassUtils.getGenericClass;
+import static io.joyrpc.permission.SerializerWhiteList.addGlobalWhite;
 
 /**
  * 服务管理器
@@ -126,15 +121,6 @@ public class ServiceManager {
      * 接口ID对照表，兼容老版本数据结构
      */
     protected Map<Long, String> interfaceIds = new ConcurrentHashMap<>();
-
-    /**
-     * 序列化白名单
-     */
-    protected SerializerWhiteList whiteList = getGlobalWhitelist();
-    /**
-     * 序列化白名单获取
-     */
-    protected SerializerWhiteListGetter whiteListGetter = getGlobalWhitelistGetter();
 
     protected ServiceManager() {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
@@ -527,30 +513,16 @@ public class ServiceManager {
      */
     protected void serializationRegister(final Class<?> clazz) {
         //扫描接口类，将入参、返回值、异常 加入白名单
-        Set<String> whites = new LinkedHashSet<>();
-        whiteListGetter.handleGenericClass(getGenericClass(clazz), whites);
-        whiteList.updateWhite(whites);
+        Set<Class<?>> targets = new SerializerTypeScanner(clazz).scan();
+        addGlobalWhite(targets);
         //注册序列化逻辑
-        List<Registration> registrations = new LinkedList<>();
         Iterable<Serialization> itr = SERIALIZATION.extensions();
         for (Serialization ser : itr) {
             if (Registration.class.isAssignableFrom(ser.getClass())) {
-                registrations.add((Registration) ser);
+                //TODO 不需要递归
+                ((Registration) ser).register(targets);
             }
         }
-        if (registrations.isEmpty()) {
-            return;
-        }
-        //遍历接口方法进行注册
-        Set<Class<?>> registerClass = new LinkedHashSet<>();
-        GenericChecker checker = new GenericChecker();
-        checker.checkMethods(clazz, GenericChecker.NONE_STATIC_METHOD, (cls, scope) -> {
-            if (!cls.equals(void.class) && !CompletionStage.class.isAssignableFrom(cls)) {
-                registerClass.add(cls);
-            }
-        });
-        //注册
-        registrations.forEach(r -> r.register(registerClass));
     }
 
     /**

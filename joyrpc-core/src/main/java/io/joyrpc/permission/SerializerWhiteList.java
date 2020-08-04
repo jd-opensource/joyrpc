@@ -24,6 +24,7 @@ import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Resource;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.time.Year;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,7 +103,7 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
      *
      * @param targets 白名单列表
      */
-    public void addWhite(final Collection<Class<?>> targets) {
+    public synchronized void addWhite(final Collection<Class<?>> targets) {
         if (targets != null) {
             targets.forEach(target -> whites.putIfAbsent(target, Boolean.TRUE));
         }
@@ -166,7 +167,9 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
             GLOBAL_WHITELIST.whites.put(Collections.checkedSortedSet(new TreeSet<>(), String.class).getClass(), Boolean.TRUE);
             GLOBAL_WHITELIST.whites.put(Collections.checkedQueue(new LinkedList<>(), String.class).getClass(), Boolean.TRUE);
             try {
-                GLOBAL_WHITELIST.whites.put(Year.class.getMethod("writeReplace").invoke(Year.of(2000)).getClass(), Boolean.TRUE);
+                Method method = Year.class.getMethod("writeReplace");
+                method.setAccessible(true);
+                GLOBAL_WHITELIST.whites.put(method.invoke(Year.of(2000)).getClass(), Boolean.TRUE);
             } catch (IllegalAccessException e) {
             } catch (InvocationTargetException e) {
             } catch (NoSuchMethodException e) {

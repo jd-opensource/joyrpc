@@ -515,7 +515,7 @@ public class ServiceManager {
      */
     protected void serializationRegister(final Class<?> clazz) {
         //多个消费者指向同一个类，避免重复扫描注册类
-        if (registers.putIfAbsent(clazz, Boolean.TRUE)) {
+        if (registers.computeIfAbsent(clazz, c -> Boolean.TRUE)) {
             //扫描接口类，将入参、返回值、异常 加入白名单
             Set<Class<?>> targets = new SerializerTypeScanner(clazz).scan();
             addGlobalWhite(targets);

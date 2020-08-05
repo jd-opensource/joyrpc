@@ -1,5 +1,14 @@
 #### java
 ##
+int
+byte
+short
+long
+float
+double
+boolean
+char
+void
 java.lang.Integer
 java.lang.Byte
 java.lang.Short

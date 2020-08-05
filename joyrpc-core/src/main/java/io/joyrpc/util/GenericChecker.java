@@ -188,36 +188,61 @@ public class GenericChecker {
         } else if (type instanceof Class) {
             checkClass((Class) type, scope, genericType, consumer);
         } else if (type instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) type;
-            //actualTypeArguments
-            Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-            //rawType
-            Class rawType = (Class) parameterizedType.getRawType();
-            GenericType newType = genericType;
-            if (actualTypeArguments != null && actualTypeArguments.length > 0) {
-                //构造该类型的泛型变量信息
-                TypeVariable<Class<?>>[] variables = rawType.getTypeParameters();
-                newType = new GenericType(genericType.genericType, genericType.type);
-                for (int i = 0; i < variables.length; i++) {
-                    newType.addVariable(new GenericType.Variable(variables[i].getName(), actualTypeArguments[i]));
-                }
-            }
-            checkType(newType, rawType, scope, consumer);
-            //泛型参数再检测一下，便于处理java集合类型
-            if (actualTypeArguments != null && actualTypeArguments.length > 0) {
-                for (Type actualTypeArgument : actualTypeArguments) {
-                    checkType(genericType, actualTypeArgument, scope, consumer);
-                }
-            }
+            checkParameterizedType(genericType, (ParameterizedType) type, scope, consumer);
         } else if (type instanceof TypeVariable) {
             //变量
-            GenericType.Variable variable = genericType.getVariable(((TypeVariable) type).getName());
-            checkType(genericType, variable.getGenericType(), scope, consumer);
+            checkTypeVariable(genericType, (TypeVariable) type, scope, consumer);
         } else if (type instanceof GenericArrayType) {
             //泛型数组
             checkType(genericType, ((GenericArrayType) type).getGenericComponentType(), scope, consumer);
         } else if (type instanceof WildcardType) {
 
+        }
+    }
+
+    /**
+     * 检查变量泛型
+     *
+     * @param genericType 泛型类型
+     * @param type        变量类型
+     * @param scope       作用域
+     * @param consumer    消费者
+     */
+    protected void checkTypeVariable(final GenericType genericType, final TypeVariable type,
+                                     final Scope scope, final Consumer<ClassInfo> consumer) {
+        GenericType.Variable variable = genericType.getVariable(type.getName());
+        checkType(genericType, variable.getGenericType(), scope, consumer);
+    }
+
+    /**
+     * 检查参数类型
+     *
+     * @param genericType 泛型
+     * @param type        参数类型
+     * @param scope       作用域
+     * @param consumer    消费者
+     */
+    protected void checkParameterizedType(final GenericType genericType, final ParameterizedType type,
+                                          final Scope scope, final Consumer<ClassInfo> consumer) {
+        //argTypes
+        Type[] argTypes = type.getActualTypeArguments();
+        //rawType
+        Class rawType = (Class) type.getRawType();
+        GenericType newType = genericType;
+        if (argTypes != null && argTypes.length > 0) {
+            //构造该类型的泛型变量信息
+            TypeVariable<Class<?>>[] variables = rawType.getTypeParameters();
+            newType = new GenericType(genericType.genericType, genericType.type);
+            for (int i = 0; i < variables.length; i++) {
+                newType.addVariable(new GenericType.Variable(variables[i].getName(), argTypes[i]));
+            }
+        }
+        checkType(newType, rawType, scope, consumer);
+        //泛型参数再检测一下，便于处理java集合类型
+        if (argTypes != null && argTypes.length > 0) {
+            for (Type actualTypeArgument : argTypes) {
+                checkType(genericType, actualTypeArgument, scope, consumer);
+            }
         }
     }
 

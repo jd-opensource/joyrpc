@@ -63,7 +63,7 @@ public class SerializerBlackWhiteList implements BlackWhiteList<Class<?>>, Black
             target = target.getComponentType();
         }
         //枚举或者基本类型
-        return target.isEnum() || target.isPrimitive() || (blackList == null || !blackList.isBlack(target))
+        return target.isPrimitive() || target.isEnum() || (blackList == null || !blackList.isBlack(target))
                 && (whiteList == null || whiteList.isWhite(target));
     }
 

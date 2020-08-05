@@ -62,7 +62,8 @@ public class SerializerBlackWhiteList implements BlackWhiteList<Class<?>>, Black
         while (target.isArray()) {
             target = target.getComponentType();
         }
-        return (blackList == null || !blackList.isBlack(target))
+        //枚举或者基本类型
+        return target.isEnum() || target.isPrimitive() || (blackList == null || !blackList.isBlack(target))
                 && (whiteList == null || whiteList.isWhite(target));
     }
 

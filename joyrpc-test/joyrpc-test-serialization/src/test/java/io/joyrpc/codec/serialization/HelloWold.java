@@ -21,6 +21,8 @@ package io.joyrpc.codec.serialization;
  */
 
 import io.joyrpc.codec.serialization.exception.NotFoundException;
+import io.joyrpc.codec.serialization.model.Animal;
+import io.joyrpc.codec.serialization.model.Employee;
 import io.joyrpc.codec.serialization.model.MyBook;
 
 import java.util.concurrent.CompletableFuture;
@@ -28,4 +30,11 @@ import java.util.concurrent.CompletableFuture;
 public interface HelloWold {
 
     CompletableFuture<Integer> update(MyBook book) throws NotFoundException;
+
+    void hello(AnimalTest<Employee> test);
+
+    interface AnimalTest<T> {
+
+        void hello(Animal<T> animal);
+    }
 }

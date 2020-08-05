@@ -21,14 +21,13 @@ package io.joyrpc.permission;
  */
 
 import io.joyrpc.util.GenericChecker;
-import io.joyrpc.util.GenericChecker.Scope;
+import io.joyrpc.util.GenericChecker.ClassInfo;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.CompletionStage;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-import static io.joyrpc.util.ClassUtils.getGenericClass;
 import static io.joyrpc.util.ClassUtils.isJavaClass;
 import static io.joyrpc.util.GenericChecker.NONE_STATIC_METHOD;
 import static io.joyrpc.util.GenericChecker.NONE_STATIC_TRANSIENT_FIELD;
@@ -41,7 +40,7 @@ public class SerializerTypeScanner {
     protected Class<?> clazz;
     protected GenericChecker checker;
     protected Set<Class<?>> uniques;
-    protected BiConsumer<Class, Scope> consumer;
+    protected Consumer<ClassInfo> consumer;
 
     public SerializerTypeScanner(Class<?> clazz) {
         this.clazz = clazz;
@@ -63,10 +62,10 @@ public class SerializerTypeScanner {
     /**
      * 接受
      *
-     * @param clazz 类型
-     * @param scope 作用域
+     * @param info 类型
      */
-    protected void accept(final Class clazz, final Scope scope) {
+    protected void accept(final ClassInfo info) {
+        Class<?> clazz = info.getClazz();
         if (Void.class == clazz || void.class == clazz || CompletionStage.class.isAssignableFrom(clazz)) {
             //不能序列化的
         } else if (clazz.isEnum()) {
@@ -78,10 +77,10 @@ public class SerializerTypeScanner {
             uniques.add(clazz);
         } else if (clazz.isInterface()) {
             //自定义接口
-            checker.checkMethods(clazz, NONE_STATIC_METHOD, consumer);
+            checker.checkMethods(info.getGenericClass(), NONE_STATIC_METHOD, consumer);
         } else {
             uniques.add(clazz);
-            checker.checkFields(getGenericClass(clazz), NONE_STATIC_TRANSIENT_FIELD, consumer);
+            checker.checkFields(info.getGenericClass(), NONE_STATIC_TRANSIENT_FIELD, consumer);
         }
     }
 }

@@ -305,6 +305,7 @@ public class SerializationTest {
         Assert.assertTrue(set.contains(NotFoundException.class));
         Assert.assertTrue(set.contains(Integer.class));
         Assert.assertFalse(set.contains(CompletableFuture.class));
+        Assert.assertFalse(set.contains(Animal.class));
     }
 
     @Test

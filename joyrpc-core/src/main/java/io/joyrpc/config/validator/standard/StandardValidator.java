@@ -23,6 +23,7 @@ package io.joyrpc.config.validator.standard;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.util.GenericChecker;
+import io.joyrpc.util.GenericChecker.ClassInfo;
 import io.joyrpc.util.GenericChecker.Scope;
 import io.joyrpc.util.Resource;
 import org.slf4j.Logger;
@@ -36,11 +37,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static io.joyrpc.util.ClassUtils.*;
 import static io.joyrpc.util.GenericChecker.NONE_STATIC_METHOD;
+import static io.joyrpc.util.GenericChecker.NONE_STATIC_TRANSIENT_FIELD;
 
 /**
  * @date 25/6/2019
@@ -105,7 +107,7 @@ public class StandardValidator implements InterfaceValidator {
     /**
      * 检查出的类消费者
      */
-    protected static class MyConsumer implements BiConsumer<Class, Scope> {
+    protected static class MyConsumer implements Consumer<ClassInfo> {
         /**
          * 检查
          */
@@ -133,21 +135,22 @@ public class StandardValidator implements InterfaceValidator {
         }
 
         @Override
-        public void accept(final Class clazz, final Scope scope) {
+        public void accept(final ClassInfo info) {
+            Class<?> clazz = info.getClazz();
             if (clazz.isEnum()) {
-                onEnum(clazz, scope);
+                onEnum(clazz, info.getScope());
             } else if (Throwable.class.isAssignableFrom(clazz)) {
                 //异常
-                onThrowable(clazz, scope);
+                onThrowable(clazz, info.getScope());
             } else if (isJavaClass(clazz)) {
-                onJava(clazz, scope);
+                onJava(clazz, info.getScope());
             } else if (clazz.isInterface()) {
                 //自定义接口
-                onCustomInterface(clazz, scope);
+                onCustomInterface(clazz, info.getScope());
             } else {
                 if (Modifier.isAbstract(clazz.getModifiers())) {
                     //抽象类
-                    onCustomAbstract(clazz, scope);
+                    onCustomAbstract(clazz, info.getScope());
                 } else if (getDefaultConstructor(clazz) == null) {
                     //检查是否有默认函数
                     onNoDefaultConstructor(clazz);
@@ -156,7 +159,7 @@ public class StandardValidator implements InterfaceValidator {
                     //没有序列化
                     onNotSerializable(clazz);
                 }
-                checker.checkFields(getGenericClass(clazz), GenericChecker.NONE_STATIC_TRANSIENT_FIELD, this);
+                checker.checkFields(info.getGenericClass(), NONE_STATIC_TRANSIENT_FIELD, this);
             }
         }
 

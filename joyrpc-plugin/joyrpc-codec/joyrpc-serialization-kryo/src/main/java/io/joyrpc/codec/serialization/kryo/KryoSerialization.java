@@ -159,8 +159,6 @@ public class KryoSerialization implements Serialization {
         public com.esotericsoftware.kryo.Serializer getDefaultSerializer(Class type) {
             if (type == null) {
                 throw new KryoException("type cannot be null.");
-            } else if (blackWhiteList != null && !blackWhiteList.isValid(type)) {
-                throw new KryoException("Failed to decode class " + type + " by kyro serialization, it is not passed through blackWhiteList.");
             }
 
             /**
@@ -176,6 +174,15 @@ public class KryoSerialization implements Serialization {
                 return new JavaSerializer();
             }
             return super.getDefaultSerializer(type);
+        }
+
+        @Override
+        public com.esotericsoftware.kryo.Registration readClass(Input input) {
+            com.esotericsoftware.kryo.Registration result = super.readClass(input);
+            if (result != null && blackWhiteList != null && !blackWhiteList.isValid(result.getType())) {
+                throw new KryoException("Failed to decode class " + result.getType() + " by kyro serialization, it is not passed through blackWhiteList.");
+            }
+            return result;
         }
     }
 }

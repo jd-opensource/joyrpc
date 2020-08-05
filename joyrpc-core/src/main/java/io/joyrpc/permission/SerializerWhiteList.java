@@ -82,7 +82,10 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
             return true;
         }
         if (!whites.containsKey(target)) {
-            if (Throwable.class.isAssignableFrom(target)) {
+            //基本类型、枚举和异常默认通过
+            if (target.isPrimitive()
+                    || target.isEnum()
+                    || Throwable.class.isAssignableFrom(target)) {
                 //异常
                 whites.putIfAbsent(target, Boolean.TRUE);
                 return true;

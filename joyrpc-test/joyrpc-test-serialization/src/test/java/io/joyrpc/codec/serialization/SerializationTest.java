@@ -30,6 +30,7 @@ import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.Name;
 import io.joyrpc.permission.SerializerTypeScanner;
+import io.joyrpc.permission.SerializerWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.ClassUtils;
@@ -37,6 +38,7 @@ import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.SystemClock;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -55,6 +57,11 @@ import java.util.function.BiConsumer;
 import static io.joyrpc.Plugin.*;
 
 public class SerializationTest {
+
+    @BeforeClass
+    public static void beforeClass() {
+        SerializerWhiteList.getGlobalWhitelist().setEnabled(false);
+    }
 
     protected void serializeAndDeserialize(final Serialization serialization, final Object target,
                                            final UnsafeByteArrayOutputStream baos,
@@ -305,7 +312,7 @@ public class SerializationTest {
         Assert.assertTrue(set.contains(NotFoundException.class));
         Assert.assertTrue(set.contains(Integer.class));
         Assert.assertFalse(set.contains(CompletableFuture.class));
-        Assert.assertFalse(set.contains(Animal.class));
+        Assert.assertTrue(set.contains(Animal.class));
     }
 
     @Test

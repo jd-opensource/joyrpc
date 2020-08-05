@@ -21,6 +21,7 @@ package io.joyrpc.codec.serialization.kryo;
  */
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
 import io.joyrpc.codec.serialization.ObjectReader;
 
@@ -43,96 +44,172 @@ public class KryoReader implements ObjectReader {
 
     @Override
     public <T> T readObject(final Class<T> clazz) throws IOException {
-        return (T) kryo.readClassAndObject(input);
+        try {
+            return (T) kryo.readClassAndObject(input);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public Object readObject() throws IOException {
-        return kryo.readClassAndObject(input);
+        try {
+            return kryo.readClassAndObject(input);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public String readString(final Charset charset, final boolean shortLength) throws IOException {
-        return input.readString();
+        try {
+            return input.readString();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int read() throws IOException {
-        return input.read();
+        try {
+            return input.read();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int read(final byte[] b) throws IOException {
-        return input.read(b);
+        try {
+            return input.read(b);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
-        return input.read(b, off, len);
+        try {
+            return input.read(b, off, len);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int available() throws IOException {
-        return input.available();
+        try {
+            return input.available();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void close() throws IOException {
-        input.close();
+        try {
+            input.close();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public boolean readBoolean() throws IOException {
-        return input.readBoolean();
+        try {
+            return input.readBoolean();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public byte readByte() throws IOException {
-        return input.readByte();
+        try {
+            return input.readByte();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int readUnsignedByte() throws IOException {
-        return input.readByteUnsigned();
+        try {
+            return input.readByteUnsigned();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public short readShort() throws IOException {
-        return input.readShort();
+        try {
+            return input.readShort();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int readUnsignedShort() throws IOException {
-        return input.readShortUnsigned();
+        try {
+            return input.readShortUnsigned();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public char readChar() throws IOException {
-        return input.readChar();
+        try {
+            return input.readChar();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public int readInt() throws IOException {
-        return input.readInt();
+        try {
+            return input.readInt();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public long readLong() throws IOException {
-        return input.readLong();
+        try {
+            return input.readLong();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public float readFloat() throws IOException {
-        return input.readFloat();
+        try {
+            return input.readFloat();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public double readDouble() throws IOException {
-        return input.readDouble();
+        try {
+            return input.readDouble();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public long skip(final long n) throws IOException {
-        return input.skip(n);
+        try {
+            return input.skip(n);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 }

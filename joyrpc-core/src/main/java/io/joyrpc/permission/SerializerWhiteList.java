@@ -52,7 +52,7 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
     /**
      * 白名单
      */
-    protected Map<Class<?>, Boolean> whites = new ConcurrentHashMap<>();
+    protected Map<Class<?>, Boolean> whites = new ConcurrentHashMap<>(512);
 
     /**
      * 白名单文件

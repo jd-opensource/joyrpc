@@ -275,15 +275,13 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
 
         @Override
         public void parseArray(final Reader reader, final Function<Function<Type, Object>, Boolean> function) throws SerializerException {
-            try {
-                JsonParser parser = mapper.createParser(reader);
+            try (JsonParser parser = mapper.createParser(reader)) {
                 // loop until token equal to "}"
                 while (parser.nextToken() != JsonToken.END_ARRAY) {
                     if (!function.apply(o -> parseObject(parser, o))) {
                         break;
                     }
                 }
-                parser.close();
             } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
@@ -291,15 +289,13 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
 
         @Override
         public void parseObject(final Reader reader, final BiFunction<String, Function<Type, Object>, Boolean> function) throws SerializerException {
-            try {
-                JsonParser parser = mapper.createParser(reader);
+            try (JsonParser parser = mapper.createParser(reader);) {
                 // loop until token equal to "}"
                 while (parser.nextToken() != JsonToken.END_ARRAY) {
                     if (!function.apply(parser.getCurrentName(), o -> parseObject(parser, o))) {
                         break;
                     }
                 }
-                parser.close();
             } catch (IOException e) {
                 throw new SerializerException("Error occurs while parsing object", e);
             }
@@ -342,6 +338,9 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         }
     }
 
+    /**
+     * 提供类型的序列化器
+     */
     protected static class MySimpleSerializers extends SimpleSerializers {
         @Override
         public JsonSerializer<?> findSerializer(SerializationConfig config, JavaType type, BeanDescription beanDesc) {
@@ -355,8 +354,14 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         }
     }
 
+    /**
+     * 提供类型的反序列化器
+     */
     protected static class MySimpleDeserializers extends SimpleDeserializers {
 
+        /**
+         * 黑白名单
+         */
         protected SerializerBlackWhiteList blackWhiteList;
 
         public MySimpleDeserializers(SerializerBlackWhiteList blackWhiteList) {

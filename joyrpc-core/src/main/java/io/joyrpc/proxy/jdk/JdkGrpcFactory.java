@@ -24,6 +24,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.proxy.AbstractGrpcFactory;
 import io.joyrpc.proxy.GrpcFactory;
+import io.joyrpc.proxy.MethodArgs;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcType;
 
@@ -49,7 +50,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String upperField = field.substring(0, 1).toUpperCase() + field.substring(1);
         StringBuilder builder = new StringBuilder(200).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
-                append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n").
+                append("public class ").append(simpleName).append(" implements java.io.Serializable," + MethodArgs.class.getName() + "{\n").
                 append("\t").append("private ").append(typeName).append(' ').append(field).append(";\n").
                 append("\t").append("public ").append(typeName).append(" get").append(upperField).append("(){\n").
                 append("\t\t").append("return ").append(field).append(";").append("\n").
@@ -78,7 +79,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String fullName = naming.getFullName();
         StringBuilder builder = new StringBuilder(1024).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
-                append("public class ").append(simpleName).append(" implements java.io.Serializable,io.joyrpc.proxy.MethodArgs{\n");
+                append("public class ").append(simpleName).append(" implements java.io.Serializable," + MethodArgs.class.getName() + "{\n");
         //添加字段
         Parameter[] parameters = method.getParameters();
         String[] typeNames = new String[parameters.length];

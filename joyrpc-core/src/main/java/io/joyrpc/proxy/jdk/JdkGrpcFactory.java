@@ -43,8 +43,6 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
 
     @Override
     protected Class<?> buildResponseClass(final Class<?> clz, final Method method, final Naming naming) throws Exception {
-
-
         String simpleName = naming.getSimpleName();
         String fullName = naming.getFullName();
         String typeName = method.getGenericReturnType().getTypeName();

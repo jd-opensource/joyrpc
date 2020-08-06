@@ -31,7 +31,6 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;

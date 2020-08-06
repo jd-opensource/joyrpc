@@ -202,7 +202,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
             }
             Constructor[] constructors = clazz.getConstructors();
             return (MethodCaller) constructors[0].newInstance(ref);
-        } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+        } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | InvocationTargetException e) {
             return null;
         }
     }

@@ -156,7 +156,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
      * @param body
      * @throws Http2Exception
      */
-    protected void handleRequest(ChannelHandlerContext ctx, int streamId, int bizMsgId,
+    protected void handleRequest(ChannelHandlerContext ctx, int streamId, long bizMsgId,
                                  Http2Headers http2Headers, ByteBuf body) throws Http2Exception {
         try {
             //获取server端响应header
@@ -177,7 +177,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
         }
     }
 
-    protected void handleEndHeader(ChannelHandlerContext ctx, int streamId, int bizMsgId,
+    protected void handleEndHeader(ChannelHandlerContext ctx, int streamId, long bizMsgId,
                                    Http2Headers http2Headers) throws Http2Exception {
         try {
             //获取server端响应header
@@ -196,7 +196,11 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
                               int padding, boolean endOfStream) throws Http2Exception {
             Http2Stream http2Stream = connection().stream(streamId);
             //根据streamKey,获取缓存的bizId
-            int bizMsgId = http2Stream.getProperty(streamKey);
+            long bizMsgId = 0;
+            try {
+                bizMsgId = http2Stream.getProperty(streamKey);
+            }catch (Throwable e){
+            }
             Http2Headers headers = http2Stream.getProperty(headerKey);
             handleRequest(ctx, streamId, bizMsgId, headers, data);
             return padding;
@@ -231,7 +235,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             } else {
                 Http2Stream http2Stream = connection().stream(streamId);
                 //根据streamKey,获取缓存的bizId
-                int bizMsgId = http2Stream.getProperty(streamKey);
+                long bizMsgId = http2Stream.getProperty(streamKey);
                 handleEndHeader(ctx, streamId, bizMsgId, headers);
             }
         }

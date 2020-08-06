@@ -26,8 +26,12 @@ import io.joyrpc.exception.ReflectionException;
 import io.joyrpc.proxy.MethodArgs;
 import io.joyrpc.util.GrpcType.GrpcConversion;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.*;
+import java.net.JarURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.*;
@@ -36,6 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
  * Title: 类型转换工具类<br>
@@ -883,6 +889,89 @@ public class ClassUtils {
     }
 
     /**
+     * 从包package中获取所有的Class
+     *
+     * @param pkName 包名
+     * @return
+     */
+    public static Set<Class<?>> scan(final String pkName) throws IOException {
+        Set<Class<?>> classes = new LinkedHashSet<>();
+        boolean recursive = true;
+        String packageName = pkName;
+        String packageDir = packageName.replace('.', '/');
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        Enumeration<URL> dirs = classLoader.getResources(packageDir);
+        while (dirs.hasMoreElements()) {
+            URL url = dirs.nextElement();
+            String protocol = url.getProtocol();
+            if ("file".equals(protocol)) {
+                String filePath = URLDecoder.decode(url.getFile(), "UTF-8");
+                scanByFile(classLoader, packageName, filePath, recursive, classes);
+            } else if ("jar".equals(protocol)) {
+                // 如果是jar包文件
+                JarFile jar = ((JarURLConnection) url.openConnection()).getJarFile();
+                Enumeration<JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    String name = entry.getName();
+                    if (name.charAt(0) == '/') {
+                        // 如果是以/开头的,获取后面的字符串
+                        name = name.substring(1);
+                    }
+                    if (name.startsWith(packageDir)) {
+                        int index = name.lastIndexOf('/');
+                        // 如果以"/"结尾 是一个包
+                        if (index != -1) {
+                            // 获取包名 把"/"替换成"."
+                            packageName = name.substring(0, index).replace('/', '.');
+                        }
+                        if ((index != -1) || recursive) {
+                            if (name.endsWith(".class") && !entry.isDirectory()) {
+                                try {
+                                    classes.add(Class.forName(packageName + '.' + name.substring(packageName.length() + 1, name.length() - 6)));
+                                } catch (ClassNotFoundException e) {
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return classes;
+    }
+
+    /**
+     * 以文件的形式来获取包下的所有Class
+     *
+     * @param classLoader 类加载器
+     * @param packageName 包名
+     * @param packagePath 包路径
+     * @param recursive   递归标识
+     * @param classes     类集合
+     */
+    protected static void scanByFile(ClassLoader classLoader,
+                                     String packageName,
+                                     String packagePath,
+                                     final boolean recursive,
+                                     Set<Class<?>> classes) {
+        File dir = new File(packagePath);
+        if (!dir.exists() || !dir.isDirectory()) {
+            return;
+        }
+        File[] dirFiles = dir.listFiles(file -> (recursive && file.isDirectory()) || (file.getName().endsWith(".class")));
+        for (File file : dirFiles) {
+            if (file.isDirectory()) {
+                scanByFile(classLoader, packageName + "." + file.getName(), file.getAbsolutePath(), recursive, classes);
+            } else {
+                try {
+                    classes.add(classLoader.loadClass(packageName + '.' + file.getName().substring(0, file.getName().length() - 6)));
+                } catch (ClassNotFoundException e) {
+                }
+            }
+        }
+    }
+
+    /**
      * 根据标准名称获取类型
      *
      * @param canonicalNames 标准名称数组
@@ -1150,6 +1239,19 @@ public class ClassUtils {
             getDesc(c, builder);
         }
         return builder.toString();
+    }
+
+    /**
+     * 获取数组类型的最终单元class
+     *
+     * @param clazz
+     * @return
+     */
+    public static Class<?> getComponentType(Class<?> clazz) {
+        while (clazz.isArray()) {
+            clazz = clazz.getComponentType();
+        }
+        return clazz;
     }
 
     /**

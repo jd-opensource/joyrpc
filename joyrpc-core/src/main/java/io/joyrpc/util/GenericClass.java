@@ -77,7 +77,7 @@ public class GenericClass {
             while (iterator.hasNext()) {
                 clazz = iterator.next();
                 parentClazz = clazz.getSuperclass();
-                if (parentClazz != Object.class) {
+                if (parentClazz != null && parentClazz != Object.class) {
                     childType = parentType(parentClazz, clazz.getGenericSuperclass(), childType);
                 }
             }

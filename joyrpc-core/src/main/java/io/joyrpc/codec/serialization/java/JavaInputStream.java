@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.java;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,6 @@ package io.joyrpc.codec.serialization.java;
  */
 
 import io.joyrpc.exception.SerializerException;
-import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.BlackWhiteList;
 
 import java.io.*;
@@ -31,22 +30,25 @@ import java.io.*;
  */
 public class JavaInputStream extends ObjectInputStream implements ObjectInput, ObjectStreamConstants {
 
-    protected BlackList<String> blackList;
+    protected BlackWhiteList<Class<?>> blackWhiteList;
 
-    public JavaInputStream(final InputStream in, final BlackList<String> blackList) throws IOException {
+    public JavaInputStream(final InputStream in, final BlackWhiteList<Class<?>> blackWhiteList) throws IOException {
         super(in);
-        this.blackList = blackList;
+        this.blackWhiteList = blackWhiteList;
     }
 
-    public JavaInputStream(final BlackWhiteList blackList) throws IOException, SecurityException {
-        this.blackList = blackList;
+    public JavaInputStream(final BlackWhiteList blackWhiteList) throws IOException, SecurityException {
+        this.blackWhiteList = blackWhiteList;
     }
 
     @Override
     protected Class<?> resolveClass(final ObjectStreamClass desc) throws IOException, ClassNotFoundException, SerializerException {
-        if (blackList != null && blackList.isBlack(desc.getName())) {
-            throw new SerializerException("Failed to decode class " + desc.getName() + " by java serialization, it is in blacklist");
+        Class<?> result = super.resolveClass(desc);
+        if (blackWhiteList != null && !blackWhiteList.isValid(result)) {
+            throw new SerializerException("Failed to decode class " + result.getName() + " by java serialization, it is not passed through blackWhiteList.");
         }
-        return super.resolveClass(desc);
+        return result;
     }
+
+
 }

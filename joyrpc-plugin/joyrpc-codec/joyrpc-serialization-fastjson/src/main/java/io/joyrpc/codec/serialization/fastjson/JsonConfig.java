@@ -25,37 +25,36 @@ import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.parser.deserializer.ASMDeserializerFactory;
 import com.alibaba.fastjson.parser.deserializer.ObjectDeserializer;
 import com.alibaba.fastjson.parser.deserializer.ThrowableDeserializer;
-import io.joyrpc.permission.BlackList;
+import io.joyrpc.permission.BlackWhiteList;
 
 import java.lang.reflect.Type;
 
 public class JsonConfig extends ParserConfig {
 
-    protected BlackList<String> blackList;
+    protected BlackWhiteList<Class<?>> blackWhiteList;
 
-    public JsonConfig(BlackList<String> blackList) {
-        this.blackList = blackList;
+    public JsonConfig(BlackWhiteList<Class<?>> blackWhiteList) {
+        this.blackWhiteList = blackWhiteList;
     }
 
-    public JsonConfig(boolean fieldBase, BlackList<String> blackList) {
+    public JsonConfig(boolean fieldBase, BlackWhiteList<Class<?>> blackWhiteList) {
         super(fieldBase);
-        this.blackList = blackList;
+        this.blackWhiteList = blackWhiteList;
     }
 
-    public JsonConfig(ClassLoader parentClassLoader, BlackList<String> blackList) {
+    public JsonConfig(ClassLoader parentClassLoader, BlackWhiteList<Class<?>> blackWhiteList) {
         super(parentClassLoader);
-        this.blackList = blackList;
+        this.blackWhiteList = blackWhiteList;
     }
 
-    public JsonConfig(ASMDeserializerFactory asmFactory, BlackList<String> blackList) {
+    public JsonConfig(ASMDeserializerFactory asmFactory, BlackWhiteList<Class<?>> blackWhiteList) {
         super(asmFactory);
-        this.blackList = blackList;
+        this.blackWhiteList = blackWhiteList;
     }
 
     public ObjectDeserializer getDeserializer(final Class<?> clazz, final Type type) {
-
-        if (blackList != null && blackList.isBlack(clazz.getName())) {
-            throw new JSONException("Failed to decode class " + type + " by json serialization, it is in blacklist");
+        if (blackWhiteList != null && !blackWhiteList.isValid(clazz)) {
+            throw new JSONException("Failed to decode class " + type + " by json serialization, it is not passed through blackWhiteList.");
         }
         ObjectDeserializer deserializer = super.getDeserializer(clazz, type);
         if (deserializer instanceof ThrowableDeserializer) {

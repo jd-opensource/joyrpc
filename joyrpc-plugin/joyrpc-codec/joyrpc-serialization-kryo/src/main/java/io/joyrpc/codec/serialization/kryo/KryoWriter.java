@@ -21,6 +21,7 @@ package io.joyrpc.codec.serialization.kryo;
  */
 
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Output;
 import io.joyrpc.codec.serialization.ObjectWriter;
 
@@ -42,67 +43,119 @@ public class KryoWriter implements ObjectWriter {
 
     @Override
     public void writeObject(final Object obj) throws IOException {
-        kryo.writeClassAndObject(output, obj);
+        try {
+            kryo.writeClassAndObject(output, obj);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void write(final byte[] b) throws IOException {
-        output.writeBytes(b);
+        try {
+            output.writeBytes(b);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void write(final byte[] b, final int off, final int len) throws IOException {
-        output.write(b, off, len);
+        try {
+            output.write(b, off, len);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void flush() throws IOException {
-        output.flush();
+        try {
+            output.flush();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void close() throws IOException {
-        output.close();
+        try {
+            output.close();
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeBoolean(final boolean v) throws IOException {
-        output.writeBoolean(v);
+        try {
+            output.writeBoolean(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeByte(final int v) throws IOException {
-        output.writeByte(v);
+        try {
+            output.writeByte(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeShort(final int v) throws IOException {
-        output.writeShort(v);
+        try {
+            output.writeShort(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeChar(final int v) throws IOException {
-        output.writeChar((char) v);
+        try {
+            output.writeChar((char) v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeInt(final int v) throws IOException {
-        output.writeInt(v);
+        try {
+            output.writeInt(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeLong(final long v) throws IOException {
-        output.writeLong(v);
+        try {
+            output.writeLong(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeFloat(final float v) throws IOException {
-        output.writeFloat(v);
+        try {
+            output.writeFloat(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
     public void writeDouble(final double v) throws IOException {
-        output.writeDouble(v);
+        try {
+            output.writeDouble(v);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     @Override
@@ -111,13 +164,21 @@ public class KryoWriter implements ObjectWriter {
             return;
         }
         int len = s.length();
-        for (int i = 0; i < len; i++) {
-            output.writeChar(s.charAt(i));
+        try {
+            for (int i = 0; i < len; i++) {
+                output.writeChar(s.charAt(i));
+            }
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
         }
     }
 
     @Override
     public void writeString(final String value, final Charset charset, final boolean zeroNull, final boolean shortLength) throws IOException {
-        output.writeString(value);
+        try {
+            output.writeString(value);
+        } catch (KryoException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 }

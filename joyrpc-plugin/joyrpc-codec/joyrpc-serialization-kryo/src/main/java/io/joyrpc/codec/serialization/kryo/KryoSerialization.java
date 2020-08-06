@@ -22,6 +22,7 @@ package io.joyrpc.codec.serialization.kryo;
 
 import com.esotericsoftware.kryo.AutowiredObjectSerializer;
 import com.esotericsoftware.kryo.Kryo;
+import com.esotericsoftware.kryo.KryoException;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import com.esotericsoftware.kryo.serializers.DefaultSerializers;
@@ -30,6 +31,7 @@ import de.javakaffee.kryoserializers.*;
 import io.joyrpc.codec.serialization.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.permission.SerializerBlackWhiteList;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 
 import java.io.IOException;
@@ -73,11 +75,15 @@ public class KryoSerialization implements Serialization {
      * Kryo序列化和反序列化实现
      */
     protected static final class KryoSerializer extends AbstractSerializer {
+
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/kryo.blacklist",
+                "META-INF/permission/kryo.blacklist");
+
         /**
          * 绑定在线程变量里面
          */
         protected static final ThreadLocal<Kryo> local = ThreadLocal.withInitial(() -> {
-            final Kryo kryo = new CompatibleKryo();
+            final Kryo kryo = new CompatibleKryo(BLACK_WHITE_LIST);
             kryo.addDefaultSerializer(Throwable.class, new JavaSerializer());
             kryo.register(Arrays.asList("").getClass(), new ArraysAsListSerializer());
             kryo.register(GregorianCalendar.class, new GregorianCalendarSerializer());
@@ -142,10 +148,17 @@ public class KryoSerialization implements Serialization {
      * 兼容Kryo
      */
     protected static class CompatibleKryo extends Kryo {
+
+        protected SerializerBlackWhiteList blackWhiteList;
+
+        public CompatibleKryo(SerializerBlackWhiteList blackWhiteList) {
+            this.blackWhiteList = blackWhiteList;
+        }
+
         @Override
         public com.esotericsoftware.kryo.Serializer getDefaultSerializer(Class type) {
             if (type == null) {
-                throw new IllegalArgumentException("type cannot be null.");
+                throw new KryoException("type cannot be null.");
             }
 
             /**
@@ -161,6 +174,15 @@ public class KryoSerialization implements Serialization {
                 return new JavaSerializer();
             }
             return super.getDefaultSerializer(type);
+        }
+
+        @Override
+        public com.esotericsoftware.kryo.Registration readClass(Input input) {
+            com.esotericsoftware.kryo.Registration result = super.readClass(input);
+            if (result != null && blackWhiteList != null && !blackWhiteList.isValid(result.getType())) {
+                throw new KryoException("Failed to decode class " + result.getType() + " by kyro serialization, it is not passed through blackWhiteList.");
+            }
+            return result;
         }
     }
 }

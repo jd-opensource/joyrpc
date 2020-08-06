@@ -24,8 +24,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.LinkedList;
-import java.util.List;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
 import java.util.function.Predicate;
 
 /**
@@ -43,40 +44,73 @@ public class Resource {
      * @return
      */
     public static List<String> lines(final String[] resources, final boolean includeAll) {
-        return lines(resources, includeAll, NONE_COMMENT);
+        return lines(resources, includeAll, false, NONE_COMMENT);
     }
 
     /**
      * 读取资源文件内容，忽略不存在的文件和异常
      *
-     * @param resources  资源文件
-     * @param includeAll 包含所有文件
-     * @param predicate  断言
+     * @param resources         资源文件
+     * @param includeAll        包含所有文件
+     * @param readDuplicateFile 读重复路径的文件
      * @return
      */
-    public static List<String> lines(final String[] resources, final boolean includeAll, final Predicate<String> predicate) {
+    public static List<String> lines(final String[] resources, final boolean includeAll, final boolean readDuplicateFile) {
+        return lines(resources, includeAll, readDuplicateFile, NONE_COMMENT);
+    }
 
+    /**
+     * 读取资源文件内容，忽略不存在的文件和异常
+     *
+     * @param resources         资源文件
+     * @param includeAll        包含所有文件
+     * @param readDuplicateFile 读重复路径的文件
+     * @param predicate         断言
+     * @return
+     */
+    public static List<String> lines(final String[] resources, final boolean includeAll,
+                                     final boolean readDuplicateFile, final Predicate<String> predicate) {
         List<String> result = new LinkedList<>();
-
         if (resources != null) {
             ClassLoader loader = ClassUtils.getCurrentClassLoader();
             for (String resource : resources) {
-                InputStream inputStream = loader.getResourceAsStream(resource);
-                if (inputStream != null) {
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            if (predicate == null || predicate.test(line)) {
-                                result.add(line);
-                            }
+                if (readDuplicateFile) {
+                    //读所有同路径的文件，合并重复行
+                    Set<String> rs = new LinkedHashSet<>();
+                    try {
+                        Enumeration<URL> duplicateResources = loader.getResources(resource);
+                        while ((duplicateResources.hasMoreElements())) {
+                            InputStream inputStream = duplicateResources.nextElement().openStream();
+                            rs.addAll(readLines(inputStream, predicate));
                         }
-                        if (!includeAll) {
-                            break;
-                        }
+                        result.addAll(rs);
                     } catch (IOException e) {
+                    }
+                } else {
+                    //同路径的文件，只读取一个
+                    InputStream inputStream = loader.getResourceAsStream(resource);
+                    result.addAll(readLines(inputStream, predicate));
+                }
+                if (!includeAll) {
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    protected static List<String> readLines(InputStream inputStream, final Predicate<String> predicate) {
+        List<String> result = new LinkedList<>();
+        if (inputStream != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (predicate == null || predicate.test(line)) {
+                        result.add(line);
                     }
                 }
 
+            } catch (IOException e) {
             }
         }
         return result;
@@ -89,7 +123,7 @@ public class Resource {
      * @return
      */
     public static List<String> lines(final String resource) {
-        return lines(new String[]{resource}, false, NONE_COMMENT);
+        return lines(new String[]{resource}, false, false, NONE_COMMENT);
     }
 
     /**

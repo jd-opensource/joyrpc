@@ -1,4 +1,4 @@
-package io.joyrpc.permission;
+package io.joyrpc.codec.serialization;
 
 /*-
  * #%L
@@ -20,34 +20,21 @@ package io.joyrpc.permission;
  * #L%
  */
 
-import java.util.Collection;
+import io.joyrpc.codec.serialization.exception.NotFoundException;
+import io.joyrpc.codec.serialization.model.Animal;
+import io.joyrpc.codec.serialization.model.Employee;
+import io.joyrpc.codec.serialization.model.MyBook;
 
-/**
- * 黑名单
- */
-public interface BlackList<T> {
+import java.util.concurrent.CompletableFuture;
 
-    /**
-     * 判断是否在黑名单中
-     *
-     * @param target
-     * @return
-     */
-    boolean isBlack(T target);
+public interface HelloWold {
 
-    /**
-     * 感知黑名单
-     */
-    @FunctionalInterface
-    interface BlackListAware {
+    CompletableFuture<Integer> update(MyBook book) throws NotFoundException;
 
-        /**
-         * 更新黑名单
-         *
-         * @param blackList 黑名单
-         */
-        void updateBlack(Collection<String> blackList);
+    void hello(AnimalTest<Employee> test);
 
+    interface AnimalTest<T> {
+
+        void hello(Animal<T> animal);
     }
-
 }

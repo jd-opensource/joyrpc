@@ -24,17 +24,20 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONReader;
 import com.alibaba.fastjson.parser.Feature;
-import com.alibaba.fastjson.parser.ParserConfig;
 import com.alibaba.fastjson.serializer.CalendarCodec;
 import com.alibaba.fastjson.serializer.SerializeConfig;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
-import io.joyrpc.codec.serialization.*;
+import io.joyrpc.codec.serialization.Json;
+import io.joyrpc.codec.serialization.Serialization;
+import io.joyrpc.codec.serialization.Serializer;
+import io.joyrpc.codec.serialization.TypeReference;
 import io.joyrpc.codec.serialization.fastjson.java8.*;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
+import io.joyrpc.permission.SerializerBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 
@@ -129,7 +132,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
 
     @Override
     public void updateBlack(final Collection<String> blackList) {
-        JsonSerializer.BLACK_LIST.updateBlack(blackList);
+        JsonSerializer.BLACK_WHITE_LIST.updateBlack(blackList);
     }
 
     /**
@@ -137,8 +140,9 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
      */
     protected static class JsonSerializer implements Serializer, Json {
 
-        protected static final BlackList<String> BLACK_LIST = new SerializerBlackList("permission/fastjson.blacklist",
-                "META-INF/permission/fastjson.blacklist").load();
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/fastjson.blacklist",
+                "META-INF/permission/fastjson.blacklist");
+
         protected static final JsonSerializer INSTANCE = new JsonSerializer();
 
         protected JsonConfig parserConfig;
@@ -179,8 +183,9 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
          * @return
          */
         protected JsonConfig createParserConfig() {
-            JsonConfig config = new JsonConfig(BLACK_LIST);
-            config.setSafeMode(VARIABLE.getBoolean(ParserConfig.SAFE_MODE_PROPERTY, true));
+            JsonConfig config = new JsonConfig(BLACK_WHITE_LIST);
+            //白名单模式，默认关闭安全模式
+            //config.setSafeMode(VARIABLE.getBoolean(ParserConfig.SAFE_MODE_PROPERTY, true));
             config.putDeserializer(MonthDay.class, MonthDaySerialization.INSTANCE);
             config.putDeserializer(YearMonth.class, YearMonthSerialization.INSTANCE);
             config.putDeserializer(Year.class, YearSerialization.INSTANCE);

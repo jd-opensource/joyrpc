@@ -121,6 +121,28 @@ public class GenericType {
     }
 
     /**
+     * 获取泛型变量
+     *
+     * @return 泛型变量
+     */
+    public Map<String, Type> getVariables() {
+        Map<String, Type> result = null;
+        if (variables == null) {
+            if (variable == null) {
+                return null;
+            }
+            result = new HashMap<>();
+            result.put(variable.getName(), variable.getGenericType());
+        } else {
+            result = new HashMap<>(variables.size());
+            for (Map.Entry<String, Variable> entry : variables.entrySet()) {
+                result.put(entry.getKey(), entry.getValue().getGenericType());
+            }
+        }
+        return result;
+    }
+
+    /**
      * 验证类型，防止漏洞攻击
      *
      * @param type   目标类型

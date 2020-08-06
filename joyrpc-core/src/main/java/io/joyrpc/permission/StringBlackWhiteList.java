@@ -9,9 +9,9 @@ package io.joyrpc.permission;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,7 +21,6 @@ package io.joyrpc.permission;
  */
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
@@ -127,28 +126,8 @@ public class StringBlackWhiteList implements BlackWhiteList<String> {
     }
 
     @Override
-    public void updateBlack(final Collection<String> targets) {
-        if (targets == null) {
-            blacks = null;
-        } else {
-            blacks = new HashSet<>(targets);
-        }
-        blackAll = all != null && all.apply(blacks);
-    }
-
-    @Override
     public boolean isWhite(final String target) {
         return target != null && (whiteAll || whites != null && whites.contains(target));
-    }
-
-    @Override
-    public void updateWhite(final Collection<String> targets) {
-        if (targets == null) {
-            whites = null;
-        } else {
-            whites = new HashSet<>(targets);
-        }
-        whiteAll = all != null && all.apply(whites);
     }
 
     @Override

@@ -21,8 +21,8 @@ package io.joyrpc.config;
  */
 
 import io.joyrpc.Callback;
-import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.annotation.CallbackArg;
+import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.cache.Cache;
 import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
@@ -37,11 +37,11 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
+import io.joyrpc.permission.SerializerWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 
@@ -61,6 +61,7 @@ import static io.joyrpc.Plugin.CACHE;
 import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Variable.VARIABLE;
+import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelist;
 import static io.joyrpc.util.ClassUtils.*;
 
 /**
@@ -532,6 +533,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * 参数描述
          */
         protected String description;
+        /**
+         * 序列化白名单
+         */
+        protected SerializerWhiteList whiteList;
 
         /**
          * 构造函数
@@ -574,6 +579,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.traceSpanId = method == null ? null : getTraceSpanId(grpcMethod.getClazz().getName(), method.getName());
             this.callback = callback;
             this.description = getDesc(types);
+            this.whiteList = getGlobalWhitelist();
         }
 
         @Override
@@ -664,6 +670,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         public CallbackMethod getCallback() {
             return callback;
         }
+
     }
 
     /**
@@ -681,5 +688,6 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             request.decline();
         }
     }
+
 
 }

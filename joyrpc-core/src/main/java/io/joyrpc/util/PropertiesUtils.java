@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Properties;
-import java.util.Set;
 import java.util.function.BiConsumer;
 
 import static io.joyrpc.util.ClassUtils.getCurrentClassLoader;

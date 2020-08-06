@@ -2,7 +2,15 @@
 
 ## 1.1.1-SNAPSHOT
 
+### Enhancement
 
+- 添加序列化白名单功能，默认开启白名单和关闭Fastjson的安全模式
+
+- 增加Jackson序列化
+
+### Bugfixes
+
+- 修复消费者对gRPC处理的问题，把bizMsgId改成long型
 
 ## 1.1.0-RELEASE(2020-07-03)
 

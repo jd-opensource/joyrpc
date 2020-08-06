@@ -42,6 +42,7 @@ import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.DashboardAware;
 import io.joyrpc.metric.DashboardFactory;
+import io.joyrpc.permission.SerializerTypeScanner;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.handler.DefaultProtocolAdapter;
 import io.joyrpc.thread.NamedThreadFactory;
@@ -54,14 +55,12 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
-import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
@@ -73,9 +72,11 @@ import static io.joyrpc.cluster.Cluster.EVENT_PUBLISHER_CLUSTER_CONF;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_DUPLICATE_REFER;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_DUPLICATE_EXPORT;
+import static io.joyrpc.permission.SerializerWhiteList.addGlobalWhite;
 
 /**
  * 服务管理器
+ *
  * @date: 9/1/2019
  */
 public class ServiceManager {
@@ -120,6 +121,8 @@ public class ServiceManager {
      * 接口ID对照表，兼容老版本数据结构
      */
     protected Map<Long, String> interfaceIds = new ConcurrentHashMap<>();
+
+    protected Map<Class<?>, Boolean> registers = new ConcurrentHashMap<>();
 
     protected ServiceManager() {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
@@ -511,27 +514,19 @@ public class ServiceManager {
      * @param clazz 类
      */
     protected void serializationRegister(final Class<?> clazz) {
-
-        List<Registration> registrations = new LinkedList<>();
-        Iterable<Serialization> itr = SERIALIZATION.extensions();
-        for (Serialization ser : itr) {
-            if (Registration.class.isAssignableFrom(ser.getClass())) {
-                registrations.add((Registration) ser);
+        //多个消费者指向同一个类，避免重复扫描注册类
+        if (registers.computeIfAbsent(clazz, c -> Boolean.TRUE)) {
+            //扫描接口类，将入参、返回值、异常 加入白名单
+            Set<Class<?>> targets = new SerializerTypeScanner(clazz).scan();
+            addGlobalWhite(targets);
+            //注册序列化逻辑
+            Iterable<Serialization> itr = SERIALIZATION.extensions();
+            for (Serialization ser : itr) {
+                if (Registration.class.isAssignableFrom(ser.getClass())) {
+                    ((Registration) ser).register(targets);
+                }
             }
         }
-        if (registrations.isEmpty()) {
-            return;
-        }
-
-        //遍历接口方法进行注册
-        Set<Class<?>> registerClass = new LinkedHashSet<>();
-        GenericChecker checker = new GenericChecker();
-        checker.checkMethods(clazz, GenericChecker.NONE_STATIC_METHOD, (cls, scope) -> {
-            if (!cls.equals(void.class) && !CompletionStage.class.isAssignableFrom(cls)) {
-                registerClass.add(cls);
-            }
-        });
-        registrations.forEach(r -> r.register(registerClass));
     }
 
     /**

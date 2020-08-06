@@ -23,8 +23,9 @@ package io.joyrpc.util;
 import java.lang.reflect.*;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static io.joyrpc.util.ClassUtils.*;
@@ -42,9 +43,9 @@ public class GenericChecker {
     /**
      * 可序列化字段
      */
-    public static final Predicate<Field> NONE_STATIC_FINAL_TRANSIENT_FIELD = (field -> {
+    public static final Predicate<Field> NONE_STATIC_TRANSIENT_FIELD = (field -> {
         int modifiers = field.getModifiers();
-        return !Modifier.isStatic(modifiers) && !Modifier.isFinal(modifiers) && !Modifier.isTransient(modifiers);
+        return !Modifier.isStatic(modifiers) && !Modifier.isTransient(modifiers);
     });
 
     /**
@@ -60,12 +61,37 @@ public class GenericChecker {
      * @param consumer  消费者
      */
     public void checkMethods(final Class clazz, final Predicate<Method> predicate,
-                             final BiConsumer<Class, Scope> consumer) {
+                             final Consumer<ClassInfo> consumer) {
         if (clazz == null || consumer == null) {
             return;
         }
         GenericClass genericClass = getGenericClass(clazz);
         List<Method> methods = getPublicMethod(clazz);
+        GenericMethod genericMethod;
+        for (Method method : methods) {
+            //静态方法不验证
+            if (predicate == null || predicate.test(method)) {
+                genericMethod = genericClass.get(method);
+                checkReturnType(genericMethod, consumer);
+                checkParameterTypes(genericMethod, consumer);
+                checkExceptionTypes(genericMethod, consumer);
+            }
+        }
+    }
+
+    /**
+     * 检测所有公共方法设计的类型
+     *
+     * @param genericClass 类型
+     * @param predicate    断言
+     * @param consumer     消费者
+     */
+    public void checkMethods(final GenericClass genericClass, final Predicate<Method> predicate,
+                             final Consumer<ClassInfo> consumer) {
+        if (genericClass == null || consumer == null) {
+            return;
+        }
+        List<Method> methods = getPublicMethod(genericClass.getClazz());
         GenericMethod genericMethod;
         for (Method method : methods) {
             //静态方法不验证
@@ -86,12 +112,14 @@ public class GenericChecker {
      * @param consumer     消费者
      */
     public void checkFields(final GenericClass genericClass, final Predicate<Field> predicate,
-                            final BiConsumer<Class, Scope> consumer) {
+                            final Consumer<ClassInfo> consumer) {
         //检查字段
         List<Field> fields = getFields(genericClass.getClazz());
+        GenericType genericType;
         for (Field field : fields) {
             if (predicate.test(field)) {
-                checkType(genericClass.get(field), field.getGenericType(), Scope.FIELD, consumer);
+                genericType = genericClass.get(field);
+                checkType(genericType, genericType.getGenericType(), Scope.FIELD, consumer);
             }
         }
     }
@@ -102,8 +130,9 @@ public class GenericChecker {
      * @param method   方法
      * @param consumer 消费者
      */
-    public void checkReturnType(final GenericMethod method, final BiConsumer<Class, Scope> consumer) {
-        checkType(method.getReturnType(), method.getMethod().getGenericReturnType(), Scope.RETURN, consumer);
+    protected void checkReturnType(final GenericMethod method, final Consumer<ClassInfo> consumer) {
+        GenericType genericType = method.getReturnType();
+        checkType(genericType, genericType.getGenericType(), Scope.RETURN, consumer);
     }
 
     /**
@@ -112,12 +141,14 @@ public class GenericChecker {
      * @param method   方法
      * @param consumer 消费者
      */
-    public void checkParameterTypes(final GenericMethod method, final BiConsumer<Class, Scope> consumer) {
+    protected void checkParameterTypes(final GenericMethod method, final Consumer<ClassInfo> consumer) {
         Type[] types = method.getMethod().getGenericParameterTypes();
         if (types != null) {
             GenericType[] genericTypes = method.getParameters();
+            GenericType genericType;
             for (int i = 0; i < types.length; i++) {
-                checkType(genericTypes[i], types[i], Scope.PARAMETER, consumer);
+                genericType = genericTypes[i];
+                checkType(genericTypes[i], genericType.getGenericType(), Scope.PARAMETER, consumer);
             }
         }
     }
@@ -128,12 +159,14 @@ public class GenericChecker {
      * @param method   方法
      * @param consumer 消费者
      */
-    public void checkExceptionTypes(final GenericMethod method, final BiConsumer<Class, Scope> consumer) {
+    protected void checkExceptionTypes(final GenericMethod method, final Consumer<ClassInfo> consumer) {
         Type[] types = method.getMethod().getGenericExceptionTypes();
         if (types != null) {
             GenericType[] genericTypes = method.getExceptions();
+            GenericType genericType;
             for (int i = 0; i < types.length; i++) {
-                checkType(genericTypes[i], types[i], Scope.EXCEPTION, consumer);
+                genericType = genericTypes[i];
+                checkType(genericType, genericType.getGenericType(), Scope.EXCEPTION, consumer);
             }
         }
     }
@@ -146,30 +179,19 @@ public class GenericChecker {
      * @param scope       作用域
      * @param consumer    消费者
      */
-    public void checkType(final GenericType genericType, final Type type,
-                          final Scope scope,
-                          final BiConsumer<Class, Scope> consumer) {
+    protected void checkType(final GenericType genericType, final Type type,
+                             final Scope scope,
+                             final Consumer<ClassInfo> consumer) {
         if (!uniques.add(type)) {
             //已经检查过
             return;
         } else if (type instanceof Class) {
-            checkClass((Class) type, scope, consumer);
+            checkClass((Class) type, scope, genericType, consumer);
         } else if (type instanceof ParameterizedType) {
-            ParameterizedType parameterizedType = (ParameterizedType) type;
-            //rawType
-            Type rawType = parameterizedType.getRawType();
-            checkType(genericType, rawType, scope, consumer);
-            //actualTypeArguments
-            Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-            if (actualTypeArguments != null && actualTypeArguments.length > 0) {
-                for (Type actualTypeArgument : actualTypeArguments) {
-                    checkType(genericType, actualTypeArgument, scope, consumer);
-                }
-            }
+            checkParameterizedType(genericType, (ParameterizedType) type, scope, consumer);
         } else if (type instanceof TypeVariable) {
             //变量
-            GenericType.Variable variable = genericType.getVariable(((TypeVariable) type).getName());
-            checkType(genericType, variable.getGenericType(), scope, consumer);
+            checkTypeVariable(genericType, (TypeVariable) type, scope, consumer);
         } else if (type instanceof GenericArrayType) {
             //泛型数组
             checkType(genericType, ((GenericArrayType) type).getGenericComponentType(), scope, consumer);
@@ -179,18 +201,62 @@ public class GenericChecker {
     }
 
     /**
+     * 检查变量泛型
+     *
+     * @param genericType 泛型类型
+     * @param type        变量类型
+     * @param scope       作用域
+     * @param consumer    消费者
+     */
+    protected void checkTypeVariable(final GenericType genericType, final TypeVariable type,
+                                     final Scope scope, final Consumer<ClassInfo> consumer) {
+        GenericType.Variable variable = genericType.getVariable(type.getName());
+        checkType(genericType, variable.getGenericType(), scope, consumer);
+    }
+
+    /**
+     * 检查参数类型
+     *
+     * @param genericType 泛型
+     * @param type        参数类型
+     * @param scope       作用域
+     * @param consumer    消费者
+     */
+    protected void checkParameterizedType(final GenericType genericType, final ParameterizedType type,
+                                          final Scope scope, final Consumer<ClassInfo> consumer) {
+        //argTypes
+        Type[] argTypes = type.getActualTypeArguments();
+        //rawType
+        Class rawType = (Class) type.getRawType();
+        GenericType newType = genericType;
+        if (argTypes != null && argTypes.length > 0) {
+            //构造该类型的泛型变量信息
+            TypeVariable<Class<?>>[] variables = rawType.getTypeParameters();
+            newType = new GenericType(genericType.genericType, genericType.type);
+            for (int i = 0; i < variables.length; i++) {
+                newType.addVariable(new GenericType.Variable(variables[i].getName(), argTypes[i]));
+            }
+        }
+        checkType(newType, rawType, scope, consumer);
+        //泛型参数再检测一下，便于处理java集合类型
+        if (argTypes != null && argTypes.length > 0) {
+            for (Type actualTypeArgument : argTypes) {
+                checkType(genericType, actualTypeArgument, scope, consumer);
+            }
+        }
+    }
+
+    /**
      * 检查类型
      *
-     * @param clazz    类
-     * @param scope    作用域
-     * @param consumer 消费者
+     * @param clazz       类
+     * @param scope       作用域
+     * @param genericType 泛型类型
+     * @param consumer    消费者
      */
-    public void checkClass(Class clazz, final Scope scope, final BiConsumer<Class, Scope> consumer) {
-        //处理数组类型
-        while (clazz.isArray()) {
-            clazz = clazz.getComponentType();
-        }
-        consumer.accept(clazz, scope);
+    protected void checkClass(final Class clazz, final Scope scope, final GenericType genericType, final Consumer<ClassInfo> consumer) {
+        //参数允许是Callback
+        consumer.accept(new ClassInfo(clazz.isArray() ? clazz.getComponentType() : clazz, scope, genericType));
     }
 
     /**
@@ -222,6 +288,48 @@ public class GenericChecker {
 
         public String getName() {
             return name;
+        }
+    }
+
+    /**
+     * 类型信息
+     */
+    public static class ClassInfo {
+        /**
+         * 类
+         */
+        protected Class<?> clazz;
+        /**
+         * 作用域
+         */
+        protected Scope scope;
+        /**
+         * 类变量
+         */
+        protected GenericType genericType;
+
+        public ClassInfo(Class<?> clazz, Scope scope, GenericType genericType) {
+            this.clazz = clazz;
+            this.scope = scope;
+            this.genericType = genericType;
+        }
+
+        public Class<?> getClazz() {
+            return clazz;
+        }
+
+        public Scope getScope() {
+            return scope;
+        }
+
+        /**
+         * 获取泛型类
+         *
+         * @return
+         */
+        public GenericClass getGenericClass() {
+            Map<String, Type> variables = genericType.getVariables();
+            return variables == null || variables.isEmpty() ? ClassUtils.getGenericClass(clazz) : new GenericClass(clazz, variables);
         }
     }
 

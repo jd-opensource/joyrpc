@@ -52,7 +52,6 @@ public class ResponsePayloadSerializer extends JsonSerializer<ResponsePayload> {
                 gen.writeObjectField(RESPONSE, response);
             } else if (exception != null) {
                 gen.writeStringField(RES_CLASS, getCanonicalName(exception.getClass()));
-                //TODO 验证jackson异常输出
                 gen.writeObjectField(RESPONSE, exception);
             }
             gen.writeEndObject();

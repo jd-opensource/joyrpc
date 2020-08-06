@@ -34,7 +34,6 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.Option;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
-import io.joyrpc.permission.SerializerBlackList;
 import io.joyrpc.permission.SerializerBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
@@ -144,7 +143,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             }
             SimpleModule module = new SimpleModule();
             module.setSerializers(new MySimpleSerializers());
-            module.setDeserializers(new MySimpleDeserializers());
+            module.setDeserializers(new MySimpleDeserializers(BLACK_LIST));
             //TODO 增加java8的序列化
             module.addSerializer(Invocation.class, InvocationSerializer.INSTANCE);
             module.addSerializer(ResponsePayload.class, ResponsePayloadSerializer.INSTANCE);
@@ -357,8 +356,18 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
     }
 
     protected static class MySimpleDeserializers extends SimpleDeserializers {
+
+        protected SerializerBlackWhiteList blackWhiteList;
+
+        public MySimpleDeserializers(SerializerBlackWhiteList blackWhiteList) {
+            this.blackWhiteList = blackWhiteList;
+        }
+
         @Override
         public JsonDeserializer<?> findBeanDeserializer(JavaType type, DeserializationConfig config, BeanDescription beanDesc) throws JsonMappingException {
+            if (blackWhiteList != null && !blackWhiteList.isValid(type.getRawClass())) {
+                throw new JsonMappingException(null, "Failed to decode class " + type.getRawClass() + " by json serialization, it is not passed through blackWhiteList.");
+            }
             JsonDeserializer<?> result = super.findBeanDeserializer(type, config, beanDesc);
             if (result != null) {
                 return result;

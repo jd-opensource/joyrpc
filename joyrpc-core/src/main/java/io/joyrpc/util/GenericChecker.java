@@ -182,7 +182,7 @@ public class GenericChecker {
     protected void checkType(final GenericType genericType, final Type type,
                              final Scope scope,
                              final Consumer<ClassInfo> consumer) {
-        if (!uniques.add(type)) {
+        if (type == null || !uniques.add(type)) {
             //已经检查过
             return;
         } else if (type instanceof Class) {
@@ -211,7 +211,7 @@ public class GenericChecker {
     protected void checkTypeVariable(final GenericType genericType, final TypeVariable type,
                                      final Scope scope, final Consumer<ClassInfo> consumer) {
         GenericType.Variable variable = genericType.getVariable(type.getName());
-        checkType(genericType, variable.getGenericType(), scope, consumer);
+        checkType(genericType, variable == null ? null : variable.getGenericType(), scope, consumer);
     }
 
     /**

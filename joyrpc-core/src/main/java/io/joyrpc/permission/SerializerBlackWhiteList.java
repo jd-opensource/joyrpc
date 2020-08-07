@@ -20,6 +20,8 @@ package io.joyrpc.permission;
  * #L%
  */
 
+import io.joyrpc.util.Resource.Definition;
+
 import java.util.Collection;
 
 /**
@@ -43,6 +45,15 @@ public class SerializerBlackWhiteList implements BlackWhiteList<Class<?>>, Black
      * @param blackListFiles 黑名单文件
      */
     public SerializerBlackWhiteList(String... blackListFiles) {
+        this(new SerializerBlackList(blackListFiles), SerializerWhiteList.getGlobalWhitelist());
+    }
+
+    /**
+     * 构造方法
+     *
+     * @param blackListFiles 黑名单资源文件定义
+     */
+    public SerializerBlackWhiteList(Definition[] blackListFiles) {
         this(new SerializerBlackList(blackListFiles), SerializerWhiteList.getGlobalWhitelist());
     }
 

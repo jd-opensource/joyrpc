@@ -20,11 +20,13 @@ package io.joyrpc.permission;
  * #L%
  */
 
-import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+
+import static io.joyrpc.util.Resource.lines;
 
 /**
  * 序列化黑名单，处理安全漏洞
@@ -37,12 +39,14 @@ public class SerializerBlackList implements BlackList<Class<?>>, BlackList.Black
     protected Set<Class<?>> locals;
     //远程黑名单
     protected Set<Class<?>> remotes;
-    //本地黑名单文件候选者
-    protected String[] blackListFiles;
 
     public SerializerBlackList(String... blackListFiles) {
-        this.blackListFiles = blackListFiles;
-        this.locals = add(new HashSet<>(200), Resource.lines(blackListFiles, true));
+        this.locals = add(new HashSet<>(200), lines(blackListFiles, true));
+        this.blacks = merge(locals, remotes);
+    }
+
+    public SerializerBlackList(Definition[] blackListFiles) {
+        this.locals = add(new HashSet<>(200), lines(blackListFiles, true));
         this.blacks = merge(locals, remotes);
     }
 

@@ -25,7 +25,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.GenericChecker.ClassInfo;
 import io.joyrpc.util.GenericChecker.Scope;
-import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +43,7 @@ import java.util.function.Function;
 import static io.joyrpc.util.ClassUtils.*;
 import static io.joyrpc.util.GenericChecker.NONE_STATIC_METHOD;
 import static io.joyrpc.util.GenericChecker.NONE_STATIC_TRANSIENT_FIELD;
+import static io.joyrpc.util.Resource.lines;
 
 /**
  * @date 25/6/2019
@@ -64,7 +65,10 @@ public class StandardValidator implements InterfaceValidator {
      * 构造函数
      */
     public StandardValidator() {
-        List<String> names = Resource.lines(new String[]{"META-INF/system_standard_type", "user_standard_type"}, true);
+        List<String> names = lines(new Definition[]{
+                new Definition("META-INF/system_standard_type", true),
+                new Definition("system_standard_type")
+        }, true);
         for (String name : names) {
             name = name.trim();
             if (!name.isEmpty()) {

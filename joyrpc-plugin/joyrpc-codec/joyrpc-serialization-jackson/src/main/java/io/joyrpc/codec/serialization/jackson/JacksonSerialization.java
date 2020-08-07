@@ -37,6 +37,8 @@ import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.SerializerBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
+import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -120,7 +122,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
 
     @Override
     public void updateBlack(final Collection<String> blackList) {
-        JacksonSerializer.BLACK_LIST.updateBlack(blackList);
+        JacksonSerializer.BLACK_WHITE_LIST.updateBlack(blackList);
     }
 
     /**
@@ -128,8 +130,11 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
      */
     protected static class JacksonSerializer implements Serializer, Json {
 
-        protected static final SerializerBlackWhiteList BLACK_LIST = new SerializerBlackWhiteList("permission/jackson.blacklist",
-                "META-INF/permission/jackson.blacklist");
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList(
+                new Definition[]{
+                        new Definition("permission/jackson.blacklist"),
+                        new Definition("META-INF/permission/jackson.blacklist", true)});
+
         protected static final JacksonSerializer INSTANCE = new JacksonSerializer();
 
         protected ObjectMapper mapper = new ObjectMapper();
@@ -143,7 +148,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
             }
             SimpleModule module = new SimpleModule();
             module.setSerializers(new MySimpleSerializers());
-            module.setDeserializers(new MySimpleDeserializers(BLACK_LIST));
+            module.setDeserializers(new MySimpleDeserializers(BLACK_WHITE_LIST));
             //TODO 增加java8的序列化
             module.addSerializer(Invocation.class, InvocationSerializer.INSTANCE);
             module.addSerializer(ResponsePayload.class, ResponsePayloadSerializer.INSTANCE);

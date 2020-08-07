@@ -12,9 +12,9 @@ package io.joyrpc.util.network;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ package io.joyrpc.util.network;
  */
 
 import io.joyrpc.exception.ConnectionException;
-import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -38,6 +38,9 @@ import java.util.Queue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.joyrpc.util.Resource.lines;
+import static java.util.regex.Pattern.compile;
+
 /**
  * 网络工具栏
  *
@@ -48,16 +51,19 @@ public class Ping {
     /**
      * Linux的PING响应
      */
-    public static final Pattern LINUX = Pattern.compile("icmp_seq=\\d+ ttl=\\d+ time=(.*?) ms");
+    public static final Pattern LINUX = compile("icmp_seq=\\d+ ttl=\\d+ time=(.*?) ms");
     /**
      * Windows的PING响应
      */
-    public static final Pattern WINDOWS = Pattern.compile("(bytes|字节)=\\d+ (time|时间)=(.*?)ms TTL=\\d+");
+    public static final Pattern WINDOWS = compile("(bytes|字节)=\\d+ (time|时间)=(.*?)ms TTL=\\d+");
 
     // less than 1ms
-    private static final Pattern WINDOWS_LESS = Pattern.compile("(bytes|字节)=\\d+ (time|时间)<(.*?)ms TTL=\\d+");
+    private static final Pattern WINDOWS_LESS = compile("(bytes|字节)=\\d+ (time|时间)<(.*?)ms TTL=\\d+");
 
-    public static final List<String> DEAD_MSG = Resource.lines(new String[]{"META-INF/system_network_error", "user_network_error"}, true);
+    public static final List<String> DEAD_MSG = lines(new Definition[]{
+            new Definition("META-INF/system_network_error", true),
+            new Definition("system_network_error")
+    }, true, true);
 
     /**
      * Ping IP

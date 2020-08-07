@@ -32,6 +32,7 @@ import io.joyrpc.codec.serialization.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.SerializerBlackWhiteList;
+import io.joyrpc.util.Resource.Definition;
 import org.objenesis.strategy.StdInstantiatorStrategy;
 
 import java.io.IOException;
@@ -76,8 +77,10 @@ public class KryoSerialization implements Serialization {
      */
     protected static final class KryoSerializer extends AbstractSerializer {
 
-        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/kryo.blacklist",
-                "META-INF/permission/kryo.blacklist");
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList(
+                new Definition[]{
+                        new Definition("permission/kryo.blacklist"),
+                        new Definition("META-INF/permission/kryo.blacklist", true)});
 
         /**
          * 绑定在线程变量里面

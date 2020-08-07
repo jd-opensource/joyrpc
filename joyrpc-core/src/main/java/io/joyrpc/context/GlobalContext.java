@@ -23,6 +23,7 @@ package io.joyrpc.context;
 import io.joyrpc.constants.Version;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 import io.joyrpc.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +91,11 @@ public class GlobalContext {
                     doPut(target, PROTOCOL_KEY, Version.PROTOCOL);
                     doPut(target, BUILD_VERSION_KEY, Version.BUILD_VERSION);
                     //读取系统内置的和用户的配置
-                    loadConfig(new String[]{"META-INF/system_context", "user_context"}, target, recognizer);
+                    loadConfig(new Definition[]{
+                                    new Definition("META-INF/system_context", true),
+                                    new Definition("system_context")
+                            },
+                            target, recognizer);
                     //打印默认的上下文
                     if (logger.isInfoEnabled()) {
                         String line = System.getProperty("line.separator");
@@ -108,12 +113,12 @@ public class GlobalContext {
     /**
      * 加载配置
      *
-     * @param resources
+     * @param definitions
      * @param target
      * @param supplier
      */
-    protected static void loadConfig(final String[] resources, final Map<String, Object> target, final Function<String, Object> supplier) {
-        List<String> lines = Resource.lines(resources, true);
+    protected static void loadConfig(final Definition[] definitions, final Map<String, Object> target, final Function<String, Object> supplier) {
+        List<String> lines = Resource.lines(definitions, true);
         for (String line : lines) {
             int pos = line.indexOf('=');
             String key = line;

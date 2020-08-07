@@ -24,6 +24,7 @@ import io.joyrpc.codec.serialization.*;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.SerializerBlackWhiteList;
+import io.joyrpc.util.Resource.Definition;
 import org.nustaq.serialization.AutowiredObjectSerializer;
 import org.nustaq.serialization.FSTConfiguration;
 
@@ -58,8 +59,10 @@ public class FSTSerialization implements Serialization {
      */
     protected static final class FSTSerializer extends AbstractSerializer {
 
-        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/fst.blacklist",
-                "META-INF/permission/fst.blacklist");
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList(
+                new Definition[]{
+                        new Definition("permission/fst.blacklist"),
+                        new Definition("META-INF/permission/fst.blacklist", true)});
 
         /**
          * 单例，延迟加载

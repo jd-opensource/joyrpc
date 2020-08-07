@@ -40,6 +40,8 @@ import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.SerializerBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
+import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -140,8 +142,10 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
      */
     protected static class JsonSerializer implements Serializer, Json {
 
-        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList("permission/fastjson.blacklist",
-                "META-INF/permission/fastjson.blacklist");
+        protected static final SerializerBlackWhiteList BLACK_WHITE_LIST = new SerializerBlackWhiteList(
+                new Definition[]{
+                        new Definition("permission/fastjson.blacklist"),
+                        new Definition("META-INF/permission/fastjson.blacklist", true)});
 
         protected static final JsonSerializer INSTANCE = new JsonSerializer();
 

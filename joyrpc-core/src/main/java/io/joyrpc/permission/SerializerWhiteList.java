@@ -22,6 +22,7 @@ package io.joyrpc.permission;
 
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,16 +55,17 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
      */
     protected Map<Class<?>, Boolean> whites = new ConcurrentHashMap<>(512);
 
-    /**
-     * 白名单文件
-     */
-    protected String[] whiteListFiles;
-
     public SerializerWhiteList(String... whiteListFiles) {
         this.enabled = VARIABLE.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED);
-        this.whiteListFiles = whiteListFiles;
         if (whiteListFiles != null) {
-            updateWhite(Resource.lines(whiteListFiles, true, true));
+            updateWhite(Resource.lines(whiteListFiles, true));
+        }
+    }
+
+    public SerializerWhiteList(Definition[] whiteListFiles) {
+        this.enabled = VARIABLE.getBoolean(SERIALIZER_WHITELIST_ENABLED, DEFAULT_SERIALIZER_WHITELIST_ENABLED);
+        if (whiteListFiles != null) {
+            updateWhite(Resource.lines(whiteListFiles, true));
         }
     }
 
@@ -151,7 +153,9 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
          * 全局的白名单
          */
         protected static final SerializerWhiteList GLOBAL_WHITELIST = new SerializerWhiteList(
-                "META-INF/system_serialization_type", "user_serialization_type");
+                new Definition[]{
+                        new Definition("permission/serialization.whitelist"),
+                        new Definition("META-INF/permission/serialization.whitelist", true)});
 
         static {
             GLOBAL_WHITELIST.whites.put(Collections.unmodifiableCollection(new ArrayList<>(0)).getClass(), Boolean.TRUE);

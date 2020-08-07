@@ -27,6 +27,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.ExtensionPoint;
 import io.joyrpc.extension.ExtensionPointLazy;
 import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,7 +141,10 @@ public class Global implements Environment {
         }
 
         //重命名规则
-        List<String> names = Resource.lines(new String[]{"META-INF/system_env", "user_env"}, true);
+        List<String> names = Resource.lines(new Definition[]{
+                new Definition("META-INF/system_env", true),
+                new Definition("system_env"),
+        }, true);
         for (String name : names) {
             //判断重命名
             int pos = name.indexOf('=');

@@ -1,20 +1,20 @@
 配置参考手册
 ===
 
-- 引入joyrpc的schema，参考如下
+引入joyrpc的schema，参考如下
 
-  ```xml
-  <?xml version="1.0" encoding="UTF-8"?>
-  <beans xmlns="http://www.springframework.org/schema/beans"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xmlns:joyrpc="http://joyrpc.io/schema/joyrpc"
-         xsi:schemaLocation=
-         "http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd
-         http://joyrpc.io/schema/joyrpc  
-         http://joyrpc.io/schema/joyrpc/joyrpc.xsd">
-  </beans>
-  ```
-  >说明：上面是完整的schema描述，下面示例中采用  **`<joyrpc/>`** 标签 代表此schema。
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xmlns:joyrpc="http://joyrpc.io/schema/joyrpc"
+     xsi:schemaLocation=
+     "http://www.springframework.org/schema/beans  http://www.springframework.org/schema/beans/spring-beans.xsd
+     http://joyrpc.io/schema/joyrpc  
+     http://joyrpc.io/schema/joyrpc/joyrpc.xsd">
+</beans>
+```
+>说明：上面是完整的schema描述，下面示例中采用  **`<joyrpc/>`** 标签 代表此schema。
   
 #### 注册中心配置 
 
@@ -229,6 +229,7 @@
       </joyrpc:consumer>
   </beans>
   ```
+
 #### 参数配置
 
   标签：`<joyrpc:parameter>` 

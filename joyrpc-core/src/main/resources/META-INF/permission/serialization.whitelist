@@ -19,6 +19,7 @@ java.lang.Boolean
 java.lang.Character
 java.lang.String
 java.lang.Void
+java.lang.Object
 java.math.BigDecimal
 java.util.Currency
 java.util.Collection
@@ -74,10 +75,6 @@ java.time.Period
 java.time.Year
 java.time.YearMonth
 java.time.DayOfWeek
-java.lang.Throwable
-java.lang.Error
-java.lang.Exception
-java.lang.Object
 java.lang.StackTraceElement
 sun.util.calendar.CalendarDate
 sun.util.calendar.CalendarSystem

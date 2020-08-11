@@ -367,10 +367,10 @@ public class Constants {
      */
     public final static String KEY_TOKEN = "token";
 
-    public final static String FIELD_MESSAGE="message";
-    public final static String FIELD_CAUSE="cause";
-    public final static String FIELD_STACKTRACE="stackTrace";
-    public final static String ANNOTATION_TYPE="@type";
+    public final static String FIELD_MESSAGE = "message";
+    public final static String FIELD_CAUSE = "cause";
+    public final static String FIELD_STACKTRACE = "stackTrace";
+    public final static String ANNOTATION_TYPE = "@type";
 
     /*======================= RPC Context Parameter Key name =======================*/
     /**
@@ -530,8 +530,8 @@ public class Constants {
     public static final URLOption<String> INSTANCE_KEY_OPTION = new URLOption<>("insKey", "");
 
     public static final URLOption<String> ROLE_OPTION = new URLOption<>(ROLE_KEY, SIDE_CONSUMER);
-    public static final URLOption<Boolean> ENABLE_VALIDATOR_OPTION = new URLOption<>("enableValidator", true);
-    public static final URLOption<String> INTERFACE_VALIDATOR_OPTION = new URLOption<>("interfaceValidator", "standard");
+    public static final URLOption<Boolean> ENABLE_VALIDATOR_OPTION = new URLOption<>("interface.validator.enable", true);
+    public static final URLOption<String> INTERFACE_VALIDATOR_OPTION = new URLOption<>("interface.validator", "standard");
     public static final String GENERIC_KEY = "generic";
     public static final URLOption<Boolean> GENERIC_OPTION = new URLOption<>(GENERIC_KEY, false);
     public static final URLOption<Boolean> SYSTEM_OPTION = new URLOption<>("system.service", false);

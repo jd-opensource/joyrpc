@@ -22,7 +22,6 @@ package io.joyrpc.config.validator;
 
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ProviderConfig;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.util.Pair;
 
 import javax.validation.ConstraintValidator;
@@ -30,6 +29,9 @@ import javax.validation.ConstraintValidatorContext;
 import javax.validation.ValidationException;
 
 import static io.joyrpc.Plugin.INTERFACE_VALIDATOR;
+import static io.joyrpc.constants.Constants.ENABLE_VALIDATOR_OPTION;
+import static io.joyrpc.constants.Constants.INTERFACE_VALIDATOR_OPTION;
+import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.StringUtils.isEmpty;
 
@@ -85,12 +87,16 @@ public class IntfValidator implements ConstraintValidator<ValidateInterface, Abs
         Object ref = config.getRef();
         if (ref != null && !clazz.isInstance(ref)) {
             return new Pair<>("interfaceClass", String.format("%s is not an instance of %s", ref.getClass().getName(), clazz.getName()));
-        } else if (config.getEnableValidator() == null || !config.getEnableValidator()) {
+        } else if (config.getEnableValidator() == null && !VARIABLE.getBoolean(ENABLE_VALIDATOR_OPTION)) {
+            //不进行接口验证
+            return null;
+        } else if (config.getEnableValidator() != null && !config.getEnableValidator()) {
+            //不进行接口验证
             return null;
         } else {
-            String validatorName = isEmpty(config.getInterfaceValidator()) ?
-                    Constants.INTERFACE_VALIDATOR_OPTION.get() :
-                    config.getInterfaceValidator();
+            String validatorName = isEmpty(config.getInterfaceValidator())
+                    ? VARIABLE.getString(INTERFACE_VALIDATOR_OPTION)
+                    : config.getInterfaceValidator();
             InterfaceValidator validator = INTERFACE_VALIDATOR.get(validatorName);
             if (validator == null) {
                 return new Pair<>("interfaceValidator",

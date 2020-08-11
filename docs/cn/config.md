@@ -109,7 +109,7 @@
 |exclude|String|否| |不发布的方法列表，逗号分隔|
 |concurrency|int|否|-1|接口下每方法的最大可并行执行请求数, -1: 关闭，0: 开启但不限制|
 |validation|Boolean|否|false|是否校验参数|
-|compress|String|否|lz4|压缩算法插件 lz4、snappy、lzma、zlib|
+|compress|String|否||压缩算法：lz4、snappy、zlib|
 |interfaceValidator|String|否|standard|接口验证器插件名称，同validation参数配合使用|
 |warmup|String|否|standard|预热插件名称|
 
@@ -167,7 +167,7 @@
 |nodeSelector|String|否| |目标节点选择器插件名称，已支持 methodRouter(基于方法参数的路由)|
 |concurrency|int|否|-1|接口下**每方法**的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制|
 |validation|Boolean|否|false|是否校验参数|
-|compress|String|否|lz4|压缩算法插件名称：lz4、snappy、lzma、zlib|
+|compress|String|否| |压缩算法：lz4、snappy、zlib|
 |interfaceValidator|String|否|standard|接口验证器插件名称，同validation参数配合使用|
 |initSize|int|否|10|初始化连接数|
 |minSize|int|否|0|最小连接数|
@@ -205,15 +205,15 @@
 |failoverSelector|String|否| |  异常重试目标节点选择器 |
 |validation|Boolean|否| |是否校验参数，支持JSR303|
 |concurrency|int|否|0|**该方法**的最大可并行执行请求数|
-|compress|String|否| |压缩算法（启动后是否压缩还取决于数据包大小）|
+|compress|String|否| |压缩算法：lz4、snappy、zlib|
 |dstParam|int|否| |目标参数（机房/分组等）索引，从0开始计数|
-|cache|Boolean|否| false |是否开启结果缓存。如果开启需要指定cacheProvider|
-|cacheProvider|String|否|caffeine|结果缓存插件名称，默认提供了caffeine、guava和map缓存插件，需要引用相关的类库才能启用|
-|cacheKeyGenerator|String|否|json|缓存键生成器名称，系统内置了json和Spring环境下的spel表达式生成器|
-|cacheExpireTime|long|否|-1|cache过期时间，单位ms 毫秒|
-|cacheNullable|Boolean|否|false|结果缓存值是否可空|
-|cacheCapacity|int|否|10000|结果缓存容量大小|
-|cacheKeyExpression|String|否| |缓存键表达式，用于表达式缓存键生成器，如spel|
+|cache|Boolean|否| |是否开启缓存|
+|cacheProvider|String|否|caffeine|缓存插件名称： map、caffeine、guava|
+|cacheKeyGenerator|String|否|json|缓存键生成器：json、spel、jexl|
+|cacheKeyExpression|String|否||缓存键表达式|
+|cacheExpireTime|long|否|-1|缓存过期时间（毫秒）|
+|cacheNullable|Boolean|否|false|是否缓存空值|
+|cacheCapacity|int|否|10000|缓存容量大小|
 
   >二级元素：可以出现在provider、consumer标签下，下面可以有parameter节点。对应io.joyrpc.config.MethodConfig
   用于配置方法级的一些属性，覆盖接口级的属性

@@ -24,8 +24,8 @@ import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.invoker.Exporter;
-import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.invoker.Refer;
+import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
 import org.apache.commons.cli.CommandLine;
@@ -117,7 +117,8 @@ public class ConfigTelnetHandler extends AbstractTelnetHandler {
             }
             result = builder.toString();
         } else if (cmd.hasOption("g")) {
-            result = JSON.get().toJSONString(GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING));
+            Map<String, String> map = GlobalContext.getInterfaceConfig(Constants.GLOBAL_SETTING);
+            result = JSON.get().toJSONString(map == null ? new HashMap<>(0) : map);
         } else if (cmd.hasOption("r")) {
             result = JSON.get().toJSONString(GlobalContext.getContext());
         } else if (cmd.hasOption("s")) {

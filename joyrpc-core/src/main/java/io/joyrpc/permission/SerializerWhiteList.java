@@ -191,7 +191,7 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
             GLOBAL_WHITELIST.whites.put(Collections.checkedSortedSet(new TreeSet<>(), String.class).getClass(), Boolean.TRUE);
             GLOBAL_WHITELIST.whites.put(Collections.checkedQueue(new LinkedList<>(), String.class).getClass(), Boolean.TRUE);
             try {
-                Method method = Year.class.getMethod("writeReplace");
+                Method method = Year.class.getDeclaredMethod("writeReplace");
                 method.setAccessible(true);
                 GLOBAL_WHITELIST.whites.put(method.invoke(Year.of(2000)).getClass(), Boolean.TRUE);
             } catch (IllegalAccessException e) {

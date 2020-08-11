@@ -82,11 +82,12 @@ public class NettyClientTransport extends AbstractClientTransport {
             final Channel[] channels = new Channel[1];
             //当出现异常的时候关闭线程池
             Consumer<AsyncResult<Channel>> myConsumer = result -> {
-                if (!result.isSuccess()) {
-                    //异常的时候都赋值了
-                    Channel channel = result.getResult();
-                    channel.close(r -> consumer.accept(result));
-                } else {
+                try {
+                    if (!result.isSuccess()) {
+                        Channel channel = result.getResult();
+                        channel.close();
+                    }
+                } finally {
                     consumer.accept(result);
                 }
             };
@@ -131,7 +132,7 @@ public class NettyClientTransport extends AbstractClientTransport {
         bootstrap.group(ioGroup).channel(Constants.isUseEpoll(url) ? EpollSocketChannel.class : NioSocketChannel.class).
                 option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION)).
                 //option(ChannelOption.SO_TIMEOUT, url.getPositiveInt(Constants.SO_TIMEOUT_OPTION)).
-                option(ChannelOption.TCP_NODELAY, url.getBoolean(TCP_NODELAY)).
+                        option(ChannelOption.TCP_NODELAY, url.getBoolean(TCP_NODELAY)).
                 option(ChannelOption.SO_KEEPALIVE, url.getBoolean(Constants.SO_KEEPALIVE_OPTION)).
                 option(ChannelOption.ALLOCATOR, BufAllocator.create(url)).
                 option(ChannelOption.WRITE_BUFFER_WATER_MARK,

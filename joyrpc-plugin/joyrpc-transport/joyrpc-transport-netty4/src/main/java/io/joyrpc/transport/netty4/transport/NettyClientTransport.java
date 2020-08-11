@@ -85,6 +85,7 @@ public class NettyClientTransport extends AbstractClientTransport {
                 try {
                     if (!result.isSuccess()) {
                         Channel channel = result.getResult();
+                        //TODO 改成同步有阻塞风险
                         channel.close();
                     }
                 } finally {

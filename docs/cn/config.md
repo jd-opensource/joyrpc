@@ -154,6 +154,7 @@
 |cacheCapacity|int|否|10000|缓存容量大小|
 |generic|Boolean|否|false|是否泛化调用|
 |cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast和forking 方式|
+|forks|int|否| |并行度，当cluster为forking时候有效|
 |retries|int|否|0（0表示失败后不重试）|失败后重试次数（需要和cluster=failover结合使用，单实例设置retries无效）|
 |retryOnlyOncePerNode|Boolean|否| |每个节点只调用一次 |
 |failoverWhenThrowable|String|否| | 可以重试的异常全路径类名，多个用逗号分隔 |
@@ -198,7 +199,9 @@
 | :----: | :----:| :----: | :----: | :----: |
 |name|String|**是**| |方法名称（不支持重载方法）|
 |timeout|String|否| |方法调用超时时间，单位毫秒|
-|retries|int|否| |方法重试次数（0表示失败后不重试）|
+|cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast和forking 方式|
+|forks|int|否| |并行度，当cluster为forking时候有效|
+|retries|int|否| |方法重试次数（0表示失败后不重试），当cluster为failover时候有效|
 |retryOnlyOncePerNode|Boolean|否| |每个节点只调用一次 |
 |failoverWhenThrowable|String|否| | 可以重试的异常全路径类名，多个用逗号分隔 |
 |failoverPredication|String|否| | 重试异常判断接口插件 |

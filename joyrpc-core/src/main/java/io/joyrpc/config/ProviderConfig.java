@@ -112,7 +112,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     /**
      * 是否启用验证
      */
-    protected Boolean enableValidator = true;
+    protected Boolean enableValidator;
     /**
      * 接口验证器插件
      */
@@ -389,8 +389,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         addElement2Map(params, Constants.DELAY_OPTION, delay);
         addElement2Map(params, Constants.ROLE_OPTION, Constants.SIDE_PROVIDER);
         addElement2Map(params, Constants.TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
-        addElement2Map(params, Constants.ENABLE_VALIDATOR_OPTION, enableValidator);
-        addElement2Map(params, Constants.INTERFACE_VALIDATOR_OPTION, interfaceValidator);
         //从serverConfig获取SSL_ENABLE配置
         String sslEnable = serverConfig.parameters == null ? "false" : serverConfig.parameters.getOrDefault(SSL_ENABLE.getName(), String.valueOf(SSL_ENABLE.getValue()));
         addElement2Map(params, SSL_ENABLE, sslEnable);

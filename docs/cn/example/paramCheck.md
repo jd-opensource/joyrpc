@@ -1,11 +1,61 @@
 参数校验
 ==
-参数校验功能是基于 JSR303 实现的，用户只需标识 JSR303 标准的验证 annotation。
-Provider和Consumer都可以独立开启参数校验功能。两者配置无关联性。
-支持接口级和方法级的配置。
+
 >说明：下面示例中采用  **`<joyrpc/>`** 标签 表示JOYRPC中的schema。
 
-### 1.参数bean配置jsr303的annotation
+## 1 参数类型校验
+
+为了跨语言和跨协议调用，需要对数据进行一定的规范。系统默认启用了参数类型校验，在程序启动的时候对不合法的参数类型进行警告或报错。
+
+### 1.1 参数类型校验配置
+
+可以在全局参数或者Springboot的配置项中配置interface.validator.enable开启或关闭参数类型校验
+
+可以在全局参数或者Springboot的配置项中配置interface.validator设置参数类型校验器
+
+### 1.2 标准类型校验器
+
+系统默认的参数类型校验器为standard，其读取"META-INF/system_standard_type"和classpath下的"system_standard_type"的类型定义
+
+```text
+#### java
+##
+int
+byte
+short
+long
+float
+double
+boolean
+char
+void
+java.lang.Integer
+java.lang.Byte
+java.lang.Short
+java.lang.Long
+java.lang.Float
+java.lang.Double
+java.lang.Boolean
+java.lang.Character
+java.lang.String
+java.lang.Void
+java.math.BigDecimal
+java.util.Currency
+java.util.Date
+java.util.Collection
+java.util.List
+java.util.Map
+java.util.Set
+java.util.Queue
+java.util.concurrent.CompletableFuture
+```
+
+## 2 动态入参校验
+
+参数校验功能是基于 JSR303 实现的，用户只需标识 JSR303 标准的验证 annotation。
+Provider和Consumer都可以独立开启参数校验功能，支持接口级和方法级的配置。
+
+### 2.1 参数bean配置jsr303的annotation
 
   ```java
   public class ValidationBean implements Serializable {
@@ -49,7 +99,7 @@ Provider和Consumer都可以独立开启参数校验功能。两者配置无关�
       }
   }
   ```
-###  2.自定义annotation
+###  2.2 自定义annotation
 
   ```java
   @Constraint(validatedBy = {MyAnnotationValidator.class}) //指定校验类
@@ -65,7 +115,7 @@ Provider和Consumer都可以独立开启参数校验功能。两者配置无关�
       Class<? extends Payload>[] payload() default {};
   }
   ```
-### 3.自定义annotation校验类
+### 2.3 自定义annotation校验类
 
   ```java
   public class MyAnnotationValidator implements ConstraintValidator<MyAnnotation, String> {
@@ -82,7 +132,7 @@ Provider和Consumer都可以独立开启参数校验功能。两者配置无关�
       }
   }
   ```
-### 4.定义测试接口
+### 2.4 定义测试接口
 
   ```java
   import javax.validation.Valid;
@@ -91,7 +141,7 @@ Provider和Consumer都可以独立开启参数校验功能。两者配置无关�
       ValidationBean validation(@Valid ValidationBean obj);
   }
   ```
-### 5. Consumer调用测试
+### 2.5 Consumer调用测试
 
 validation参数值设置为true
 

@@ -28,12 +28,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * 抽象的数据序列化
  */
 public abstract class AbstractSerializer implements Serializer {
+    //缓存自定义编解码类型
+    protected static final Map<Class, Boolean> CUSTOM_CODEC = new ConcurrentHashMap<>(256);
+    protected static final Function<Class, Boolean> CUSTOM_CODEC_FUNCTION = a -> Codec.class.isAssignableFrom(a);
 
     /**
      * 构造数据写对象
@@ -80,7 +86,8 @@ public abstract class AbstractSerializer implements Serializer {
         try {
             Class<T> clazz = (Class<T>) type;
             ObjectReader input = createReader(is, clazz);
-            if (Codec.class.isAssignableFrom(clazz)) {
+            Boolean customCodec = CUSTOM_CODEC.computeIfAbsent(clazz, CUSTOM_CODEC_FUNCTION);
+            if (customCodec.booleanValue()) {
                 Codec codec = (Codec) ClassUtils.newInstance(clazz);
                 codec.decode(input);
                 return (T) codec;

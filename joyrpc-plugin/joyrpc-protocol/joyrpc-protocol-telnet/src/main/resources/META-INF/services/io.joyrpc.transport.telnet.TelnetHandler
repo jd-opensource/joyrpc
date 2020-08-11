@@ -8,3 +8,4 @@ io.joyrpc.protocol.telnet.handler.PortTelnetHandler
 io.joyrpc.protocol.telnet.handler.ServiceInfoTelnetHandler
 io.joyrpc.protocol.telnet.handler.SudoTelnetHandler
 io.joyrpc.protocol.telnet.handler.VersionTelnetHandler
+io.joyrpc.protocol.telnet.handler.WhitelistTelnetHandler

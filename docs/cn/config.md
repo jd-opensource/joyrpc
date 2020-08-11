@@ -38,7 +38,7 @@
   目前支持的注册中心类型如下：
   
   |类型|名称|描述|
-  | :----: | :----: | :----: | 
+  | :---- | :---- | :---- | 
   |memory|内存|基于内存的注册中心，适合单节点，可用于测试|
   |broadcast|广播|广播模式|
   |consul|Consul|Consul注册中心|
@@ -50,7 +50,7 @@
   标签：`<joyrpc:server>` 
 
 属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :----: | :----: |
+| :---- | :----: | :----: | :---- | :---- |
 |id|String|**是**| |Spring的BeanId|
 |host|String|否| |服务端绑定地址|
 |port|int|否|22000|服务端绑定端口。如果端口被占用，会提示启动失败|
@@ -84,7 +84,7 @@
   标签：`<joyrpc:provider>` 
 
 属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :---- | :----  |
+| :---- | :----: | :----: | :---- | :----  |
 |id|String|**是**| |Spring的BeanId|
 |interface|String|**是**| |发布的接口名称|
 |alias|String|**是**| |服务别名分组信息|
@@ -96,19 +96,20 @@
 |subscribe|Boolean|否|true|是否从注册中心订阅|
 |timeout|Int|否|5000|服务端调用超时时间，单位毫秒。|
 |proxy|String|否|bytebuddy|代理类, 插件名称：bytebuddy、javassist、jdk|
-|cache|Boolean|否| |是否开启结果缓存。如果开启需要指定cacheProvider|
-|cacheProvider|String|否|caffeine|缓存插件名称： caffeine、guava|
-|cacheKeyGenerator|String|否|json|cache key生成器名称|
-|cacheExpireTime|long|否|-1|cache过期时间，单位ms 毫秒|
-|cacheNullable|Boolean|否|false|结果缓存值是否可空|
-|cacheCapacity|int|否|10000|结果缓存容量大小|
+|cache|Boolean|否| |是否开启缓存|
+|cacheProvider|String|否|caffeine|缓存插件名称： map、caffeine、guava|
+|cacheKeyGenerator|String|否|json|缓存键生成器：json、spel、jexl|
+|cacheKeyExpression|String|否||缓存键表达式|
+|cacheExpireTime|long|否|-1|缓存过期时间（毫秒）|
+|cacheNullable|Boolean|否|false|是否缓存空值|
+|cacheCapacity|int|否|10000|缓存容量大小|
 |delay|int|否|0|延迟发布服务时间。|
 |weight|int|否|100|服务提供者权重|
 |include|String|否|*|发布的方法列表，逗号分隔|
 |exclude|String|否| |不发布的方法列表，逗号分隔|
 |concurrency|int|否|-1|接口下每方法的最大可并行执行请求数, -1: 关闭，0: 开启但不限制|
 |validation|Boolean|否|false|是否校验参数|
-|compress|String|否|lz4|压缩算法插件 lz4、snappy、lzma、zlib|
+|compress|String|否||压缩算法：lz4、snappy、zlib|
 |interfaceValidator|String|否|standard|接口验证器插件名称，同validation参数配合使用|
 |warmup|String|否|standard|预热插件名称|
 
@@ -133,7 +134,7 @@
   标签：`<joyrpc:consumer>` 
 
 |属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :---- | :----  |
+| :---- | :----: | :----: | :---- | :----  |
 |id|String|**是**| |Spring的BeanId|
 |interface|String|**是**| |调用的接口名称|
 |alias|String|**是**| |服务别名分组信息|
@@ -144,14 +145,16 @@
 |subscribe|Boolean|否|true|是否从注册中心订阅|
 |timeout|int|否|5000|调用端调用超时时间，单位毫秒|
 |proxy|String|否|bytebuddy|代理类生成方式插件配置，插件名称：bytebuddy、javassist、jdk|
-|cache|Boolean|否|false|是否开启结果缓存。如果开启需要指定cacheProvider|
-|cacheProvider|String|否|caffeine|自定义结果缓存插件名称：caffeine、guava|
-|cacheKeyGenerator|String|否|default|cache key生成器名称|
-|cacheExpireTime|long|否|-1|cache过期时间，单位ms 毫秒|
-|cacheNullable|Boolean|否|false|结果缓存值是否可空|
-|cacheCapacity|int|否|10000|结果缓存容量大小|
+|cache|Boolean|否| |是否开启缓存|
+|cacheProvider|String|否|caffeine|缓存插件名称： map、caffeine、guava|
+|cacheKeyGenerator|String|否|json|缓存键生成器：json、spel、jexl|
+|cacheKeyExpression|String|否||缓存键表达式|
+|cacheExpireTime|long|否|-1|缓存过期时间（毫秒）|
+|cacheNullable|Boolean|否|false|是否缓存空值|
+|cacheCapacity|int|否|10000|缓存容量大小|
 |generic|Boolean|否|false|是否泛化调用|
 |cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast和forking 方式|
+|forks|int|否| |并行度，当cluster为forking时候有效|
 |retries|int|否|0（0表示失败后不重试）|失败后重试次数（需要和cluster=failover结合使用，单实例设置retries无效）|
 |retryOnlyOncePerNode|Boolean|否| |每个节点只调用一次 |
 |failoverWhenThrowable|String|否| | 可以重试的异常全路径类名，多个用逗号分隔 |
@@ -165,8 +168,9 @@
 |nodeSelector|String|否| |目标节点选择器插件名称，已支持 methodRouter(基于方法参数的路由)|
 |concurrency|int|否|-1|接口下**每方法**的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制|
 |validation|Boolean|否|false|是否校验参数|
-|compress|String|否|lz4|压缩算法插件名称：lz4、snappy、lzma、zlib|
-|interfaceValidator|String|否|standard|接口验证器插件名称，同validation参数配合使用|
+|compress|String|否| |压缩算法：lz4、snappy、zlib|
+|enableValidator|Boolean|否|true|是否启动时候对接口数据结构进行校验|
+|interfaceValidator|String|否|standard|接口数据结构验证器|
 |initSize|int|否|10|初始化连接数|
 |minSize|int|否|0|最小连接数|
 |candidature|String|否|""|候选者算法插件|
@@ -196,22 +200,24 @@
 | :----: | :----:| :----: | :----: | :----: |
 |name|String|**是**| |方法名称（不支持重载方法）|
 |timeout|String|否| |方法调用超时时间，单位毫秒|
-|retries|int|否| |方法重试次数（0表示失败后不重试）|
+|cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast和forking 方式|
+|forks|int|否| |并行度，当cluster为forking时候有效|
+|retries|int|否| |方法重试次数（0表示失败后不重试），当cluster为failover时候有效|
 |retryOnlyOncePerNode|Boolean|否| |每个节点只调用一次 |
 |failoverWhenThrowable|String|否| | 可以重试的异常全路径类名，多个用逗号分隔 |
 |failoverPredication|String|否| | 重试异常判断接口插件 |
 |failoverSelector|String|否| |  异常重试目标节点选择器 |
 |validation|Boolean|否| |是否校验参数，支持JSR303|
 |concurrency|int|否|0|**该方法**的最大可并行执行请求数|
-|compress|String|否| |压缩算法（启动后是否压缩还取决于数据包大小）|
+|compress|String|否| |压缩算法：lz4、snappy、zlib|
 |dstParam|int|否| |目标参数（机房/分组等）索引，从0开始计数|
-|cache|Boolean|否| false |是否开启结果缓存。如果开启需要指定cacheProvider|
-|cacheProvider|String|否|caffeine|结果缓存插件名称，默认提供了caffeine、guava和map缓存插件，需要引用相关的类库才能启用|
-|cacheKeyGenerator|String|否|json|缓存键生成器名称，系统内置了json和Spring环境下的spel表达式生成器|
-|cacheExpireTime|long|否|-1|cache过期时间，单位ms 毫秒|
-|cacheNullable|Boolean|否|false|结果缓存值是否可空|
-|cacheCapacity|int|否|10000|结果缓存容量大小|
-|cacheKeyExpression|String|否| |缓存键表达式，用于表达式缓存键生成器，如spel|
+|cache|Boolean|否| |是否开启缓存|
+|cacheProvider|String|否|caffeine|缓存插件名称： map、caffeine、guava|
+|cacheKeyGenerator|String|否|json|缓存键生成器：json、spel、jexl|
+|cacheKeyExpression|String|否||缓存键表达式|
+|cacheExpireTime|long|否|-1|缓存过期时间（毫秒）|
+|cacheNullable|Boolean|否|false|是否缓存空值|
+|cacheCapacity|int|否|10000|缓存容量大小|
 
   >二级元素：可以出现在provider、consumer标签下，下面可以有parameter节点。对应io.joyrpc.config.MethodConfig
   用于配置方法级的一些属性，覆盖接口级的属性
@@ -271,7 +277,7 @@
   >常用全局配置参数
 
 属性|类型|默认值|描述|
-| :----: | :----: | :---- | :----: |
+| :---- | :----: | :---- | :---- |
 |connectTimeout|int|5000|创建连接的超时时间，单位毫秒|
 |reconnectInterval|int|2000|客户端重连死亡服务端的间隔，单位毫秒。配置小于0代表不重连|
 |payload|int|8388608|允许数据包大小|
@@ -283,7 +289,7 @@
   标签：`<joyrpc:consumerGroup>` 
 
 属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :---- | :----: |
+| :---- | :----: | :----: | :---- | :---- |
 |dstParam|int|否| |目标参数（机房/分组等）索引，从0开始计数|
 |aliasAdaptive|Boolean|否|false|是否自动适配alias，设为true当没有alias时自动引入|
 |groupRouter|String|否| |自定义分组路由规则实现类|

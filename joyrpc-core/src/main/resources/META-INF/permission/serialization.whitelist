@@ -96,7 +96,6 @@ io.joyrpc.cluster.discovery.backup.BackupCluster
 io.joyrpc.cluster.discovery.backup.BackupDatum
 io.joyrpc.cluster.discovery.backup.BackupShard
 io.joyrpc.Result
-io.joyrpc.protocol.message.negotiation.AbstractNegotiation
 io.joyrpc.protocol.message.negotiation.NegotiationRequest
 io.joyrpc.protocol.message.negotiation.NegotiationResponse
 io.joyrpc.protocol.message.Invocation

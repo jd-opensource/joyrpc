@@ -38,7 +38,7 @@
   目前支持的注册中心类型如下：
   
   |类型|名称|描述|
-  | :----: | :----: | :----: | 
+  | :---- | :---- | :---- | 
   |memory|内存|基于内存的注册中心，适合单节点，可用于测试|
   |broadcast|广播|广播模式|
   |consul|Consul|Consul注册中心|
@@ -50,7 +50,7 @@
   标签：`<joyrpc:server>` 
 
 属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :----: | :----: |
+| :---- | :----: | :----: | :---- | :---- |
 |id|String|**是**| |Spring的BeanId|
 |host|String|否| |服务端绑定地址|
 |port|int|否|22000|服务端绑定端口。如果端口被占用，会提示启动失败|
@@ -84,7 +84,7 @@
   标签：`<joyrpc:provider>` 
 
 属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :---- | :----  |
+| :---- | :----: | :----: | :---- | :----  |
 |id|String|**是**| |Spring的BeanId|
 |interface|String|**是**| |发布的接口名称|
 |alias|String|**是**| |服务别名分组信息|
@@ -96,12 +96,13 @@
 |subscribe|Boolean|否|true|是否从注册中心订阅|
 |timeout|Int|否|5000|服务端调用超时时间，单位毫秒。|
 |proxy|String|否|bytebuddy|代理类, 插件名称：bytebuddy、javassist、jdk|
-|cache|Boolean|否| |是否开启结果缓存。如果开启需要指定cacheProvider|
-|cacheProvider|String|否|caffeine|缓存插件名称： caffeine、guava|
-|cacheKeyGenerator|String|否|json|cache key生成器名称|
-|cacheExpireTime|long|否|-1|cache过期时间，单位ms 毫秒|
-|cacheNullable|Boolean|否|false|结果缓存值是否可空|
-|cacheCapacity|int|否|10000|结果缓存容量大小|
+|cache|Boolean|否| |是否开启缓存|
+|cacheProvider|String|否|caffeine|缓存插件名称： map、caffeine、guava|
+|cacheKeyGenerator|String|否|json|缓存键生成器：json、spel、jexl|
+|cacheKeyExpression|String|否||缓存键表达式|
+|cacheExpireTime|long|否|-1|缓存过期时间（毫秒）|
+|cacheNullable|Boolean|否|false|是否缓存空值|
+|cacheCapacity|int|否|10000|缓存容量大小|
 |delay|int|否|0|延迟发布服务时间。|
 |weight|int|否|100|服务提供者权重|
 |include|String|否|*|发布的方法列表，逗号分隔|
@@ -133,7 +134,7 @@
   标签：`<joyrpc:consumer>` 
 
 |属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :---- | :----  |
+| :---- | :----: | :----: | :---- | :----  |
 |id|String|**是**| |Spring的BeanId|
 |interface|String|**是**| |调用的接口名称|
 |alias|String|**是**| |服务别名分组信息|
@@ -144,12 +145,13 @@
 |subscribe|Boolean|否|true|是否从注册中心订阅|
 |timeout|int|否|5000|调用端调用超时时间，单位毫秒|
 |proxy|String|否|bytebuddy|代理类生成方式插件配置，插件名称：bytebuddy、javassist、jdk|
-|cache|Boolean|否|false|是否开启结果缓存。如果开启需要指定cacheProvider|
-|cacheProvider|String|否|caffeine|自定义结果缓存插件名称：caffeine、guava|
-|cacheKeyGenerator|String|否|default|cache key生成器名称|
-|cacheExpireTime|long|否|-1|cache过期时间，单位ms 毫秒|
-|cacheNullable|Boolean|否|false|结果缓存值是否可空|
-|cacheCapacity|int|否|10000|结果缓存容量大小|
+|cache|Boolean|否| |是否开启缓存|
+|cacheProvider|String|否|caffeine|缓存插件名称： map、caffeine、guava|
+|cacheKeyGenerator|String|否|json|缓存键生成器：json、spel、jexl|
+|cacheKeyExpression|String|否||缓存键表达式|
+|cacheExpireTime|long|否|-1|缓存过期时间（毫秒）|
+|cacheNullable|Boolean|否|false|是否缓存空值|
+|cacheCapacity|int|否|10000|缓存容量大小|
 |generic|Boolean|否|false|是否泛化调用|
 |cluster|String|否|failover|集群策略插件名称，已支持：failover、failfast、pinpoint、broadcast和forking 方式|
 |retries|int|否|0（0表示失败后不重试）|失败后重试次数（需要和cluster=failover结合使用，单实例设置retries无效）|
@@ -271,7 +273,7 @@
   >常用全局配置参数
 
 属性|类型|默认值|描述|
-| :----: | :----: | :---- | :----: |
+| :---- | :----: | :---- | :---- |
 |connectTimeout|int|5000|创建连接的超时时间，单位毫秒|
 |reconnectInterval|int|2000|客户端重连死亡服务端的间隔，单位毫秒。配置小于0代表不重连|
 |payload|int|8388608|允许数据包大小|
@@ -283,7 +285,7 @@
   标签：`<joyrpc:consumerGroup>` 
 
 属性|类型|必填|默认值|描述|
-| :----: | :----: | :----: | :---- | :----: |
+| :---- | :----: | :----: | :---- | :---- |
 |dstParam|int|否| |目标参数（机房/分组等）索引，从0开始计数|
 |aliasAdaptive|Boolean|否|false|是否自动适配alias，设为true当没有alias时自动引入|
 |groupRouter|String|否| |自定义分组路由规则实现类|

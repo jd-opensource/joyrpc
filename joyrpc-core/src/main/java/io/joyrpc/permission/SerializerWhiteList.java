@@ -127,6 +127,10 @@ public class SerializerWhiteList implements WhiteList<Class<?>>, WhiteList.White
         }
     }
 
+    public Set<Class<?>> getWhitelist() {
+        return whites.keySet();
+    }
+
     /**
      * 添加全局白名单
      *

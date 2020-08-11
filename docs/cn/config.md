@@ -169,7 +169,8 @@
 |concurrency|int|否|-1|接口下**每方法**的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制|
 |validation|Boolean|否|false|是否校验参数|
 |compress|String|否| |压缩算法：lz4、snappy、zlib|
-|interfaceValidator|String|否|standard|接口验证器插件名称，同validation参数配合使用|
+|enableValidator|Boolean|否|true|是否启动时候对接口数据结构进行校验|
+|interfaceValidator|String|否|standard|接口数据结构验证器|
 |initSize|int|否|10|初始化连接数|
 |minSize|int|否|0|最小连接数|
 |candidature|String|否|""|候选者算法插件|

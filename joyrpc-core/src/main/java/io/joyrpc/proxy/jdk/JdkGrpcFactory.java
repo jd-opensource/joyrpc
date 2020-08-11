@@ -68,7 +68,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
             try {
                 return compiler.compile(n, builder);
             } catch (Throwable e) {
-                throw new RuntimeException(e.getMessage() + " java source:\n" + builder.toString());
+                throw new RuntimeException(e.getMessage() + " java source:\n" + builder.toString(), e);
             }
         });
     }
@@ -123,7 +123,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
             try {
                 return compiler.compile(n, builder);
             } catch (Throwable e) {
-                throw new RuntimeException(e.getMessage() + " java source:\n" + builder.toString());
+                throw new RuntimeException(e.getMessage() + " java source:\n" + builder.toString(), e);
             }
         });
     }

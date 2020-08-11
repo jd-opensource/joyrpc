@@ -193,7 +193,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 try {
                     return compiler.compile(n, builder);
                 } catch (Throwable e) {
-                    logger.error(e.getMessage() + " java:\n" + builder.toString());
+                    logger.error(e.getMessage() + " java:\n" + builder.toString(), e);
                     return null;
                 }
             });

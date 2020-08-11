@@ -82,13 +82,11 @@ public class NettyClientTransport extends AbstractClientTransport {
             final Channel[] channels = new Channel[1];
             //当出现异常的时候关闭线程池
             Consumer<AsyncResult<Channel>> myConsumer = result -> {
-                try {
-                    if (!result.isSuccess()) {
-                        Channel channel = result.getResult();
-                        //TODO 改成同步有阻塞风险
-                        channel.close();
-                    }
-                } finally {
+                if (!result.isSuccess()) {
+                    //异常的时候都赋值了
+                    Channel channel = result.getResult();
+                    channel.close(r -> consumer.accept(result));
+                } else {
                     consumer.accept(result);
                 }
             };

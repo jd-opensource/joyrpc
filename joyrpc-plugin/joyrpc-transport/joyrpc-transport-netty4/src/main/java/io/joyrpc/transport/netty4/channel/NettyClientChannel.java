@@ -55,7 +55,8 @@ public class NettyClientChannel extends NettyChannel {
                 consumer.accept(o.isSuccess() ? new AsyncResult<>(this) : new AsyncResult<>(this, o.getThrowable()));
             } else if (consumer != null) {
                 //强制关闭
-                ioGroup.shutdownGracefully().addListener(f -> consumer.accept(o));
+                ioGroup.shutdownGracefully();
+                consumer.accept(o);
             } else if (ioGroup != null) {
                 ioGroup.shutdownGracefully();
             }

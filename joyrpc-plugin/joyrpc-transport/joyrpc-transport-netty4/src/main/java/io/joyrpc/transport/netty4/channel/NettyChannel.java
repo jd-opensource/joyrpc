@@ -36,10 +36,10 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * @date: 2019/1/15
@@ -93,13 +93,17 @@ public class NettyChannel implements Channel {
                 throw throwable;
             }
         } else if (consumer != null) {
-            channel.writeAndFlush(object).addListener((future) -> {
-                if (future.isSuccess()) {
-                    consumer.accept(new SendResult(true, this, object));
-                } else {
-                    consumer.accept(new SendResult(future.cause(), this, object));
-                }
-            });
+            try {
+                channel.writeAndFlush(object).addListener((future) -> {
+                    if (future.isSuccess()) {
+                        consumer.accept(new SendResult(true, this, object));
+                    } else {
+                        consumer.accept(new SendResult(future.cause(), this, object));
+                    }
+                });
+            } catch (Throwable e) {
+                consumer.accept(new SendResult(e, this));
+            }
         } else {
             channel.writeAndFlush(object, channel.voidPromise());
         }
@@ -118,34 +122,42 @@ public class NettyChannel implements Channel {
     /**
      * 执行
      *
-     * @param supplier
+     * @param callable
      * @return
      */
-    protected boolean execute(final Supplier<ChannelFuture> supplier) {
-        ChannelFuture future = supplier.get();
+    protected boolean execute(final Callable<ChannelFuture> callable) {
+        ChannelFuture future = null;
         try {
+            future = callable.call();
             future.await();
         } catch (InterruptedException e) {
+        } catch (Throwable e) {
         }
-        return future.isSuccess();
+        return future != null ? future.isSuccess() : false;
     }
 
     /**
      * 执行
      *
-     * @param supplier
-     * @param consumer
+     * @param callable 调用
+     * @param consumer 消费者
      */
-    protected void execute(final Supplier<ChannelFuture> supplier, final Consumer<AsyncResult<Channel>> consumer) {
-        ChannelFuture future = supplier.get();
-        if (consumer != null) {
-            future.addListener(f -> {
-                if (f.isSuccess()) {
-                    consumer.accept(new AsyncResult<>(this));
-                } else {
-                    consumer.accept(new AsyncResult<>(this, f.cause()));
-                }
-            });
+    protected void execute(final Callable<ChannelFuture> callable, final Consumer<AsyncResult<Channel>> consumer) {
+        try {
+            ChannelFuture future = callable.call();
+            if (consumer != null) {
+                future.addListener(f -> {
+                    if (f.isSuccess()) {
+                        consumer.accept(new AsyncResult<>(this));
+                    } else {
+                        consumer.accept(new AsyncResult<>(this, f.cause()));
+                    }
+                });
+            }
+        } catch (Throwable e) {
+            if (consumer != null) {
+                consumer.accept(new AsyncResult<>(this, e));
+            }
         }
     }
 

@@ -24,6 +24,7 @@ import io.joyrpc.event.AsyncResult;
 import io.joyrpc.transport.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -52,13 +53,19 @@ public class NettyClientChannel extends NettyChannel {
         super.close(o -> {
             if (consumer != null && ioGroup == null) {
                 //不需要等到
-                consumer.accept(o.isSuccess() ? new AsyncResult<>(this) : new AsyncResult<>(this, o.getThrowable()));
+                consumer.accept(o);
             } else if (consumer != null) {
                 //强制关闭
-                ioGroup.shutdownGracefully();
-                consumer.accept(o);
+                try {
+                    ioGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).addListener(f -> consumer.accept(o));
+                } catch (Throwable e) {
+                    consumer.accept(o);
+                }
             } else if (ioGroup != null) {
-                ioGroup.shutdownGracefully();
+                try {
+                    ioGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS);
+                } catch (Throwable e) {
+                }
             }
         });
     }

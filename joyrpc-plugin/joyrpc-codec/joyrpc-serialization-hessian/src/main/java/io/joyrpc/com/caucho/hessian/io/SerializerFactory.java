@@ -235,7 +235,7 @@ public class SerializerFactory extends AbstractSerializerFactory {
         serializer = loadSerializer(cl);
 
         if (_cachedSerializerMap == null) {
-            _cachedSerializerMap = new ConcurrentHashMap(8);
+            _cachedSerializerMap = new ConcurrentHashMap(256);
         }
 
         _cachedSerializerMap.put(cl, serializer);
@@ -369,7 +369,7 @@ public class SerializerFactory extends AbstractSerializerFactory {
         deserializer = loadDeserializer(cl);
 
         if (_cachedDeserializerMap == null) {
-            _cachedDeserializerMap = new ConcurrentHashMap(8);
+            _cachedDeserializerMap = new ConcurrentHashMap(256);
         }
 
         _cachedDeserializerMap.put(cl, deserializer);

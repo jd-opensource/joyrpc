@@ -25,6 +25,7 @@ import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.example.service.DemoService;
 import io.joyrpc.example.service.impl.DemoServiceImpl;
+import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +44,8 @@ public class ApiServer {
         providerConfig.setInterfaceClazz(DemoService.class.getName());
         providerConfig.setRef(demoService);
         providerConfig.setAlias("joyrpc-demo");
-        providerConfig.setRegistry(new RegistryConfig("broadcast"));
+        //providerConfig.setRegistry(new RegistryConfig("broadcast"));
+        providerConfig.setRegistry(new RegistryConfig("memory"));
 
         providerConfig.exportAndOpen().whenComplete((v, t) -> {
             if (t != null) {
@@ -51,6 +53,8 @@ public class ApiServer {
                 System.exit(1);
             }
         });
+
+
 
 
         providerConfig.setParameter("shutdownTimeout", 15000);

@@ -23,6 +23,8 @@ package io.joyrpc.example.api;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.example.service.DemoService;
+import io.joyrpc.example.service.vo.Java8TimeObj;
+import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,10 +40,17 @@ public class ApiClient {
         ConsumerConfig<DemoService> consumerConfig = new ConsumerConfig<>(); //consumer设置
         consumerConfig.setInterfaceClazz(DemoService.class.getName());
         consumerConfig.setAlias("joyrpc-demo");
-        consumerConfig.setRegistry(new RegistryConfig("broadcast"));
+        //consumerConfig.setRegistry(new RegistryConfig("broadcast"));
+        consumerConfig.setRegistry(new RegistryConfig("fix", "grpc://127.0.0.1:22000"));
+        consumerConfig.setTimeout(1000000);
         try {
             CompletableFuture<DemoService> future = consumerConfig.refer();
             DemoService service = future.get();
+
+            // 验证java8 时间对象
+            /*Java8TimeObj java8TimeObj = Java8TimeObj.newJava8TimeObj();
+            Java8TimeObj java8TimeObjRes = service.echoJava8TimeObj(java8TimeObj);
+            Assert.assertEquals(java8TimeObj, java8TimeObjRes);*/
 
             String echo = service.sayHello("hello"); //发起服务调用
             logger.info("Get msg: {} ", echo);

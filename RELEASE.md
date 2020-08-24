@@ -1,6 +1,6 @@
 # 版本说明
 
-## 1.1.1-SNAPSHOT
+## 1.2.0-SNAPSHOT
 
 ### Enhancement
 

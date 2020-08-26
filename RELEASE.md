@@ -1,6 +1,6 @@
 # 版本说明
 
-## 1.2.0-SNAPSHOT
+## 1.2.0-RELEASE(2020-08-26)
 
 ### Enhancement
 

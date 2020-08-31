@@ -36,6 +36,7 @@
 | io.grpc                         | grpc-protobuf-lite              | 1.20.0                                    | Apache 2.0                                              |
 | io.grpc                         | grpc-stub                       | 1.20.0                                    | Apache 2.0                                              |
 | io.netty                        | netty-all                       | 4.1.43.Final                              | Apache License, Version 2.0                             |
+| io.seata                        | seata-all                       | 1.3.0                                     | Apache License, Version 2.0                             |
 | io.opencensus                   | opencensus-api                  | 0.19.2                                    | The Apache License, Version 2.0                         |
 | io.opencensus                   | opencensus-contrib-grpc-metrics | 0.19.2                                    | The Apache License, Version 2.0                         |
 | io.protostuff                   | protostuff-api                  | 1.5.9                                     | The Apache Software License, Version 2.0                |

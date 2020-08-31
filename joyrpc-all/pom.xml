@@ -5,7 +5,7 @@
     <parent>
         <artifactId>joyrpc</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.2.1-SNAPSHOT</version>
+        <version>1.3.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>joyrpc-all</artifactId>
@@ -185,6 +185,11 @@
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-expression-jexl</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-transaction-seata</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>

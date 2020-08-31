@@ -2,7 +2,9 @@
 
 ## 1.2.1-SNAPSHOT
 
+### Enhancement
 
+- 添加分布式事务seata的集成
 
 ## 1.2.0-RELEASE(2020-08-26)
 

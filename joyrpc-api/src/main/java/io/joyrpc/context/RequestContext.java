@@ -58,7 +58,6 @@ public class RequestContext {
     /**
      * The constant LOCAL.
      */
-    // todo InheritableThreadLocal 有问题
     protected static final ThreadLocal<RequestContext> LOCAL = ThreadLocal.withInitial(() -> new RequestContext());
 
     public static final Predicate<String> NONE_INTERNAL_KEY = (o) -> o == null || o.charAt(0) != INTERNAL_KEY_PREFIX;

@@ -51,7 +51,7 @@ public class SkywalkingTraceFactory implements TraceFactory {
      * 隐藏属性的key：分布式跟踪 数据KEY
      */
     public static final String HIDDEN_KEY_TRACE_SKYWALKING = ".skywalking";
-    public static final int COMPONENT_ID = 8888;
+    public static final int COMPONENT_ID = 2999;
     protected int componentId;
 
     public SkywalkingTraceFactory() {

@@ -460,6 +460,7 @@
                         </goals>
                         <configuration>
                             <additionalJOption>-Xdoclint:none</additionalJOption>
+                            <excludePackageNames>com.*:io.joyrpc.com.*</excludePackageNames>
                         </configuration>
                     </execution>
                 </executions>

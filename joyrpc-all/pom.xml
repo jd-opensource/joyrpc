@@ -268,7 +268,7 @@
                             <dependencySourceIncludes>
                                 <dependencySourceInclude>io.joyrpc:*</dependencySourceInclude>
                             </dependencySourceIncludes>
-                            <excludePackageNames>com.*</excludePackageNames>
+                            <excludePackageNames>com.*:io.joyrpc.com.*</excludePackageNames>
                         </configuration>
                     </execution>
                 </executions>

@@ -20,6 +20,7 @@
         <module>joyrpc-expression</module>
         <module>joyrpc-transport</module>
         <module>joyrpc-trace</module>
+        <module>joyrpc-transaction</module>
     </modules>
 
     <dependencies>

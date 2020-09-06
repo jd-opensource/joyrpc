@@ -20,6 +20,7 @@ package io.joyrpc.context.auth;
  * #L%
  */
 
+import io.joyrpc.util.network.IpLong;
 import io.joyrpc.util.network.Ipv4;
 import io.joyrpc.util.network.Lan;
 
@@ -82,7 +83,7 @@ public class IPPermission {
         if (whiteLan == null && blackLan == null) {
             return true;
         }
-        long v = Ipv4.toLong(ip);
+        IpLong v = new IpLong(ip);
         //TODO 黑白名单统一规则
         return (whiteLan == null || whiteLan.contains(v)) && (blackLan == null || !blackLan.contains(v));
     }

@@ -94,7 +94,8 @@ public class Lan {
         if (ip == null || ip.isEmpty()) {
             return false;
         }
-        return contains(segment -> segment.contains(ip));
+        IpLong ipLong = new IpLong(ip);
+        return contains(segment -> segment.contains(ipLong));
     }
 
     /**
@@ -122,7 +123,7 @@ public class Lan {
      * @param ip IP
      * @return 布尔值
      */
-    public boolean contains(long ip) {
+    public boolean contains(IpLong ip) {
         return contains(segment -> segment.contains(ip));
     }
 

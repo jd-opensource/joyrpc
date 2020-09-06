@@ -88,10 +88,20 @@ public class Ipv4 {
      * 本地所有IP
      */
     protected static Set<String> LOCAL_IPS;
+
+    /**
+     * 本地名称
+     */
+    protected static Set<String> LOCAL_HOST = new HashSet<>(5);
     /**
      * 本地首选的IP
      */
     protected static String LOCAL_IP;
+
+    protected static boolean IPV4 = false;
+
+    public static final IpLong IP_MIN;
+    public static final IpLong IP_MAX;
 
     static {
         //从环境变量里面获取默认的网卡和管理网络
@@ -99,15 +109,35 @@ public class Ipv4 {
         NET_INTERFACE = System.getProperty(LOCAL_NIC_KEY, env.get(LOCAL_NIC_KEY));
         MANAGE_IP = System.getProperty(MANAGE_IP_KEY, env.get(MANAGE_IP_KEY));
         try {
+            //java.net.preferIPv6Addresses表示在查询本地或远端IP地址时，如果存在IPv4和IPv6双地址，是否优先返回IPv6地址，默认是false
+            IPV4 = InetAddress.getLocalHost() instanceof Inet4Address;
+        } catch (UnknownHostException ignored) {
+        }
+        IP_MIN = IPV4 ? new IpLong("0.0.0.0") : new IpLong("0000:0000:0000:0000:0000:0000:0000:0000");
+        IP_MAX = IPV4 ? new IpLong("255.255.255.255") : new IpLong("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
+        try {
             LOCAL_IPS = new HashSet<>(getLocalIps());
             LOCAL_IPS.add("127.0.0.1");
             LOCAL_IPS.add("0:0:0:0:0:0:0:1");
+            LOCAL_IPS.add("::1");
+            LOCAL_HOST.add("localhost");
+            LOCAL_HOST.add("127.0.0.1");
+            LOCAL_HOST.add("0:0:0:0:0:0:0:1");
+            LOCAL_HOST.add("::1");
             //绑定到某个网卡上
             if (NET_INTERFACE != null && !NET_INTERFACE.isEmpty()) {
                 LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);
             }
         } catch (SocketException ignored) {
         }
+    }
+
+    /**
+     * 是否启用IPV4
+     * @return 启用IPV4标识
+     */
+    public static boolean isIpv4() {
+        return IPV4;
     }
 
     /**
@@ -161,8 +191,11 @@ public class Ipv4 {
             ias = ni.getInetAddresses();
             while (ias.hasMoreElements()) {
                 address = ias.nextElement();
-                if (!address.isLoopbackAddress() && (address instanceof Inet4Address)) {
-                    result.add(address.getHostAddress());
+                if (!address.isLoopbackAddress()) {
+                    if (IPV4 && address instanceof Inet4Address
+                            || !IPV4 && address instanceof Inet6Address) {
+                        result.add(toIp(address));
+                    }
                 }
             }
         }
@@ -268,7 +301,7 @@ public class Ipv4 {
      * @return 本地域名标识
      */
     public static boolean isLocalHost(final String host) {
-        return host == null || host.isEmpty() || "localhost".equals(host) || "127.0.0.1".equals(host);
+        return host == null || host.isEmpty() || LOCAL_HOST.contains(host);
     }
 
     /**
@@ -322,7 +355,7 @@ public class Ipv4 {
             return false;
         }
         try {
-            long v = toLong(ip);
+            IpLong v = new IpLong(ip);
             for (Segment segment : segments) {
                 if (segment.contains(v)) {
                     return true;
@@ -337,14 +370,15 @@ public class Ipv4 {
      * 判断该IP是否在网络短中
      * @param segments 网段
      * @param ip ip
-     * @return
+     * @return 布尔值
      */
     public static boolean contains(final List<Segment> segments, final long ip) {
         if (segments == null || segments.isEmpty()) {
             return false;
         }
+        IpLong ipLong = new IpLong(ip);
         for (Segment segment : segments) {
-            if (segment.contains(ip)) {
+            if (segment.contains(ipLong)) {
                 return true;
             }
         }
@@ -363,7 +397,11 @@ public class Ipv4 {
         }
         if (address instanceof InetSocketAddress) {
             InetSocketAddress isa = (InetSocketAddress) address;
-            String host = isa.getAddress().getHostAddress();
+            InetAddress inetAddress = isa.getAddress();
+            String host = toIp(inetAddress);
+            if (inetAddress instanceof Inet6Address) {
+                return "[" + host + "]" + ':' + isa.getPort();
+            }
             return host + ':' + isa.getPort();
         } else {
             return address.toString();
@@ -371,450 +409,35 @@ public class Ipv4 {
     }
 
     /**
-     * 得到ip地址
+     * 获取IP字符串
      *
-     * @param address
-     *         InetSocketAddress
-     * @return ip地址
+     * @param address 地址
+     * @return IP字符串
+     */
+    public static String toIp(final InetAddress address) {
+        String result = address == null ? null : address.getHostAddress();
+        if (address instanceof Inet6Address) {
+            int pos = result.lastIndexOf('%');
+            if (pos > 0) {
+                return result.substring(0, pos);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 得到ip
+     *
+     * @param address 地址
+     *
+     * @return ip
      */
     public static String toIp(final InetSocketAddress address) {
         if (address == null) {
             return null;
-        } else {
-            InetAddress inetAddress = address.getAddress();
-            return inetAddress == null ? address.getHostName() :
-                    inetAddress.getHostAddress();
         }
+        InetAddress inetAddress = address.getAddress();
+        return inetAddress == null ? address.getHostName() : toIp(inetAddress);
     }
-
-    /**
-     * 从地址数组中获取IP，跳过必要的端口
-     *
-     * @param address 地址数组
-     * @return IP
-     */
-    public static String toIp(final byte[] address) {
-        if (address == null || address.length < 4) {
-            return null;
-        }
-        int pos = 0;
-        if (address.length >= 6) {
-            // 跳过端口
-            pos += 2;
-        }
-        StringBuilder builder = new StringBuilder(20);
-        builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos] & 0xFF);
-        return builder.toString();
-    }
-
-    /**
-     * 把地址转化成字节数组，如果有端口，则第一和第二字节为端口，其余为IP段
-     *
-     * @param address 地址
-     * @return 字节数组
-     */
-    public static byte[] toByte(String address) {
-        return toByte(address, false);
-    }
-
-    /**
-     * 把地址转化成字节数组，如果有端口，则第一和第二字节为端口，其余为IP段
-     *
-     * @param address 地址
-     * @param hex     字符串是否是16进制模式
-     * @return 字节数组
-     */
-    public static byte[] toByte(final String address, final boolean hex) {
-        if (address == null) {
-            return null;
-        }
-        int pos = 0;
-        byte[] buf = null;
-        if (hex) {
-            // 16进制地址
-            int len = address.length();
-            switch (len) {
-                case 12:
-                    buf = new byte[6];
-                    buf[pos++] = (byte) Integer.parseInt(address.substring(10, 12), 16);
-                    buf[pos++] = (byte) Integer.parseInt(address.substring(8, 10), 16);
-                case 8:
-                    buf = buf == null ? new byte[4] : buf;
-                    buf[pos++] = (byte) Integer.parseInt(address.substring(0, 2), 16);
-                    buf[pos++] = (byte) Integer.parseInt(address.substring(2, 4), 16);
-                    buf[pos++] = (byte) Integer.parseInt(address.substring(4, 6), 16);
-                    buf[pos] = (byte) Integer.parseInt(address.substring(6, 8), 16);
-                    break;
-                default:
-                    return null;
-            }
-        } else {
-            // IP地址，第5个元素表示端口
-            int[] parts = parseAddress(address);
-            if (parts == null) {
-                return null;
-            }
-            buf = parts[4] <= 0 ? new byte[4] : new byte[6];
-            if (buf.length > 4) {
-                buf[pos++] = (byte) (parts[4] & 0xFF);
-                buf[pos++] = (byte) (parts[4] >> 8 & 0xFF);
-            }
-            buf[pos++] = (byte) parts[0];
-            buf[pos++] = (byte) parts[1];
-            buf[pos++] = (byte) parts[2];
-            buf[pos] = (byte) parts[3];
-        }
-        return buf;
-    }
-
-    /**
-     * 地址转化成字节数组
-     *
-     * @param socketAddress 地址对象
-     * @return 字节数组
-     */
-    public static byte[] toByte(InetSocketAddress socketAddress) {
-        if (socketAddress == null) {
-            throw new IllegalArgumentException("socketAddress is null");
-        }
-        InetAddress inetAddress = socketAddress.getAddress();
-        if (inetAddress == null) {
-            throw new IllegalArgumentException("socketAddress is invalid");
-        }
-        byte[] address = inetAddress.getAddress();
-        byte[] result = new byte[address.length + 2];
-        System.arraycopy(address, 0, result, 2, address.length);
-        int port = socketAddress.getPort();
-        result[1] = (byte) (port >> 8 & 0xFF);
-        result[0] = (byte) (port & 0xFF);
-        return result;
-    }
-
-    /**
-     * 把字节数组转换成地址对象
-     *
-     * @param address 地址字节数组
-     * @return 地址对象
-     */
-    public static InetSocketAddress toAddress(final byte[] address) {
-        if (address == null || (address.length != 6 && address.length != 18)) {
-            // 端口2个字节，IPV4 4字节，IPV6 16字节
-            throw new IllegalArgumentException("address is invalid");
-        }
-        // 低位2个字节是端口数据
-        int port = address[0] & 0xFF;
-        port |= (address[1] << 8 & 0xFF00);
-
-        try {
-            InetAddress addr = InetAddress.getByAddress(null, Arrays.copyOfRange(address, 2, address.length));
-            return new InetSocketAddress(addr, port);
-        } catch (UnknownHostException ignored) {
-            return null;
-        }
-    }
-
-    /**
-     * 把地址数组转换成字符串
-     *
-     * @param address 字节数组
-     * @param builder 字符串构造器
-     */
-    public static void toAddress(byte[] address, StringBuilder builder) {
-        if (builder == null) {
-            return;
-        }
-        if (address == null) {
-            throw new IllegalArgumentException("address is invalid");
-        }
-        if (address.length < 4) {
-            throw new IllegalArgumentException("address is invalid");
-        }
-        int pos = 0;
-        int port = 0;
-        if (address.length >= 6) {
-            port = address[pos++] & 0xFF;
-            port |= (address[pos++] << 8 & 0xFF00);
-        }
-        builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos++] & 0xFF).append('.');
-        builder.append(address[pos] & 0xFF);
-        if (address.length >= 6) {
-            builder.append(':').append(port);
-        }
-    }
-
-    /**
-     * 把字节数组转化成16进制字符串
-     *
-     * @param address 字节数组
-     * @return 16进制
-     */
-    public static String toHex(byte[] address) {
-        StringBuilder builder = new StringBuilder();
-        toHex(address, builder);
-        return builder.toString();
-    }
-
-    /**
-     * 把地址数组转化成16进制字符串
-     *
-     * @param address 字节数组
-     * @param builder 字符串构造器
-     */
-    public static void toHex(byte[] address, StringBuilder builder) {
-        if (address == null || address.length == 0 || builder == null) {
-            return;
-        }
-        String hex;
-        int pos = 0;
-        int port = 0;
-        // 有端口
-        if (address.length >= 6) {
-            port = address[pos++] & 0xFF;
-            port |= (address[pos++] << 8 & 0xFF00);
-        }
-        // IP段
-        for (int i = 0; i < 4; i++) {
-            hex = Integer.toHexString(address[pos++] & 0xFF).toUpperCase();
-            if (hex.length() == 1) {
-                builder.append('0').append(hex);
-            } else {
-                builder.append(hex);
-            }
-        }
-        // 追加端口字符串
-        if (address.length >= 6) {
-            hex = Integer.toHexString(port).toUpperCase();
-            int len = hex.length();
-            if (len == 1) {
-                builder.append("000").append(hex);
-            } else if (len == 2) {
-                builder.append("00").append(hex);
-            } else if (len == 3) {
-                builder.append("0").append(hex);
-            } else {
-                builder.append(hex);
-            }
-        }
-    }
-
-    /**
-     * 是否是有效的IPV4
-     *
-     * @param ip ip地址
-     * @return 有效标示
-     */
-    public static boolean isIp(final String ip) {
-        return parseIp(ip) != null;
-    }
-
-    /**
-     * 是否是有效的地址，IP加端口
-     *
-     * @param address ip地址
-     * @return 有效标示
-     */
-    public static boolean isAddress(final String address) {
-        return parseAddress(address) != null;
-    }
-
-    /**
-     * 解析地址<br>，分隔符支持".",":","_"
-     * 第1-4个元素为IP段，第5个元素为端口，如果第5个元素为-1，则表示端口不存在
-     *
-     * @param address ip地址
-     * @return 分段
-     */
-    public static int[] parseAddress(final String address) {
-        if (address == null || address.isEmpty()) {
-            return null;
-        }
-        int[] parts = new int[5];
-        parts[4] = 0;
-        int index = 0;
-        int start = -1;
-        int end = -1;
-        int part;
-        char[] chars = address.toCharArray();
-        char ch = 0;
-        for (int i = 0; i < chars.length; i++) {
-            ch = chars[i];
-            switch (ch) {
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                    if (start == -1) {
-                        start = i;
-                    }
-                    end = i;
-                    if ((index < 3 && end - start > 2) || (index == 3 && end - start > 5)) {
-                        // IP每段最大255，端口最大65535
-                        return null;
-                    }
-                    break;
-                case '_':
-                case ':':
-                case '.':
-                    // 分隔符
-                    if (start == -1) {
-                        // 前面必须有字符
-                        return null;
-                    }
-                    if (index >= 4) {
-                        // 已经有4个IP段和端口了
-                        return null;
-                    }
-                    part = Integer.parseInt(new String(chars, start, end - start + 1));
-                    if (part > 255) {
-                        return null;
-                    }
-                    parts[index++] = part;
-                    start = -1;
-                    end = -1;
-                    break;
-                default:
-                    return null;
-            }
-        }
-        if (start > -1) {
-            part = Integer.parseInt(new String(chars, start, end - start + 1));
-            if (index <= 3 && part > 255 || index == 4 && part > 65535) {
-                return null;
-            }
-            parts[index] = part;
-            return index >= 3 ? parts : null;
-        } else {
-            // 以.结尾
-            return null;
-        }
-    }
-
-    /**
-     * 分解IP,只支持IPV4
-     *
-     * @param ip ip地址
-     * @return 分段
-     */
-    public static int[] parseIp(final String ip) {
-        if (ip == null || ip.isEmpty()) {
-            return null;
-        }
-        int[] parts = new int[4];
-        int index = 0;
-        int start = -1;
-        int end = -1;
-        int part;
-        char[] chars = ip.toCharArray();
-        char ch = 0;
-        for (int i = 0; i < chars.length; i++) {
-            if (index > 3) {
-                // 超过了4个数字
-                return null;
-            }
-            ch = chars[i];
-            switch (ch) {
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
-                    if (start == -1) {
-                        start = i;
-                    }
-                    end = i;
-                    if (end - start > 2) {
-                        // 超长了，最多3个数字
-                        return null;
-                    }
-                    break;
-                case '.':
-                    // 分隔符
-                    if (start == -1) {
-                        // 前面必须有字符
-                        return null;
-                    }
-                    part = Integer.parseInt(new String(chars, start, end - start + 1));
-                    if (part > 255) {
-                        return null;
-                    }
-                    parts[index++] = part;
-                    start = -1;
-                    end = -1;
-                    break;
-                default:
-                    return null;
-            }
-        }
-        if (start > -1) {
-            part = Integer.parseInt(new String(chars, start, end - start + 1));
-            if (part > 255) {
-                return null;
-            }
-            parts[index] = part;
-            return index == 3 ? parts : null;
-        } else {
-            // 以.结尾
-            return null;
-        }
-    }
-
-    /**
-     * 把IP地址转换成长整形
-     *
-     * @param ip IP地址
-     * @return 长整形
-     */
-    public static long toLong(final String ip) {
-        int[] data = parseIp(ip);
-        if (data == null) {
-            throw new IllegalArgumentException(String.format("invalid ip %s", ip));
-        }
-        long result = 0;
-        result += ((long) data[0]) << 24;
-        result += ((long) (data[1]) << 16);
-        result += ((long) (data[2]) << 8);
-        result += ((long) (data[3]));
-        return result;
-    }
-
-    /**
-     * 把长整形转换成IP地址
-     *
-     * @param ip 长整形
-     * @return IP字符串
-     */
-    public static String toIp(long ip) {
-        StringBuilder builder = new StringBuilder(20);
-        long part1 = (ip & 0xFFFFFFFF) >>> 24;
-        long part2 = (ip & 0x00FFFFFF) >>> 16;
-        long part3 = (ip & 0x0000FFFF) >>> 8;
-        long part4 = ip & 0x000000FF;
-        //直接右移24位
-        builder.append(part1).append('.');
-        //将高8位置0，然后右移16位
-        builder.append(part2).append('.');
-        //将高16位置0，然后右移8位
-        builder.append(part3).append('.');
-        //将高24位置0
-        builder.append(part4);
-        return builder.toString();
-    }
-
 
 }

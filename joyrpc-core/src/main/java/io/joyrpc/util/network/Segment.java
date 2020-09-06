@@ -9,9 +9,9 @@ package io.joyrpc.util.network;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,39 +35,38 @@ public class Segment {
                     "255.255.240.0", "255.255.248.0", "255.255.252.0", "255.255.254.0", "255.255.255.0",
                     "255.255.255.128", "255.255.255.192", "255.255.255.224", "255.255.255.240", "255.255.255.248",
                     "255.255.255.252", "255.255.255.254", "255.255.255.255"};
-    public static final long MIN = Ipv4.toLong("0.0.0.0");
-    public static final long MAX = Ipv4.toLong("255.255.255.255");
 
     // 起始IP
-    private long begin;
+    private IpLong begin;
     // 最后IP
-    private long end;
+    private IpLong end;
 
     public Segment(final String ips) {
         if (ips == null || ips.isEmpty()) {
             throw new IllegalArgumentException("ips is empty.");
         }
+        //TODO 修改IP段
         int length = ips.length();
         if (length == 1) {
             switch (ips.charAt(0)) {
                 case '-':
                 case '*':
-                    begin = MIN;
-                    end = MAX;
+                    begin = Ipv4.IP_MIN;
+                    end = Ipv4.IP_MAX;
                     break;
             }
         } else {
             int pos = ips.indexOf('-');
             if (pos == 0) {
-                begin = MIN;
-                end = Ipv4.toLong(ips.substring(1));
+                begin = Ipv4.IP_MIN;
+                end = new IpLong(ips.substring(1));
             } else if (pos == length - 1) {
-                begin = Ipv4.toLong(ips.substring(0, length - 1));
-                end = MAX;
+                begin = new IpLong(ips.substring(0, length - 1));
+                end = Ipv4.IP_MAX;
             } else if (pos > 0) {
                 // IP-IP格式
-                begin = Ipv4.toLong(ips.substring(0, pos));
-                end = Ipv4.toLong(ips.substring(pos + 1));
+                begin = new IpLong(ips.substring(0, pos));
+                end = new IpLong(ips.substring(pos + 1));
             } else {
                 pos = ips.indexOf('/');
                 if (pos == 0 || pos == length - 1) {
@@ -78,23 +77,23 @@ public class Segment {
                     if (bits < 1 || bits > 32) {
                         throw new IllegalArgumentException(String.format("ips is invalid. %s", ips));
                     }
-                    long mask = (int) Ipv4.toLong(MASKES[bits - 1]);
-                    begin = Ipv4.toLong(ips.substring(0, pos)) & mask;
-                    end = begin + ~((int) mask);
+                    //long mask = (int) Ipv4.toLong(MASKES[bits - 1]);
+                    //begin = Ipv4.toLong(ips.substring(0, pos)) & mask;
+                   // end = begin + ~((int) mask);
                 } else {
                     // 可能存在*号
-                    begin = Ipv4.toLong(ips.replaceAll("\\*", "0"));
-                    end = Ipv4.toLong(ips.replaceAll("\\*", "255"));
+                    begin = new IpLong(ips.replaceAll("\\*", "0"));
+                    end = new IpLong(ips.replaceAll("\\*", "255"));
                 }
             }
         }
     }
 
-    public long getBegin() {
+    public IpLong getBegin() {
         return begin;
     }
 
-    public long getEnd() {
+    public IpLong getEnd() {
         return end;
     }
 
@@ -109,23 +108,22 @@ public class Segment {
 
         Segment segment = (Segment) o;
 
-        if (begin != segment.begin) {
+        if (!begin.equals(segment.begin)) {
             return false;
         }
-        return end == segment.end;
-
+        return end.equals(segment.end);
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (begin ^ (begin >>> 32));
-        result = 31 * result + (int) (end ^ (end >>> 32));
+        int result = begin.hashCode();
+        result = 31 * result + end.hashCode();
         return result;
     }
 
     @Override
     public String toString() {
-        return Ipv4.toIp(begin) + "-" + Ipv4.toIp(end);
+        return begin.toString() + "-" + end.toString();
     }
 
     /**
@@ -135,17 +133,16 @@ public class Segment {
      * @return 布尔值
      */
     public boolean contains(final String ip) {
-        long value = Ipv4.toLong(ip);
-        return value >= begin && value <= end;
+        return ip != null && contains(new IpLong(ip));
     }
 
     /**
      * 是否包含指定IP
      *
-     * @param ip
-     * @return
+     * @param ip ip
+     * @return 布尔值
      */
-    public boolean contains(final long ip) {
-        return ip >= begin && ip <= end;
+    public boolean contains(final IpLong ip) {
+        return ip != null && begin.compareTo(ip) <= 0 && end.compareTo(ip) >= 0;
     }
 }

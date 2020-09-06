@@ -358,7 +358,6 @@ public class ClassUtils {
             if (loader != null) {
                 return loader;
             }
-            return clazz.getClassLoader();
         }
         return ClassLoader.getSystemClassLoader();
     }

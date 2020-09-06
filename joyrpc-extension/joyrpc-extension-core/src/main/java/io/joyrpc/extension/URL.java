@@ -165,9 +165,10 @@ public final class URL extends MapParametric<String, String> implements Serializ
             i = url.indexOf("?");
         }
         if (i >= 0) {
+            // parameter
             if (i < url.length() - 1) {
                 String[] parts = url.substring(i + 1).split("&");
-                parameters = new HashMap<String, String>(10);
+                parameters = new HashMap<>(10);
                 String name = null;
                 String value = null;
                 for (String part : parts) {
@@ -206,7 +207,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         if (protocol == null || protocol.isEmpty()) {
             protocol = defProtocol;
             if (protocol == null || protocol.isEmpty()) {
-                throw new IllegalStateException("url missing protocol: " + url);
+                throw new IllegalArgumentException("url missing protocol: " + url);
             }
         }
         if (protocol.equals(FILE)) {
@@ -233,6 +234,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
                 url = url.substring(i + 1);
             }
         } else {
+            // user and password
             i = url.indexOf("@");
             if (i >= 0) {
                 user = url.substring(0, i);
@@ -243,16 +245,31 @@ public final class URL extends MapParametric<String, String> implements Serializ
                 }
                 url = url.substring(i + 1);
             }
-            String[] values = url.split(":");
-            if (values.length == 2) {
-                // 排除zookeeper://192.168.1.2:2181,192.168.1.3:2181
-                port = Integer.parseInt(values[1]);
-                url = values[0];
-            } else if (defPort != null) {
-                port = defPort;
+            // ipv6
+            if (url.charAt(0) == '[') {
+                i = url.lastIndexOf(']');
+                if (i > 0) {
+                    host = url.substring(0, i + 1);
+                    i = url.indexOf(':', i + 1);
+                    if (i > 0 && i < url.length() - 1) {
+                        port = Integer.parseInt(url.substring(i + 1));
+                    } else if (defPort != null) {
+                        port = defPort;
+                    }
+                } else {
+                    throw new IllegalArgumentException("ip v6 address is not end with ']' " + url);
+                }
+            } else {
+                i = url.indexOf(':', i + 1);
+                if (i > 0 && i < url.length() - 1) {
+                    port = Integer.parseInt(url.substring(i + 1));
+                    host = url.substring(0, i);
+                } else if (defPort != null) {
+                    port = defPort;
+                }
             }
         }
-        if (!url.isEmpty()) {
+        if (host == null && !url.isEmpty()) {
             host = url;
         }
         return new URL(protocol, user, password, host, port, path, parameters);

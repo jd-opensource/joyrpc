@@ -20,20 +20,18 @@ package io.joyrpc.util;
  * #L%
  */
 
-import io.joyrpc.util.model.User;
+import io.joyrpc.extension.URL;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.Method;
-import java.util.Map;
-
-public class ClassUtilsTest {
+public class Ipv6Test {
 
     @Test
-    public void testGetterSetter() {
-        Map<String, Method> getter = ClassUtils.getGetter(User.class);
-        Assert.assertEquals(getter.size(), 2);
-        Assert.assertTrue(getter.containsKey("name"));
-        Assert.assertTrue(getter.containsKey("man"));
+    public void testUrl() {
+        URL url = URL.valueOf("http://[2001:470:c:1818::2]:80/index.html");
+        Assert.assertEquals(url.getProtocol(), "http");
+        Assert.assertEquals(url.getPort(), 80);
+        Assert.assertEquals(url.getHost(), "[2001:470:c:1818::2]");
+        Assert.assertEquals(url.getPath(), "index.html");
     }
 }

@@ -35,45 +35,60 @@ public class IpLong implements Comparable<IpLong> {
      */
     protected long low;
     /**
+     * 类型
+     */
+    protected IpType type;
+    /**
      * IP信息
      */
     protected String ip;
 
     public IpLong(final String ip) {
-        int[] data = parseIp(ip);
-        if (data == null) {
+        IpPart part = parseIp(ip);
+        if (part == null) {
             throw new IllegalArgumentException(String.format("invalid ip %s", ip));
         }
         this.ip = ip;
+        this.type = part.type;
         int index = 0;
-        if (data.length == 8) {
+        int[] parts = part.parts;
+        if (parts.length == 8) {
             //ipv6
-            high += ((long) data[index++]) << 48;
-            high += ((long) (data[index++]) << 32);
-            high += ((long) (data[index++]) << 16);
-            high += data[index++];
-            low += ((long) data[index++]) << 48;
-            low += ((long) (data[index++]) << 32);
-            low += ((long) (data[index++]) << 16);
-            low += ((long) (data[index]));
+            high += ((long) parts[index++]) << 48;
+            high += ((long) (parts[index++]) << 32);
+            high += ((long) (parts[index++]) << 16);
+            high += parts[index++];
+            low += ((long) parts[index++]) << 48;
+            low += ((long) (parts[index++]) << 32);
+            low += ((long) (parts[index++]) << 16);
+            low += ((long) (parts[index]));
         } else {
             high = -1;
             //ipv4
-            low += ((long) data[index++]) << 24;
-            low += ((long) (data[index++]) << 16);
-            low += ((long) (data[index++]) << 8);
-            low += ((long) (data[index]));
+            low += ((long) parts[index++]) << 24;
+            low += ((long) (parts[index++]) << 16);
+            low += ((long) (parts[index++]) << 8);
+            low += ((long) (parts[index]));
         }
     }
 
     public IpLong(long low) {
-        high = -1;
+        this.high = -1;
         this.low = low;
+        this.type = IpType.IPV4;
     }
 
     public IpLong(long high, long low) {
         this.high = high;
         this.low = low;
+        this.type = IpType.IPV6;
+    }
+
+    public IpLong(long high, long low, IpType type) {
+        this.high = high;
+        this.low = low;
+        this.type = type;
+        this.ip = null;
     }
 
     public long getHigh() {
@@ -82,6 +97,10 @@ public class IpLong implements Comparable<IpLong> {
 
     public long getLow() {
         return low;
+    }
+
+    public IpType getType() {
+        return type;
     }
 
     @Override
@@ -135,33 +154,80 @@ public class IpLong implements Comparable<IpLong> {
                         .append((low & 0xFFFFL) >>> 8).append('.')
                         .append(low & 0xFFL);
             } else {
-                //ipv6
-                append(builder, (high & 0xFFFFFFFFFFFFFFFFL) >>> 48).append(':');
-                append(builder, (high & 0xFFFFFFFFFFFL) >>> 32).append(':');
-                append(builder, (high & 0xFFFFFFFFL) >>> 16).append(':');
-                append(builder, (high & 0xFFFFL)).append(':');
-                append(builder, (low & 0xFFFFFFFFFFFFFFFFL) >>> 48).append(':');
-                append(builder, (low & 0xFFFFFFFFFFFL) >>> 32).append(':');
-                append(builder, (low & 0xFFFFFFFFL) >>> 16).append(':');
-                append(builder, (low & 0xFFFFL));
+                //ipv6，自动缩略2个及以上的0000:0000
+                int[] parts = new int[8];
+                parts[0] = (int) ((high & 0xFFFFFFFFFFFFFFFFL) >>> 48);
+                parts[1] = (int) ((high & 0xFFFFFFFFFFFL) >>> 32);
+                parts[2] = (int) ((high & 0xFFFFFFFFL) >>> 16);
+                parts[3] = (int) ((high & 0xFFFFL));
+                parts[4] = (int) ((low & 0xFFFFFFFFFFFFFFFFL) >>> 48);
+                parts[5] = (int) ((low & 0xFFFFFFFFFFFFL) >>> 32);
+                parts[6] = (int) ((low & 0xFFFFFFFFL) >>> 16);
+                parts[7] = (int) (low & 0xFFFFL);
+                int end = type == IpType.IPV6 ? 7 : 5;
+                int zero = 0;
+                int zeroIndex = -1;
+                int maxZero = 0;
+                int maxZeroIndex = 0;
+                for (int i = 0; i <= end; i++) {
+                    if (parts[i] == 0) {
+                        if (zero++ == 0) {
+                            zeroIndex = i;
+                        }
+                    } else if (zero > 0) {
+                        if (maxZero < zero) {
+                            maxZero = zero;
+                            maxZeroIndex = zeroIndex;
+                        }
+                        zero = 0;
+                        zeroIndex = -1;
+                    }
+                }
+                if (zero > 0 && maxZero < zero) {
+                    maxZero = zero;
+                    maxZeroIndex = zeroIndex;
+                }
+                if (maxZero < 2) {
+                    // 两个以上再省略
+                    maxZero = 0;
+                    maxZeroIndex = 0;
+                }
+                for (int i = 0; i < maxZeroIndex; i++) {
+                    append(builder, parts[i]).append(':');
+                }
+                if (maxZero > 0) {
+                    builder.append("::");
+                }
+                for (int i = maxZeroIndex + maxZero; i <= end; i++) {
+                    append(builder, parts[i]).append(i < 7 ? ":" : "");
+                }
+                if (type == IpType.MIXER) {
+                    // mixer
+                    builder.append(parts[6] >>> 8).append('.');
+                    builder.append(parts[6] & 0xFF).append('.');
+                    builder.append(parts[7] >>> 8).append('.');
+                    builder.append(parts[7] & 0xFF);
+                }
             }
-            return builder.toString();
+            ip = builder.toString();
         }
         return ip;
     }
 
     /**
-     * 分解IP
+     * 分解IP<br/>
+     * ipv6与ipv4之间的转换<br/>
+     * 在兼容情况下：如果ipv4表示为“X.X.X.X”，那么对应的ipv6即为“::X.X.X.X”（高位补零） <br/>
+     * 在映射情况下：如果ipv6表示为“::FFFF:X.X.X.X”（33-128位为::FFFF），这类情况下的ipv6将会被映射为ipv4
      *
      * @param ip ip地址
      * @return 分段
      */
-    public static int[] parseIp(final String ip) {
+    public static IpPart parseIp(final String ip) {
         if (ip == null || ip.isEmpty()) {
             return null;
         }
-        boolean ipv4 = false;
-        boolean ipv6 = false;
+        IpType ipType = null;
         int[] parts = new int[8];
         int index = 0;
         int start = -1;
@@ -169,6 +235,7 @@ public class IpLong implements Comparable<IpLong> {
         int part;
         int colon = 0;
         int ellipsis = -1;//占位符索引
+        int ipv4Index = -1;//ipv4起始位置，用于混合兼容情况
         char[] chars = ip.toCharArray();
         char ch = 0;
         for (int i = 0; i < chars.length; i++) {
@@ -186,10 +253,11 @@ public class IpLong implements Comparable<IpLong> {
                 case 'D':
                 case 'E':
                 case 'F':
-                    if (ipv4) {
+                    if (ipType == IpType.IPV4 || ipType == IpType.MIXER) {
+                        //ipv4后不能再出现ipv6
                         return null;
                     }
-                    ipv6 = true;
+                    ipType = IpType.IPV6;
                 case '0':
                 case '1':
                 case '2':
@@ -211,14 +279,16 @@ public class IpLong implements Comparable<IpLong> {
                     colon = 0;
                     break;
                 case '.':
-                    if (ipv6) {
-                        return null;
-                    }
-                    ipv4 = true;
                     if (start == -1) {
                         // 前面必须有字符
                         return null;
                     }
+                    if (ipv4Index == -1) {
+                        //ipv4起始位置
+                        ipv4Index = index;
+                    }
+                    //支持混合模式
+                    ipType = ipType == null || ipType == IpType.IPV4 ? IpType.IPV4 : IpType.MIXER;
                     part = Integer.parseInt(new String(chars, start, end - start + 1));
                     if (part > 0xFF) {
                         // ipv4每个部分最大255
@@ -229,10 +299,11 @@ public class IpLong implements Comparable<IpLong> {
                     end = -1;
                     break;
                 case ':':
-                    if (ipv4) {
+                    if (ipType == IpType.IPV4 || ipType == IpType.MIXER) {
+                        //ipv4后不能再出现ipv6
                         return null;
                     }
-                    ipv6 = true;
+                    ipType = IpType.IPV6;
                     //判断冒号数量
                     switch (++colon) {
                         case 1:
@@ -273,32 +344,48 @@ public class IpLong implements Comparable<IpLong> {
             return null;
         } else if (start > -1) {
             // 以数字结尾
-            part = Integer.parseInt(new String(chars, start, end - start + 1), ipv6 ? 16 : 10);
-            if (part > (ipv6 ? 0xFFFF : 0xFF)) {
+            part = Integer.parseInt(new String(chars, start, end - start + 1), ipType == IpType.IPV4 || ipType == IpType.MIXER ? 10 : 16);
+            if (part > (ipType == IpType.IPV4 || ipType == IpType.MIXER ? 0xFF : 0xFFFF)) {
+                //优先ipv4
                 return null;
             }
             parts[index++] = part;
-            if (ipv4) {
-                return index == 4 ? Arrays.copyOfRange(parts, 0, 3) : null;
+            if (ipType == IpType.IPV4) {
+                // 纯ipv4
+                return index == 4 ? new IpPart(ipType, Arrays.copyOfRange(parts, 0, 3)) : null;
+            } else if (ipType == IpType.MIXER) {
+                // 混合模式
+                if (index - ipv4Index < 4) {
+                    // ipv4小于4段
+                    return null;
+                }
+                // 变成ipv6
+                parts[ipv4Index] = (parts[ipv4Index] << 8) | parts[ipv4Index + 1];
+                parts[ipv4Index + 1] = (parts[ipv4Index + 2] << 8) | parts[ipv4Index + 3];
+                index -= 2;
             }
         }
-        // ipv6
+        // ipv6或者mixer
         if (index > 8) {
             return null;
         } else if (ellipsis == -1) {
-            return index == 8 ? parts : null;
+            return index == 8 ? new IpPart(ipType, parts) : null;
         }
         int[] result = new int[8];
+        //省略号前
         for (int i = 0; i < ellipsis; i++) {
             result[i] = parts[i];
         }
-        for (int i = index - 1; i > ellipsis; i--) {
-            result[i] = parts[i];
-        }
+        //省略号代表的
         int max = ellipsis + (7 - index + 1);
         for (int i = ellipsis; i <= max; i++) {
-            result[i] = 0xFFFF;
+            result[i] = 0x0000;
         }
-        return result;
+        //省略号后
+        for (int i = ellipsis + 1; i < index; i++) {
+            result[max + i - ellipsis] = parts[i];
+        }
+        return new IpPart(ipType, result);
     }
+
 }

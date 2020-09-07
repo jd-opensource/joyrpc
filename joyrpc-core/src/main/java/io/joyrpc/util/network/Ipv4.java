@@ -119,10 +119,12 @@ public class Ipv4 {
             LOCAL_IPS = new HashSet<>(getLocalIps());
             LOCAL_IPS.add("127.0.0.1");
             LOCAL_IPS.add("0:0:0:0:0:0:0:1");
+            LOCAL_IPS.add("0000:0000:0000:0000:0000:0000:0000:0001");
             LOCAL_IPS.add("::1");
             LOCAL_HOST.add("localhost");
             LOCAL_HOST.add("127.0.0.1");
             LOCAL_HOST.add("0:0:0:0:0:0:0:1");
+            LOCAL_HOST.add("0000:0000:0000:0000:0000:0000:0000:0001");
             LOCAL_HOST.add("::1");
             //绑定到某个网卡上
             if (NET_INTERFACE != null && !NET_INTERFACE.isEmpty()) {

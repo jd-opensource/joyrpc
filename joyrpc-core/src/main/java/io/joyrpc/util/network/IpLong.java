@@ -193,7 +193,7 @@ public class IpLong implements Comparable<IpLong> {
                     maxZeroIndex = 0;
                 }
                 for (int i = 0; i < maxZeroIndex; i++) {
-                    append(builder, parts[i]).append(':');
+                    append(builder.append(i > 0 ? ":" : ""), parts[i]);
                 }
                 if (maxZero > 0) {
                     builder.append("::");
@@ -352,7 +352,7 @@ public class IpLong implements Comparable<IpLong> {
             parts[index++] = part;
             if (ipType == IpType.IPV4) {
                 // 纯ipv4
-                return index == 4 ? new IpPart(ipType, Arrays.copyOfRange(parts, 0, 3)) : null;
+                return index == 4 ? new IpPart(ipType, Arrays.copyOfRange(parts, 0, 4)) : null;
             } else if (ipType == IpType.MIXER) {
                 // 混合模式
                 if (index - ipv4Index < 4) {

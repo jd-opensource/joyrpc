@@ -126,20 +126,21 @@ public class IpLong implements Comparable<IpLong> {
 
     protected StringBuilder append(final StringBuilder builder, final long value) {
         String st = Long.toHexString(value).toUpperCase();
-        switch (st.length()) {
-            case 1:
-                builder.append("000").append(st);
-                break;
-            case 2:
-                builder.append("00").append(st);
-                break;
-            case 3:
-                builder.append("0").append(st);
-                break;
-            default:
-                builder.append(st);
-                break;
-        }
+//        switch (st.length()) {
+//            case 1:
+//                builder.append("000").append(st);
+//                break;
+//            case 2:
+//                builder.append("00").append(st);
+//                break;
+//            case 3:
+//                builder.append("0").append(st);
+//                break;
+//            default:
+//                builder.append(st);
+//                break;
+//        }
+        builder.append(st);
         return builder;
     }
 

@@ -31,7 +31,7 @@ public class Ipv4Test {
         URL url = URL.valueOf("http://[2001:470:c:1818::2]:80/index.html");
         Assert.assertEquals(url.getProtocol(), "http");
         Assert.assertEquals(url.getPort(), 80);
-        Assert.assertEquals(url.getHost(), "[2001:470:c:1818::2]");
+        Assert.assertEquals(url.getHost(), "2001:470:c:1818::2");
         Assert.assertEquals(url.getPath(), "index.html");
     }
 

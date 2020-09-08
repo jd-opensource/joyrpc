@@ -307,6 +307,14 @@ public class Ipv4 {
     }
 
     /**
+     * 获取本机所有地址的表示
+     * @return 本机所有地址表示
+     */
+    public static String getAnyHost() {
+        return IPV4 ? "0.0.0.0" : "0:0:0:0:0:0:0:0";
+    }
+
+    /**
      * 判断端口是否有效 0-65535
      *
      * @param port

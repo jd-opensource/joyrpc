@@ -549,13 +549,14 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
     }
 
     /**
-     * 根据远端检查获取本地出口地址
+     * 根据远端（注册中心）检查获取本地出口地址
      *
-     * @param remoteUrls
+     * @param remoteUrls 远端地址
      */
     protected static String getLocalHost(String remoteUrls) {
         InetSocketAddress remote = null;
         if (!remoteUrls.isEmpty()) {
+            //存在多个地址的情况
             int nodeEnd = remoteUrls.indexOf(",");
             int shardEnd = remoteUrls.indexOf(";");
             int end = Math.min(nodeEnd, shardEnd);
@@ -564,36 +565,14 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
             String remoteUrlString = end > 0 ? remoteUrls.substring(0, remoteUrls.indexOf(delimiter)) : remoteUrls;
             URL remoteUrl = URL.valueOf(remoteUrlString, GlobalContext.getString(PROTOCOL_KEY));
             remote = new InetSocketAddress(remoteUrl.getHost(), remoteUrl.getPort());
-            if ("http".equals(remoteUrl.getProtocol()) || "https".equals(remoteUrl.getProtocol())) {
+            if ("http".equalsIgnoreCase(remoteUrl.getProtocol()) || "https".equalsIgnoreCase(remoteUrl.getProtocol())) {
                 InetAddress address = remote.getAddress();
-                String ip = address.getHostAddress();
+                String ip = Ipv4.toIp(address);
                 int port = remote.getPort() == 0 ? 80 : remote.getPort();
                 remote = new InetSocketAddress(ip, port);
             }
         }
         return Ipv4.getLocalIp(remote);
-    }
-
-    /**
-     * 获取本地服务地址
-     *
-     * @param config 服务配置
-     * @param remote 注册中心远程地址，用于检测本地出口地址
-     * @return
-     */
-    protected static ProviderConfig.ServerAddress getAddress(final ServerConfig config, final String remote) {
-        String host;
-        String bindIp = null;
-        if (Ipv4.isLocalHost(config.getHost())) {
-            //拿到本机地址
-            host = getLocalHost(remote);
-            //绑定地址
-            bindIp = "0.0.0.0";
-        } else {
-            host = config.getHost();
-        }
-        int port = config.getPort() == null ? PORT_OPTION.getValue() : config.getPort();
-        return new ProviderConfig.ServerAddress(host, bindIp, port);
     }
 
     /**

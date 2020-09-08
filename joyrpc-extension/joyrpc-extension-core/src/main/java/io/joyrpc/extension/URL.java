@@ -51,6 +51,8 @@ public final class URL extends MapParametric<String, String> implements Serializ
     protected final int port;
     // 路径
     protected final String path;
+    // ipv6
+    protected final boolean ipv6;
 
     protected URL() {
         this.protocol = null;
@@ -59,30 +61,36 @@ public final class URL extends MapParametric<String, String> implements Serializ
         this.host = null;
         this.port = 0;
         this.path = null;
+        this.ipv6 = false;
     }
 
     public URL(String protocol, String host, int port) {
-        this(protocol, null, null, host, port, null, null);
+        this(protocol, null, null, host, port, null, null, false);
     }
 
     public URL(String protocol, String host, int port, Map<String, String> parameters) {
-        this(protocol, null, null, host, port, null, parameters);
+        this(protocol, null, null, host, port, null, parameters, false);
     }
 
     public URL(String protocol, String host, int port, String path) {
-        this(protocol, null, null, host, port, path, null);
+        this(protocol, null, null, host, port, path, null, false);
     }
 
     public URL(String protocol, String host, int port, String path, Map<String, String> parameters) {
-        this(protocol, null, null, host, port, path, parameters);
+        this(protocol, null, null, host, port, path, parameters, false);
     }
 
     public URL(String protocol, String user, String password, String host, int port, String path) {
-        this(protocol, user, password, host, port, path, null);
+        this(protocol, user, password, host, port, path, null, false);
     }
 
     public URL(String protocol, String user, String password, String host, int port, String path,
                Map<String, String> parameters) {
+        this(protocol, user, password, host, port, path, parameters, false);
+    }
+
+    public URL(String protocol, String user, String password, String host, int port, String path,
+               Map<String, String> parameters, boolean ipv6) {
         super(parameters == null || parameters.isEmpty() ? UNMODIFIED_EMPTY_MAP :
                 (UNMODIFIED_EMPTY_MAP.getClass().equals(parameters.getClass()) ? parameters :
                         Collections.unmodifiableMap(new HashMap<>(parameters))));
@@ -92,6 +100,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         this.host = host;
         this.port = (port < 0 ? 0 : port);
         this.path = path;
+        this.ipv6 = ipv6;
     }
 
     /**
@@ -151,6 +160,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         int port = 0;
         String path = null;
         Map<String, String> parameters = null;
+        boolean ipv6 = false;
 
         // cloud://user:password@jss.360buy.com/mq?timeout=60000
         // file:/path/to/file.txt
@@ -249,7 +259,8 @@ public final class URL extends MapParametric<String, String> implements Serializ
             if (url.charAt(0) == '[') {
                 i = url.lastIndexOf(']');
                 if (i > 0) {
-                    host = url.substring(0, i + 1);
+                    ipv6 = true;
+                    host = url.substring(1, i);
                     i = url.indexOf(':', i + 1);
                     if (i > 0 && i < url.length() - 1) {
                         port = Integer.parseInt(url.substring(i + 1));
@@ -272,7 +283,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         if (host == null && !url.isEmpty()) {
             host = url;
         }
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     /**
@@ -331,7 +342,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setProtocol(String protocol) {
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public String getUser() {
@@ -339,7 +350,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setUser(String user) {
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public String getPassword() {
@@ -347,7 +358,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setPassword(String password) {
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public String getHost() {
@@ -355,7 +366,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setHost(String host) {
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public int getPort() {
@@ -363,7 +374,15 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setPort(int port) {
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
+    }
+
+    public boolean isIpv6() {
+        return ipv6;
+    }
+
+    public URL setIpv6(boolean ipv6) {
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public String getAddress() {
@@ -380,7 +399,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         } else {
             host = address;
         }
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public InetSocketAddress getSocketAddress() {
@@ -392,7 +411,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setPath(String path) {
-        return new URL(protocol, user, password, host, port, path, parameters);
+        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public String getAbsolutePath() {
@@ -753,7 +772,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         }
         Map<String, String> map = getParameters();
         map.put(key, value);
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -779,7 +798,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         }
         Map<String, String> map = getParameters();
         map.putAll(url.parameters);
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -794,7 +813,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         }
         Map<String, String> map = getParameters();
         map.putAll(parameters);
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -970,7 +989,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         }
         Map<String, String> map = getParameters();
         map.put(key, value);
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -987,7 +1006,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         if (this.parameters != null) {
             map.putAll(this.parameters);
         }
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -1005,7 +1024,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         if (this.parameters != null) {
             map.putAll(this.parameters);
         }
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -1051,7 +1070,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         if (parameters.size() == map.size()) {
             return this;
         }
-        return new URL(protocol, user, password, host, port, path, map);
+        return new URL(protocol, user, password, host, port, path, map, ipv6);
     }
 
     /**
@@ -1060,7 +1079,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return 新的URL对象
      */
     public URL remove() {
-        return new URL(protocol, user, password, host, port, path, new HashMap<String, String>());
+        return new URL(protocol, user, password, host, port, path, new HashMap<>(), ipv6);
     }
 
     @Override
@@ -1103,7 +1122,11 @@ public final class URL extends MapParametric<String, String> implements Serializ
         boolean address = false;
         if (host != null && !host.isEmpty()) {
             address = true;
-            buf.append(host);
+            if (ipv6) {
+                buf.append('[').append(host).append(']');
+            } else {
+                buf.append(host);
+            }
             if (port > 0) {
                 buf.append(':').append(port);
             }

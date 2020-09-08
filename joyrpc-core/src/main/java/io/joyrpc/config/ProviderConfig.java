@@ -35,6 +35,7 @@ import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -558,6 +559,28 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
 
     public void setEnableValidator(Boolean enableValidator) {
         this.enableValidator = enableValidator;
+    }
+
+    /**
+     * 获取本地服务地址
+     *
+     * @param config 服务配置
+     * @param remote 注册中心远程地址，用于检测本地出口地址
+     * @return 服务地址信息
+     */
+    protected static ServerAddress getAddress(final ServerConfig config, final String remote) {
+        String host;
+        String bindIp = null;
+        if (Ipv4.isLocalHost(config.getHost())) {
+            //拿到本机地址
+            host = getLocalHost(remote);
+            //绑定地址
+            bindIp = Ipv4.getAnyHost();
+        } else {
+            host = config.getHost();
+        }
+        int port = config.getPort() == null ? PORT_OPTION.getValue() : config.getPort();
+        return new ServerAddress(host, bindIp, port);
     }
 
     /**

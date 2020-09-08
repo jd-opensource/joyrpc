@@ -55,7 +55,7 @@ public class Ipv4Test {
         Assert.assertNotNull(parts);
         parts = IpLong.parseIp("::");
         Assert.assertNotNull(parts);
-        parts = IpLong.parseIp("::FFFF:192.168.1.1");
+        parts = IpLong.parseIp("::ffff:192.168.1.1");
         Assert.assertNotNull(parts);
         parts = IpLong.parseIp("0000:0000::0000.0000:0000:0000:000");
         Assert.assertNull(parts);
@@ -65,16 +65,16 @@ public class Ipv4Test {
         Assert.assertNull(parts);
         parts = IpLong.parseIp("0000:0000:0000::0000::0000:0000");
         Assert.assertNull(parts);
-        parts = IpLong.parseIp("::FFFF:192.168.1");
+        parts = IpLong.parseIp("::ffff:192.168.1");
         Assert.assertNull(parts);
-        IpLong ipLong = new IpLong("0000:0000:0000:0001:0000:0000:0000:FFFF");
+        IpLong ipLong = new IpLong("0000:0000:0000:0001:0000:0000:0000:ffff");
         Assert.assertEquals(ipLong.getHigh(), 1L);
         Assert.assertEquals(ipLong.getLow(), 65535L);
         ipLong = new IpLong(ipLong.getHigh(), ipLong.getLow());
-        Assert.assertEquals(ipLong.toString(), "::1:0:0:0:FFFF");
-        ipLong = new IpLong("::FFFF:192.168.1.1");
+        Assert.assertEquals(ipLong.toString(), "::1:0:0:0:ffff");
+        ipLong = new IpLong("::ffff:192.168.1.1");
         ipLong = new IpLong(ipLong.getHigh(), ipLong.getLow(), ipLong.getType());
-        Assert.assertEquals(ipLong.toString(), "::FFFF:192.168.1.1");
+        Assert.assertEquals(ipLong.toString(), "::ffff:192.168.1.1");
     }
 
     @Test
@@ -102,6 +102,6 @@ public class Ipv4Test {
         Assert.assertEquals(segment.getEnd().toString(), "::3");
         segment = new Segment("0:0:0:2::/63");
         Assert.assertEquals(segment.getBegin().toString(), "0:0:0:2::");
-        Assert.assertEquals(segment.getEnd().toString(), "::3:FFFF:FFFF:FFFF:FFFF");
+        Assert.assertEquals(segment.getEnd().toString(), "::3:ffff:ffff:ffff:ffff");
     }
 }

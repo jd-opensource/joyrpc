@@ -125,7 +125,7 @@ public class IpLong implements Comparable<IpLong> {
     }
 
     protected StringBuilder append(final StringBuilder builder, final long value) {
-        String st = Long.toHexString(value).toUpperCase();
+        String st = Long.toHexString(value);
 //        switch (st.length()) {
 //            case 1:
 //                builder.append("000").append(st);

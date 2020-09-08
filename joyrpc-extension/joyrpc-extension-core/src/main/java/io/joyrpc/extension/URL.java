@@ -65,28 +65,28 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL(String protocol, String host, int port) {
-        this(protocol, null, null, host, port, null, null, false);
+        this(protocol, null, null, host, port, null, null, isIpv6(host));
     }
 
     public URL(String protocol, String host, int port, Map<String, String> parameters) {
-        this(protocol, null, null, host, port, null, parameters, false);
+        this(protocol, null, null, host, port, null, parameters, isIpv6(host));
     }
 
     public URL(String protocol, String host, int port, String path) {
-        this(protocol, null, null, host, port, path, null, false);
+        this(protocol, null, null, host, port, path, null, isIpv6(host));
     }
 
     public URL(String protocol, String host, int port, String path, Map<String, String> parameters) {
-        this(protocol, null, null, host, port, path, parameters, false);
+        this(protocol, null, null, host, port, path, parameters, isIpv6(host));
     }
 
     public URL(String protocol, String user, String password, String host, int port, String path) {
-        this(protocol, user, password, host, port, path, null, false);
+        this(protocol, user, password, host, port, path, null, isIpv6(host));
     }
 
     public URL(String protocol, String user, String password, String host, int port, String path,
                Map<String, String> parameters) {
-        this(protocol, user, password, host, port, path, parameters, false);
+        this(protocol, user, password, host, port, path, parameters, isIpv6(host));
     }
 
     public URL(String protocol, String user, String password, String host, int port, String path,
@@ -101,6 +101,15 @@ public final class URL extends MapParametric<String, String> implements Serializ
         this.port = (port < 0 ? 0 : port);
         this.path = path;
         this.ipv6 = ipv6;
+    }
+
+    /**
+     * 是否是IPV6地址
+     * @param host 地址
+     * @return IPV6地址
+     */
+    protected static boolean isIpv6(final String host) {
+        return host == null ? false : host.indexOf(':') != -1;
     }
 
     /**
@@ -366,7 +375,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public URL setHost(String host) {
-        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
+        return new URL(protocol, user, password, host, port, path, parameters, isIpv6(host));
     }
 
     public int getPort() {
@@ -379,10 +388,6 @@ public final class URL extends MapParametric<String, String> implements Serializ
 
     public boolean isIpv6() {
         return ipv6;
-    }
-
-    public URL setIpv6(boolean ipv6) {
-        return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }
 
     public String getAddress() {

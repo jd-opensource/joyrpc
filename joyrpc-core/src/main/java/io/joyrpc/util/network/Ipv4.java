@@ -67,6 +67,10 @@ public class Ipv4 {
      */
     public static final String MANAGE_IP_KEY = "MANAGE_IP";
     /**
+     * 强制IPV6
+     */
+    public static final String FORCE_IPV_6_STACK = "java.net.forceIPv6Stack";
+    /**
      * 最小端口
      */
     public static final int MIN_PORT = 0;
@@ -108,11 +112,23 @@ public class Ipv4 {
         Map<String, String> env = System.getenv();
         NET_INTERFACE = System.getProperty(LOCAL_NIC_KEY, env.get(LOCAL_NIC_KEY));
         MANAGE_IP = System.getProperty(MANAGE_IP_KEY, env.get(MANAGE_IP_KEY));
+        //判断是否强制IPV6，便于调试
+        boolean forceIpv6 = false;
         try {
-            //java.net.preferIPv6Addresses表示在查询本地或远端IP地址时，如果存在IPv4和IPv6双地址，是否优先返回IPv6地址，默认是false
-            IPV4 = InetAddress.getLocalHost() instanceof Inet4Address;
-        } catch (UnknownHostException ignored) {
+            forceIpv6 = Boolean.parseBoolean(System.getProperty(FORCE_IPV_6_STACK, env.get(FORCE_IPV_6_STACK)));
+        } catch (Exception e) {
         }
+        if (!forceIpv6) {
+            try {
+                //java.net.preferIPv6Addresses表示在查询本地或远端IP地址时，如果存在IPv4和IPv6双地址，是否优先返回IPv6地址，默认是false
+                IPV4 = InetAddress.getLocalHost() instanceof Inet4Address;
+            } catch (UnknownHostException ignored) {
+            }
+        } else {
+            IPV4 = false;
+        }
+        System.setProperty("java.net.preferIPv4Stack", String.valueOf(IPV4));
+        System.setProperty("java.net.preferIPv6Addresses", String.valueOf(!IPV4));
         IP_MIN = IPV4 ? new IpLong("0.0.0.0") : new IpLong("0000:0000:0000:0000:0000:0000:0000:0000");
         IP_MAX = IPV4 ? new IpLong("255.255.255.255") : new IpLong("FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF:FFFF");
         try {
@@ -129,6 +145,11 @@ public class Ipv4 {
             //绑定到某个网卡上
             if (NET_INTERFACE != null && !NET_INTERFACE.isEmpty()) {
                 LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);
+            } else {
+                LOCAL_IP = getLocalIp("en0", MANAGE_IP);
+                if (LOCAL_IP == null) {
+                    LOCAL_IP = getLocalIp("eth0", MANAGE_IP);
+                }
             }
         } catch (SocketException ignored) {
         }
@@ -425,14 +446,15 @@ public class Ipv4 {
      * @return IP字符串
      */
     public static String toIp(final InetAddress address) {
-        String result = address == null ? null : address.getHostAddress();
+        return address == null ? null : address.getHostAddress();
+        /*String result = address == null ? null : address.getHostAddress();
         if (address instanceof Inet6Address) {
             int pos = result.lastIndexOf('%');
             if (pos > 0) {
                 return result.substring(0, pos);
             }
         }
-        return result;
+        return result;*/
     }
 
     /**

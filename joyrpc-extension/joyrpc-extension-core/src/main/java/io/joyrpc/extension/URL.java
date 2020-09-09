@@ -391,18 +391,40 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     public String getAddress() {
+        if (ipv6) {
+            return port <= 0 ? "[" + host + "]" : "[" + host + "]" + ":" + port;
+        }
         return port <= 0 ? host : host + ":" + port;
     }
 
     public URL setAddress(String address) {
-        int i = address.lastIndexOf(':');
-        String host;
-        int port = this.port;
-        if (i >= 0) {
-            host = address.substring(0, i);
-            port = Integer.parseInt(address.substring(i + 1));
-        } else {
-            host = address;
+        String host = null;
+        int port = 0;
+        if (address != null) {
+            int pos;
+            if (address.charAt(0) == '[') {
+                // ipv6
+                pos = address.lastIndexOf(']');
+                if (pos == -1) {
+                    throw new IllegalArgumentException("invalid address " + address);
+                }
+                host = address.substring(1, pos);
+                pos = address.indexOf(':', pos);
+                if (pos > 0 && pos < address.length() - 1) {
+                    port = Integer.parseInt(address.substring(pos + 1));
+                }
+                return new URL(protocol, user, password, host, port, path, parameters, true);
+            }
+            // ipv4
+            pos = address.lastIndexOf(':');
+            if (pos >= 0) {
+                host = address.substring(0, pos);
+                if (pos < address.length() - 1) {
+                    port = Integer.parseInt(address.substring(pos + 1));
+                }
+            } else {
+                host = address;
+            }
         }
         return new URL(protocol, user, password, host, port, path, parameters, ipv6);
     }

@@ -239,6 +239,7 @@ public class IpLong implements Comparable<IpLong> {
         int ipv4Index = -1;//ipv4起始位置，用于混合兼容情况
         char[] chars = ip.toCharArray();
         char ch = 0;
+        int ifNameIndex = -1;
         for (int i = 0; i < chars.length; i++) {
             ch = chars[i];
             switch (ch) {
@@ -336,8 +337,17 @@ public class IpLong implements Comparable<IpLong> {
                             return null;
                     }
                     break;
+                case '%':
+                    if (ipType != IpType.IPV6 && ipType != IpType.MIXER) {
+                        return null;
+                    }
+                    ifNameIndex = i;
+                    break;
                 default:
                     return null;
+            }
+            if (ifNameIndex > 0) {
+                break;
             }
         }
         if ((start == -1 && colon == 0) || colon == 1) {

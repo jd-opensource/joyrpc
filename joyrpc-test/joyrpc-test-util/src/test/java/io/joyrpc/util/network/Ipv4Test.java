@@ -33,6 +33,12 @@ public class Ipv4Test {
         Assert.assertEquals(url.getPort(), 80);
         Assert.assertEquals(url.getHost(), "2001:470:c:1818::2");
         Assert.assertEquals(url.getPath(), "index.html");
+        url = url.setAddress("[2001:470:c:1818::3]:");
+        Assert.assertEquals(url.getHost(), "2001:470:c:1818::3");
+        Assert.assertEquals(url.getPort(), 0);
+        url = url.setAddress("[]:80");
+        Assert.assertEquals(url.getHost(), "");
+        Assert.assertEquals(url.getPort(), 80);
     }
 
     @Test

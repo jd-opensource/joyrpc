@@ -145,6 +145,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         properties.putAll(url.startsWith("hazelcast."));
         //不创建关闭钩子
         properties.setProperty("hazelcast.shutdownhook.enabled", "false");
+        properties.setProperty("hazelcast.prefer.ipv4.stack", String.valueOf(Ipv4.isIpv4()));
 
         //同步复制，可以读取从
         cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).

@@ -103,6 +103,10 @@ public class Ipv4 {
     protected static String LOCAL_IP;
 
     protected static boolean IPV4 = false;
+    /**
+     * 所有网卡信息
+     */
+    protected static Map<String, List<String>> INTERFACES;
 
     public static final IpLong IP_MIN;
     public static final IpLong IP_MAX;
@@ -145,7 +149,8 @@ public class Ipv4 {
             //绑定到某个网卡上
             if (NET_INTERFACE != null && !NET_INTERFACE.isEmpty()) {
                 LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);
-            } else {
+            }
+            if (LOCAL_IP == null) {
                 LOCAL_IP = getLocalIp("en0", MANAGE_IP);
                 if (LOCAL_IP == null) {
                     LOCAL_IP = getLocalIp("eth0", MANAGE_IP);
@@ -193,33 +198,59 @@ public class Ipv4 {
     }
 
     /**
+     * 得到网卡上的地址
+     *
+     * @return 地址列表
+     * @throws SocketException 网络异常
+     */
+    protected static Map<String, List<String>> getInterfaces() throws SocketException {
+        if (INTERFACES == null) {
+            Map<String, List<String>> result = new LinkedHashMap<>();
+            NetworkInterface ni;
+            Enumeration<InetAddress> ias;
+            InetAddress address;
+            Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
+            List<String> ips;
+            while (netInterfaces.hasMoreElements()) {
+                ni = netInterfaces.nextElement();
+                ias = ni.getInetAddresses();
+                ips = new ArrayList<>(4);
+                while (ias.hasMoreElements()) {
+                    address = ias.nextElement();
+                    if (!address.isLoopbackAddress()) {
+                        if (IPV4 && address instanceof Inet4Address
+                                || !IPV4 && address instanceof Inet6Address) {
+                            ips.add(toIp(address));
+                        }
+                    }
+                }
+                if (!ips.isEmpty()) {
+                    result.put(ni.getName(), ips);
+                }
+            }
+            INTERFACES = result;
+        }
+        return INTERFACES;
+    }
+
+    /**
      * 得到指定网卡上的地址
      *
-     * @param nic     网卡
+     * @param nic     指定网卡
      * @param exclude 排除的地址
      * @return 地址列表
      * @throws SocketException 网络异常
      */
     public static List<String> getLocalIps(final String nic, final String exclude) throws SocketException {
-        List<String> result = new ArrayList<String>();
-        NetworkInterface ni;
-        Enumeration<InetAddress> ias;
-        InetAddress address;
-        Enumeration<NetworkInterface> netInterfaces = NetworkInterface.getNetworkInterfaces();
-        while (netInterfaces.hasMoreElements()) {
-            ni = netInterfaces.nextElement();
-            if (nic != null && !nic.isEmpty() && !ni.getName().equals(nic)) {
-                continue;
-            }
-            ias = ni.getInetAddresses();
-            while (ias.hasMoreElements()) {
-                address = ias.nextElement();
-                if (!address.isLoopbackAddress()) {
-                    if (IPV4 && address instanceof Inet4Address
-                            || !IPV4 && address instanceof Inet6Address) {
-                        result.add(toIp(address));
-                    }
-                }
+        Map<String, List<String>> interfaces = getInterfaces();
+        List<String> result;
+        if (nic != null && !nic.isEmpty()) {
+            result = interfaces.get(nic);
+            result = result == null ? new ArrayList<>() : result;
+        } else {
+            result = new ArrayList<>();
+            for (Map.Entry<String, List<String>> entry : interfaces.entrySet()) {
+                result.addAll(entry.getValue());
             }
         }
         // 只有一个IP

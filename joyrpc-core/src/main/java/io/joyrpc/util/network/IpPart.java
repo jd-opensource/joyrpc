@@ -33,10 +33,20 @@ public class IpPart {
      * 分段
      */
     protected int[] parts;
+    /**
+     * 网口名称
+     */
+    protected String ifName;
 
     public IpPart(IpType type, int[] parts) {
         this.type = type;
         this.parts = parts;
+    }
+
+    public IpPart(IpType type, int[] parts, String ifName) {
+        this.type = type;
+        this.parts = parts;
+        this.ifName = ifName;
     }
 
     public IpType getType() {
@@ -45,5 +55,9 @@ public class IpPart {
 
     public int[] getParts() {
         return parts;
+    }
+
+    public String getIfName() {
+        return ifName;
     }
 }

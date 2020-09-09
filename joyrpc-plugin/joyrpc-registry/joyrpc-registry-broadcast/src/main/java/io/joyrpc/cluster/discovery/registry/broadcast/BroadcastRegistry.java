@@ -40,6 +40,7 @@ import io.joyrpc.extension.URLOption;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
+import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +87,7 @@ public class BroadcastRegistry extends AbstractRegistry {
     /**
      * multicast分组
      */
-    public static final URLOption<String> MULTICAST_GROUP = new URLOption<>("multicastGroup", "224.2.2.3");
+    public static final URLOption<String> MULTICAST_GROUP = new URLOption<>("multicastGroup", Ipv4.isIpv4() ? "224.2.2.3" : "FF02:0:0:0:0:0:0:203");
     /**
      * multicast组播端口
      */

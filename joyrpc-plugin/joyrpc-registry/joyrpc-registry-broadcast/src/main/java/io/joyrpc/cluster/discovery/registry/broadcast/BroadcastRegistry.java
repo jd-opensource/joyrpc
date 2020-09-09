@@ -146,12 +146,15 @@ public class BroadcastRegistry extends AbstractRegistry {
         //不创建关闭钩子
         properties.setProperty("hazelcast.shutdownhook.enabled", "false");
         properties.setProperty("hazelcast.prefer.ipv4.stack", String.valueOf(Ipv4.isIpv4()));
+        properties.setProperty("hazelcast.local.localAddress", Ipv4.getLocalIp());
 
         //同步复制，可以读取从
         cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).
                 setAsyncBackupCount(url.getNaturalInt(ASYNC_BACKUP_COUNT)).setReadBackupData(false);
         cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
-        cfg.getNetworkConfig().setPort(url.getPositiveInt(NETWORK_PORT)).setPortCount(url.getInteger(NETWORK_PORT_COUNT));
+        cfg.getNetworkConfig()
+                .setPort(url.getPositiveInt(NETWORK_PORT))
+                .setPortCount(url.getInteger(NETWORK_PORT_COUNT));
         cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)
                 .setMulticastGroup(url.getString(MULTICAST_GROUP)).setMulticastPort(url.getPositiveInt(MULTICAST_PORT));
         this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());

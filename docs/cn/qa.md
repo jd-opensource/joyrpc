@@ -7,5 +7,5 @@ Q: JOYRPC 内部是用 Zookeeper 作为注册中心的吗？可以集成其它 E
    
 Q: IPV6支持？
 
->  根据当前jvm虚拟机的参数来选用IPV4或IPV6，在支持IPV6的机器上，可以配置系统参数java.net.forceIPv6Stack=true来强制使用IPV6，便于进行调试，系统内置的广播模式已经支持IPV6的服务发现。
+>  根据当前jvm虚拟机的参数来选用IPV4或IPV6，在支持IPV6的机器上，可以配置系统参数java.net.forceIPv6Stack=true来强制使用IPV6，便于进行调试，系统内置的广播模式服务发现已经支持IPV6。
    

@@ -9,9 +9,9 @@ package io.joyrpc.protocol;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,7 @@ import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.protocol.message.BaseMessage;
+import io.joyrpc.protocol.message.Message;
 import io.joyrpc.transport.channel.ChannelHandler;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Pair;
@@ -58,9 +58,9 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
     /**
      * 解压缩
      *
-     * @param compression
-     * @param content
-     * @return
+     * @param compression 压缩
+     * @param content     待解压内容
+     * @return 字节数组
      * @throws IOException
      */
     protected byte[] decompress(final Compression compression, final byte[] content) throws IOException {
@@ -89,7 +89,7 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
      *
      * @param compression 压缩算法
      * @param content     待压缩内容
-     * @return
+     * @return 字节数组
      * @throws IOException
      */
     protected byte[] compress(final Compression compression, final byte[] content) throws IOException {
@@ -103,7 +103,7 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
      * @param content     待压缩内容
      * @param offset      待压缩内容偏移量
      * @param length      待压缩内容长度
-     * @return
+     * @return 字节数组
      * @throws IOException
      */
     protected byte[] compress(final Compression compression, final byte[] content, final int offset, final int length) throws IOException {
@@ -118,7 +118,7 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
      * @param content     待压缩内容
      * @param offset      待压缩内容偏移量
      * @param length      待压缩内容长度
-     * @return
+     * @return 字节数组
      * @throws IOException
      */
     protected byte[] compress(final Compression compression, final UnsafeByteArrayOutputStream baos,
@@ -146,13 +146,13 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
     /**
      * 压缩
      *
-     * @param content
-     * @param message
-     * @param acceptEncoding
-     * @param consumer
-     * @return
+     * @param content        内容
+     * @param message        消息
+     * @param acceptEncoding 接收的编解码
+     * @param consumer       消费者
+     * @return 字节数组
      */
-    protected byte[] compress(byte[] content, final BaseMessage message, final byte acceptEncoding,
+    protected byte[] compress(byte[] content, final Message<?> message, final byte acceptEncoding,
                               final Consumer<String> consumer) {
         if (content.length > 1024) {
             //超过1K再压缩
@@ -173,8 +173,8 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
     /**
      * 获取编解码
      *
-     * @param encodings
-     * @return
+     * @param encodings 待解析编解码
+     * @return 编解码
      */
     protected Pair<String, Compression> getEncoding(final String encodings) {
         Compression compression = null;
@@ -195,9 +195,9 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
     /**
      * 获取压缩
      *
-     * @param parametric
-     * @param header
-     * @return
+     * @param parametric 参数
+     * @param header     头
+     * @return 压缩
      */
     protected Compression getCompression(final Parametric parametric, final String header) {
         //Content-Encoding:gzip
@@ -208,10 +208,10 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
     /**
      * 获取序列化
      *
-     * @param parametric
-     * @param header
-     * @param defSerial
-     * @return
+     * @param parametric 参数
+     * @param header     头
+     * @param defSerial  默认序列化
+     * @return 序列化
      */
     protected Serialization getSerialization(final Parametric parametric, final String header, final Serialization defSerial) {
         Serialization result = null;
@@ -231,9 +231,9 @@ public abstract class AbstractHttpHandler implements ChannelHandler {
     /**
      * 获取超时时间
      *
-     * @param parametric
-     * @param header
-     * @return
+     * @param parametric 参数
+     * @param header     头
+     * @return 超时时间
      */
     protected int getTimeout(final Parametric parametric, final String header) {
         String value = parametric.getString(header);

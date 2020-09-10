@@ -268,13 +268,15 @@ public class MessageHeader implements Header {
      *
      * @param key   键
      * @param value 值
+     * @return 消息头
      */
-    public void addAttribute(final Head key, final Object value) {
+    public MessageHeader addAttribute(final Head key, final Object value) {
         if (!key.getType().isInstance(value)) { // 检查类型
             throw new IllegalArgumentException("type mismatch of key:" + key.getKey() + ", expect:"
                     + key.getType().getName() + ", actual:" + value.getClass().getName());
         }
         addAttribute(key.getKey(), value);
+        return this;
     }
 
     /**
@@ -282,12 +284,13 @@ public class MessageHeader implements Header {
      *
      * @param key   键
      * @param value 值
+     * @return 消息头
      */
-    public void addAttribute(final Byte key, final Object value) {
-        if (key == null || value == null) {
-            return;
+    public MessageHeader addAttribute(final Byte key, final Object value) {
+        if (key != null && value != null) {
+            getOrCreateAttributes().put(key, value);
         }
-        getOrCreateAttributes().put(key, value);
+        return this;
     }
 
     /**

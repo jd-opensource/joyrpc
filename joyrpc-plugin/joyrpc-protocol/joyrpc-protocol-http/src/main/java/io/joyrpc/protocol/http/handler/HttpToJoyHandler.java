@@ -32,6 +32,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.http.HeaderMapping;
+import io.joyrpc.protocol.http.HttpController;
 import io.joyrpc.protocol.http.URLBinding;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
@@ -55,6 +56,7 @@ import static io.joyrpc.Plugin.GENERIC_SERIALIZER;
 import static io.joyrpc.codec.serialization.GenericSerializer.JSON;
 import static io.joyrpc.protocol.http.HeaderMapping.ACCEPT_ENCODING;
 import static io.joyrpc.protocol.http.HeaderMapping.KEEP_ALIVE;
+import static io.joyrpc.protocol.http.Plugin.HTTP_CONTROLLER;
 import static io.joyrpc.protocol.http.Plugin.URL_BINDING;
 import static io.joyrpc.transport.http.HttpHeaders.Names.CONTENT_LENGTH;
 
@@ -62,9 +64,11 @@ import static io.joyrpc.transport.http.HttpHeaders.Names.CONTENT_LENGTH;
  * HTTP转换成joy
  */
 public class HttpToJoyHandler extends AbstractHttpHandler {
-    public static final byte PROTOCOL_NUMBER = 9;
 
     private final static Logger logger = LoggerFactory.getLogger(HttpToJoyHandler.class);
+
+    public static final byte PROTOCOL_NUMBER = 9;
+
     public static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(
             "HTTP uri format: http://ip:port/interfaceClazz/methodName with alias header. " +
                     "or http://ip:port/interfaceClazz/alias/methodName");
@@ -77,9 +81,6 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
      */
     protected URLBinding binding;
 
-    /**
-     * 构造函数
-     */
     public HttpToJoyHandler() {
         defSerializer = GENERIC_SERIALIZER.get(JSON);
         binding = URL_BINDING.get();
@@ -92,9 +93,6 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
             return msg;
         }
         HttpRequestMessage message = (HttpRequestMessage) msg;
-        long receiveTime = SystemClock.now();
-        // 如果服务端开启容许keep-alive并且客户端是keep-alive方式调用
-        boolean isKeepAlive = message.headers().isKeepAlive();
         HttpMethod method = message.getHttpMethod();
         String uri = message.getUri();
         try {
@@ -104,22 +102,34 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
                 case PUT:
                     break;
                 default:
-                    writeBack(ctx.getChannel(), false, "Only allow GET POST and PUT", isKeepAlive);
+                    writeError(ctx.getChannel(), "Only allow GET POST and PUT", message.headers().isKeepAlive());
                     return null;
             }
-            if ("/favicon.ico".equals(uri)) {
-                writeBack(ctx.getChannel(), true, "", isKeepAlive);
-                return null;
+            // 相对路径，确保以"/"开头
+            if (!uri.startsWith("/")) {
+                uri = "/" + uri;
             }
-            return convert(ctx.getChannel(), message, isKeepAlive, receiveTime);
+            // 解析uri
+            List<String> params = new LinkedList<>();
+            URL url = URL.valueOf(uri, "http", params);
+            String path = url.getAbsolutePath();
+            int pos = path.indexOf('/', 1);
+            if (pos > 0) {
+                path = path.substring(0, pos);
+                //获取插件
+                HttpController controller = HTTP_CONTROLLER.get(path);
+                if (controller != null) {
+                    return controller.execute(ctx, message, url, params);
+                }
+            }
+            return execute(ctx, message, url, params);
         } catch (Throwable e) {
             // 解析请求body
             logger.error(String.format("Error occurs while parsing http request for uri %s from %s", uri, Channel.toString(ctx.getChannel().getRemoteAddress())), e);
             //write error msg back
-            writeBack(ctx.getChannel(), false, e.getMessage(), isKeepAlive);
+            writeError(ctx.getChannel(), e.getMessage(), message.headers().isKeepAlive());
+            return null;
         }
-        return null;
-
     }
 
     @Override
@@ -128,40 +138,30 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     }
 
     /**
-     * 把HTTP请求转换成joy请求
+     * 上下文
      *
-     * @param channel     通道
-     * @param msg         消息
-     * @param isKeepAlive 保持连接
-     * @return
-     * @throws Exception
+     * @param ctx     上下文
+     * @param message 消息
+     * @param url     url
+     * @param params  参数名称
+     * @return 返回对象
+     * @throws Exception 异常
      */
-    protected RequestMessage<Invocation> convert(final Channel channel,
-                                                 final HttpRequestMessage msg,
-                                                 final boolean isKeepAlive,
-                                                 final long receiveTime) throws Exception {
-        HttpHeaders httpHeaders = msg.headers();
-        Map<CharSequence, Object> headerMap = httpHeaders.getAll();
+    protected Object execute(final ChannelContext ctx, final HttpRequestMessage message,
+                             final URL url, final List<String> params) throws Exception {
+        Map<CharSequence, Object> headerMap = message.headers().getAll();
         Parametric parametric = new MapParametric(headerMap);
-        // 解析uri
-        List<String> params = new LinkedList<>();
-        //相对路径，确保以"/"开头
-        String uri = msg.getUri();
-        if (!uri.startsWith("/")) {
-            uri = "/" + uri;
-        }
-        URL url = URL.valueOf(uri, "http", params);
         Invocation invocation = Invocation.build(url, headerMap, EXCEPTION_SUPPLIER);
-        invocation.setArgs(parseArgs(invocation, msg, parametric, url, params));
+        invocation.setArgs(parseArgs(invocation, message, parametric, url, params));
 
         // 构建joy请求
         MessageHeader header = createHeader();
         header.setLength(parametric.getPositive(CONTENT_LENGTH, (Integer) null));
-        header.addAttribute(KEEP_ALIVE.getNum(), isKeepAlive);
+        header.addAttribute(KEEP_ALIVE.getNum(), message.headers().isKeepAlive());
         header.addAttribute(ACCEPT_ENCODING.getNum(), parametric.getString(HttpHeaders.Names.ACCEPT_ENCODING));
         header.setTimeout(getTimeout(parametric, Constants.TIMEOUT_OPTION.getName()));
         // 解析远程地址
-        return RequestMessage.build(header, invocation, channel, parametric, receiveTime);
+        return RequestMessage.build(header, invocation, ctx.getChannel(), parametric, SystemClock.now());
     }
 
     /**
@@ -226,9 +226,9 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     /**
      * 判断参数名称是否一样
      *
-     * @param params
-     * @param parameters
-     * @return
+     * @param params     参数
+     * @param parameters 参数
+     * @return 匹配标识
      */
     protected boolean isMatch(final List<String> params, final Parameter[] parameters) {
         Set<String> set = new HashSet<>(params);
@@ -248,7 +248,7 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
      * @param parameter 参数类型
      * @param index     参数索引
      * @param value     字符串
-     * @return
+     * @return 目标参数对象
      */
     protected Object convert(final Class<?> clazz, final Method method, final Parameter parameter, final int index, final String value) {
         Class<?> type = parameter.getType();
@@ -283,20 +283,16 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
      * 回写数据
      *
      * @param channel     通道
-     * @param isSuccess   成功标识
-     * @param message     消息
+     * @param error       异常消息
      * @param isKeepAlive 保持连接
-     * @return 消息长度
      */
-    protected int writeBack(final Channel channel, final boolean isSuccess, final String message, final boolean isKeepAlive) {
+    protected void writeError(final Channel channel, final String error, final boolean isKeepAlive) {
         ResponseMessage<ResponsePayload> response = new ResponseMessage<>();
-        MessageHeader header = response.getHeader();
-        header.addAttribute(HeaderMapping.CONTENT_TYPE.getNum(), isSuccess ? "text/html; charset=UTF-8" : "text/json; charset=UTF-8");
-        header.addAttribute(KEEP_ALIVE.getNum(), isKeepAlive);
-        response.setPayLoad(isSuccess ? new ResponsePayload(message) : new ResponsePayload(new Exception(message)));
+        response.getHeader()
+                .addAttribute(HeaderMapping.CONTENT_TYPE.getNum(), "text/json; charset=UTF-8")
+                .addAttribute(KEEP_ALIVE.getNum(), isKeepAlive);
+        response.setPayLoad(new ResponsePayload(new Exception(error)));
         channel.send(response);
-
-        return message.length();
     }
 
 }

@@ -8,6 +8,8 @@
 
 - 增加ipv6支持，目前内置的广播服务发现已经支持ipv6
 
+- 增加HttpController插件
+
 ## 1.2.0-RELEASE(2020-08-26)
 
 ### Enhancement

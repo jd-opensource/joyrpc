@@ -265,7 +265,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
                 url = url.substring(i + 1);
             }
             // ipv6
-            if (url.charAt(0) == '[') {
+            if (!url.isEmpty() && url.charAt(0) == '[') {
                 i = url.lastIndexOf(']');
                 if (i > 0) {
                     ipv6 = true;

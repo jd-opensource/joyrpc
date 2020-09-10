@@ -20,21 +20,28 @@ package io.joyrpc.protocol.http;
  * #L%
  */
 
-import io.joyrpc.extension.ExtensionPoint;
-import io.joyrpc.extension.ExtensionPointLazy;
+import io.joyrpc.extension.Extensible;
+import io.joyrpc.extension.URL;
+import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.http.HttpRequestMessage;
+
+import java.util.List;
 
 /**
- * 扩展点
+ * HTTP请求控制器，提供扩展点，可以增加Swagger等插件
  */
-public interface Plugin {
+@Extensible("HttpController")
+public interface HttpController {
 
     /**
-     * URL参数绑定
+     * 上下文
+     *
+     * @param ctx     上下文
+     * @param message 消息
+     * @param url     url
+     * @param params  参数名称
+     * @return 返回对象
+     * @throws Exception 异常
      */
-    ExtensionPoint<URLBinding, String> URL_BINDING = new ExtensionPointLazy<>(URLBinding.class);
-
-    /**
-     * http控制器
-     */
-    ExtensionPoint<HttpController, String> HTTP_CONTROLLER = new ExtensionPointLazy<>(HttpController.class);
+    Object execute(ChannelContext ctx, HttpRequestMessage message, URL url, List<String> params) throws Exception;
 }

@@ -111,7 +111,8 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
             }
             // 解析uri
             List<String> params = new LinkedList<>();
-            URL url = URL.valueOf(uri, "http", params);
+            String host = (String) message.headers().get(HttpHeaders.Names.HOST);
+            URL url = URL.valueOf(host + uri, "http", params);
             String path = url.getAbsolutePath();
             int pos = path.indexOf('/', 1);
             if (pos > 0) {

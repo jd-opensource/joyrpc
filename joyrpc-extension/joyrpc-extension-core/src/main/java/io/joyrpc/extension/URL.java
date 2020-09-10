@@ -109,7 +109,41 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return IPV6地址
      */
     protected static boolean isIpv6(final String host) {
-        return host == null ? false : host.indexOf(':') != -1;
+        if (host == null) {
+            return false;
+        }
+        for (int i = 0; i < host.length(); i++) {
+            switch (host.charAt(i)) {
+                case 'a':
+                case 'b':
+                case 'c':
+                case 'd':
+                case 'e':
+                case 'f':
+                case 'A':
+                case 'B':
+                case 'C':
+                case 'D':
+                case 'E':
+                case 'F':
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    break;
+                case ':':
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        return false;
     }
 
     /**

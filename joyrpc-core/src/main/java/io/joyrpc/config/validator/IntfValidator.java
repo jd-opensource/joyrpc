@@ -29,7 +29,8 @@ import javax.validation.ConstraintValidatorContext;
 import javax.validation.ValidationException;
 
 import static io.joyrpc.Plugin.INTERFACE_VALIDATOR;
-import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.ENABLE_VALIDATOR_OPTION;
+import static io.joyrpc.constants.Constants.INTERFACE_VALIDATOR_OPTION;
 import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.StringUtils.isEmpty;
@@ -84,7 +85,7 @@ public class IntfValidator implements ConstraintValidator<ValidateInterface, Abs
      */
     protected Pair<String, String> valid(final ProviderConfig config, final Class clazz) {
         Object ref = config.getRef();
-        if (VARIABLE.getBoolean(ENABLE_INSTANCE_VALIDATOR_OPTION) && ref != null && !clazz.isInstance(ref)) {
+        if (ref != null && !clazz.isAssignableFrom(ref.getClass())) {
             return new Pair<>("interfaceClass", String.format("%s is not an instance of %s", ref.getClass().getName(), clazz.getName()));
         } else if (config.getEnableValidator() == null && !VARIABLE.getBoolean(ENABLE_VALIDATOR_OPTION)) {
             //不进行接口验证

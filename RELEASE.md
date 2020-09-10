@@ -10,6 +10,10 @@
 
 - 增加HttpController插件
 
+### Bugfixes
+
+- 处理在Springboot的某些场景下，接口验证中判断引用对象是否是目标接口返回错误的问题
+
 ## 1.2.0-RELEASE(2020-08-26)
 
 ### Enhancement

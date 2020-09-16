@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GROUP_ROUTE;
-import static io.joyrpc.constants.Constants.DEFAULT_GROUP_ROUTER;
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 消费组配置
@@ -46,6 +46,11 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     @ValidatePlugin(extensible = GroupInvoker.class, name = "GROUP_ROUTE", defaultValue = DEFAULT_GROUP_ROUTER)
     protected String groupRouter;
 
+    /**
+     * 分组下调用者配置
+     */
+    protected Map<String, ConsumerConfig<T>> consumerConfigs;
+
     public Integer getDstParam() {
         return dstParam;
     }
@@ -54,12 +59,21 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         this.dstParam = dstParam;
     }
 
+
     public String getGroupRouter() {
         return groupRouter;
     }
 
     public void setGroupRouter(String groupRouter) {
         this.groupRouter = groupRouter;
+    }
+
+    public Map<String, ConsumerConfig<T>> getConsumerConfigs() {
+        return consumerConfigs;
+    }
+
+    public void setConsumerConfigs(Map<String, ConsumerConfig<T>> consumerConfigs) {
+        this.consumerConfigs = consumerConfigs;
     }
 
     @Override
@@ -83,7 +97,22 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
      * @return 消费者配置
      */
     protected ConsumerConfig<T> createGroupConfig(final String alias) {
-        return new ConsumerConfig<>(this, alias);
+        ConsumerConfig<T> resConfig = new ConsumerConfig<>(this, alias);
+        ConsumerConfig childConfig = consumerConfigs == null || consumerConfigs.isEmpty() ? null : consumerConfigs.get(alias);
+        if (childConfig != null) {
+            Map<String, String> params = childConfig.addAttribute2Map();
+            if (childConfig.getTimeout() == null) {
+                params.remove(TIMEOUT_OPTION.getName());
+            }
+            if (childConfig.getGeneric() == null) {
+                params.remove(GENERIC_KEY);
+            }
+            if (childConfig.getConcurrency() == null) {
+                params.remove(CONCURRENCY_OPTION.getName());
+            }
+            params.forEach(resConfig::setParameter);
+        }
+        return resConfig;
     }
 
     /**

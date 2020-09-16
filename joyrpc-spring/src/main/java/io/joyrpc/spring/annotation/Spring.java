@@ -1,4 +1,4 @@
-package io.joyrpc.spring;
+package io.joyrpc.spring.annotation;
 
 /*-
  * #%L
@@ -20,33 +20,18 @@ package io.joyrpc.spring;
  * #L%
  */
 
-import io.joyrpc.config.ServerConfig;
-import io.joyrpc.spring.annotation.Spring;
-import org.springframework.beans.factory.BeanNameAware;
+
+import java.lang.annotation.*;
+
+import static java.lang.annotation.ElementType.METHOD;
 
 /**
- * 服务Bean
- *
- * @description:
+ * Spring注入的方法
  */
-public class ServerBean extends ServerConfig implements BeanNameAware {
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({METHOD})
+@Inherited
+public @interface Spring {
 
-    @Override
-    @Spring
-    public void setBeanName(String name) {
-        this.id = name;
-    }
-
-    @Override
-    public String getId() {
-        return id;
-    }
-
-    public String getName() {
-        return id;
-    }
-
-    public void setName(String name) {
-        this.id = name;
-    }
 }

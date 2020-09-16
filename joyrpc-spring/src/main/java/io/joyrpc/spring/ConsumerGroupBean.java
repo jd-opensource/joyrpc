@@ -22,6 +22,7 @@ package io.joyrpc.spring;
 
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerGroupConfig;
+import io.joyrpc.spring.annotation.Spring;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.FactoryBean;
@@ -53,11 +54,13 @@ public class ConsumerGroupBean<T> extends ConsumerGroupConfig<T> implements Init
     }
 
     @Override
+    @Spring
     public void setBeanName(String name) {
         spring.setBeanName(name);
     }
 
     @Override
+    @Spring
     public void setApplicationContext(ApplicationContext context) {
         spring.setApplicationContext(context);
     }

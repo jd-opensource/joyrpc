@@ -26,6 +26,7 @@ import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.exception.IllegalConfigureException;
 import io.joyrpc.extension.Converts;
+import io.joyrpc.spring.annotation.Spring;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.TypedStringValue;
 import org.springframework.beans.factory.support.ManagedMap;
@@ -115,15 +116,21 @@ public class AbstractBeanDefinitionParser implements BeanDefinitionParser {
             property = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
             parser = parsers.get(property);
             if (parser != null) {
+                //自定义解析器
                 parserMap.put(property, parser);
             } else {
-                Alias alias = setter.getAnnotation(Alias.class);
-                //对象属性对应的xml中的attribute名称
-                if (alias != null && !StringUtils.isEmpty(alias.value())) {
-                    parserMap.put(alias.value(), new AliasParser(property));
-                } else {
-                    //判断是否已经设置了别名
-                    parserMap.putIfAbsent(property, new AliasParser(property));
+                //过滤掉spring的注入方法
+                Spring spring = setter.getAnnotation(Spring.class);
+                if (spring == null) {
+                    //判断是否有别名
+                    Alias alias = setter.getAnnotation(Alias.class);
+                    //对象属性对应的xml中的attribute名称
+                    if (alias != null && !StringUtils.isEmpty(alias.value())) {
+                        parserMap.put(alias.value(), new AliasParser(property));
+                    } else {
+                        //判断是否已经设置了别名
+                        parserMap.putIfAbsent(property, new AliasParser(property));
+                    }
                 }
             }
         }

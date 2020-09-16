@@ -22,6 +22,7 @@ package io.joyrpc.spring;
 
 import io.joyrpc.config.AbstractConfig;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.spring.annotation.Spring;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -87,6 +88,7 @@ public class GlobalParameterBean extends AbstractConfig implements InitializingB
     }
 
     @Override
+    @Spring
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

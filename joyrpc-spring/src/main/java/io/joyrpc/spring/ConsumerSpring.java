@@ -3,6 +3,7 @@ package io.joyrpc.spring;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
+import io.joyrpc.spring.annotation.Spring;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
@@ -91,11 +92,13 @@ public class ConsumerSpring<T> implements InitializingBean, FactoryBean,
     }
 
     @Override
+    @Spring
     public void setBeanName(String name) {
         config.setId(name);
     }
 
     @Override
+    @Spring
     public void setApplicationContext(final ApplicationContext appContext) {
         this.applicationContext = appContext;
     }

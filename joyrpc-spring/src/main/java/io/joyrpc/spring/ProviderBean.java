@@ -23,6 +23,7 @@ package io.joyrpc.spring;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.*;
+import io.joyrpc.spring.annotation.Spring;
 import io.joyrpc.spring.event.ConsumerDoneEvent;
 import io.joyrpc.spring.event.ProviderDoneEvent;
 import io.joyrpc.util.ClassUtils;
@@ -109,11 +110,13 @@ public class ProviderBean<T> extends ProviderConfig<T> implements InitializingBe
     }
 
     @Override
+    @Spring
     public void setBeanName(String name) {
         this.id = name;
     }
 
     @Override
+    @Spring
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         this.applicationContext = applicationContext;
     }

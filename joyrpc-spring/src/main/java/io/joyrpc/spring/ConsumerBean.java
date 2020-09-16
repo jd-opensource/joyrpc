@@ -23,6 +23,7 @@ package io.joyrpc.spring;
 import io.joyrpc.annotation.Alias;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.ParameterConfig;
+import io.joyrpc.spring.annotation.Spring;
 import io.joyrpc.util.StringUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
@@ -59,13 +60,14 @@ public class ConsumerBean<T> extends ConsumerConfig<T> implements InitializingBe
         spring = new ConsumerSpring<>(this);
     }
 
-
     @Override
+    @Spring
     public void setBeanName(String name) {
         spring.setBeanName(name);
     }
 
     @Override
+    @Spring
     public void setApplicationContext(ApplicationContext context) {
         spring.setApplicationContext(context);
     }

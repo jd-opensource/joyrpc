@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static io.joyrpc.Plugin.GROUP_ROUTE;
-import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.DEFAULT_GROUP_ROUTER;
 
 /**
  * 消费组配置
@@ -58,7 +58,6 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     public void setDstParam(Integer dstParam) {
         this.dstParam = dstParam;
     }
-
 
     public String getGroupRouter() {
         return groupRouter;
@@ -97,22 +96,13 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
      * @return 消费者配置
      */
     protected ConsumerConfig<T> createGroupConfig(final String alias) {
-        ConsumerConfig<T> resConfig = new ConsumerConfig<>(this, alias);
-        ConsumerConfig childConfig = consumerConfigs == null || consumerConfigs.isEmpty() ? null : consumerConfigs.get(alias);
-        if (childConfig != null) {
-            Map<String, String> params = childConfig.addAttribute2Map();
-            if (childConfig.getTimeout() == null) {
-                params.remove(TIMEOUT_OPTION.getName());
-            }
-            if (childConfig.getGeneric() == null) {
-                params.remove(GENERIC_KEY);
-            }
-            if (childConfig.getConcurrency() == null) {
-                params.remove(CONCURRENCY_OPTION.getName());
-            }
-            params.forEach(resConfig::setParameter);
+        ConsumerConfig<T> result = new ConsumerConfig<>(this, alias);
+        ConsumerConfig config = consumerConfigs == null || consumerConfigs.isEmpty() ? null : consumerConfigs.get(alias);
+        if (config != null) {
+            Map<String, String> params = config.addAttribute2Map();
+            params.forEach(result::setParameter);
         }
-        return resConfig;
+        return result;
     }
 
     /**

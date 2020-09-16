@@ -55,7 +55,7 @@ public class ConsumerGroupBeanDefinitionParser extends AbstractInterfaceBeanDefi
      */
     public static class ConsumerParser implements CustomParser {
 
-        private ConsumerConfigBeanDefinitionParser consumerBeanDefinitionParser = new ConsumerConfigBeanDefinitionParser();
+        protected static ConsumerBeanDefinitionParser parser = new ConsumerBeanDefinitionParser(ConsumerConfig.class, false);
 
         @Override
         public void parse(final BeanDefinition definition, final String id, final Element element, final String name,
@@ -70,9 +70,9 @@ public class ConsumerGroupBeanDefinitionParser extends AbstractInterfaceBeanDefi
                         if ("consumer".equals(node.getNodeName()) || "consumer".equals(node.getLocalName())) {
                             String alias = elt.getAttribute("alias");
                             if (alias == null || alias.isEmpty()) {
-                                throw new IllegalStateException("Attribute alias of <jsf:consumer> below <jsf:consumerGroup> is empty");
+                                throw new IllegalStateException("Attribute alias of consumer is empty");
                             }
-                            BeanDefinition consumerBeanDefinition = consumerBeanDefinitionParser.parse(elt, context);
+                            BeanDefinition consumerBeanDefinition = parser.parse(elt, context);
                             if (consumerBeanDefinition != null) {
                                 BeanDefinitionHolder consumerBeanDefinitionHolder = new BeanDefinitionHolder(
                                         consumerBeanDefinition, id + "." + alias);
@@ -94,13 +94,5 @@ public class ConsumerGroupBeanDefinitionParser extends AbstractInterfaceBeanDefi
             }
         }
     }
-
-    public static class ConsumerConfigBeanDefinitionParser extends AbstractInterfaceBeanDefinitionParser {
-
-        public ConsumerConfigBeanDefinitionParser() {
-            super(ConsumerConfig.class, false);
-        }
-    }
-
 
 }

@@ -109,6 +109,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
             params.remove(Constants.GENERIC_OPTION.getName());
             params.remove(Constants.CHECK_OPTION.getName());
             params.remove(Constants.CHANNEL_FACTORY_OPTION.getName());
+            params.remove(Constants.TIMESTAMP_KEY);
             params.forEach(result::setParameter);
         }
         return result;

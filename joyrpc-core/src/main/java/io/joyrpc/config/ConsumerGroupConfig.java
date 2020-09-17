@@ -100,6 +100,15 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         ConsumerConfig config = consumerConfigs == null || consumerConfigs.isEmpty() ? null : consumerConfigs.get(alias);
         if (config != null) {
             Map<String, String> params = config.addAttribute2Map();
+            //过滤掉分组不能单独设置的参数
+            params.remove(Constants.SERVICE_NAME_OPTION.getName());
+            params.remove(Constants.INTERFACE_CLAZZ_OPTION.getName());
+            params.remove(Constants.REGISTER_OPTION.getName());
+            params.remove(Constants.SUBSCRIBE_OPTION.getName());
+            params.remove(Constants.VALIDATION_OPTION.getName());
+            params.remove(Constants.GENERIC_OPTION.getName());
+            params.remove(Constants.CHECK_OPTION.getName());
+            params.remove(Constants.CHANNEL_FACTORY_OPTION.getName());
             params.forEach(result::setParameter);
         }
         return result;

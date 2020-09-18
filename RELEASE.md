@@ -12,6 +12,12 @@
 
 - 动态分组增加自定义分组配置参数
 
+- Dependency
+
+  - 升级Springboot为2.2.10.RELEASE版本
+
+  - 升级Spring为5.2.9.RELEASE版本
+
 ### Bugfixes
 
 - 处理在Springboot的某些场景下，接口验证中判断引用对象是否是目标接口返回错误的问题

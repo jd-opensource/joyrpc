@@ -17,6 +17,8 @@
   - 升级Springboot为2.2.10.RELEASE版本
 
   - 升级Spring为5.2.9.RELEASE版本
+  
+  - 升级vertx-consul-client为3.9.3版本
 
 ### Bugfixes
 

@@ -1,6 +1,3 @@
-/**
- *
- */
 package io.joyrpc.extension;
 
 /*-
@@ -32,26 +29,40 @@ import java.util.*;
 import java.util.function.BiConsumer;
 
 /**
- *
+ * URL标识
  */
 public final class URL extends MapParametric<String, String> implements Serializable {
     public static final String FILE = "file";
     public static final String UTF_8 = "UTF-8";
     private static final long serialVersionUID = -1985165475234910535L;
-    private static final Map<String, String> UNMODIFIED_EMPTY_MAP = Collections.unmodifiableMap(new HashMap<String, String>());
-    // 协议
+    private static final Map<String, String> UNMODIFIED_EMPTY_MAP = Collections.unmodifiableMap(new HashMap<>());
+    /**
+     * 协议
+     */
     protected final String protocol;
-    // 名称
+    /**
+     * 名称
+     */
     protected final String user;
-    // 密码
+    /**
+     * 密码
+     */
     protected final String password;
-    // 主机
+    /**
+     * 主机
+     */
     protected final String host;
-    // 端口
+    /**
+     * 端口
+     */
     protected final int port;
-    // 路径
+    /**
+     * 路径
+     */
     protected final String path;
-    // ipv6
+    /**
+     * ipv6
+     */
     protected final boolean ipv6;
 
     protected URL() {
@@ -98,7 +109,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         this.user = user;
         this.password = password;
         this.host = host;
-        this.port = (port < 0 ? 0 : port);
+        this.port = Math.max(port, 0);
         this.path = path;
         this.ipv6 = ipv6;
     }
@@ -210,7 +221,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         // zookeeper://10.10.10.10:2181,10.10.10.11:2181/?retryTimes=3
         // failover://(zookeeper://10.10.10.10:2181,10.10.10.11:2181;zookeeper://20.10.10.10:2181,20.10.10.11:2181)
         // ?interval=1000
-        int j = 0;
+        int j;
         int i = url.indexOf(')');
         if (i >= 0) {
             i = url.indexOf('?', i);
@@ -334,7 +345,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      *
      * @param value 字符串
      * @return 编码后的字符串
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public static String encode(final String value) throws UnsupportedEncodingException {
         return encode(value, UTF_8);
@@ -346,7 +357,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param value   字符串
      * @param charset 字符集
      * @return 编码后的字符串
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public static String encode(final String value, final String charset) throws UnsupportedEncodingException {
         if (value == null || value.isEmpty()) {
@@ -360,7 +371,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      *
      * @param value 编码后的字符串
      * @return 解码字符串
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public static String decode(String value) throws UnsupportedEncodingException {
         return decode(value, UTF_8);
@@ -371,7 +382,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      *
      * @param value 编码后的字符串
      * @return 解码字符串
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public static String decode(String value, String charset) throws UnsupportedEncodingException {
         if (value == null || value.isEmpty()) {
@@ -496,7 +507,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
 
     /**
      * 获取一份参数拷贝。
-     * @return
+     * @return 参数拷贝
      */
     public Map<String, String> getParameters() {
         return parameters == null ? new HashMap<>() : new HashMap<>(parameters);
@@ -504,11 +515,11 @@ public final class URL extends MapParametric<String, String> implements Serializ
 
     /**
      * 获取指定后缀的非空参数
-     * @param suffix
-     * @return
+     * @param suffix 后缀
+     * @return 指定后缀的非空参数
      */
     public Map<String, String> endsWith(final String suffix) {
-        Map<String, String> result = new HashMap<String, String>(10);
+        Map<String, String> result = new HashMap<>(10);
         if (suffix != null && !suffix.isEmpty()) {
             String key;
             String value;
@@ -525,8 +536,8 @@ public final class URL extends MapParametric<String, String> implements Serializ
 
     /**
      * 获取指定前缀的非空参数
-     * @param prefix
-     * @return
+     * @param prefix 前缀
+     * @return 指定前缀的非空参数
      */
     public Map<String, String> startsWith(final String prefix) {
         return startsWith(prefix, null);
@@ -536,7 +547,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * 获取指定前缀的非空参数
      * @param prefix 前缀
      * @param strip 是否裁剪前缀
-     * @return
+     * @return 指定前缀的非空参数
      */
     public Map<String, String> startsWith(final String prefix, final boolean strip) {
         return startsWith(prefix, strip ? Strip.SIMPLE_STRIP : null);
@@ -546,10 +557,10 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * 获取指定前缀的非空参数
      * @param prefix 前缀
      * @param strip Key裁剪函数
-     * @return
+     * @return 指定前缀的非空参数
      */
     public Map<String, String> startsWith(final String prefix, final Strip strip) {
-        Map<String, String> result = new HashMap<String, String>(10);
+        Map<String, String> result = new HashMap<>(10);
         if (prefix != null && !prefix.isEmpty()) {
             String key;
             String value;
@@ -565,6 +576,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public String getObject(final String key) {
         return getString(key);
     }
@@ -579,7 +591,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      *
      * @param key 参数名称
      * @return 参数值
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public String getDecoded(final String key) throws UnsupportedEncodingException {
         return decode(getString(key));
@@ -591,7 +603,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param key     参数名称
      * @param charset 字符集
      * @return 参数值
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public String getDecoded(final String key, final String charset) throws UnsupportedEncodingException {
         return decode(getString(key), charset);
@@ -604,18 +616,17 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param def     默认值
      * @param charset 字符集
      * @return 参数值
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public String getDecoded(final String key, final String def, final String charset) throws UnsupportedEncodingException {
         return getDecoded(getString(key, def), charset);
     }
 
     /**
-     * 判断参数是否存在
+     * 判断参数值是否存在
      *
      * @param key 参数名称
-     * @return <li>true 存在</li>
-     * <li>false 不存在</li>
+     * @return 参数值存在标识
      */
     public boolean contains(final String key) {
         String value = getString(key);
@@ -806,7 +817,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return 新创建的URL对象
      */
     public URL add(final String key, final Number value) {
-        return add(key, value == null ? (String) null : String.valueOf(value));
+        return add(key, value == null ? null : String.valueOf(value));
     }
 
     /**
@@ -817,7 +828,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return 新创建的URL对象
      */
     public URL add(final String key, final CharSequence value) {
-        return add(key, value == null ? (String) null : value.toString());
+        return add(key, value == null ? null : value.toString());
     }
 
     /**
@@ -883,7 +894,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param key   参数名称
      * @param value 值
      * @return 新创建的URL对象
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public URL addEncoded(final String key, final String value) throws UnsupportedEncodingException {
         return add(key, encode(value));
@@ -896,7 +907,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param value   值
      * @param charset 字符集
      * @return 新创建的URL对象
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public URL addEncoded(final String key, final String value, final String charset) throws UnsupportedEncodingException {
         return add(key, encode(value, charset));
@@ -908,7 +919,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param key   参数名称
      * @param value 值
      * @return 新创建的URL对象
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public URL addEncoded(final String key, final CharSequence value) throws UnsupportedEncodingException {
         return add(key, encode(value == null ? null : value.toString()));
@@ -921,7 +932,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @param value   值
      * @param charset 字符集
      * @return 新创建的URL对象
-     * @throws UnsupportedEncodingException
+     * @throws UnsupportedEncodingException 编码不支持异常
      */
     public URL addEncoded(final String key, final CharSequence value, final String charset) throws UnsupportedEncodingException {
         return add(key, encode(value == null ? null : value.toString(), charset));
@@ -1023,7 +1034,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return 新创建的URL对象
      */
     public URL addIfAbsent(final String key, final Number value) {
-        return addIfAbsent(key, value == null ? (String) null : String.valueOf(value));
+        return addIfAbsent(key, value == null ? null : String.valueOf(value));
     }
 
     /**
@@ -1034,7 +1045,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
      * @return 新创建的URL对象
      */
     public URL addIfAbsent(final String key, final CharSequence value) {
-        return addIfAbsent(key, value == null ? (String) null : value.toString());
+        return addIfAbsent(key, value == null ? null : value.toString());
     }
 
     /**
@@ -1081,7 +1092,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
             return this;
         }
         //复制一份数据
-        Map<String, String> map = new HashMap<String, String>(parameters);
+        Map<String, String> map = new HashMap<>(parameters);
         if (this.parameters != null) {
             map.putAll(this.parameters);
         }
@@ -1111,7 +1122,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
         if (keys == null || keys.size() == 0) {
             return this;
         }
-        return remove(keys.toArray(new String[keys.size()]));
+        return remove(keys.toArray(new String[0]));
     }
 
     /**
@@ -1146,7 +1157,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
     @Override
     public void foreach(final BiConsumer<String, Object> consumer) {
         if (consumer != null && parameters != null) {
-            parameters.forEach(consumer::accept);
+            parameters.forEach(consumer);
         }
     }
 
@@ -1217,7 +1228,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
             boolean first = true;
             String value;
             if (parameters != null && parameters.length > 0) {
-                Set<String> includes = new TreeSet<String>();
+                Set<String> includes = new TreeSet<>();
                 for (String p : parameters) {
                     if (p != null && !p.isEmpty()) {
                         includes.add(p);
@@ -1241,7 +1252,7 @@ public final class URL extends MapParametric<String, String> implements Serializ
             } else {
                 String key;
                 // 按照字符串排序
-                for (Map.Entry<String, String> entry : new TreeMap<String, String>(map).entrySet()) {
+                for (Map.Entry<String, String> entry : new TreeMap<>(map).entrySet()) {
                     key = entry.getKey();
                     value = entry.getValue();
                     if (key != null && !key.isEmpty()) {
@@ -1265,51 +1276,31 @@ public final class URL extends MapParametric<String, String> implements Serializ
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((protocol == null) ? 0 : protocol.hashCode());
-        result = prime * result + ((host == null) ? 0 : host.hashCode());
-        result = prime * result + port;
-        result = prime * result + ((path == null) ? 0 : path.hashCode());
+        int result = protocol != null ? protocol.hashCode() : 0;
+        result = 31 * result + (host != null ? host.hashCode() : 0);
+        result = 31 * result + port;
+        result = 31 * result + (path != null ? path.hashCode() : 0);
         return result;
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         }
-        if (obj == null) {
+        if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        if (getClass() != obj.getClass()) {
+
+        URL url = (URL) o;
+
+        if (port != url.port) {
+            return false;
+        } else if (!Objects.equals(protocol, url.protocol)) {
+            return false;
+        } else if (!Objects.equals(host, url.host)) {
             return false;
         }
-        URL other = (URL) obj;
-        if (protocol == null) {
-            if (other.protocol != null) {
-                return false;
-            }
-        } else if (!protocol.equals(other.protocol)) {
-            return false;
-        }
-        if (host == null) {
-            if (other.host != null) {
-                return false;
-            }
-        } else if (!host.equals(other.host)) {
-            return false;
-        }
-        if (port != other.port) {
-            return false;
-        }
-        if (path == null) {
-            if (other.path != null) {
-                return false;
-            }
-        } else if (!path.equals(other.path)) {
-            return false;
-        }
-        return true;
+        return Objects.equals(path, url.path);
     }
 }

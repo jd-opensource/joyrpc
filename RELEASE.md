@@ -1,5 +1,11 @@
 # 版本说明
 
+## 1.4.0-SNAPSHOT
+
+### Enhancement
+
+- TODO 增加json-rpc 2.0协议支持
+
 ## 1.3.0-RELEASE(2020-09-21)
 
 ### Enhancement

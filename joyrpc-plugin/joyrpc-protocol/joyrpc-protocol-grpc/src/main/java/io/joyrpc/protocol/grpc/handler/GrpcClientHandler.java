@@ -23,14 +23,13 @@ package io.joyrpc.protocol.grpc.handler;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.internal.GrpcUtil;
-import io.joyrpc.codec.compression.Compression;
-import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.codec.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.UnsafeByteArrayOutputStream;
+import io.joyrpc.codec.compression.Compression;
+import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
@@ -38,6 +37,7 @@ import io.joyrpc.protocol.grpc.exception.GrpcBizException;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.channel.ChannelHandler;
 import io.joyrpc.transport.channel.EnhanceCompletableFuture;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http2.DefaultHttp2Headers;
@@ -60,22 +60,19 @@ import java.util.concurrent.ConcurrentHashMap;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.transport.http.HttpHeaders.Values.GZIP;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * grpc client端消息转换handler
  */
-public class GrpcClientHandler extends AbstractHttpHandler {
+public class GrpcClientHandler implements ChannelHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcClientHandler.class);
 
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 
     protected Map<Integer, Http2ResponseMessage> http2ResponseNoEnds = new ConcurrentHashMap<>();
-
-    @Override
-    protected Logger getLogger() {
-        return logger;
-    }
 
     @Override
     public Object received(final ChannelContext ctx, final Object message) {
@@ -165,7 +162,7 @@ public class GrpcClientHandler extends AbstractHttpHandler {
         }
         //解压处理
         if (isCompression > 0) {
-            Compression compression = getEncoding((String) headers.get(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
+            Compression compression = COMPRESSION.get(split((String) headers.get(GrpcUtil.MESSAGE_ACCEPT_ENCODING), SEMICOLON_COMMA_WHITESPACE));
             if (compression != null) {
                 in = compression.decompress(in);
             }

@@ -21,9 +21,9 @@ package io.joyrpc.protocol.grpc.handler;
  */
 
 import io.grpc.internal.GrpcUtil;
+import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.LafException;
@@ -31,7 +31,6 @@ import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
@@ -43,13 +42,13 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.channel.ChannelHandler;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
 import io.joyrpc.transport.http2.Http2Headers;
 import io.joyrpc.transport.http2.Http2RequestMessage;
 import io.joyrpc.transport.http2.Http2ResponseMessage;
 import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.GrpcType.ClassWrapper;
-import io.joyrpc.util.Pair;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,13 +57,16 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static io.joyrpc.Plugin.COMPRESSION;
 import static io.joyrpc.Plugin.SERIALIZATION_SELECTOR;
 import static io.joyrpc.protocol.grpc.HeaderMapping.ACCEPT_ENCODING;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * @date: 2019/5/6
  */
-public class GrpcServerHandler extends AbstractHttpHandler {
+public class GrpcServerHandler implements ChannelHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcServerHandler.class);
     protected static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(":path interfaceClazz/methodName with alias header or interfaceClazz/alias/methodName");
@@ -72,11 +74,6 @@ public class GrpcServerHandler extends AbstractHttpHandler {
      * 默认序列化
      */
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
-
-    @Override
-    protected Logger getLogger() {
-        return logger;
-    }
 
     @Override
     public Object received(final ChannelContext ctx, final Object message) {
@@ -187,16 +184,16 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         //获取 content 字节数组
         byte[] content = baos.toByteArray();
         //压缩处理
-        Pair<String, Compression> pair = null;
+        Compression compression = null;
         if (content.length > 1024) {
-            pair = getEncoding((String) header.getAttribute(ACCEPT_ENCODING.getNum()));
+            compression = COMPRESSION.get(split((String) header.getAttribute(ACCEPT_ENCODING.getNum()), SEMICOLON_COMMA_WHITESPACE));
         }
-        if (pair != null) {
+        if (compression != null) {
             //复用缓冲区
             baos.reset();
             baos.write(new byte[]{1, 0, 0, 0, 0});
-            content = pair.getValue().compress(baos, content, 5, content.length - 5);
-            headers.set(GrpcUtil.MESSAGE_ENCODING, pair.getKey());
+            content = compression.compress(baos, content, 5, content.length - 5);
+            headers.set(GrpcUtil.MESSAGE_ENCODING, compression.getTypeName());
         }
         //设置数据长度
         int length = content.length - 5;

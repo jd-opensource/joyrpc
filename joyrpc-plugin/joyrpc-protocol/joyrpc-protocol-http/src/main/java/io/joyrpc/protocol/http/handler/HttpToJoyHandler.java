@@ -21,7 +21,6 @@ package io.joyrpc.protocol.http.handler;
  */
 
 import io.joyrpc.extension.URL;
-import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.http.HeaderMapping;
 import io.joyrpc.protocol.http.HttpController;
 import io.joyrpc.protocol.http.controller.DefaultHttpController;
@@ -29,6 +28,7 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.channel.ChannelHandler;
 import io.joyrpc.transport.http.HttpHeaders;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http.HttpRequestMessage;
@@ -45,7 +45,7 @@ import static io.joyrpc.protocol.http.Plugin.HTTP_CONTROLLER;
 /**
  * HTTP转换成joy
  */
-public class HttpToJoyHandler extends AbstractHttpHandler {
+public class HttpToJoyHandler implements ChannelHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(HttpToJoyHandler.class);
 
@@ -108,11 +108,6 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
             writeError(ctx.getChannel(), e.getMessage(), message.headers().isKeepAlive());
             return null;
         }
-    }
-
-    @Override
-    public Logger getLogger() {
-        return logger;
     }
 
     /**

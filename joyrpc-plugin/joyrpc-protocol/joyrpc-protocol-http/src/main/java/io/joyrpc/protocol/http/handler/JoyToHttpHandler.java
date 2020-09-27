@@ -20,26 +20,21 @@ package io.joyrpc.protocol.http.handler;
  * #L%
  */
 
-import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.http.HttpResponse;
 import io.joyrpc.protocol.http.message.JsonResponseMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.channel.ChannelHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * 结果转换成HTTP应答
  */
-public class JoyToHttpHandler extends AbstractHttpHandler {
+public class JoyToHttpHandler implements ChannelHandler {
 
     protected static final Logger logger = LoggerFactory.getLogger(JoyToHttpHandler.class);
-
-    @Override
-    protected Logger getLogger() {
-        return logger;
-    }
 
     @Override
     public Object wrote(final ChannelContext context, final Object message) {

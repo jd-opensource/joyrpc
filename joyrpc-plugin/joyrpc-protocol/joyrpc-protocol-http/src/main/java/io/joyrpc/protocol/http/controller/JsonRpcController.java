@@ -26,7 +26,6 @@ import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.codec.serialization.generic.StandardGenericSerializer;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.SerializerException;
@@ -38,18 +37,19 @@ import io.joyrpc.protocol.AbstractHttpDecoder;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.http.ContentTypeHandler;
+import io.joyrpc.protocol.http.exception.JsonRpcCodecException;
 import io.joyrpc.protocol.http.message.JsonRpcRequest;
 import io.joyrpc.protocol.http.message.JsonRpcResponse;
 import io.joyrpc.protocol.http.message.JsonRpcResponseMessage;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.http.HttpHeaders.Names;
 import io.joyrpc.transport.http.HttpRequestMessage;
 import io.joyrpc.util.SystemClock;
 
-import java.lang.reflect.Array;
 import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.Map;
@@ -75,6 +75,7 @@ public class JsonRpcController implements ContentTypeHandler {
 
     @Override
     public Object execute(final ChannelContext ctx, final HttpRequestMessage message, final URL url, final List<String> params) throws Exception {
+        JsonRpcRequest request = null;
         try {
             Map<CharSequence, Object> headerMap = message.headers().getAll();
             Parametric parametric = new MapParametric(headerMap);
@@ -82,6 +83,7 @@ public class JsonRpcController implements ContentTypeHandler {
                     .header(parametric)
                     .body(message.content())
                     .serializer(genericSerializer);
+            request = decoder.request;
             Invocation invocation = decoder.build();
             // 构建joy请求
             MessageHeader header = new MessageHeader(MsgType.BizReq.getType(), (byte) Serialization.JSON_ID, (byte) Protocol.JSON_RPC);
@@ -94,16 +96,34 @@ public class JsonRpcController implements ContentTypeHandler {
             result.setResponseSupplier(() -> new JsonRpcResponseMessage(new JsonRpcResponse(VERSION, decoder.request.getId())));
             return result;
         } catch (SerializerException e) {
-            throw new CodecException("Parse error", e, "-32700");
+            caught(ctx, message, new JsonRpcCodecException("Parse error", e, "-32700", request == null ? null : request.getId()));
         } catch (ClassNotFoundException e) {
-            throw new CodecException("Invalid Request", e, "-32600");
+            caught(ctx, message, new JsonRpcCodecException("Invalid Request", e, "-32600", request == null ? null : request.getId()));
         } catch (NoSuchMethodException e) {
-            throw new CodecException("Method not found", e, "-32601");
+            caught(ctx, message, new JsonRpcCodecException("Method not found", e, "-32601", request == null ? null : request.getId()));
         } catch (MethodOverloadException e) {
-            throw new CodecException("Invalid Request", e, "-32600");
+            caught(ctx, message, new JsonRpcCodecException("Invalid Request", e, "-32600", request == null ? null : request.getId()));
+        } catch (JsonRpcCodecException e) {
+            caught(ctx, message, e);
         } catch (Throwable e) {
-            throw new CodecException("Internal error", e, "-32603");
+            caught(ctx, message, new JsonRpcCodecException("Internal error", e, "-32603", request == null ? null : request.getId()));
         }
+        return null;
+    }
+
+    /**
+     * 捕获异常
+     *
+     * @param ctx       上下文
+     * @param message   请求消息
+     * @param exception 异常
+     */
+    protected void caught(final ChannelContext ctx, final HttpRequestMessage message, final JsonRpcCodecException exception) {
+        MessageHeader header = new MessageHeader(MsgType.BizReq.getType(), (byte) Serialization.JSON_ID, (byte) Protocol.JSON_RPC);
+        header.addAttribute(KEEP_ALIVE.getNum(), message.headers().isKeepAlive());
+        JsonRpcResponseMessage response = new JsonRpcResponseMessage(header, new ResponsePayload(exception),
+                new JsonRpcResponse(VERSION, exception.getId()));
+        ctx.getChannel().send(response);
     }
 
     /**
@@ -162,7 +182,7 @@ public class JsonRpcController implements ContentTypeHandler {
             request = JSON.get().parseObject(new UnsafeByteArrayInputStream(content), JsonRpcRequest.class);
             methodName = request.getMethod();
             if (methodName == null || request.getId() == null || !VERSION.equals(request.getJsonrpc())) {
-                throw new CodecException("Invalid Request", "-32600");
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
             }
             parseMethod();
         }
@@ -175,46 +195,60 @@ public class JsonRpcController implements ContentTypeHandler {
                 return;
             } else if (params == null) {
                 //参数不存在
-                throw new CodecException("Invalid Request", "-32600");
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
             }
-            Object[] args = new Object[parameters.length];
+            Object args = null;
             // 判断是数组还是Map
             if (params instanceof Map) {
-                Map<String, Object> map = (Map<String, Object>) params;
-                int i = 0;
-                for (Parameter parameter : parameters) {
-                    args[i] = map.get(parameter.getName());
-                    i++;
-                }
-                invocation.setArgs(new Object[]{null, null, args});
-                invocation.setArgs(serializer.deserialize(invocation));
+                args = parseArgs(parameters, (Map<String, Object>) params);
             } else if (params instanceof List) {
-                //集合
-                List<?> objects = (List<?>) params;
-                int len = objects.size();
-                if (len != parameters.length) {
-                    throw new CodecException("Invalid Request", "-32600");
-                }
-                int i = 0;
-                for (Object obj : objects) {
-                    args[i++] = obj;
-                }
-                invocation.setArgs(new Object[]{null, null, args});
-                invocation.setArgs(serializer.deserialize(invocation));
+                args = parseArgs(parameters, (List<?>) params);
             } else if (params.getClass().isArray()) {
-                int len = Array.getLength(params);
-                if (len != parameters.length) {
-                    throw new CodecException("Invalid Request", "-32600");
-                }
-                //数组
-                for (int i = 0; i < len; i++) {
-                    args[i] = Array.get(params, i);
-                }
+                args = params;
+            }
+            if (args != null) {
                 invocation.setArgs(new Object[]{null, null, args});
                 invocation.setArgs(serializer.deserialize(invocation));
             } else {
-                throw new CodecException("Invalid Request", "-32600");
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
             }
+        }
+
+        /**
+         * 解析参数
+         *
+         * @param parameters 参数
+         * @param params     参数值集合
+         * @return 参数数组
+         */
+        protected Object[] parseArgs(final Parameter[] parameters, final List<?> params) {
+            //集合
+            List<?> objects = params;
+            if (objects.size() != parameters.length) {
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
+            }
+            Object[] args = objects.toArray();
+            return args;
+        }
+
+        /**
+         * 解析参数
+         *
+         * @param parameters 参数
+         * @param params     参数值
+         * @return 参数数组
+         */
+        protected Object[] parseArgs(final Parameter[] parameters, final Map<String, Object> params) {
+            if (params.size() != parameters.length) {
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
+            }
+            Object[] args = new Object[parameters.length];
+            int i = 0;
+            for (Parameter parameter : parameters) {
+                args[i] = params.get(parameter.getName());
+                i++;
+            }
+            return args;
         }
     }
 

@@ -20,6 +20,10 @@ package io.joyrpc.protocol.http.message;
  * #L%
  */
 
+import io.joyrpc.protocol.http.exception.JsonRpcCodecException;
+import io.joyrpc.protocol.message.MessageHeader;
+import io.joyrpc.protocol.message.ResponsePayload;
+
 import static io.joyrpc.Plugin.JSON;
 
 /**
@@ -35,12 +39,23 @@ public class JsonRpcResponseMessage extends AbstractJsonResponseMessage {
         this.jsonRpcResponse = jsonRpcResponse;
     }
 
+    public JsonRpcResponseMessage(MessageHeader header, ResponsePayload response, JsonRpcResponse jsonRpcResponse) {
+        super(header, response);
+        this.jsonRpcResponse = jsonRpcResponse;
+    }
+
     @Override
     protected void render() {
         if (!response.isError()) {
             jsonRpcResponse.setResult(response.getResponse());
         } else {
-            jsonRpcResponse.setError(new JsonRpcError(-32603, response.getException().getMessage()));
+            Throwable exception = response.getException();
+            if (exception instanceof JsonRpcCodecException) {
+                JsonRpcCodecException jrce = (JsonRpcCodecException) exception;
+                jsonRpcResponse.setError(new JsonRpcError(Integer.parseInt(jrce.getErrorCode()), exception.getMessage()));
+            } else {
+                jsonRpcResponse.setError(new JsonRpcError(-32603, exception.getMessage()));
+            }
         }
         content = JSON.get().toJSONBytes(jsonRpcResponse);
         status = 200;

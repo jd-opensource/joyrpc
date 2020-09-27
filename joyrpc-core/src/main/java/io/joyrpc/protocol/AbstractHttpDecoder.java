@@ -91,27 +91,27 @@ public class AbstractHttpDecoder {
      */
     protected transient GenericMethod genericMethod;
 
-    public AbstractHttpDecoder url(final URL url) {
+    protected AbstractHttpDecoder url(final URL url) {
         this.url = url;
         return this;
     }
 
-    public AbstractHttpDecoder paths(final String[] paths) {
+    protected AbstractHttpDecoder paths(final String[] paths) {
         this.paths = paths;
         return this;
     }
 
-    public AbstractHttpDecoder header(final Parametric header) {
+    protected AbstractHttpDecoder header(final Parametric header) {
         this.header = header;
         return this;
     }
 
-    public AbstractHttpDecoder body(final byte[] body) {
+    protected AbstractHttpDecoder body(final byte[] body) {
         this.body = body;
         return this;
     }
 
-    public AbstractHttpDecoder error(final Supplier<LafException> error) {
+    protected AbstractHttpDecoder error(final Supplier<LafException> error) {
         this.error = error;
         return this;
     }

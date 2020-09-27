@@ -30,12 +30,12 @@ public class Version {
      * 2.0.1-SNAPSHOT对应2010<br>
      * 2.0.1正式版对应2011
      */
-    public static final short BUILD_VERSION = 2300;
+    public static final short BUILD_VERSION = 2400;
 
     /**
      * 当前Build版本，每次发布修改
      */
-    public static final String BUILD_VERSION_TIME = "2.3.0_202009111620";
+    public static final String BUILD_VERSION_TIME = "2.4.0_202009111620";
 
     /**
      * 当前协议版本

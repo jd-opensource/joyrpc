@@ -544,6 +544,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
                     registry.registerBeanDefinition(refName, definition);
                 }
             }
+            refName = isEmpty(refName) ? Introspector.decapitalize(getShortName(providerClass.getName())) : refName;
             if (isEmpty(provider.getId())) {
                 provider.setId(PROVIDER_PREFIX + refName);
             }

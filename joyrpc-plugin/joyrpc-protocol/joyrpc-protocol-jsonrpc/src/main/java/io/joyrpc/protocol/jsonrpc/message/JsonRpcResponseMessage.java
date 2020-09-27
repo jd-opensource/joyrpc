@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http.message;
+package io.joyrpc.protocol.jsonrpc.message;
 
 /*-
  * #%L
@@ -20,7 +20,8 @@ package io.joyrpc.protocol.http.message;
  * #L%
  */
 
-import io.joyrpc.protocol.http.exception.JsonRpcCodecException;
+import io.joyrpc.protocol.http.message.AbstractJsonResponseMessage;
+import io.joyrpc.protocol.jsonrpc.exception.JsonRpcCodecException;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.ResponsePayload;
 

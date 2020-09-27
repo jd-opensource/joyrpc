@@ -23,12 +23,16 @@ package io.joyrpc.protocol.http.message;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 
+import java.nio.charset.StandardCharsets;
+
 import static io.joyrpc.Plugin.JSON;
 
 /**
  * 普通JSON应答
  */
 public class JsonResponseMessage extends AbstractJsonResponseMessage {
+
+    public static final byte[] EMPTY = "".getBytes();
 
     public JsonResponseMessage() {
     }
@@ -41,7 +45,14 @@ public class JsonResponseMessage extends AbstractJsonResponseMessage {
     protected void render() {
         if (!response.isError()) {
             status = 200;
-            content = JSON.get().toJSONBytes(response.getResponse());
+            Object res = response.getResponse();
+            if (res == null) {
+                content = EMPTY;
+            } else if (res instanceof CharSequence) {
+                content = ((CharSequence) res).toString().getBytes(StandardCharsets.UTF_8);
+            } else {
+                content = JSON.get().toJSONBytes(res);
+            }
         } else {
             status = 500;
             content = JSON.get().toJSONBytes(new ErrorResponse(status, response.getException().getMessage()));

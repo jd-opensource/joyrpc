@@ -3,21 +3,20 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>joyrpc-plugin</artifactId>
+        <artifactId>joyrpc-protocol</artifactId>
         <groupId>io.joyrpc</groupId>
         <version>1.4.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>joyrpc-protocol</artifactId>
-    <packaging>pom</packaging>
-    <modules>
-        <module>joyrpc-protocol-telnet</module>
-        <module>joyrpc-protocol-http</module>
-        <module>joyrpc-protocol-grpc</module>
-        <module>joyrpc-protocol-dubbo</module>
-        <module>joyrpc-protocol-jsonrpc</module>
-    </modules>
+    <artifactId>joyrpc-protocol-jsonrpc</artifactId>
 
+    <dependencies>
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-protocol-http</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
 
 </project>

@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http.controller;
+package io.joyrpc.protocol.jsonrpc.controller;
 
 /*-
  * #%L
@@ -37,10 +37,10 @@ import io.joyrpc.protocol.AbstractHttpDecoder;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.http.ContentTypeHandler;
-import io.joyrpc.protocol.http.exception.JsonRpcCodecException;
-import io.joyrpc.protocol.http.message.JsonRpcRequest;
-import io.joyrpc.protocol.http.message.JsonRpcResponse;
-import io.joyrpc.protocol.http.message.JsonRpcResponseMessage;
+import io.joyrpc.protocol.jsonrpc.exception.JsonRpcCodecException;
+import io.joyrpc.protocol.jsonrpc.message.JsonRpcRequest;
+import io.joyrpc.protocol.jsonrpc.message.JsonRpcResponse;
+import io.joyrpc.protocol.jsonrpc.message.JsonRpcResponseMessage;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.RequestMessage;

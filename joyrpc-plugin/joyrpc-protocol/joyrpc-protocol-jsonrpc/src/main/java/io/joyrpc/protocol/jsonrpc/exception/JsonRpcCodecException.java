@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http.controller;
+package io.joyrpc.protocol.jsonrpc.exception;
 
 /*-
  * #%L
@@ -20,12 +20,30 @@ package io.joyrpc.protocol.http.controller;
  * #L%
  */
 
-import io.joyrpc.extension.Extension;
+import io.joyrpc.exception.CodecException;
 
 /**
- * JsonRpc调用处理，处理以/jsonrpc/开头的调用
+ * 内部捕获异常使用
  */
-@Extension("jsonrpc")
-public class JsonRpc0Controller extends JsonRpcController {
+public class JsonRpcCodecException extends CodecException {
 
+    protected Long id;
+
+    public JsonRpcCodecException(Long id) {
+        this.id = id;
+    }
+
+    public JsonRpcCodecException(String message, String errorCode, Long id) {
+        super(message, errorCode);
+        this.id = id;
+    }
+
+    public JsonRpcCodecException(String message, Throwable cause, String errorCode, Long id) {
+        super(message, cause, errorCode);
+        this.id = id;
+    }
+
+    public Long getId() {
+        return id;
+    }
 }

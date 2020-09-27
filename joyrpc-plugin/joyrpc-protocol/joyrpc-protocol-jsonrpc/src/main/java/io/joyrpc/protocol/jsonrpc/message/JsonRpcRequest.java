@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http.message;
+package io.joyrpc.protocol.jsonrpc.message;
 
 /*-
  * #%L

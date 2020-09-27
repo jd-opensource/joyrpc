@@ -45,7 +45,7 @@ public class FaviconController implements HttpController {
         response.getHeader()
                 .addAttribute(HeaderMapping.CONTENT_TYPE.getNum(), "text/html; charset=UTF-8")
                 .addAttribute(KEEP_ALIVE.getNum(), message.headers().isKeepAlive());
-        response.setPayLoad(new ResponsePayload(message));
+        response.setPayLoad(new ResponsePayload(null));
         ctx.getChannel().send(response);
         return null;
     }

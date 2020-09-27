@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http.exception;
+package io.joyrpc.protocol.jsonrpc.message;
 
 /*-
  * #%L
@@ -20,30 +20,40 @@ package io.joyrpc.protocol.http.exception;
  * #L%
  */
 
-import io.joyrpc.exception.CodecException;
-
 /**
- * 内部捕获异常使用
+ * JsonRpc应答
  */
-public class JsonRpcCodecException extends CodecException {
+public class JsonRpcError {
+    /**
+     * 错误代码
+     */
+    protected int code;
+    /**
+     * 错误信息
+     */
+    protected String message;
 
-    protected Long id;
-
-    public JsonRpcCodecException(Long id) {
-        this.id = id;
+    public JsonRpcError() {
     }
 
-    public JsonRpcCodecException(String message, String errorCode, Long id) {
-        super(message, errorCode);
-        this.id = id;
+    public JsonRpcError(int code, String message) {
+        this.code = code;
+        this.message = message;
     }
 
-    public JsonRpcCodecException(String message, Throwable cause, String errorCode, Long id) {
-        super(message, cause, errorCode);
-        this.id = id;
+    public int getCode() {
+        return code;
     }
 
-    public Long getId() {
-        return id;
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 }

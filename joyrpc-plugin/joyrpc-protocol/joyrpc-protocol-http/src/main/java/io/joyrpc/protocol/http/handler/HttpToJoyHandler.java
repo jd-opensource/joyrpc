@@ -93,12 +93,10 @@ public class HttpToJoyHandler implements ChannelHandler {
             // 根据路径调用插件
             String path = url.getAbsolutePath();
             int pos = path.indexOf('/', 1);
-            if (pos > 0) {
-                //获取插件
-                controller = HTTP_CONTROLLER.get(path.substring(0, pos));
-                if (controller != null) {
-                    return controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params);
-                }
+            //获取插件
+            controller = HTTP_CONTROLLER.get(pos > 0 ? path.substring(0, pos) : path);
+            if (controller != null) {
+                return controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params);
             }
             return defController.execute(ctx, message, url, params);
         } catch (Throwable e) {

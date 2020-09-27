@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http.message;
+package io.joyrpc.protocol.jsonrpc.controller;
 
 /*-
  * #%L
@@ -20,40 +20,12 @@ package io.joyrpc.protocol.http.message;
  * #L%
  */
 
+import io.joyrpc.extension.Extension;
+
 /**
- * JsonRpc应答
+ * JsonRpc调用处理，处理以/jsonrpc/开头的调用
  */
-public class JsonRpcError {
-    /**
-     * 错误代码
-     */
-    protected int code;
-    /**
-     * 错误信息
-     */
-    protected String message;
+@Extension("jsonrpc")
+public class JsonRpc0Controller extends JsonRpcController {
 
-    public JsonRpcError() {
-    }
-
-    public JsonRpcError(int code, String message) {
-        this.code = code;
-        this.message = message;
-    }
-
-    public int getCode() {
-        return code;
-    }
-
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
 }

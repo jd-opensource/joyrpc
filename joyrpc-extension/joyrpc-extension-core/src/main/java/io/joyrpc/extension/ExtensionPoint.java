@@ -57,6 +57,14 @@ public interface ExtensionPoint<T, M> {
     T getOrDefault(M name);
 
     /**
+     * 遍历名称，找到第一个扩展
+     *
+     * @param names 名称数组
+     * @return 匹配的第一个扩展
+     */
+    T get(M[] names);
+
+    /**
      * 选择一个实现
      *
      * @return 扩展实现

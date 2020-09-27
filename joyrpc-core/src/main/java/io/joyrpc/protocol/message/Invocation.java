@@ -20,12 +20,9 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.constants.Constants;
-import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.extension.URL;
 import io.joyrpc.util.*;
 
 import java.lang.reflect.InvocationTargetException;
@@ -35,12 +32,11 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiFunction;
+import java.util.Objects;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.constants.Constants.GENERIC_KEY;
 import static io.joyrpc.util.ClassUtils.*;
 import static io.joyrpc.util.GenericType.validate;
 
@@ -519,10 +515,10 @@ public class Invocation implements Call {
     /**
      * 获取扩展属性
      *
-     * @param key
-     * @param function
+     * @param key      键
+     * @param function 函数
      * @param <T>
-     * @return
+     * @return 值
      */
     public <T> T computeIfAbsent(final String key, final Function<String, T> function) {
         if (key == null) {
@@ -538,7 +534,7 @@ public class Invocation implements Call {
      * 移除扩展信息
      *
      * @param key 键
-     * @return
+     * @return 值
      */
     public Object removeAttachment(final String key) {
         return key == null || attachments == null ? null : attachments.remove(key);
@@ -576,7 +572,7 @@ public class Invocation implements Call {
     }
 
     public Parametric asParametric() {
-        return new MapParametric(attachments);
+        return new MapParametric<>(attachments);
     }
 
     @Override
@@ -599,110 +595,12 @@ public class Invocation implements Call {
     /**
      * 方法调用
      *
-     * @param target
-     * @throws InvocationTargetException
-     * @throws IllegalAccessException
+     * @param target 目标对象
+     * @throws InvocationTargetException 调用异常
+     * @throws IllegalAccessException    无效访问异常
      */
     public Object invoke(final Object target) throws InvocationTargetException, IllegalAccessException {
         return method.invoke(target, args);
-    }
-
-    /**
-     * 构建调用对象
-     *
-     * @param url        url
-     * @param parametric 参数
-     * @param supplier   异常提供者
-     * @return 调用对象
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws MethodOverloadException
-     */
-    public static Invocation build(final URL url, final Parametric parametric, final Supplier<LafException> supplier)
-            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        return build(url, parametric, null, supplier);
-    }
-
-    /**
-     * 构建调用对象
-     *
-     * @param url        url
-     * @param parametric 参数
-     * @param function   GrpcType函数
-     * @param supplier   异常提供者
-     * @return 调用对象
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws MethodOverloadException
-     */
-    public static Invocation build(final URL url, final Parametric parametric,
-                                   final BiFunction<Class<?>, Method, GrpcType> function,
-                                   final Supplier<LafException> supplier)
-            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        String path = url.getPath();
-        String[] parts = path == null ? new String[0] : StringUtils.split(path, '/');
-        String className;
-        String alias;
-        String methodName;
-        if (parts.length > 2) {
-            className = parts[0];
-            alias = parts[1];
-            methodName = parts[2];
-        } else if (parts.length == 2) {
-            className = parts[0];
-            methodName = parts[1];
-            alias = parametric.getString(ALIAS_OPTION);
-        } else {
-            throw supplier.get();
-        }
-        Class ifaceClass = forName(className);
-        //获取方法信息
-        Method method;
-        GrpcType grpcType = null;
-        if (function == null) {
-            method = getPublicMethod(ifaceClass, methodName);
-        } else {
-            //需要GrpcType信息
-            GrpcMethod grpcMethod = getPublicMethod(ifaceClass, methodName, function);
-            method = grpcMethod.getMethod();
-            grpcType = grpcMethod.getType();
-        }
-        GenericClass genericClass = ClassUtils.getGenericClass(ifaceClass);
-        GenericMethod genericMethod = genericClass.get(method);
-
-        Invocation invocation = new Invocation(className, alias == null ? "" : alias, methodName, genericMethod.getTypes()).
-                addAttachment(Constants.HIDDEN_KEY_TOKEN, parametric.getString(KEY_TOKEN)).
-                addAttachment(HIDDEN_KEY_APPID, parametric.getString(KEY_APPID)).
-                addAttachment(HIDDEN_KEY_APPNAME, parametric.getString(KEY_APPNAME)).
-                addAttachment(HIDDEN_KEY_APPINSID, parametric.getString(KEY_APPINSID));
-        invocation.setClazz(ifaceClass);
-        invocation.setMethod(method);
-        invocation.setGenericMethod(genericMethod);
-        invocation.setGenericTypes(genericMethod.getGenericTypes());
-        invocation.setGrpcType(grpcType);
-        //隐式传参
-        parametric.foreach((key, value) -> {
-            if (!key.isEmpty() && key.charAt(0) == Constants.HIDE_KEY_PREFIX) {
-                invocation.addAttachment(key, value);
-            }
-        });
-        return invocation;
-    }
-
-    /**
-     * 构建调用对象
-     *
-     * @param url      url
-     * @param headers  http头
-     * @param supplier 异常提供者
-     * @return
-     * @throws ClassNotFoundException
-     * @throws NoSuchMethodException
-     * @throws MethodOverloadException
-     */
-    public static Invocation build(final URL url, final Map<CharSequence, Object> headers, final Supplier<LafException> supplier)
-            throws ClassNotFoundException, NoSuchMethodException, MethodOverloadException {
-        return build(url, new MapParametric(headers), null, supplier);
     }
 
     @Override
@@ -716,24 +614,20 @@ public class Invocation implements Call {
 
         Invocation that = (Invocation) o;
 
-        if (className != null ? !className.equals(that.className) : that.className != null) {
+        if (!Objects.equals(className, that.className)) {
+            return false;
+        } else if (!Objects.equals(alias, that.alias)) {
+            return false;
+        } else if (!Objects.equals(methodName, that.methodName)) {
+            return false;
+        } else if (!Arrays.equals(argsType, that.argsType)) {
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
+            return false;
+        } else if (!Arrays.equals(args, that.args)) {
+            // Probably incorrect - comparing Object[] arrays with Arrays.equals
             return false;
         }
-        if (alias != null ? !alias.equals(that.alias) : that.alias != null) {
-            return false;
-        }
-        if (methodName != null ? !methodName.equals(that.methodName) : that.methodName != null) {
-            return false;
-        }
-        // Probably incorrect - comparing Object[] arrays with Arrays.equals
-        if (!Arrays.equals(argsType, that.argsType)) {
-            return false;
-        }
-        // Probably incorrect - comparing Object[] arrays with Arrays.equals
-        if (!Arrays.equals(args, that.args)) {
-            return false;
-        }
-        return attachments != null ? attachments.equals(that.attachments) : that.attachments == null;
+        return Objects.equals(attachments, that.attachments);
 
     }
 
@@ -760,4 +654,5 @@ public class Invocation implements Call {
         sb.append('}');
         return sb.toString();
     }
+
 }

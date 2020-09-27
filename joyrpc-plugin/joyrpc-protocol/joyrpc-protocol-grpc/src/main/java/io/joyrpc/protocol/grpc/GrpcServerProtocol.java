@@ -55,8 +55,6 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
 
     public static final String GRPC_NAME = "grpc";
 
-    public static final byte GRPC_NUMBER = 10;
-
     @Override
     public ChannelHandlerChain buildChain() {
         if (chain == null) {

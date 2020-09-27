@@ -20,7 +20,7 @@ package io.joyrpc.codec.compression;
  * #L%
  */
 
-import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
+import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.netty.buffer.ByteBufAllocator;
 import org.junit.Assert;

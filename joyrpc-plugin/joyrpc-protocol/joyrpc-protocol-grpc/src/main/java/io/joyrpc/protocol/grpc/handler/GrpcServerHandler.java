@@ -23,9 +23,8 @@ package io.joyrpc.protocol.grpc.handler;
 import io.grpc.internal.GrpcUtil;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.codec.serialization.Serializer;
-import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
-import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
+import io.joyrpc.codec.UnsafeByteArrayOutputStream;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
@@ -34,6 +33,7 @@ import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
 import io.joyrpc.protocol.grpc.Headers;
 import io.joyrpc.protocol.grpc.message.GrpcResponseMessage;
@@ -59,8 +59,6 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.SERIALIZATION_SELECTOR;
-import static io.joyrpc.constants.Constants.GRPC_TYPE_FUNCTION;
-import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.protocol.grpc.HeaderMapping.ACCEPT_ENCODING;
 
 /**
@@ -137,46 +135,25 @@ public class GrpcServerHandler extends AbstractHttpHandler {
         }
         URL url = URL.valueOf(path, "http");
         //消息头
-        MessageHeader header = new MessageHeader(serialization.getTypeId(), MsgType.BizReq.getType(), GRPC_NUMBER);
+        MessageHeader header = new MessageHeader(serialization.getTypeId(), MsgType.BizReq.getType(), (byte) Protocol.GRPC);
         header.setMsgId(message.getMsgId());
         header.setMsgType(MsgType.BizReq.getType());
-        header.setTimeout(getTimeout(parametric, GrpcUtil.TIMEOUT));
+        header.setTimeout(parametric.getTimeout(GrpcUtil.TIMEOUT, Constants.TIMEOUT_OPTION.getValue()));
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), message.getStreamId());
         header.addAttribute(ACCEPT_ENCODING.getNum(), parametric.getString(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
         //构造invocation
-        Invocation invocation = Invocation.build(url, parametric, GRPC_TYPE_FUNCTION, EXCEPTION_SUPPLIER);
-        //获取 grpcType
-        GrpcType grpcType = invocation.getGrpcType();
-        //构造消息输入流
-        UnsafeByteArrayInputStream in = new UnsafeByteArrayInputStream(message.content());
-        int compressed = in.read();
-        if (in.skip(4) < 4) {
-            throw new IOException(String.format("request data is not full. id=%d", message.getMsgId()));
-        }
-        Object[] args;
-        ClassWrapper wrapper = grpcType.getRequest();
-        //如果方法没有参数，则返回null
-        if (wrapper != null) {
-            //获取反序列化插件
-            Serializer serializer = getSerialization(parametric, GrpcUtil.CONTENT_ENCODING, serialization).getSerializer();
-            //获取压缩类型
-            Compression compression = compressed == 0 ? null : getCompression(parametric, GrpcUtil.MESSAGE_ENCODING);
-            //反序列化
-            Object target = serializer.deserialize(compression == null ? in : compression.decompress(in), wrapper.getClazz());
-            //isWrapper为true，为包装对象，遍历每个field，逐个取值赋值给args数组，否则，直接赋值args[0]
-            if (wrapper.isWrapper()) {
-                args = wrapper.getConversion().getToParameter().apply(target);
-            } else {
-                args = new Object[]{target};
-            }
-        } else {
-            args = new Object[0];
-        }
-        invocation.setArgs(args);
+        Invocation invocation = new GrpcDecoder()
+                .url(url)
+                .header(parametric)
+                .messageId(header.getMsgId())
+                .body(message.content())
+                .serialization(serialization)
+                .error(EXCEPTION_SUPPLIER)
+                .build();
         RequestMessage<Invocation> reqMessage = RequestMessage.build(header, invocation, channel, parametric, receiveTime);
         reqMessage.setResponseSupplier(() -> {
             MessageHeader respHeader = header.response(MsgType.BizResp.getType(), Compression.NONE, header.getAttributes());
-            return new GrpcResponseMessage<>(respHeader, grpcType);
+            return new GrpcResponseMessage<>(respHeader, invocation.getGrpcType());
         });
         return reqMessage;
     }
@@ -218,7 +195,7 @@ public class GrpcServerHandler extends AbstractHttpHandler {
             //复用缓冲区
             baos.reset();
             baos.write(new byte[]{1, 0, 0, 0, 0});
-            content = compress(pair.getValue(), baos, content, 5, content.length - 5);
+            content = pair.getValue().compress(baos, content, 5, content.length - 5);
             headers.set(GrpcUtil.MESSAGE_ENCODING, pair.getKey());
         }
         //设置数据长度

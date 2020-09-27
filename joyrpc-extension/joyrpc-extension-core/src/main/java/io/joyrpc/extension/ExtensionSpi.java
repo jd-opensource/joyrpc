@@ -121,6 +121,20 @@ public class ExtensionSpi<T, M> implements ExtensionPoint<T, M> {
     }
 
     @Override
+    public T get(final M[] names) {
+        if (names != null) {
+            T result;
+            for (M name : names) {
+                result = get(name);
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
     public T get() {
         if (target == null && !metas.isEmpty()) {
             ExtensionMeta<T, M> meta = metas.get(0);

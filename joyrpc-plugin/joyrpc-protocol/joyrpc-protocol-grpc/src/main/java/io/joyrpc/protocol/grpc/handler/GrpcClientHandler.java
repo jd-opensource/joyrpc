@@ -25,13 +25,14 @@ import io.grpc.Status.Code;
 import io.grpc.internal.GrpcUtil;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.codec.serialization.UnsafeByteArrayInputStream;
-import io.joyrpc.codec.serialization.UnsafeByteArrayOutputStream;
+import io.joyrpc.codec.UnsafeByteArrayInputStream;
+import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.protocol.AbstractHttpHandler;
 import io.joyrpc.protocol.MsgType;
+import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
 import io.joyrpc.protocol.grpc.exception.GrpcBizException;
 import io.joyrpc.protocol.message.*;
@@ -47,7 +48,6 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.GrpcType.ClassWrapper;
-import io.joyrpc.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +59,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.protocol.grpc.GrpcServerProtocol.GRPC_NUMBER;
 import static io.joyrpc.transport.http.HttpHeaders.Values.GZIP;
 
 /**
@@ -86,7 +85,7 @@ public class GrpcClientHandler extends AbstractHttpHandler {
                 return input(ctx.getChannel(), response);
             } catch (Throwable e) {
                 logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
-                MessageHeader header = new MessageHeader((byte) Serialization.PROTOBUF_ID, MsgType.BizReq.getType(), GRPC_NUMBER);
+                MessageHeader header = new MessageHeader((byte) Serialization.PROTOBUF_ID, MsgType.BizReq.getType(), (byte) Protocol.GRPC);
                 header.setMsgId(response.getMsgId());
                 header.addAttribute(HeaderMapping.STREAM_ID.getNum(), response.getStreamId());
                 throw new RpcException(header, e);
@@ -126,7 +125,7 @@ public class GrpcClientHandler extends AbstractHttpHandler {
         if (http2Msg == null) {
             return null;
         }
-        MessageHeader header = new MessageHeader(serialization.getTypeId(), MsgType.BizResp.getType(), GRPC_NUMBER);
+        MessageHeader header = new MessageHeader(serialization.getTypeId(), MsgType.BizResp.getType(), (byte) Protocol.GRPC);
         header.setMsgId(http2Msg.getMsgId());
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), http2Msg.getStreamId());
         ResponsePayload payload;
@@ -166,9 +165,9 @@ public class GrpcClientHandler extends AbstractHttpHandler {
         }
         //解压处理
         if (isCompression > 0) {
-            Pair<String, Compression> pair = getEncoding((String) headers.get(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
-            if (pair != null) {
-                in = pair.getValue().decompress(in);
+            Compression compression = getEncoding((String) headers.get(GrpcUtil.MESSAGE_ACCEPT_ENCODING));
+            if (compression != null) {
+                in = compression.decompress(in);
             }
         }
         //反序列化
@@ -246,7 +245,7 @@ public class GrpcClientHandler extends AbstractHttpHandler {
                 //复用内存缓冲区
                 baos.reset();
                 baos.write(new byte[]{1, 0, 0, 0, 0});
-                content = compress(compression, baos, content, 5, content.length - 5);
+                content = compression.compress(baos, content, 5, content.length - 5);
                 headers.set(GrpcUtil.MESSAGE_ENCODING, compression.getTypeName());
             }
         }

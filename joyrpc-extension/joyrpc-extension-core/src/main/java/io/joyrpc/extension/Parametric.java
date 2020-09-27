@@ -702,6 +702,56 @@ public interface Parametric {
     Byte getPositiveByte(URLBiOption<Byte> option);
 
     /**
+     * 获取超时时间
+     *
+     * @param option 选项
+     * @return 超时时间
+     */
+    default Integer getTimeout(final URLOption<Integer> option) {
+        return getTimeout(option.getName(), option.getValue());
+    }
+
+    /**
+     * 获取超时时间
+     *
+     * @param key 键
+     * @param def 默认值
+     * @return 超时时间
+     */
+    default Integer getTimeout(final String key, final Integer def) {
+        String value = getString(key);
+        int timeout = 0;
+        if (value != null && !value.isEmpty()) {
+            //兼容grpc-time格式
+            try {
+                int last = value.length() - 1;
+                switch (value.charAt(last)) {
+                    case 'H':
+                        timeout = Integer.parseInt(value.substring(0, last)) * 3600 * 1000;
+                        break;
+                    case 'M':
+                        timeout = Integer.parseInt(value.substring(0, last)) * 60 * 1000;
+                        break;
+                    case 'S':
+                        timeout = Integer.parseInt(value.substring(0, last)) * 1000;
+                        break;
+                    case 'm':
+                        timeout = Integer.parseInt(value.substring(0, last));
+                        break;
+                    case 'u':
+                        break;
+                    case 'n':
+                        break;
+                    default:
+                        timeout = Integer.parseInt(value);
+                }
+            } catch (NumberFormatException e) {
+            }
+        }
+        return timeout <= 0 ? def : timeout;
+    }
+
+    /**
      * 迭代消费
      *
      * @param consumer

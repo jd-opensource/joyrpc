@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http;
+package io.joyrpc.protocol.http.controller;
 
 /*-
  * #%L
@@ -20,26 +20,12 @@ package io.joyrpc.protocol.http;
  * #L%
  */
 
-import io.joyrpc.extension.ExtensionPoint;
-import io.joyrpc.extension.ExtensionPointLazy;
+import io.joyrpc.extension.Extension;
 
 /**
- * 扩展点
+ * JsonRpc调用处理，处理以/jsonrpc/开头的调用
  */
-public interface Plugin {
+@Extension("jsonrpc")
+public class JsonRpc0Controller extends JsonRpcController {
 
-    /**
-     * URL参数绑定
-     */
-    ExtensionPoint<URLBinding, String> URL_BINDING = new ExtensionPointLazy<>(URLBinding.class);
-
-    /**
-     * http控制器
-     */
-    ExtensionPoint<HttpController, String> HTTP_CONTROLLER = new ExtensionPointLazy<>(HttpController.class);
-
-    /**
-     * 内容控制器
-     */
-    ExtensionPoint<ContentTypeHandler, String> CONTENT_TYPE_HANDLER = new ExtensionPointLazy<>(ContentTypeHandler.class);
 }

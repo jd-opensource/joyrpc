@@ -1,4 +1,4 @@
-package io.joyrpc.codec.serialization;
+package io.joyrpc.codec;
 
 /*-
  * #%L

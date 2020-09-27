@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.http;
+package io.joyrpc.protocol.http.message;
 
 /*-
  * #%L
@@ -20,26 +20,40 @@ package io.joyrpc.protocol.http;
  * #L%
  */
 
-import io.joyrpc.extension.ExtensionPoint;
-import io.joyrpc.extension.ExtensionPointLazy;
-
 /**
- * 扩展点
+ * JsonRpc应答
  */
-public interface Plugin {
-
+public class JsonRpcError {
     /**
-     * URL参数绑定
+     * 错误代码
      */
-    ExtensionPoint<URLBinding, String> URL_BINDING = new ExtensionPointLazy<>(URLBinding.class);
-
+    protected int code;
     /**
-     * http控制器
+     * 错误信息
      */
-    ExtensionPoint<HttpController, String> HTTP_CONTROLLER = new ExtensionPointLazy<>(HttpController.class);
+    protected String message;
 
-    /**
-     * 内容控制器
-     */
-    ExtensionPoint<ContentTypeHandler, String> CONTENT_TYPE_HANDLER = new ExtensionPointLazy<>(ContentTypeHandler.class);
+    public JsonRpcError() {
+    }
+
+    public JsonRpcError(int code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public void setCode(int code) {
+        this.code = code;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
 }

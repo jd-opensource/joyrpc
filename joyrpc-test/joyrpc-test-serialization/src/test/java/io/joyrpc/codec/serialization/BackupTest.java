@@ -22,6 +22,8 @@ package io.joyrpc.codec.serialization;
 
 import io.joyrpc.cluster.discovery.backup.BackupDatum;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
+import io.joyrpc.codec.UnsafeByteArrayInputStream;
+import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import org.junit.Assert;
 import org.junit.Test;
 

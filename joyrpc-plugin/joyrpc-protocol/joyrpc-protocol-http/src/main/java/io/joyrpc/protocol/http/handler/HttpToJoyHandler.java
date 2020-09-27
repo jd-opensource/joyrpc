@@ -20,45 +20,27 @@ package io.joyrpc.protocol.http.handler;
  * #L%
  */
 
-import io.joyrpc.codec.compression.Compression;
-import io.joyrpc.codec.serialization.GenericSerializer;
-import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.constants.Constants;
-import io.joyrpc.exception.CodecException;
-import io.joyrpc.exception.LafException;
-import io.joyrpc.extension.MapParametric;
-import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.AbstractHttpHandler;
-import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.http.HeaderMapping;
 import io.joyrpc.protocol.http.HttpController;
-import io.joyrpc.protocol.http.URLBinding;
-import io.joyrpc.protocol.message.*;
+import io.joyrpc.protocol.http.controller.DefaultHttpController;
+import io.joyrpc.protocol.message.ResponseMessage;
+import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.http.HttpHeaders;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http.HttpRequestMessage;
-import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
-import java.net.URLDecoder;
-import java.util.*;
-import java.util.function.Supplier;
+import java.util.LinkedList;
+import java.util.List;
 
-import static io.joyrpc.Plugin.GENERIC_SERIALIZER;
-import static io.joyrpc.codec.serialization.GenericSerializer.JSON;
-import static io.joyrpc.protocol.http.HeaderMapping.ACCEPT_ENCODING;
 import static io.joyrpc.protocol.http.HeaderMapping.KEEP_ALIVE;
+import static io.joyrpc.protocol.http.Plugin.CONTENT_TYPE_HANDLER;
 import static io.joyrpc.protocol.http.Plugin.HTTP_CONTROLLER;
-import static io.joyrpc.protocol.http.Plugin.URL_BINDING;
-import static io.joyrpc.transport.http.HttpHeaders.Names.CONTENT_LENGTH;
 
 /**
  * HTTP转换成joy
@@ -67,24 +49,13 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(HttpToJoyHandler.class);
 
-    public static final byte PROTOCOL_NUMBER = 9;
-
-    public static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(
-            "HTTP uri format: http://ip:port/interfaceClazz/methodName with alias header. " +
-                    "or http://ip:port/interfaceClazz/alias/methodName");
     /**
      * 默认序列化器
      */
-    protected GenericSerializer defSerializer;
-    /**
-     * 数据绑定
-     */
-    protected URLBinding binding;
+    protected HttpController defController;
 
     public HttpToJoyHandler() {
-        defSerializer = GENERIC_SERIALIZER.get(JSON);
-        binding = URL_BINDING.get();
-        binding = binding == null ? this::convert : binding;
+        defController = new DefaultHttpController();
     }
 
     @Override
@@ -113,17 +84,23 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
             List<String> params = new LinkedList<>();
             String host = (String) message.headers().get(HttpHeaders.Names.HOST);
             URL url = URL.valueOf(host + uri, "http", params);
+            // 根据协议调用插件
+            String contentType = (String) message.headers().get(HttpHeaders.Names.CONTENT_TYPE);
+            HttpController controller = contentType == null || contentType.isEmpty() ? null : CONTENT_TYPE_HANDLER.get(contentType);
+            if (controller != null) {
+                return controller.execute(ctx, message, url, params);
+            }
+            // 根据路径调用插件
             String path = url.getAbsolutePath();
             int pos = path.indexOf('/', 1);
             if (pos > 0) {
-                path = path.substring(0, pos);
                 //获取插件
-                HttpController controller = HTTP_CONTROLLER.get(path);
+                controller = HTTP_CONTROLLER.get(path.substring(0, pos));
                 if (controller != null) {
-                    return controller.execute(ctx, message, url, params);
+                    return controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params);
                 }
             }
-            return execute(ctx, message, url, params);
+            return defController.execute(ctx, message, url, params);
         } catch (Throwable e) {
             // 解析请求body
             logger.error(String.format("Error occurs while parsing http request for uri %s from %s", uri, Channel.toString(ctx.getChannel().getRemoteAddress())), e);
@@ -136,148 +113,6 @@ public class HttpToJoyHandler extends AbstractHttpHandler {
     @Override
     public Logger getLogger() {
         return logger;
-    }
-
-    /**
-     * 上下文
-     *
-     * @param ctx     上下文
-     * @param message 消息
-     * @param url     url
-     * @param params  参数名称
-     * @return 返回对象
-     * @throws Exception 异常
-     */
-    protected Object execute(final ChannelContext ctx, final HttpRequestMessage message,
-                             final URL url, final List<String> params) throws Exception {
-        Map<CharSequence, Object> headerMap = message.headers().getAll();
-        Parametric parametric = new MapParametric(headerMap);
-        Invocation invocation = Invocation.build(url, headerMap, EXCEPTION_SUPPLIER);
-        invocation.setArgs(parseArgs(invocation, message, parametric, url, params));
-
-        // 构建joy请求
-        MessageHeader header = createHeader();
-        header.setLength(parametric.getPositive(CONTENT_LENGTH, (Integer) null));
-        header.addAttribute(KEEP_ALIVE.getNum(), message.headers().isKeepAlive());
-        header.addAttribute(ACCEPT_ENCODING.getNum(), parametric.getString(HttpHeaders.Names.ACCEPT_ENCODING));
-        header.setTimeout(getTimeout(parametric, Constants.TIMEOUT_OPTION.getName()));
-        // 解析远程地址
-        return RequestMessage.build(header, invocation, ctx.getChannel(), parametric, SystemClock.now());
-    }
-
-    /**
-     * 创建请求消息头
-     *
-     * @return 消息头
-     */
-    protected MessageHeader createHeader() {
-        return new MessageHeader(MsgType.BizReq.getType(), (byte) Serialization.JSON_ID, PROTOCOL_NUMBER);
-    }
-
-    /**
-     * 解析参数
-     *
-     * @param invocation 请求
-     * @param message    消息
-     * @param parametric 参数化
-     * @param url        url
-     * @param params     参数名
-     * @return 参数值对象
-     */
-    protected Object[] parseArgs(final Invocation invocation,
-                                 final HttpRequestMessage message,
-                                 final Parametric parametric,
-                                 final URL url,
-                                 final List<String> params) throws IOException {
-        Method method = invocation.getMethod();
-        Parameter[] parameters = method.getParameters();
-        if (parameters.length == 0) {
-            return new Object[0];
-        }
-        Object[] args;
-        //判断是否有参数名称
-        boolean hasName = parameters[0].isNamePresent();
-        HttpMethod reqMethod = message.getHttpMethod();
-        if (reqMethod != HttpMethod.GET) {
-            //获取压缩
-            Compression compression = getCompression(parametric, HttpHeaders.Names.CONTENT_ENCODING);
-            //解压缩
-            byte[] content = decompress(compression, message.content());
-            //构造泛化调用参数
-            invocation.setArgs(new Object[]{invocation.getMethodName(), null, new Object[]{content}});
-            //反序列化
-            args = defSerializer.deserialize(invocation);
-        } else if (params.size() < parameters.length) {
-            throw new CodecException("The number of parameter is wrong.");
-        } else {
-            args = new Object[parameters.length];
-            //和老版本兼容，历史原因问题，可能请求的参数和名称不一致，只有一致的情况下才按照名称获取
-            boolean match = hasName && isMatch(params, parameters);
-            String name;
-            Parameter parameter;
-            for (int i = 0; i < parameters.length; i++) {
-                parameter = parameters[i];
-                name = match ? parameter.getName() : params.get(i);
-                args[i] = binding.convert(invocation.getClass(), method, parameter, i, url.getString(name));
-            }
-        }
-        return args;
-    }
-
-    /**
-     * 判断参数名称是否一样
-     *
-     * @param params     参数
-     * @param parameters 参数
-     * @return 匹配标识
-     */
-    protected boolean isMatch(final List<String> params, final Parameter[] parameters) {
-        Set<String> set = new HashSet<>(params);
-        for (Parameter parameter : parameters) {
-            if (!set.contains(parameter.getName())) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * 把字符串转换成参数类型
-     *
-     * @param clazz     类型
-     * @param method    方法
-     * @param parameter 参数类型
-     * @param index     参数索引
-     * @param value     字符串
-     * @return 目标参数对象
-     */
-    protected Object convert(final Class<?> clazz, final Method method, final Parameter parameter, final int index, final String value) {
-        Class<?> type = parameter.getType();
-        if (String.class.equals(type)) {
-            try {
-                return URLDecoder.decode(value, "UTF-8");
-            } catch (UnsupportedEncodingException e) {
-                return value;
-            }
-        } else if (boolean.class.equals(type) || Boolean.class.equals(type)) {
-            return Boolean.parseBoolean(value);
-        } else if (byte.class.equals(type) || Byte.class.equals(type)) {
-            return Byte.decode(value);
-        } else if (short.class.equals(type) || Short.class.equals(type)) {
-            return Short.decode(value);
-        } else if (char.class.equals(type) || Character.class.equals(type)) {
-            return value.charAt(0);
-        } else if (int.class.equals(type) || Integer.class.equals(type)) {
-            return Integer.decode(value);
-        } else if (long.class.equals(type) || Long.class.equals(type)) {
-            return Long.decode(value);
-        } else if (float.class.equals(type) || Float.class.equals(type)) {
-            return Float.valueOf(value);
-        } else if (double.class.equals(type) || Double.class.equals(type)) {
-            return Double.valueOf(value);
-        } else {
-            throw new UnsupportedOperationException();
-        }
     }
 
     /**

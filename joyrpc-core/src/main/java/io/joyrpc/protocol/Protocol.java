@@ -48,6 +48,10 @@ public interface Protocol {
      * GRPC
      */
     int GRPC = 10;
+    /**
+     * Json Rpc
+     */
+    int JSON_RPC = 11;
 
     /**
      * Joy插件顺序

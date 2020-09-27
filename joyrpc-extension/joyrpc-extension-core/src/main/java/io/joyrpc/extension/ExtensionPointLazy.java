@@ -93,6 +93,11 @@ public class ExtensionPointLazy<T, M> implements ExtensionPoint<T, M> {
     }
 
     @Override
+    public T get(M[] names) {
+        return getDelegate().get(names);
+    }
+
+    @Override
     public T get() {
         return getDelegate().get();
     }

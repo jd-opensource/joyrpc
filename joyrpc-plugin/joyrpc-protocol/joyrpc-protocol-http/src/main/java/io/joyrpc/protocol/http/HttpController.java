@@ -44,4 +44,13 @@ public interface HttpController {
      * @throws Exception 异常
      */
     Object execute(ChannelContext ctx, HttpRequestMessage message, URL url, List<String> params) throws Exception;
+
+    /**
+     * 保持相对路径
+     *
+     * @return 保持相对路径标识
+     */
+    default boolean relativePath() {
+        return true;
+    }
 }

@@ -196,7 +196,7 @@ public class DefaultHttpController implements HttpController {
                     //获取压缩
                     Compression compression = getCompression(HttpHeaders.Names.CONTENT_ENCODING);
                     //解压缩
-                    byte[] content = compression.decompress(body);
+                    byte[] content = compression == null ? body : compression.decompress(body);
                     //构造泛化调用参数
                     invocation.setArgs(new Object[]{invocation.getMethodName(), null, new Object[]{content}});
                     //反序列化

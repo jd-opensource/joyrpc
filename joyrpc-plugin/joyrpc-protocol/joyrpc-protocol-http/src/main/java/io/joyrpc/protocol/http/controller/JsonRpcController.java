@@ -157,7 +157,7 @@ public class JsonRpcController implements ContentTypeHandler {
             //获取压缩
             Compression compression = getCompression(Names.CONTENT_ENCODING);
             //解压缩
-            byte[] content = compression.decompress(body);
+            byte[] content = compression == null ? body : compression.decompress(body);
             //反序列化
             request = JSON.get().parseObject(new UnsafeByteArrayInputStream(content), JsonRpcRequest.class);
             methodName = request.getMethod();
@@ -185,6 +185,19 @@ public class JsonRpcController implements ContentTypeHandler {
                 for (Parameter parameter : parameters) {
                     args[i] = map.get(parameter.getName());
                     i++;
+                }
+                invocation.setArgs(new Object[]{null, null, args});
+                invocation.setArgs(serializer.deserialize(invocation));
+            } else if (params instanceof List) {
+                //集合
+                List<?> objects = (List<?>) params;
+                int len = objects.size();
+                if (len != parameters.length) {
+                    throw new CodecException("Invalid Request", "-32600");
+                }
+                int i = 0;
+                for (Object obj : objects) {
+                    args[i++] = obj;
                 }
                 invocation.setArgs(new Object[]{null, null, args});
                 invocation.setArgs(serializer.deserialize(invocation));

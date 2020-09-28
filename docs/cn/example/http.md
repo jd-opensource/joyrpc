@@ -30,21 +30,42 @@ POST/PUT
 
 ### 2.2 URL格式：
 
-可以采用如下两种格式
+可以采用如下四种格式
 - http://ip:port/interface
-
-  alias通过header传递
+  
+  | Header参数 | 参数值 | 说明 |
+  | :--: | :--: | :--: |
+  | alias | | 分组别名 |
+  | Content-Type| application/json-rpc | |
 
 - http://ip:port/interface/alias
+  
+  | Header参数 | 参数值 | 说明 |
+  | :--: | :--: | :--: |
+  | Content-Type| application/json-rpc | |
+
+- http://ip:port/jsonrpc/interface/alias
+
+- http://ip:port/jsonrpc/interface
+
+  | Header参数 | 参数值 | 说明 |
+  | :--: | :--: | :--: |
+  | alias | | 分组别名 |
 
 ### 2.3 BODY参数
 
-仅支持单条json-rpc调用，不支持批量调用
+仅支持单条json-rpc调用，不支持批量调用，如下：
+
+```json
+{"jsonrpc": "2.0", "method": "sum", "params": [1,2,4], "id": "1"}
+```
 
 ## 3. Header传参
 
 提供了HeaderInjection扩展点，系统内置了默认实现，支持如下传参
 
-1. header中以"."开头的隐式参数
-2. header中以"X-HIDDEN-"开头的隐式参数
-3. header中以"X-TRANS-"开头的普通参数
+| 参数 | 说明 |
+| :--: | :--: |
+| "."开头 | 隐式参数 |
+| "X-HIDDEN-"开头 | 隐式参数 |
+| "X-TRANS-"开头 | 普通参数 |

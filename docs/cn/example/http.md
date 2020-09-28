@@ -14,7 +14,9 @@ POST/PUT
 - http://ip:port/interface/alias/method
 - http://ip:port/interface/method
 
-  alias通过http header传递
+  | Header参数 | 参数值 | 说明 |
+  | :---- | :---- | :---- |
+  | alias | | 分组别名 |
 
 ### 1.3 BODY参数
 

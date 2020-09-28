@@ -64,10 +64,20 @@ POST/PUT
 
 ## 3. Header传参
 
-提供了HeaderInjection扩展点，系统内置了默认实现，支持如下传参
+提供了HeaderInjection扩展点
+系统内置了默认实现，支持如下传参
 
 | 参数 | 说明 |
 | :---- | :---- | 
 | "."开头 | 隐式参数 |
 | "X-HIDDEN-"开头 | 隐式参数 |
 | "X-TRANS-"开头 | 普通参数 |
+
+默认实现会加载类路径下的所有"META-INF/system_http_header"，以及类路径下的"system_http_header"文件，配置样例如下：
+
+```properties
+.*=.*
+X-HIDDEN-*=.*
+X-TRANS-*=*
+TEST=TEST
+```

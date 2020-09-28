@@ -20,11 +20,18 @@ package io.joyrpc.protocol.http.injection;
  * #L%
  */
 
-import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.protocol.http.HeaderInjection;
 import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.util.Resource;
+import io.joyrpc.util.Resource.Definition;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Function;
+
+import static io.joyrpc.util.StringUtils.split;
 
 
 /**
@@ -33,24 +40,90 @@ import io.joyrpc.protocol.message.Invocation;
 @Extension("default")
 public class DefaultHeaderInjection implements HeaderInjection {
 
-    public static final String X_HIDDEN_PREFIX = "X-HIDDEN-";
-    public static final String X_TRANS_PREFIX = "X-TRANS-";
+    protected List<Function<String, String>> pattens = new ArrayList<>(15);
+
+    public DefaultHeaderInjection() {
+        List<String> lines = Resource.lines(new Definition[]{
+                new Definition("META-INF/system_http_header", true),
+                new Definition("system_http_header")
+        }, true);
+        String[] parts;
+        for (String line : lines) {
+            parts = split(line, '=');
+            if (parts.length == 2) {
+                if (parts[0].endsWith("*")) {
+                    pattens.add(new PrefixKey(parts[0].substring(0, parts[0].length() - 1), parts[1]));
+                } else {
+                    pattens.add(new EqualKey(parts[0], parts[1]));
+                }
+            } else {
+                pattens.add(new EqualKey(parts[0], parts[0]));
+            }
+        }
+    }
 
     @Override
     public void inject(final Invocation invocation, final Parametric header) {
         header.foreach((key, value) -> {
-            if (!key.isEmpty()) {
-                if (key.charAt(0) == Constants.HIDE_KEY_PREFIX) {
-                    //hidden
-                    invocation.addAttachment(key, value);
-                } else if (key.startsWith(X_HIDDEN_PREFIX)) {
-                    //hidden
-                    invocation.addAttachment("." + key.substring(X_HIDDEN_PREFIX.length()), value);
-                } else if (key.startsWith(X_TRANS_PREFIX)) {
-                    //normal
-                    invocation.addAttachment(key.substring(X_TRANS_PREFIX.length()), value);
+            if (!key.isEmpty() && !pattens.isEmpty()) {
+                String v;
+                for (Function<String, String> patten : pattens) {
+                    v = patten.apply(key);
+                    if (v != null && !v.isEmpty()) {
+                        invocation.addAttachment(v, value);
+                        break;
+                    }
                 }
             }
         });
     }
+
+    /**
+     * 前缀匹配
+     */
+    protected static class PrefixKey implements Function<String, String> {
+        /**
+         * 前缀
+         */
+        protected String prefix;
+        /**
+         * 替换
+         */
+        protected String replace;
+
+        public PrefixKey(String prefix, String replace) {
+            this.prefix = prefix;
+            this.replace = replace;
+        }
+
+        @Override
+        public String apply(String s) {
+            return s.startsWith(prefix) ? replace.replace("*", s.substring(prefix.length())) : null;
+        }
+    }
+
+    /**
+     * 键匹配
+     */
+    protected static class EqualKey implements Function<String, String> {
+        /**
+         * 键
+         */
+        protected String key;
+        /**
+         * 替换
+         */
+        protected String replace;
+
+        public EqualKey(String key, String replace) {
+            this.key = key;
+            this.replace = replace;
+        }
+
+        @Override
+        public String apply(String s) {
+            return key.equals(s) ? replace : null;
+        }
+    }
+
 }

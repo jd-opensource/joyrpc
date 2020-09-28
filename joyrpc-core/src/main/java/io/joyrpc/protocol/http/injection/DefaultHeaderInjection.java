@@ -40,7 +40,8 @@ import static io.joyrpc.util.StringUtils.split;
 @Extension("default")
 public class DefaultHeaderInjection implements HeaderInjection {
 
-    protected List<Function<String, String>> pattens = new ArrayList<>(15);
+    protected List<PrefixKey> prefixKeys = new ArrayList<>(5);
+    protected List<EqualKey> equalKeys = new ArrayList<>(15);
 
     public DefaultHeaderInjection() {
         List<String> lines = Resource.lines(new Definition[]{
@@ -52,25 +53,34 @@ public class DefaultHeaderInjection implements HeaderInjection {
             parts = split(line, '=');
             if (parts.length == 2) {
                 if (parts[0].endsWith("*")) {
-                    pattens.add(new PrefixKey(parts[0].substring(0, parts[0].length() - 1), parts[1]));
+                    prefixKeys.add(new PrefixKey(parts[0].substring(0, parts[0].length() - 1), parts[1]));
                 } else {
-                    pattens.add(new EqualKey(parts[0], parts[1]));
+                    equalKeys.add(new EqualKey(parts[0], parts[1]));
                 }
             } else {
-                pattens.add(new EqualKey(parts[0], parts[0]));
+                equalKeys.add(new EqualKey(parts[0], parts[0]));
             }
         }
     }
 
     @Override
     public void inject(final Invocation invocation, final Parametric header) {
+        if (!equalKeys.isEmpty()) {
+            String value;
+            for (EqualKey equalKey : equalKeys) {
+                value = header.getString(equalKey.key);
+                if (value != null && !value.isEmpty()) {
+                    invocation.addAttachment(equalKey.replace, value);
+                }
+            }
+        }
         header.foreach((key, value) -> {
-            if (!key.isEmpty() && !pattens.isEmpty()) {
-                String v;
-                for (Function<String, String> patten : pattens) {
-                    v = patten.apply(key);
-                    if (v != null && !v.isEmpty()) {
-                        invocation.addAttachment(v, value);
+            if (!key.isEmpty() && !prefixKeys.isEmpty()) {
+                String replace;
+                for (PrefixKey prefixKey : prefixKeys) {
+                    replace = prefixKey.apply(key);
+                    if (replace != null && !replace.isEmpty()) {
+                        invocation.addAttachment(replace, value);
                         break;
                     }
                 }

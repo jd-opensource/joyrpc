@@ -34,14 +34,14 @@ POST/PUT
 - http://ip:port/interface
   
   | Header参数 | 参数值 | 说明 |
-  | :--: | :--: | :--: |
+  | :---- | :---- | :---- |
   | alias | | 分组别名 |
   | Content-Type| application/json-rpc | |
 
 - http://ip:port/interface/alias
   
   | Header参数 | 参数值 | 说明 |
-  | :--: | :--: | :--: |
+  | :---- | :---- | :---- |
   | Content-Type| application/json-rpc | |
 
 - http://ip:port/jsonrpc/interface/alias
@@ -49,7 +49,7 @@ POST/PUT
 - http://ip:port/jsonrpc/interface
 
   | Header参数 | 参数值 | 说明 |
-  | :--: | :--: | :--: |
+  | :---- | :---- | :---- |
   | alias | | 分组别名 |
 
 ### 2.3 BODY参数
@@ -65,7 +65,7 @@ POST/PUT
 提供了HeaderInjection扩展点，系统内置了默认实现，支持如下传参
 
 | 参数 | 说明 |
-| :--: | :--: |
+| :---- | :---- | 
 | "."开头 | 隐式参数 |
 | "X-HIDDEN-"开头 | 隐式参数 |
 | "X-TRANS-"开头 | 普通参数 |

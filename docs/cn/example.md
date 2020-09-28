@@ -22,3 +22,4 @@
 19. [分布式跟踪](./example/trace.md)
 20. [熔断限流](./example/circuitBreaker.md)
 21. [序列化白名单](./example/serialization_whitelist.md)
+22. [HTTP调用](./example/http.md)

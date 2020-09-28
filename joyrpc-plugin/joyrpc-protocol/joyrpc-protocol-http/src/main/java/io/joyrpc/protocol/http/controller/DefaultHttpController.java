@@ -30,7 +30,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.protocol.AbstractHttpDecoder;
+import io.joyrpc.protocol.http.AbstractHttpDecoder;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.http.HttpController;

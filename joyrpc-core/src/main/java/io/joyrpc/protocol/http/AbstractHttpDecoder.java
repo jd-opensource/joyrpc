@@ -1,4 +1,4 @@
-package io.joyrpc.protocol;
+package io.joyrpc.protocol.http;
 /*-
  * #%L
  * joyrpc
@@ -33,8 +33,7 @@ import io.joyrpc.util.StringUtils;
 import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
-import static io.joyrpc.Plugin.COMPRESSION;
-import static io.joyrpc.Plugin.SERIALIZATION;
+import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.util.ClassUtils.*;
 
@@ -116,6 +115,14 @@ public class AbstractHttpDecoder {
         return this;
     }
 
+    protected String[] getPaths() {
+        if (paths == null) {
+            String path = url.getPath();
+            paths = path == null ? new String[0] : StringUtils.split(path, '/');
+        }
+        return paths;
+    }
+
     /**
      * 获取压缩
      *
@@ -168,12 +175,8 @@ public class AbstractHttpDecoder {
         invocation.setGenericMethod(genericMethod);
         invocation.setGenericTypes(genericMethod.getGenericTypes());
         build(invocation);
-        //隐式传参
-        header.foreach((key, value) -> {
-            if (!key.isEmpty() && key.charAt(0) == Constants.HIDE_KEY_PREFIX) {
-                invocation.addAttachment(key, value);
-            }
-        });
+        //注入参数
+        HEADER_INJECTION.extensions().forEach(o -> o.inject(invocation, header));
         parseArg(invocation);
         return invocation;
     }
@@ -201,10 +204,7 @@ public class AbstractHttpDecoder {
      * @throws Exception 异常
      */
     protected void parse() throws Exception {
-        if (paths == null) {
-            String path = url.getPath();
-            paths = path == null ? new String[0] : StringUtils.split(path, '/');
-        }
+        String[] paths = getPaths();
         if (paths.length > 2) {
             className = paths[0];
             alias = paths[1];

@@ -4,7 +4,9 @@
 
 ### Enhancement
 
-- TODO 增加json-rpc 2.0协议支持
+- 增加json-rpc 2.0协议支持
+
+- http协议和grpc协议服务端增加http头参数注入插件，便于自定义参数注入
 
 ## 1.3.0-RELEASE(2020-09-21)
 

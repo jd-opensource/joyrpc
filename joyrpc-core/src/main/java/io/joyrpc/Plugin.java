@@ -65,6 +65,7 @@ import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.Protocol.ProtocolVersion;
 import io.joyrpc.protocol.ServerProtocol;
+import io.joyrpc.protocol.http.HeaderInjection;
 import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.ProxyFactory;
@@ -137,6 +138,11 @@ public interface Plugin {
      * 应答注入
      */
     ExtensionPoint<RespInjection, String> RESPONSE_INJECTION = new ExtensionPointLazy<>(RespInjection.class);
+
+    /**
+     * HTTP参数注入
+     */
+    ExtensionPoint<HeaderInjection, String> HEADER_INJECTION = new ExtensionPointLazy<>(HeaderInjection.class);
 
     /**
      * 配置

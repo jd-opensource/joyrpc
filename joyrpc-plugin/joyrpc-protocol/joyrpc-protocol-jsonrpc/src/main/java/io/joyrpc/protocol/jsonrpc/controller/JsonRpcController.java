@@ -33,7 +33,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.protocol.AbstractHttpDecoder;
+import io.joyrpc.protocol.http.AbstractHttpDecoder;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.http.ContentTypeHandler;
@@ -170,8 +170,16 @@ public class JsonRpcController implements ContentTypeHandler {
 
         @Override
         protected void parse() throws Exception {
-            className = url.getPath();
-            alias = header.getString(ALIAS_OPTION);
+            String[] paths = getPaths();
+            if (paths.length == 1) {
+                className = paths[0];
+                alias = header.getString(ALIAS_OPTION);
+            } else if (paths.length == 2) {
+                className = paths[0];
+                alias = paths[1];
+            } else {
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
+            }
             intfClass = forName(className);
             genericClass = getGenericClass(intfClass);
             //获取压缩

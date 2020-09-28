@@ -29,7 +29,7 @@ import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.protocol.AbstractHttpDecoder;
+import io.joyrpc.protocol.http.AbstractHttpDecoder;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;

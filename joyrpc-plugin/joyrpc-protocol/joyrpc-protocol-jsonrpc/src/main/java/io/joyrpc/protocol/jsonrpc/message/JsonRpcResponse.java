@@ -40,12 +40,12 @@ public class JsonRpcResponse {
     /**
      * 序号
      */
-    protected Long id;
+    protected Object id;
 
     public JsonRpcResponse() {
     }
 
-    public JsonRpcResponse(String jsonrpc, Long id) {
+    public JsonRpcResponse(String jsonrpc, Object id) {
         this.jsonrpc = jsonrpc;
         this.id = id;
     }
@@ -74,11 +74,11 @@ public class JsonRpcResponse {
         this.error = error;
     }
 
-    public Long getId() {
+    public Object getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Object id) {
         this.id = id;
     }
 }

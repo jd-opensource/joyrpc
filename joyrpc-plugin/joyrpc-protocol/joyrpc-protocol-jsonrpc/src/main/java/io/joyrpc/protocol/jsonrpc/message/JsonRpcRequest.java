@@ -37,7 +37,7 @@ public class JsonRpcRequest {
     /**
      * 序号
      */
-    protected Long id;
+    protected String id;
     /**
      * 参数
      */
@@ -59,11 +59,11 @@ public class JsonRpcRequest {
         this.method = method;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 

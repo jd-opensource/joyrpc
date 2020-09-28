@@ -33,9 +33,9 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
-import io.joyrpc.protocol.http.AbstractHttpDecoder;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
+import io.joyrpc.protocol.http.AbstractHttpDecoder;
 import io.joyrpc.protocol.http.ContentTypeHandler;
 import io.joyrpc.protocol.jsonrpc.exception.JsonRpcCodecException;
 import io.joyrpc.protocol.jsonrpc.message.JsonRpcRequest;
@@ -189,7 +189,10 @@ public class JsonRpcController implements ContentTypeHandler {
             //反序列化
             request = JSON.get().parseObject(new UnsafeByteArrayInputStream(content), JsonRpcRequest.class);
             methodName = request.getMethod();
-            if (methodName == null || request.getId() == null || !VERSION.equals(request.getJsonrpc())) {
+            Object id = request.getId();
+            if (methodName == null || !VERSION.equals(request.getJsonrpc())) {
+                throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
+            } else if (id == null || !(id instanceof String) && !(id instanceof Number)) {
                 throw new JsonRpcCodecException("Invalid Request", "-32600", request.getId());
             }
             parseMethod();

@@ -27,23 +27,23 @@ import io.joyrpc.exception.CodecException;
  */
 public class JsonRpcCodecException extends CodecException {
 
-    protected Long id;
+    protected Object id;
 
-    public JsonRpcCodecException(Long id) {
+    public JsonRpcCodecException(Object id) {
         this.id = id;
     }
 
-    public JsonRpcCodecException(String message, String errorCode, Long id) {
+    public JsonRpcCodecException(String message, String errorCode, Object id) {
         super(message, errorCode);
         this.id = id;
     }
 
-    public JsonRpcCodecException(String message, Throwable cause, String errorCode, Long id) {
+    public JsonRpcCodecException(String message, Throwable cause, String errorCode, Object id) {
         super(message, cause, errorCode);
         this.id = id;
     }
 
-    public Long getId() {
+    public Object getId() {
         return id;
     }
 }

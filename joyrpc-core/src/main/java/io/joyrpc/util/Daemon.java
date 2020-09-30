@@ -22,7 +22,7 @@ public class Daemon {
     /**
      * 执行块
      */
-    protected Callable<Long> callable;
+    protected Callable<Waiting> callable;
     /**
      * 执行块
      */
@@ -70,7 +70,7 @@ public class Daemon {
         this(name, prepare,
                 () -> {
                     runnable.run();
-                    return interval;
+                    return new Waiting(interval);
                 },
                 delay, error, fault, condition, waiter);
     }
@@ -87,7 +87,7 @@ public class Daemon {
      * @param condition 判断是否要继续
      * @param waiter    等待对象
      */
-    public Daemon(final String name, final Runnable prepare, final Callable<Long> callable, final long delay,
+    public Daemon(final String name, final Runnable prepare, final Callable<Waiting> callable, final long delay,
                   final Consumer<Throwable> error, final long fault,
                   final Supplier<Boolean> condition,
                   final Waiter waiter) {
@@ -109,7 +109,7 @@ public class Daemon {
     /**
      * 是否启动标识
      *
-     * @return
+     * @return 启动标识
      */
     public boolean isStarted() {
         return started.get();
@@ -125,19 +125,19 @@ public class Daemon {
                 if (prepare != null) {
                     prepare.run();
                 }
-                long time = delay;
+                Waiting waiting = new Waiting(delay);
                 while (continuous()) {
                     try {
-                        //第一次运行
-                        if (time > 0) {
+                        //判断是否要等等
+                        if (waiting.getTime() > 0) {
                             //等待一段时间
-                            waiter.await(time, TimeUnit.MILLISECONDS);
+                            waiter.await(waiting.time, TimeUnit.MILLISECONDS, waiting.getCondition());
                             //再次判断是否继续
                             if (continuous()) {
-                                time = callable.call();
+                                waiting = callable.call();
                             }
                         } else {
-                            time = callable.call();
+                            waiting = callable.call();
                         }
                     } catch (InterruptedException e) {
                         break;
@@ -145,7 +145,7 @@ public class Daemon {
                         if (error != null) {
                             error.accept(e);
                         }
-                        time = fault;
+                        waiting = new Waiting(fault);
                     }
                 }
             }, name);
@@ -157,7 +157,7 @@ public class Daemon {
     /**
      * 是否要继续
      *
-     * @return
+     * @return 继续标识
      */
     protected boolean continuous() {
         return started.get() && (condition == null || condition.get());
@@ -181,12 +181,11 @@ public class Daemon {
     /**
      * 构建构造器
      *
-     * @return
+     * @return 构建器
      */
     public static Builder builder() {
         return new Builder();
     }
-
 
     /**
      * 构建器
@@ -207,7 +206,7 @@ public class Daemon {
         /**
          * 执行块
          */
-        protected Callable<Long> callable;
+        protected Callable<Waiting> callable;
         /**
          * 执行块
          */
@@ -251,7 +250,7 @@ public class Daemon {
             return this;
         }
 
-        public Builder callable(Callable<Long> val) {
+        public Builder callable(Callable<Waiting> val) {
             callable = val;
             return this;
         }
@@ -293,9 +292,40 @@ public class Daemon {
         }
 
         public Daemon build() {
-            return callable != null ? new Daemon(name, prepare, callable, delay == null ? 0 : delay, error, fault == null ? 0 : delay, condition, waiter) :
+            return callable != null ? new Daemon(name, prepare, callable, delay == null ? 0 : delay, error, fault == null ? 0 : fault, condition, waiter) :
                     new Daemon(name, prepare, runnable, interval == null ? 0 : interval, delay == null ? 0 : delay, error, fault == null ? 0 : fault, condition, waiter);
         }
 
+    }
+
+    /**
+     * 等待对象
+     */
+    public static final class Waiting {
+        /**
+         * 等待时间
+         */
+        protected long time;
+        /**
+         * 判断条件
+         */
+        protected Supplier<Boolean> condition;
+
+        public Waiting(long time) {
+            this.time = time;
+        }
+
+        public Waiting(long time, Supplier<Boolean> condition) {
+            this.time = time;
+            this.condition = condition;
+        }
+
+        public long getTime() {
+            return time;
+        }
+
+        public Supplier<Boolean> getCondition() {
+            return condition;
+        }
     }
 }

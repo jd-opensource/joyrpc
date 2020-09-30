@@ -40,6 +40,7 @@ import io.joyrpc.event.UpdateEvent;
 import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.*;
+import io.joyrpc.util.Daemon.Waiting;
 import io.joyrpc.util.StateMachine.StateFuture;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,8 +62,6 @@ import static io.joyrpc.constants.Constants.*;
 
 /**
  * 注册中心基类，实现Registry接口
- *
- * @date: 23/1/2019
  */
 public abstract class AbstractRegistry implements Registry, Configure {
     protected static final Logger logger = LoggerFactory.getLogger(AbstractRegistry.class);
@@ -240,8 +239,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构建注册的Key
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 注册Key
      */
     protected RegKey buildRegKey(final URL url) {
         return new RegKey(url);
@@ -250,8 +249,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构建集群的Key
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 集群Key
      */
     protected ClusterKey buildClusterKey(final URL url) {
         return new ClusterKey(url);
@@ -260,8 +259,8 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 构建配置的Key
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 配置Key
      */
     protected ConfigKey buildConfigKey(final URL url) {
         return new ConfigKey(url);
@@ -885,7 +884,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @return 等到时间
          */
-        protected long dispatch() {
+        protected Waiting dispatch() {
             if (!connected.get() && isOpen()) {
                 //当前还没有连接上，则判断是否有重连任务
                 ReconnectTask task = reconnectTask;
@@ -895,10 +894,10 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     task.run();
                 }
                 //等到连接通知
-                return 1000L;
+                return new Waiting(1000L);
             } else {
-                long waitTime = execute();
-                if (waitTime > 0
+                Waiting waiting = execute();
+                if (waiting.getTime() > 0
                         && registry.backup != null
                         && (SystemClock.now() - lastBackup) > registry.backupInterval
                         && dirty.compareAndSet(true, false)) {
@@ -906,7 +905,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                     lastBackup = SystemClock.now();
                     backup();
                 }
-                return waitTime;
+                return waiting;
             }
         }
 
@@ -915,41 +914,41 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @return 等到时间
          */
-        protected long execute() {
-            long waitTime;
-            //取到第一个任务
-            Task task = tasks.peekFirst();
-            if (task != null) {
-                //判断是否超时
-                waitTime = task.getRetryTime() - SystemClock.now();
-            } else {
-                //没有任务则等待10秒
-                waitTime = 10000L;
+        protected Waiting execute() {
+            //判断第一个任务是否超时
+            final Task first = tasks.peekFirst();
+            if (first == null) {
+                return new Waiting(10000L, tasks::isEmpty);
             }
-            //有任务执行
-            if (waitTime <= 0) {
-                //有其它线程并发插入头部，pollFirst可能拿到其它对象
-                task = tasks.pollFirst();
-                //再次判断
-                if (task != null) {
-                    //判断是否超时
-                    waitTime = task.getRetryTime() - SystemClock.now();
-                    if (waitTime <= 0) {
-                        execute(task);
-                    } else {
-                        //重新入队
-                        tasks.addFirst(task);
-                    }
-                } else {
-                    //没有任务则等待10秒
-                    waitTime = 10000L;
+            long waitTime = first.getRetryTime() - SystemClock.now();
+            if (waitTime > 0) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Wait %d(ms) to execute %s", waitTime, first.getName()));
                 }
-            } else if (task != null) {
+                return new Waiting(waitTime, () -> tasks.peekFirst() == first);
+            }
+            //超时则第一个任务出队，有其它线程并发插入头部，pollFirst可能拿到其它对象
+            final Task task = tasks.pollFirst();
+            //再次判断
+            if (task == null) {
+                return new Waiting(10000L, tasks::isEmpty);
+            } else if (task == first) {
+                execute(task);
+                return new Waiting(0);
+            }
+            //拿到了其它任务，则重新判断是否超时
+            waitTime = task.getRetryTime() - SystemClock.now();
+            if (waitTime <= 0) {
+                execute(task);
+                return new Waiting(0);
+            } else {
                 if (logger.isDebugEnabled()) {
                     logger.debug(String.format("Wait %d(ms) to execute %s", waitTime, task.getName()));
                 }
+                //重新入队
+                tasks.addFirst(task);
+                return new Waiting(waitTime, () -> tasks.peekFirst() == task);
             }
-            return waitTime;
         }
 
         /**
@@ -1004,7 +1003,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 }
             }
         }
-
 
         /**
          * 用于断开重连恢复注册和订阅

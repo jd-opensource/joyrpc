@@ -111,6 +111,7 @@
         <nacos.version>1.2.1</nacos.version>
         <skywalking.version>7.0.0</skywalking.version>
         <jaeger.version>1.2.0</jaeger.version>
+        <hmily.version>2.1.1</hmily.version>
 
     </properties>
 

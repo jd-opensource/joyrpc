@@ -21,6 +21,8 @@
         <module>joyrpc-transport</module>
         <module>joyrpc-trace</module>
         <module>joyrpc-transaction</module>
+        <module>joyrpc-transaction/hmily</module>
+        <module>joyrpc-transaction/joyrpc-transaction-hmily</module>
     </modules>
 
     <dependencies>

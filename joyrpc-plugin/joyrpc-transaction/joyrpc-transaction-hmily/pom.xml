@@ -14,13 +14,6 @@
     <dependencies>
         <dependency>
             <groupId>org.dromara</groupId>
-            <artifactId>hmily-spring</artifactId>
-            <version>${hmily.version}</version>
-            <optional>true</optional>
-        </dependency>
-
-        <dependency>
-            <groupId>org.dromara</groupId>
             <artifactId>hmily-tcc</artifactId>
             <version>${hmily.version}</version>
         </dependency>

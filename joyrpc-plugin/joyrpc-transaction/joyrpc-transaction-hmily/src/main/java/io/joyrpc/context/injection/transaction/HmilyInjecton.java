@@ -23,6 +23,7 @@ package io.joyrpc.context.injection.transaction;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.session.Session.RpcSession;
@@ -38,7 +39,11 @@ import org.dromara.hmily.repository.spi.entity.HmilyParticipant;
 
 import java.lang.reflect.Method;
 
+/**
+ * hmily分布式事务集成
+ */
 @Extension("hmily")
+@ConditionalOnProperty(value = "extension.hmily.enable", matchIfMissing = true)
 @ConditionalOnClass("org.dromara.hmily.core.context.HmilyTransactionContext")
 public class HmilyInjecton implements Transmit {
 

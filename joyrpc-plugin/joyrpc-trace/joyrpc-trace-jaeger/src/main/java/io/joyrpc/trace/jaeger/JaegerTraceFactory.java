@@ -33,6 +33,7 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.TraceFactory;
@@ -49,6 +50,7 @@ import static io.joyrpc.constants.Constants.KEY_APPNAME;
  * jaeger跟踪工厂
  */
 @Extension(value = "jaeger", order = TraceFactory.ORDER_JAEGER)
+@ConditionalOnProperty(value = "extension.jaeger.enable", matchIfMissing = true)
 @ConditionalOnClass("io.jaegertracing.internal.JaegerTracer")
 public class JaegerTraceFactory implements TraceFactory {
     /**

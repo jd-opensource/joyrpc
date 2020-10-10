@@ -23,6 +23,7 @@ package io.joyrpc.context.injection.transaction;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.session.Session;
@@ -32,6 +33,7 @@ import io.seata.core.context.RootContext;
  * Seata分布式事务集成
  */
 @Extension(value = "seata")
+@ConditionalOnProperty(value = "extension.seata.enable", matchIfMissing = true)
 @ConditionalOnClass("io.seata.core.context.RootContext")
 public class SeataInjecton implements Transmit {
 

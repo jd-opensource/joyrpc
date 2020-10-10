@@ -24,6 +24,7 @@ import io.joyrpc.context.Variable;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.TraceFactory;
@@ -44,6 +45,7 @@ import java.util.Map;
  * skywalking跟踪工厂
  */
 @Extension(value = "skywalking", order = TraceFactory.ORDER_SKYWALKING)
+@ConditionalOnProperty(value = "extension.skywalking.enable", matchIfMissing = true)
 @ConditionalOnClass("org.apache.skywalking.apm.agent.core.context.ContextManager")
 public class SkywalkingTraceFactory implements TraceFactory {
 

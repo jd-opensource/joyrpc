@@ -9,3 +9,6 @@ Q: IPV6支持？
 
 >  根据当前jvm虚拟机的参数来选用IPV4或IPV6，在支持IPV6的机器上，可以配置系统参数java.net.forceIPv6Stack=true来强制使用IPV6，便于进行调试，系统内置的广播模式服务发现已经支持IPV6。
    
+Q: 分布式事务支持？
+
+>  支持Seata和hmily分布式事务

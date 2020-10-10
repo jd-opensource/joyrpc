@@ -534,6 +534,12 @@ public class Refer extends AbstractService {
     }
 
     @Override
+    protected void onComplete(final RequestMessage<Invocation> request, final Result result) {
+        //调用端触发上下文恢复事件
+        transmits.forEach(o -> o.restoreOnComplete(request, result));
+    }
+
+    @Override
     protected CompletableFuture<Void> doOpen() {
         CompletableFuture<Void> result = new CompletableFuture<>();
         //注册
@@ -582,7 +588,7 @@ public class Refer extends AbstractService {
     /**
      * 注册
      *
-     * @return
+     * @return CompletableFuture
      */
     protected CompletableFuture<Void> register() {
         CompletableFuture<Void> result = new CompletableFuture<>();
@@ -605,7 +611,7 @@ public class Refer extends AbstractService {
     /**
      * 从注册中心注销
      *
-     * @return
+     * @return CompletableFuture
      */
     protected CompletableFuture<Void> deregister() {
         CompletableFuture<Void> future = new CompletableFuture<>();
@@ -622,7 +628,7 @@ public class Refer extends AbstractService {
     /**
      * 取消配置订阅
      *
-     * @return
+     * @return CompletableFuture
      */
     protected CompletableFuture<Void> unsubscribe() {
         CompletableFuture<Void> future = new CompletableFuture<>();

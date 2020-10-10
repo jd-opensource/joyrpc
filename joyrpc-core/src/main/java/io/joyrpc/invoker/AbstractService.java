@@ -145,13 +145,21 @@ public abstract class AbstractService implements Invoker {
 
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-        if ((Shutdown.isShutdown() || status != Status.OPENED) && !system) {
-            //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
-            return CompletableFuture.completedFuture(new Result(request.getContext(), shutdownException()));
-        }
-        //执行调用链，减少计数器
         CompletableFuture<Result> future;
-        //在关闭判断之前增加计数器，确保安全
+        //判断状态
+        if ((Shutdown.isShutdown() || status != Status.OPENED) && !system) {
+            //系统状服务允许执行，例如注册中心在关闭的时候进行注销操作
+            if (request.getOption() == null) {
+                try {
+                    setup(request);
+                } catch (Throwable ignored) {
+                }
+            }
+            Result result = new Result(request.getContext(), shutdownException());
+            onComplete(request, result);
+            return CompletableFuture.completedFuture(result);
+        }
+        //增加计数器
         requests.incrementAndGet();
         try {
             if (request.getOption() == null) {
@@ -168,12 +176,13 @@ public abstract class AbstractService implements Invoker {
         }
         future.whenComplete((result, throwable) -> {
             if (requests.decrementAndGet() == 0 && flyingFuture != null) {
-                //通知请求已经完成
+                //通知请求已经完成，触发优雅关闭
                 flyingFuture.complete(null);
             }
+            //触发结束操作，可以进行上下文额外处理，例如事务处理
+            onComplete(request, throwable != null ? new Result(request.getContext(), throwable) : result);
         });
         return future;
-
     }
 
     /**
@@ -185,6 +194,16 @@ public abstract class AbstractService implements Invoker {
     protected CompletableFuture<Result> doInvoke(final RequestMessage<Invocation> request) {
         //执行调用链
         return chain.invoke(request);
+    }
+
+    /**
+     * 结束
+     *
+     * @param request 请求
+     * @param result  结果
+     */
+    protected void onComplete(RequestMessage<Invocation> request, Result result) {
+
     }
 
     /**

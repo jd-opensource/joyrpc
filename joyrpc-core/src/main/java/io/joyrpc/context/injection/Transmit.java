@@ -20,6 +20,7 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -43,9 +44,9 @@ public interface Transmit extends ReqInjection {
      * 服务消费者异步调用完成后，在线程切换的时候进行恢复
      *
      * @param request 请求
+     * @param result  结果
      */
-    @Deprecated
-    default void restoreOnComplete(RequestMessage<Invocation> request) {
+    default void restoreOnComplete(RequestMessage<Invocation> request, final Result result) {
 
     }
 

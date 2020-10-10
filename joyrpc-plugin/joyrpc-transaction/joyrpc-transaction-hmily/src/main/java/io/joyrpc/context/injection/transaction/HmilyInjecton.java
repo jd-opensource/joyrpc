@@ -1,39 +1,67 @@
-package io.joyrpc.filter.consumer;
+package io.joyrpc.context.injection.transaction;
 
-import io.joyrpc.Invoker;
-import io.joyrpc.Result;
-import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.filter.ConsumerFilter;
+/*-
+ * #%L
+ * joyrpc
+ * %%
+ * Copyright (C) 2019 joyrpc.io
+ * %%
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ * #L%
+ */
+
+import io.joyrpc.context.injection.Transmit;
+import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.transport.session.Session.RpcSession;
 import org.dromara.hmily.annotation.Hmily;
 import org.dromara.hmily.common.enums.HmilyActionEnum;
 import org.dromara.hmily.common.enums.HmilyRoleEnum;
-import org.dromara.hmily.common.exception.HmilyRuntimeException;
 import org.dromara.hmily.common.utils.IdWorkerUtils;
 import org.dromara.hmily.core.context.HmilyContextHolder;
 import org.dromara.hmily.core.context.HmilyTransactionContext;
-import org.dromara.hmily.core.holder.HmilyTransactionHolder;
 import org.dromara.hmily.core.mediator.RpcMediator;
 import org.dromara.hmily.repository.spi.entity.HmilyInvocation;
 import org.dromara.hmily.repository.spi.entity.HmilyParticipant;
 
 import java.lang.reflect.Method;
-import java.util.concurrent.CompletableFuture;
 
-public class HmilyFilter  implements ConsumerFilter {
+@Extension("hmily")
+@ConditionalOnClass("org.dromara.hmily.core.context.HmilyTransactionContext")
+public class HmilyInjecton implements Transmit {
 
     @Override
-    public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        final HmilyTransactionContext context = HmilyContextHolder.get();
+    public void restoreOnReceive(final RequestMessage<Invocation> request, final RpcSession session) {
+        Invocation invocation = request.getPayLoad();
+        HmilyTransactionContext transactionContext = RpcMediator.getInstance().acquire(invocation::getAttachment);
+        if (transactionContext != null) {
+            HmilyContextHolder.set(transactionContext);
+        }
+    }
+
+    @Override
+    public void inject(final RequestMessage<Invocation> request) {
+        HmilyTransactionContext context = HmilyContextHolder.get();
         if (context == null) {
-            return invoker.invoke(request);
+            return;
         }
         Invocation invocation = request.getPayLoad();
         Method method = invocation.getMethod();
         Hmily hmily = method.getAnnotation(Hmily.class);
         if (hmily == null) {
-            return invoker.invoke(request);
+            return;
         }
         Long participantId = context.getParticipantId();
         final HmilyParticipant hmilyParticipant = buildParticipant(context, invocation);
@@ -44,22 +72,10 @@ public class HmilyFilter  implements ConsumerFilter {
             context.setParticipantRefId(participantId);
         }
         RpcMediator.getInstance().transmit(invocation::addAttachment, context);
-        final Result result = invoker.invoke(invocation);
-        //if result has not exception
-        if (!result.hasException()) {
-            if (context.getRole() == HmilyRoleEnum.PARTICIPANT.getCode()) {
-                HmilyTransactionHolder.getInstance().registerParticipantByNested(participantId, hmilyParticipant);
-            } else {
-                HmilyTransactionHolder.getInstance().registerStarterParticipant(hmilyParticipant);
-            }
-        } else {
-            throw new HmilyRuntimeException("rpc invoke exception{}", result.getException());
-        }
-        return result;
     }
 
     protected HmilyParticipant buildParticipant(final HmilyTransactionContext context,
-                                                final Invocation invocation) throws HmilyRuntimeException {
+                                                final Invocation invocation) {
         if (HmilyActionEnum.TRYING.getCode() != context.getAction()) {
             return null;
         }
@@ -71,10 +87,5 @@ public class HmilyFilter  implements ConsumerFilter {
         hmilyParticipant.setConfirmHmilyInvocation(hmilyInvocation);
         hmilyParticipant.setCancelHmilyInvocation(hmilyInvocation);
         return hmilyParticipant;
-    }
-
-    @Override
-    public boolean test(final InterfaceOption option) {
-      return true;
     }
 }

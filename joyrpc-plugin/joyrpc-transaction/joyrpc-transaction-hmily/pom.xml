@@ -16,6 +16,7 @@
             <groupId>org.dromara</groupId>
             <artifactId>hmily-tcc</artifactId>
             <version>${hmily.version}</version>
+            <optional>true</optional>
         </dependency>
 
     </dependencies>

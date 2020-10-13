@@ -6,8 +6,6 @@
 
 - 增加json-rpc 2.0协议支持
 
-- 增加hmily分布式事务集成
-
 - http协议和grpc协议服务端增加http头参数注入插件，便于自定义参数注入
 
 ### Bugfixes

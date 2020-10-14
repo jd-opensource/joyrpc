@@ -25,6 +25,7 @@ import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
+import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.util.Status.*;
 
 /**
@@ -86,6 +88,10 @@ public abstract class AbstractService implements Invoker {
      * 调用链
      */
     protected Invoker chain;
+    /**
+     * 透传插件
+     */
+    protected Iterable<Transmit> transmits = TRANSMIT.extensions();
     /**
      * 调用计数器
      */

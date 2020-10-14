@@ -34,6 +34,7 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.proxy.MethodCaller;
+import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcType;
 
@@ -195,6 +196,13 @@ public interface InterfaceOption {
          * @return 回调方法
          */
         CallbackMethod getCallback();
+
+        /**
+         * 获取事务选项
+         *
+         * @return 事务选项
+         */
+        TransactionOption getTransactionOption();
 
         /**
          * 是否异步调用

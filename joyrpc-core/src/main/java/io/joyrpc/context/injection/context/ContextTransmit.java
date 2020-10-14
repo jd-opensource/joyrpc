@@ -20,6 +20,7 @@ package io.joyrpc.context.injection.context;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.extension.Extension;
@@ -35,9 +36,7 @@ import static io.joyrpc.context.RequestContext.*;
 import static io.joyrpc.util.Maps.put;
 
 /**
- * r请求上下文传递
- *
- * @date: 2019/6/14
+ * 请求上下文传递
  */
 @Extension(value = "context", order = 1)
 public class ContextTransmit implements Transmit {
@@ -53,7 +52,8 @@ public class ContextTransmit implements Transmit {
     }
 
     @Override
-    public void restoreOnReceive(final RequestMessage<Invocation> request, final RpcSession session) {
+    public void onReceive(final RequestMessage<Invocation> request) {
+        RpcSession session = (RpcSession) request.getSession();
         RequestContext context = request.getContext();
         context.setLocalAddress(request.getLocalAddress());
         context.setRemoteAddress(request.getRemoteAddress());
@@ -94,4 +94,8 @@ public class ContextTransmit implements Transmit {
         }
     }
 
+    @Override
+    public void onReturn(final RequestMessage<Invocation> request, final Result result) {
+        RequestContext.remove();
+    }
 }

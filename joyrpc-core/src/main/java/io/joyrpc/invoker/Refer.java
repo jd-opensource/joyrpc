@@ -41,7 +41,6 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.NodeReqInjection;
-import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.NoAliveProviderException;
@@ -138,10 +137,7 @@ public class Refer extends AbstractService {
      * 本地服务的名称
      */
     protected String exporterName;
-    /**
-     * 透传插件
-     */
-    protected Iterable<Transmit> transmits;
+
     /**
      * 条件透传
      */
@@ -247,8 +243,6 @@ public class Refer extends AbstractService {
         //处理链
         this.chain = FILTER_CHAIN_FACTORY.getOrDefault(url.getString(FILTER_CHAIN_FACTORY_OPTION))
                 .build(this, this::distribute);
-        //加载符合条件的透传插件，例如在MESH环境加载MeshTransmit
-        this.transmits = TRANSMIT.extensions();
         this.injections = NODE_REQUEST_INJECTION.extensions(NodeReqInjection::test);
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
         this.publisher = publisher;
@@ -506,7 +500,7 @@ public class Refer extends AbstractService {
         newRequest.setContext(new RequestContext());
         newRequest.setSession(session);
         //透传处理
-        transmits.forEach(o -> o.restoreOnReceive(newRequest, session));
+        transmits.forEach(o -> o.onReceive(newRequest));
         local.setup(newRequest);
 
         //产生本地调用的消息ID
@@ -536,7 +530,7 @@ public class Refer extends AbstractService {
     @Override
     protected void onComplete(final RequestMessage<Invocation> request, final Result result) {
         //调用端触发上下文恢复事件
-        transmits.forEach(o -> o.restoreOnComplete(request, result));
+        transmits.forEach(o -> o.onReturn(request, result));
     }
 
     @Override

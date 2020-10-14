@@ -29,6 +29,7 @@ import io.joyrpc.permission.Authorization;
 import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.trace.Tracer;
+import io.joyrpc.transaction.TransactionContext;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ChannelTransport;
@@ -121,6 +122,10 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
      * 跟踪
      */
     protected transient Tracer tracer;
+    /**
+     * 事务上下文
+     */
+    protected transient TransactionContext transactionContext;
     /**
      * refer或exporter的url
      */
@@ -380,6 +385,14 @@ public class RequestMessage<T> extends BaseMessage<T> implements Request {
 
     public void setTracer(Tracer tracer) {
         this.tracer = tracer;
+    }
+
+    public TransactionContext getTransactionContext() {
+        return transactionContext;
+    }
+
+    public void setTransactionContext(TransactionContext transactionContext) {
+        this.transactionContext = transactionContext;
     }
 
     public URL getUrl() {

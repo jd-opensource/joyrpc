@@ -1,4 +1,4 @@
-package io.joyrpc.context.injection;
+package io.joyrpc.transaction.seata;
 
 /*-
  * #%L
@@ -20,27 +20,20 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.extension.Extension;
+import io.joyrpc.transaction.TransactionFactory;
+import io.joyrpc.transaction.TransactionOption;
+
+import java.lang.reflect.Method;
 
 /**
- * 隐式参数配置
+ * seata事务提供者
  */
-public interface ReqInjection {
+@Extension("seata")
+public class SeataTransactionFactory implements TransactionFactory {
 
-    /**
-     * 消费者调用，绑定上下文到调用对象
-     *
-     * @param request 请求
-     */
-    void inject(RequestMessage<Invocation> request);
-
-    /**
-     * 消费者调用，取消绑定的上下文，用在重试，不同的节点有不同的协议，注入不同的隐式参数
-     *
-     * @param request 请求
-     */
-    default void reject(final RequestMessage<Invocation> request) {
-
+    @Override
+    public TransactionOption create(final Class<?> clazz, final Method method) {
+        return null;
     }
 }

@@ -44,6 +44,7 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.Timer;
 import io.joyrpc.util.*;
 import org.slf4j.Logger;
@@ -280,6 +281,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
                 getCachePolicy(parametric),
                 getValidator(parametric),
+                transactionFactory == null ? null : transactionFactory.create(interfaceClass, method),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
                 parametric.getBoolean(TRACE_OPEN, enableTrace == null ? trace : enableTrace.value()),
@@ -448,18 +450,27 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected volatile Map<String, Object> mock;
 
-        public InnerConsumerMethodOption(final GrpcMethod grpcMethod, final GenericMethod genericMethod,
-                                         final Map<String, ?> implicits, final int timeout, final Concurrency concurrency,
-                                         final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final boolean async, final boolean trace,
-                                         final CallbackMethod callback, final int forks,
+        public InnerConsumerMethodOption(final GrpcMethod grpcMethod,
+                                         final GenericMethod genericMethod,
+                                         final Map<String, ?> implicits,
+                                         final int timeout,
+                                         final Concurrency concurrency,
+                                         final CachePolicy cachePolicy,
+                                         final Validator validator,
+                                         final TransactionOption transactionOption,
+                                         final String token,
+                                         final boolean async,
+                                         final boolean trace,
+                                         final CallbackMethod callback,
+                                         final int forks,
                                          final Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector,
-                                         final Router router, final FailoverPolicy failoverPolicy,
+                                         final Router router,
+                                         final FailoverPolicy failoverPolicy,
                                          final MethodAdaptiveConfig adaptiveConfig,
                                          final McMethodBreakerConfig staticBreakerConfig,
                                          final McMethodBreakerConfig dynamicBreakerConfig,
                                          final Map<String, Object> mock) {
-            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
+            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, transactionOption, token, async, trace, callback);
             this.forks = forks;
             this.selector = selector;
             this.router = router;

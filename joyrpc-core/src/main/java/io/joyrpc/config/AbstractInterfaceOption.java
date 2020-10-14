@@ -40,6 +40,8 @@ import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.SerializerWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.transaction.TransactionFactory;
+import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcMethod;
@@ -57,8 +59,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
 import static io.joyrpc.GenericService.GENERIC;
-import static io.joyrpc.Plugin.CACHE;
-import static io.joyrpc.Plugin.CACHE_KEY_GENERATOR;
+import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelist;
@@ -125,6 +126,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * 缓存工厂类
      */
     protected CacheFactory cacheFactory;
+    /**
+     * 事务提供者
+     */
+    protected TransactionFactory transactionFactory;
     /**
      * 是否要进行方法参数验证
      */
@@ -210,6 +215,8 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         this.cacheKeyGenerator = url.getString(CACHE_KEY_GENERATOR_OPTION);
         this.cacheProvider = url.getString(CACHE_PROVIDER_OPTION);
         this.cacheFactory = CACHE.get(cacheProvider);
+        //事务工厂
+        this.transactionFactory = TRANSACTION_FACTORY.get();
         //默认是否认证
         this.validation = url.getBoolean(VALIDATION_OPTION);
         this.limiter = url.getBoolean(LIMITER_OPTION);
@@ -510,6 +517,10 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          */
         protected Validator validator;
         /**
+         * 事务选项
+         */
+        protected TransactionOption transactionOption;
+        /**
          * 令牌
          */
         protected String token;
@@ -558,6 +569,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final Concurrency concurrency,
                                  final CachePolicy cachePolicy,
                                  final Validator validator,
+                                 final TransactionOption transactionOption,
                                  final String token,
                                  final boolean async,
                                  final boolean trace,
@@ -573,6 +585,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.concurrency = concurrency;
             this.cachePolicy = cachePolicy;
             this.validator = validator;
+            this.transactionOption = transactionOption;
             this.token = token;
             this.async = async;
             this.trace = trace;
@@ -625,6 +638,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         @Override
         public Validator getValidator() {
             return validator;
+        }
+
+        @Override
+        public TransactionOption getTransactionOption() {
+            return transactionOption;
         }
 
         @Override

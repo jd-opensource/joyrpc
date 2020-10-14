@@ -479,7 +479,7 @@ public class CallbackManager implements Closeable {
              */
             public CallbackInnerMethodOption(GrpcMethod grpcMethod) {
                 super(grpcMethod, null, null, 0, null, null,
-                        null, null, false, false, null);
+                        null, null, null, false, false, null);
             }
         }
     }

@@ -1,4 +1,4 @@
-package io.joyrpc.context.injection;
+package io.joyrpc.transaction.seata;
 
 /*-
  * #%L
@@ -20,27 +20,24 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.transaction.TransactionContext;
 
 /**
- * 隐式参数配置
+ * seata事务上下文
  */
-public interface ReqInjection {
+public class SeataTransactionContext implements TransactionContext {
 
     /**
-     * 消费者调用，绑定上下文到调用对象
-     *
-     * @param request 请求
+     * seata的分布式事务id
      */
-    void inject(RequestMessage<Invocation> request);
+    protected String xid;
 
-    /**
-     * 消费者调用，取消绑定的上下文，用在重试，不同的节点有不同的协议，注入不同的隐式参数
-     *
-     * @param request 请求
-     */
-    default void reject(final RequestMessage<Invocation> request) {
-
+    public SeataTransactionContext(String xid) {
+        this.xid = xid;
     }
+
+    public String getXid() {
+        return xid;
+    }
+
 }

@@ -319,6 +319,8 @@ public class Exporter extends AbstractService {
         context.setProvider(true);
         //方法透传参数，整合了接口级别的参数
         context.setAttachments(option.getImplicits());
+        //恢复参数
+        transmits.forEach(o -> o.onReceive(request));
         //处理回调
         if (option.getCallback() != null) {
             container.addCallback(request, request.getTransport());

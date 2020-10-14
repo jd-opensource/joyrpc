@@ -71,6 +71,7 @@ import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.trace.TraceFactory;
+import io.joyrpc.transaction.TransactionFactory;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.transport.http.HttpClient;
@@ -123,6 +124,11 @@ public interface Plugin {
      * 跟踪工厂
      */
     ExtensionPoint<TraceFactory, String> TRACE_FACTORY = new ExtensionPointLazy<>(TraceFactory.class);
+
+    /**
+     * 事务工厂
+     */
+    ExtensionPoint<TransactionFactory, String> TRANSACTION_FACTORY = new ExtensionPointLazy<>(TransactionFactory.class);
 
     /**
      * 上下文传递扩展

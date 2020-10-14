@@ -27,8 +27,6 @@ import java.io.Serializable;
 
 /**
  * 业务方法调用结果，使用在Filter链里面
- *
- * @date: 31/1/2019
  */
 public class Result implements Serializable {
     /**
@@ -51,7 +49,7 @@ public class Result implements Serializable {
     /**
      * 构造函数
      *
-     * @param context
+     * @param context 上下文
      */
     public Result(final RequestContext context) {
         this.context = context;
@@ -60,8 +58,8 @@ public class Result implements Serializable {
     /**
      * 构造函数
      *
-     * @param context
-     * @param value
+     * @param context 上下文
+     * @param value   应答值
      */
     public Result(final RequestContext context, final Object value) {
         this.context = context;
@@ -71,9 +69,9 @@ public class Result implements Serializable {
     /**
      * 构造函数
      *
-     * @param context
-     * @param value
-     * @param response
+     * @param context  上下文
+     * @param value    应答值
+     * @param response 应答消息
      */
     public Result(final RequestContext context, final Object value, final Message response) {
         this.context = context;
@@ -84,8 +82,8 @@ public class Result implements Serializable {
     /**
      * 构造函数
      *
-     * @param context
-     * @param throwable
+     * @param context   上下文
+     * @param throwable 异常
      */
     public Result(final RequestContext context, final Throwable throwable) {
         this.context = context;
@@ -95,9 +93,9 @@ public class Result implements Serializable {
     /**
      * 构造函数
      *
-     * @param context
-     * @param throwable
-     * @param response
+     * @param context   上下文
+     * @param throwable 异常
+     * @param response  应答消息
      */
     public Result(final RequestContext context, final Throwable throwable, final Message response) {
         this.context = context;

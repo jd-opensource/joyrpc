@@ -20,10 +20,10 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
+import io.joyrpc.Result;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.session.Session.RpcSession;
 
 /**
  * 上下文透传接口，包括注入和恢复
@@ -32,20 +32,47 @@ import io.joyrpc.transport.session.Session.RpcSession;
 public interface Transmit extends ReqInjection {
 
     /**
-     * 服务提供者收到调用请求对象时候，恢复上下文
+     * 客户端方法调用结束
      *
      * @param request 请求
-     * @param session 会话
      */
-    void restoreOnReceive(RequestMessage<Invocation> request, RpcSession session);
+    default void onReturn(final RequestMessage<Invocation> request) {
+
+    }
 
     /**
-     * 服务消费者异步调用完成后，在线程切换的时候进行恢复
+     * 消费者异步调用结果返回后或异常
+     *
+     * @param request 请求
+     * @param result  结果
+     */
+    default void onComplete(final RequestMessage<Invocation> request, final Result result) {
+
+    }
+
+    /**
+     * 服务提供者收到调用请求对象，恢复上下文
      *
      * @param request 请求
      */
-    @Deprecated
-    default void restoreOnComplete(RequestMessage<Invocation> request) {
+    void onServerReceive(RequestMessage<Invocation> request);
+
+    /**
+     * 服务提供者方法调用结束
+     *
+     * @param request 请求
+     */
+    default void onServerReturn(final RequestMessage<Invocation> request) {
+
+    }
+
+    /**
+     * 服务提供者异步调用结果返回或异常
+     *
+     * @param request 请求
+     * @param result  结果
+     */
+    default void onServerComplete(final RequestMessage<Invocation> request, final Result result) {
 
     }
 

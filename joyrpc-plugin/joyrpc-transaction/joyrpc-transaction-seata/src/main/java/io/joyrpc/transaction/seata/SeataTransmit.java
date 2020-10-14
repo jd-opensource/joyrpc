@@ -1,4 +1,4 @@
-package io.joyrpc.context.injection.transaction;
+package io.joyrpc.transaction.seata;
 
 /*-
  * #%L
@@ -26,8 +26,10 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.session.Session;
+import io.joyrpc.transaction.TransactionContext;
 import io.seata.core.context.RootContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Seata分布式事务集成
@@ -35,14 +37,34 @@ import io.seata.core.context.RootContext;
 @Extension(value = "seata")
 @ConditionalOnProperty(value = "extension.seata.enable", matchIfMissing = true)
 @ConditionalOnClass("io.seata.core.context.RootContext")
-public class SeataInjecton implements Transmit {
+public class SeataTransmit implements Transmit {
+
+    private final static Logger logger = LoggerFactory.getLogger(SeataTransmit.class);
 
     @Override
-    public void restoreOnReceive(final RequestMessage<Invocation> request, final Session.RpcSession session) {
+    public void onServerReceive(final RequestMessage<Invocation> request) {
         String rpcXid = request.getPayLoad().getAttachment(RootContext.KEY_XID); // Acquire the XID from RPC invoke
         if (rpcXid != null) {
             // Provider：Bind the XID propagated by RPC to current runtime
+            request.setTransactionContext(new SeataTransactionContext(rpcXid));
             RootContext.bind(rpcXid);
+        }
+    }
+
+    @Override
+    public void onServerReturn(final RequestMessage<Invocation> request) {
+        // Provider：Clean up XID after invoke
+        TransactionContext context = request.getTransactionContext();
+        if (context instanceof SeataTransactionContext) {
+            String xid = ((SeataTransactionContext) context).getXid();
+            String unbindXid = RootContext.unbind();
+            if (!xid.equalsIgnoreCase(unbindXid)) {
+                logger.warn("xid in change during RPC from " + xid + " to " + unbindXid);
+                if (unbindXid != null) { // if there is new transaction begin, can't do clean up
+                    RootContext.bind(unbindXid);
+                    logger.warn("bind [" + unbindXid + "] back to RootContext");
+                }
+            }
         }
     }
 

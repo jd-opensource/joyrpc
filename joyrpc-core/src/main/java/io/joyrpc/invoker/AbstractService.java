@@ -25,6 +25,7 @@ import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.Configure;
 import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
+import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.util.Status.*;
 
 /**
@@ -86,6 +88,10 @@ public abstract class AbstractService implements Invoker {
      * 调用链
      */
     protected Invoker chain;
+    /**
+     * 透传插件
+     */
+    protected Iterable<Transmit> transmits = TRANSMIT.extensions();
     /**
      * 调用计数器
      */
@@ -145,13 +151,19 @@ public abstract class AbstractService implements Invoker {
 
     @Override
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
-        if ((Shutdown.isShutdown() || status != Status.OPENED) && !system) {
-            //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
-            return CompletableFuture.completedFuture(new Result(request.getContext(), shutdownException()));
-        }
-        //执行调用链，减少计数器
         CompletableFuture<Result> future;
-        //在关闭判断之前增加计数器，确保安全
+        //判断状态
+        if ((Shutdown.isShutdown() || status != Status.OPENED) && !system) {
+            //系统状服务允许执行，例如注册中心在关闭的时候进行注销操作
+            if (request.getOption() == null) {
+                try {
+                    setup(request);
+                } catch (Throwable ignored) {
+                }
+            }
+            return Futures.completeExceptionally(shutdownException());
+        }
+        //增加计数器
         requests.incrementAndGet();
         try {
             if (request.getOption() == null) {
@@ -168,12 +180,11 @@ public abstract class AbstractService implements Invoker {
         }
         future.whenComplete((result, throwable) -> {
             if (requests.decrementAndGet() == 0 && flyingFuture != null) {
-                //通知请求已经完成
+                //通知请求已经完成，触发优雅关闭
                 flyingFuture.complete(null);
             }
         });
         return future;
-
     }
 
     /**

@@ -1,4 +1,4 @@
-package io.joyrpc.context.injection.transaction;
+package io.joyrpc.transaction.hmily;
 
 /*-
  * #%L
@@ -26,8 +26,7 @@ import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.extension.condition.ConditionalOnProperty;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.session.Session.RpcSession;
-import org.dromara.hmily.annotation.Hmily;
+import io.joyrpc.transaction.TransactionOption;
 import org.dromara.hmily.common.enums.HmilyActionEnum;
 import org.dromara.hmily.common.enums.HmilyRoleEnum;
 import org.dromara.hmily.common.utils.IdWorkerUtils;
@@ -37,18 +36,20 @@ import org.dromara.hmily.core.mediator.RpcMediator;
 import org.dromara.hmily.repository.spi.entity.HmilyInvocation;
 import org.dromara.hmily.repository.spi.entity.HmilyParticipant;
 
-import java.lang.reflect.Method;
-
 /**
  * hmily分布式事务集成
  */
 @Extension("hmily")
 @ConditionalOnProperty(value = "extension.hmily.enable", matchIfMissing = true)
 @ConditionalOnClass("org.dromara.hmily.core.context.HmilyTransactionContext")
-public class HmilyInjecton implements Transmit {
+public class HmilyTransmit implements Transmit {
 
     @Override
-    public void restoreOnReceive(final RequestMessage<Invocation> request, final RpcSession session) {
+    public void onServerReceive(final RequestMessage<Invocation> request) {
+        TransactionOption transactionOption = request.getOption().getTransactionOption();
+        if (!(transactionOption instanceof HmilyTransactionOption)) {
+            return;
+        }
         Invocation invocation = request.getPayLoad();
         HmilyTransactionContext transactionContext = RpcMediator.getInstance().acquire(invocation::getAttachment);
         if (transactionContext != null) {
@@ -58,14 +59,13 @@ public class HmilyInjecton implements Transmit {
 
     @Override
     public void inject(final RequestMessage<Invocation> request) {
-        HmilyTransactionContext context = HmilyContextHolder.get();
-        if (context == null) {
+        Invocation invocation = request.getPayLoad();
+        TransactionOption transactionOption = request.getOption().getTransactionOption();
+        if (!(transactionOption instanceof HmilyTransactionOption)) {
             return;
         }
-        Invocation invocation = request.getPayLoad();
-        Method method = invocation.getMethod();
-        Hmily hmily = method.getAnnotation(Hmily.class);
-        if (hmily == null) {
+        HmilyTransactionContext context = HmilyContextHolder.get();
+        if (context == null) {
             return;
         }
         Long participantId = context.getParticipantId();

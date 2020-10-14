@@ -32,6 +32,7 @@ import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.MethodCaller;
+import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.GrpcMethod;
@@ -136,6 +137,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                 new Concurrency(parametric.getInteger(CONCURRENCY_OPTION.getName(), concurrency)),
                 getCachePolicy(parametric),
                 getValidator(parametric),
+                transactionFactory == null ? null : transactionFactory.create(interfaceClass, method),
                 parametric.getString(HIDDEN_KEY_TOKEN, token),
                 method != null && isReturnFuture(interfaceClass, method),
                 parametric.getBoolean(TRACE_OPEN, enableTrace == null ? trace : enableTrace.value()),
@@ -228,15 +230,23 @@ public class InnerProviderOption extends AbstractInterfaceOption {
          */
         protected MethodCaller caller;
 
-        public InnerProviderMethodOption(final GrpcMethod grpcMethod, final GenericMethod genericMethod,
-                                         final Map<String, ?> implicits, final int timeout,
-                                         final Concurrency concurrency, final CachePolicy cachePolicy, final Validator validator,
-                                         final String token, final boolean async, final boolean trace, final CallbackMethod callback,
+        public InnerProviderMethodOption(final GrpcMethod grpcMethod,
+                                         final GenericMethod genericMethod,
+                                         final Map<String, ?> implicits,
+                                         final int timeout,
+                                         final Concurrency concurrency,
+                                         final CachePolicy cachePolicy,
+                                         final Validator validator,
+                                         final TransactionOption transactionOption,
+                                         final String token,
+                                         final boolean async,
+                                         final boolean trace,
+                                         final CallbackMethod callback,
                                          final BlackWhiteList<String> methodBlackWhiteList,
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter,
                                          final MethodCaller caller) {
-            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, token, async, trace, callback);
+            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, transactionOption, token, async, trace, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;

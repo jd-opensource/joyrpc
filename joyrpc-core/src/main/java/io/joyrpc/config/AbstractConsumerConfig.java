@@ -65,7 +65,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.TRANSMIT;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.context.RequestContext.restore;
 import static io.joyrpc.util.ClassUtils.forName;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 import static io.joyrpc.util.Status.*;
@@ -242,7 +241,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 代理对象，用于Spring场景提前返回代理
      *
-     * @return
+     * @return 代理
      */
     public T proxy() {
         if (stub == null) {
@@ -281,7 +280,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 异步引用
      *
-     * @return
+     * @return CompletableFuture
      */
     public CompletableFuture<T> refer() {
         CompletableFuture<T> result = new CompletableFuture<>();
@@ -356,25 +355,25 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 创建消费控制器
      *
-     * @return
+     * @return 控制器
      */
     protected abstract AbstractConsumerController<T, ? extends AbstractConsumerConfig> create();
 
     /**
      * 注销
      *
-     * @return
+     * @return CompletableFuture
      */
     public CompletableFuture<Void> unrefer() {
-        Parametric parametric = new MapParametric(GlobalContext.getContext());
+        Parametric parametric = new MapParametric<>(GlobalContext.getContext());
         return unrefer(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     /**
      * 注销
      *
-     * @param gracefully
-     * @return
+     * @param gracefully 优雅标识
+     * @return CompletableFuture
      */
     public CompletableFuture<Void> unrefer(final boolean gracefully) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
@@ -638,7 +637,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 添加事件监听器
      *
-     * @param handler
+     * @param handler 事件处理器
      */
     public void addEventHandler(final EventHandler<NodeEvent> handler) {
         if (handler != null) {
@@ -649,7 +648,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 移除事件监听器
      *
-     * @param handler
+     * @param handler 事件处理器
      */
     public void removeEventHandler(final EventHandler<NodeEvent> handler) {
         if (handler != null) {
@@ -726,7 +725,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 构造函数
          *
-         * @param config
+         * @param config 配置
          */
         public AbstractConsumerController(C config) {
             super(config);
@@ -745,7 +744,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 打开
          *
-         * @return
+         * @return CompletableFuture
          */
         public CompletableFuture<Void> open() {
             CompletableFuture<Void> future = new CompletableFuture<>();
@@ -783,17 +782,17 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 打开操作
          *
-         * @return
+         * @return CompletableFuture
          */
         protected abstract CompletableFuture<Void> doOpen();
 
         /**
          * 关闭
          *
-         * @return
+         * @return CompletableFuture
          */
         public CompletableFuture<Void> close() {
-            Parametric parametric = new MapParametric(GlobalContext.getContext());
+            Parametric parametric = new MapParametric<>(GlobalContext.getContext());
             return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
         }
 
@@ -801,7 +800,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * 关闭
          *
          * @param gracefully 是否优雅关闭
-         * @return
+         * @return CompletableFuture
          */
         public CompletableFuture<Void> close(boolean gracefully) {
             return CompletableFuture.completedFuture(null);
@@ -840,8 +839,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
 
     /**
      * 消费者调用
-     *
-     * @date: 2 /19/2019
      */
     protected static class ConsumerInvokeHandler implements InvocationHandler {
         /**
@@ -880,18 +877,17 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * 默认方法处理器
          */
         protected Map<String, Optional<MethodHandle>> handles = new ConcurrentHashMap<>();
-
         /**
          * 透传插件
          */
-        protected Iterable<Transmit> transmits = TRANSMIT.extensions();
+        protected Iterable<Transmit> transmits = TRANSMIT.reverse();
 
         /**
          * 构造函数
          *
-         * @param invoker
-         * @param iface
-         * @param serviceUrl
+         * @param invoker    调用器
+         * @param iface      接口类
+         * @param serviceUrl 服务url
          */
         public ConsumerInvokeHandler(final Invoker invoker, final Class<?> iface, final URL serviceUrl) {
             this.invoker = invoker;
@@ -975,10 +971,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 处理toString，equals，hashcode等方法
          *
-         * @param proxy
-         * @param method
-         * @param param
-         * @return
+         * @param proxy  代理
+         * @param method 方法
+         * @param param  参数
+         * @return 结果
          */
         protected Object invokeObjectMethod(final Object proxy, final Method method, final Object[] param) {
             Object[] args = param;
@@ -1003,11 +999,11 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         /**
          * 调用默认方法
          *
-         * @param proxy
-         * @param method
-         * @param param
-         * @return
-         * @throws Throwable
+         * @param proxy  代理
+         * @param method 方法
+         * @param param  参数
+         * @return 结果
+         * @throws Throwable 异常
          */
         protected Object invokeDefaultMethod(final Object proxy, final Method method, final Object[] param) throws Throwable {
             if (constructor == null) {
@@ -1071,7 +1067,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 throw e.getCause() != null ? e.getCause() : e;
             } finally {
                 //调用结束，使用新的请求上下文，保留会话、调用者和跟踪的上下文
-                restore(request.getContext().create());
+                transmits.forEach(o -> o.onReturn(request));
             }
         }
 
@@ -1089,26 +1085,26 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 CompletableFuture<Result> future = invoker.invoke(request);
                 future.whenComplete((res, err) -> {
                     //目前是让用户自己保留上下文
-                    /*//判断线程是否发生切换，从而决定是否要恢复上下文，确保用户业务代码能拿到调用上下文
-                    if (request.getThread() != Thread.currentThread()) {
-                        transmits.forEach(o -> o.restoreOnComplete(request));
-                    }*/
                     Throwable throwable = err == null ? res.getException() : err;
                     if (throwable != null) {
+                        transmits.forEach(o -> o.onComplete(request, new Result(request.getContext(), throwable)));
                         response.completeExceptionally(throwable);
                     } else {
+                        transmits.forEach(o -> o.onComplete(request, res));
                         response.complete(res.getValue());
                     }
                 });
             } catch (CompletionException e) {
                 //调用出错，线程没有切换，保留原有上下文
+                transmits.forEach(o -> o.onComplete(request, new Result(request.getContext(), e)));
                 response.completeExceptionally(e.getCause() != null ? e.getCause() : e);
             } catch (Throwable e) {
                 //调用出错，线程没有切换，保留原有上下文
+                transmits.forEach(o -> o.onComplete(request, new Result(request.getContext(), e)));
                 response.completeExceptionally(e);
             } finally {
                 //调用结束，使用新的请求上下文，保留会话、调用者和跟踪的上下文
-                restore(request.getContext().create());
+                transmits.forEach(o -> o.onReturn(request));
             }
             return response;
         }

@@ -1,4 +1,4 @@
-package io.joyrpc.context.injection;
+package io.joyrpc.transaction.hmily;
 
 /*-
  * #%L
@@ -20,27 +20,21 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.transaction.TransactionOption;
+import org.dromara.hmily.annotation.Hmily;
 
 /**
- * 隐式参数配置
+ * 事务选项
  */
-public interface ReqInjection {
+public class HmilyTransactionOption implements TransactionOption {
 
-    /**
-     * 消费者调用，绑定上下文到调用对象
-     *
-     * @param request 请求
-     */
-    void inject(RequestMessage<Invocation> request);
+    protected Hmily hmily;
 
-    /**
-     * 消费者调用，取消绑定的上下文，用在重试，不同的节点有不同的协议，注入不同的隐式参数
-     *
-     * @param request 请求
-     */
-    default void reject(final RequestMessage<Invocation> request) {
+    public HmilyTransactionOption(Hmily hmily) {
+        this.hmily = hmily;
+    }
 
+    public Hmily getHmily() {
+        return hmily;
     }
 }

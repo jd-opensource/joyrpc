@@ -50,7 +50,6 @@ public class SeataInjecton implements Transmit {
     public void inject(RequestMessage<Invocation> request) {
         // Get XID of current transaction
         String xid = RootContext.getXID();
-        boolean bind = false;
         if (xid != null) {
             // Consumer：Put XID into the attachment of RPC
             request.getPayLoad().addAttachment(RootContext.KEY_XID, xid);

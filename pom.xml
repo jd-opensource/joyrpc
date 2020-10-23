@@ -87,9 +87,9 @@
         <fastjson.version>1.2.70</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
         <commons-compress.version>1.20</commons-compress.version>
-        <byte-buddy.version>1.10.14</byte-buddy.version>
+        <byte-buddy.version>1.10.17</byte-buddy.version>
         <grpc.version>1.20.0</grpc.version>
-        <netty.version>4.1.48.Final</netty.version>
+        <netty.version>4.1.53.Final</netty.version>
         <hazelcast.version>3.12.5</hazelcast.version>
         <curator.version>4.3.0</curator.version>
         <zookeeper.version>3.5.7</zookeeper.version>

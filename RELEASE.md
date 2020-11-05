@@ -6,12 +6,6 @@
 
 - 修复工程手动引入hessian包后，内置的hessian加载序列化扩展冲突问题
 
-### Enhancement
-
-- 增加json-rpc 2.0协议支持
-
-- http协议和grpc协议服务端增加http头参数注入插件，便于自定义参数注入
-
 ## 1.4.0-RELEASE(2020-10-20)
 
 ### Enhancement

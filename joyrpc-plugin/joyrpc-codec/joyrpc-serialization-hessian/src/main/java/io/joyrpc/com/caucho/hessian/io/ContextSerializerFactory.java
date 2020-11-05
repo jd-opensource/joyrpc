@@ -274,7 +274,7 @@ public class ContextSerializerFactory {
         HashMap<Class, Class> classMap;
 
         classMap = new HashMap<Class, Class>();
-        initSerializerFiles("META-INF/hessian/serializers", _serializerFiles, classMap, Serializer.class);
+        initSerializerFiles("META-INF/jhessian/serializers", _serializerFiles, classMap, Serializer.class);
 
         for (Map.Entry<Class, Class> entry : classMap.entrySet()) {
             try {
@@ -291,7 +291,7 @@ public class ContextSerializerFactory {
         }
 
         classMap = new HashMap<Class, Class>();
-        initSerializerFiles("META-INF/hessian/deserializers", _deserializerFiles, classMap, Deserializer.class);
+        initSerializerFiles("META-INF/jhessian/deserializers", _deserializerFiles, classMap, Deserializer.class);
 
         for (Map.Entry<Class, Class> entry : classMap.entrySet()) {
             try {

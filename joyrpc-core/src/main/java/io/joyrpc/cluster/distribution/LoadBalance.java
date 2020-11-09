@@ -31,7 +31,6 @@ import io.joyrpc.protocol.message.RequestMessage;
 /**
  * 负载均衡接口
  */
-//TODO 考虑对集群节点异步化评分和权重分组，负载均衡如果拿到这些分组和评分可以快速计算，这样大规模集群也可以提升性能。例如可以异步化计算权重分组，这样随机权重算法弱化为随机算法。
 @Extensible("loadBalance")
 public interface LoadBalance extends Prototype {
 

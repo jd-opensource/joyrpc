@@ -265,7 +265,6 @@ public class EtcdRegistry extends AbstractRegistry {
                         //已经关闭，或者创建了新的客户端
                         future.completeExceptionally(new IllegalStateException("controller is closed."));
                     } else if (t != null) {
-                        //TODO 判断租期失效异常，触发重连逻辑
                         logger.error(String.format("Error occurs while register provider of %s, caused by %s. retry....",
                                 registion.getPath(), t.getMessage()), t);
                         future.completeExceptionally(t);
@@ -512,7 +511,6 @@ public class EtcdRegistry extends AbstractRegistry {
                         CONFIG_EVENT_HANDLER.extensions().forEach(v -> v.handle(className, oldAttrs == null ? new HashMap<>() : oldAttrs, data));
                         //修改全局配置
                         GlobalContext.put(className, datum);
-                        //TODO 是否需要实例配置
                         handle(new ConfigEvent(this, null, version, datum));
                     }
                 });

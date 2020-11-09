@@ -21,7 +21,6 @@ package io.joyrpc.context.auth;
  */
 
 import io.joyrpc.util.network.IpLong;
-import io.joyrpc.util.network.Ipv4;
 import io.joyrpc.util.network.Lan;
 
 import java.util.Map;
@@ -55,9 +54,9 @@ public class IPPermission {
     /**
      * 构造函数
      *
-     * @param enabled
-     * @param whites
-     * @param blacks
+     * @param enabled 启用标识
+     * @param whites  白名单
+     * @param blacks  黑名单
      */
     public IPPermission(final boolean enabled, final Map<String, Lan> whites, final Map<String, Lan> blacks) {
         this.enabled = enabled;
@@ -70,9 +69,9 @@ public class IPPermission {
     /**
      * 是否允许
      *
-     * @param alias
-     * @param ip
-     * @return
+     * @param alias 分组
+     * @param ip    ip
+     * @return 允许标识
      */
     public boolean permit(final String alias, final String ip) {
         if (!enabled) {
@@ -80,11 +79,13 @@ public class IPPermission {
         }
         Lan whiteLan = whites == null ? null : whites.getOrDefault(alias, defWhite);
         Lan blackLan = blacks == null ? null : blacks.getOrDefault(alias, defBlack);
-        if (whiteLan == null && blackLan == null) {
-            return true;
+        if (whiteLan == null) {
+            return blackLan == null || !blackLan.contains(new IpLong(ip));
+        } else if (blackLan == null) {
+            return whiteLan.contains(new IpLong(ip));
+        } else {
+            IpLong v = new IpLong(ip);
+            return whiteLan.contains(v) && !blackLan.contains(v);
         }
-        IpLong v = new IpLong(ip);
-        //TODO 黑白名单统一规则
-        return (whiteLan == null || whiteLan.contains(v)) && (blackLan == null || !blackLan.contains(v));
     }
 }

@@ -9,9 +9,9 @@ package io.joyrpc.transport.codec;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,7 +32,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
- * @date: 2019/4/28
+ * Telnet编解码
  */
 public class TelnetCodec implements Codec {
 
@@ -76,11 +76,12 @@ public class TelnetCodec implements Codec {
     }
 
     /**
-     * 其它
+     * 其它类型
      *
-     * @param channel
-     * @param bytes
-     * @return
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
+     * @return 其它请求
      */
     protected Object onOther(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
         // 追加到当前缓冲器
@@ -93,18 +94,18 @@ public class TelnetCodec implements Codec {
     /**
      * 获取输入
      *
-     * @param channel
-     * @return
+     * @param channel 通道
+     * @return 输入
      */
-    protected TelnetInput getTelnetInput(Channel channel) {
+    protected TelnetInput getTelnetInput(final Channel channel) {
         return channel.getAttribute(TELNET_INPUT, o -> new TelnetInput(prompt, 70));
     }
 
     /**
      * 获取字符集
      *
-     * @param channel
-     * @return
+     * @param channel 通道
+     * @return 字符集
      */
     protected Charset getCharset(final Channel channel) {
         return channel.getAttribute(CHARSET, o -> StandardCharsets.UTF_8);
@@ -113,10 +114,10 @@ public class TelnetCodec implements Codec {
     /**
      * 回车键
      *
-     * @param channel
-     * @param buffer
-     * @param bytes
-     * @return
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
+     * @return 回车键请求
      */
     protected Object onEnter(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
         Charset charset = getCharset(channel);
@@ -139,10 +140,10 @@ public class TelnetCodec implements Codec {
     /**
      * 控制命令
      *
-     * @param channel
-     * @param buffer
-     * @param bytes
-     * @return
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
+     * @return 控制命令请求
      */
     protected Object onNvt(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
         // TODO 控制命令，暂时忽略
@@ -152,10 +153,10 @@ public class TelnetCodec implements Codec {
     /**
      * 退出
      *
-     * @param channel
-     * @param buffer
-     * @param bytes
-     * @return
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
+     * @return 退出请求
      */
     protected Object onExit(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
         //退出操作
@@ -166,44 +167,41 @@ public class TelnetCodec implements Codec {
     /**
      * 向下翻
      *
-     * @param channel
-     * @param buffer
-     * @param bytes
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
      */
     protected Object onDown(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
-        TelnetInput input = getTelnetInput(channel);
-        //下键翻阅历史命令
-        String downCmd = input.roll(false);
-        StringBuilder sb = new StringBuilder();
-        if (downCmd != null) {
-            for (int i = 0; i <= bytes.length; i++) {
-                sb.append("\b");
-            }
-            for (int i = 0; i <= bytes.length; i++) {
-                sb.append(" ");
-            }
-            for (int i = 0; i <= bytes.length; i++) {
-                sb.append("\b");
-            }
-            sb.append(downCmd.trim().substring(3));
-        }
-        return new TelnetResponse(sb.toString());
+        return onRoll(channel, buffer, bytes, false);
     }
 
     /**
      * 向上翻
      *
-     * @param channel
-     * @param buffer
-     * @param bytes
-     * @return
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
+     * @return 向上翻请求
      */
     protected Object onUp(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
+        return onRoll(channel, buffer, bytes, true);
+    }
+
+    /**
+     * 翻页
+     *
+     * @param channel  通道
+     * @param buffer   缓冲区
+     * @param bytes    字节数组
+     * @param backward 向后翻页
+     * @return 翻页请求
+     */
+    protected Object onRoll(final Channel channel, final ChannelBuffer buffer, final byte[] bytes, boolean backward) {
         TelnetInput input = getTelnetInput(channel);
-        //上键翻阅历史命令
-        String upCmd = input.roll(true);
-        StringBuilder sb = new StringBuilder();
-        if (upCmd != null) {
+        String cmd = input.roll(true);
+        if (cmd != null) {
+            cmd = cmd.trim();
+            StringBuilder sb = new StringBuilder(bytes.length * 3 + 3);
             for (int i = 0; i <= bytes.length; i++) {
                 sb.append("\b");
             }
@@ -213,18 +211,18 @@ public class TelnetCodec implements Codec {
             for (int i = 0; i <= bytes.length; i++) {
                 sb.append("\b");
             }
-            sb.append(upCmd.trim().substring(3));
+            sb.append(cmd.substring(3));
         }
-        return new TelnetResponse(sb.toString());
+        return new TelnetResponse("");
     }
 
     /**
      * 退格
      *
-     * @param channel
-     * @param buffer
-     * @param bytes
-     * @return
+     * @param channel 通道
+     * @param buffer  缓冲区
+     * @param bytes   字节数组
+     * @return 退格请求
      */
     protected Object onBackspace(final Channel channel, final ChannelBuffer buffer, final byte[] bytes) {
         TelnetInput input = getTelnetInput(channel);

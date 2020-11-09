@@ -451,7 +451,6 @@ public abstract class AbstractCodec implements Codec, LengthFieldFrameCodec {
         inputStream = compression == null ? inputStream : compression.decompress(inputStream);
         Class payloadClass = getPayloadClass(header, msgType);
 
-        //TODO 尽量拿到当前类型来进行反序列化
         Object payload = payloadClass == null ? null : deserialize(serialization, inputStream, payloadClass, msgHeader, context);
         if (msgType.isRequest()) {
             RequestMessage request = new RequestMessage(msgHeader, payload);

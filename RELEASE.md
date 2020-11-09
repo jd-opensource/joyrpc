@@ -1,5 +1,11 @@
 # 版本说明
 
+## 1.4.2-SNAPSHOT
+
+### Enhancement
+
+- nacos 1.4.0支持，支持配置更新（todo）
+
 ## 1.4.1-RELEASE(2020-11-05)
 
 ### Bugfixes

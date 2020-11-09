@@ -840,7 +840,6 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param task 任务
          */
         protected void addNewTask(final Task task) {
-            //TODO 重试的任务是否应该放在后面？
             if (logger.isDebugEnabled()) {
                 logger.debug("add task " + task.getName());
             }
@@ -962,45 +961,42 @@ public abstract class AbstractRegistry implements Registry, Configure {
             } else if (!task.test(null)) {
                 task.completeExceptionally(new IllegalStateException("url is removed."));
             } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Start calling task %s, remain tasks %d", task.getName(), tasks.size()));
+                }
                 try {
-                    if (logger.isDebugEnabled()) {
-                        logger.debug(String.format("Start calling task %s, remain tasks %d", task.getName(), tasks.size()));
-                    }
                     //执行任务
-                    task.call().whenComplete((v, t) -> {
-                        if (!isOpen()) {
-                            task.completeExceptionally(new IllegalStateException("registry is closed."));
-                        } else if (!task.test(t)) {
-                            task.completeExceptionally(t == null ? new IllegalStateException("url is removed.") : t);
-                        } else if (t != null) {
-                            if (task.getMaxRetries() < 0 || task.getRetry() < task.getMaxRetries()) {
-                                //重试
-                                task.setRetryTime(SystemClock.now() + registry.taskRetryInterval);
-                                task.setRetry(task.getRetry() + 1);
-                                tasks.addLast(task);
-                            } else {
-                                task.completeExceptionally(t);
-                            }
-                        } else {
-                            task.complete();
-                        }
-                    });
+                    task.call().whenComplete((v, t) -> complete(task, t));
                 } catch (Throwable e) {
                     //执行出错，则重试
                     logger.error("Error occurs while executing registry task,caused by " + e.getMessage(), e);
-                    if (!isOpen()) {
-                        task.completeExceptionally(new IllegalStateException("registry is closed."));
-                    } else if (!task.test(e)) {
-                        task.completeExceptionally(e);
-                    } else if (task.getMaxRetries() < 0 || task.getRetry() < task.getMaxRetries()) {
-                        //重试
-                        task.setRetryTime(SystemClock.now() + registry.taskRetryInterval);
-                        task.setRetry(task.getRetry() + 1);
-                        tasks.addLast(task);
-                    } else {
-                        task.completeExceptionally(e);
-                    }
+                    complete(task, e);
                 }
+            }
+        }
+
+        /**
+         * 完成任务
+         *
+         * @param task      任务
+         * @param throwable 异常
+         */
+        protected void complete(final Task task, final Throwable throwable) {
+            if (!isOpen()) {
+                task.completeExceptionally(new IllegalStateException("registry is closed."));
+            } else if (!task.test(throwable)) {
+                task.completeExceptionally(throwable == null ? new IllegalStateException("url is removed.") : throwable);
+            } else if (throwable != null) {
+                if (task.getMaxRetries() < 0 || task.getRetry() < task.getMaxRetries()) {
+                    //重试任务放在最后
+                    task.setRetryTime(SystemClock.now() + registry.taskRetryInterval);
+                    task.setRetry(task.getRetry() + 1);
+                    tasks.addLast(task);
+                } else {
+                    task.completeExceptionally(throwable);
+                }
+            } else {
+                task.complete();
             }
         }
 

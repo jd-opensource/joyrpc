@@ -9,9 +9,9 @@ package io.joyrpc.cluster.discovery.backup.file;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -105,6 +105,7 @@ public class FileBackup implements Backup {
     @Override
     public void backup(final String name, final BackupDatum datum) throws IOException {
         AtomicInteger counter = counters.computeIfAbsent(name, o -> new AtomicInteger(-1));
+        //加锁防止并发
         synchronized (counter) {
             int cursor = 0;
             //备份数大于1
@@ -120,7 +121,6 @@ public class FileBackup implements Backup {
 
             File target = new File(directory, name + "." + cursor);
             File temp = File.createTempFile("cluster", "backup");
-            //TODO 可能存在并发写入的问题
             try (FileOutputStream out = new FileOutputStream(temp)) {
                 getSerialization().getSerializer().serialize(out, datum);
                 out.flush();

@@ -896,7 +896,9 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
                 open.whenComplete((v, t) -> {
                     if (t != null) {
                         future.completeExceptionally(new InitializationException(
-                                String.format("Registry open error. %s", registry.getUrl().toString(false, false))));
+                                String.format("Registry open error. %s",
+                                        registry.getUrl().toString(false, false)),
+                                t));
                     } else if (subscribed.compareAndSet(false, true)) {
                         //保存订阅注册中心
                         if (configureRef == null) {

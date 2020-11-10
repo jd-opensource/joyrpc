@@ -232,25 +232,6 @@ public class NacosRegistry extends AbstractRegistry {
                 future.complete(null);
             });
         }
-
-        /**
-         * 更新集群
-         *
-         * @param ncBooking 订阅
-         * @param instances 实例
-         */
-        protected void doUpdate(final NacosClusterBooking ncBooking, final List<Instance> instances) {
-            String defProtocol = GlobalContext.getString(Constants.PROTOCOL_KEY);
-            List<ClusterEvent.ShardEvent> shards = new LinkedList<>();
-            for (Instance ins : instances) {
-                URL shardUrl = ncBooking.createShardUrl(defProtocol, ins);
-                if (shardUrl != null) {
-                    shards.add(new ClusterEvent.ShardEvent(new Shard.DefaultShard(shardUrl), ClusterEvent.ShardEventType.UPDATE));
-                }
-            }
-            ncBooking.handle(new ClusterEvent(registry, null, UpdateEvent.UpdateType.FULL, ncBooking.getVersion() + 1, shards));
-        }
-
     }
 
     /**
@@ -272,7 +253,10 @@ public class NacosRegistry extends AbstractRegistry {
 
         public NacosClusterBooking(URLKey key, Runnable dirty, Publisher<ClusterEvent> publisher) {
             super(key, dirty, publisher);
-            this.serviceName = createServiceName(this.getUrl());
+            String name = key.getService();
+            String version = url.getString(SERVICE_VERSION_OPTION);
+            String group = url.getString(ALIAS_OPTION);
+            this.serviceName = "providers:" + name + ":" + version + ":" + group;
             this.group = url.getString(GROUP, DEFAULT_GROUP);
         }
 
@@ -283,10 +267,10 @@ public class NacosRegistry extends AbstractRegistry {
          * @return 服务名称
          */
         protected String createServiceName(URL url) {
-            String serviceName = url.getString(SERVICE_NAME_KEY, url.getPath());
+            String name = url.getString(SERVICE_NAME_KEY, url.getPath());
             String version = url.getString(SERVICE_VERSION_OPTION);
             String group = url.getString(ALIAS_OPTION);
-            return "providers:" + serviceName + ":" + version + ":" + group;
+            return "providers:" + name + ":" + version + ":" + group;
         }
 
         /**
@@ -329,21 +313,6 @@ public class NacosRegistry extends AbstractRegistry {
         public String getGroup() {
             return group;
         }
-
-        public EventListener getListener() {
-            return listener;
-        }
-
-        public void setListener(EventListener listener) {
-            this.listener = listener;
-        }
-
-        public EventListener removeListener() {
-            EventListener res = listener;
-            this.listener = null;
-            return res;
-        }
-
     }
 
     /**
@@ -439,38 +408,27 @@ public class NacosRegistry extends AbstractRegistry {
 
         public NacosRegistion(URLKey key) {
             super(key);
-            this.serviceName = createServiceName(url);
+            String name = key.getService();
+            String version = url.getString(SERVICE_VERSION_OPTION);
+            String group = url.getString(ALIAS_OPTION);
+            String pre = SIDE_PROVIDER.equals(url.getString(ROLE_OPTION)) ? "providers:" : "consumers:";
+
+            this.serviceName = pre + name + ":" + version + ":" + group;
             this.group = url.getString(GROUP, DEFAULT_GROUP);
             this.instance = createInstance(url);
         }
 
         /**
-         * 生成服务名称
-         *
+         * 构建实例
          * @param url url
-         * @return 名称
-         */
-        protected String createServiceName(URL url) {
-            String serviceName = url.getString(SERVICE_NAME_KEY, url.getPath());
-            String version = url.getString(SERVICE_VERSION_OPTION);
-            String group = url.getString(ALIAS_OPTION);
-            String pre = SIDE_PROVIDER.equals(url.getString(ROLE_OPTION)) ? "providers:" : "consumers:";
-            return pre + serviceName + ":" + version + ":" + group;
-        }
-
-        /**
-         * 生成实例对象
-         *
-         * @param url url
-         * @return 实例对象
+         * @return 实例
          */
         protected Instance createInstance(final URL url) {
-            Instance instance = new Instance();
-            instance.setIp(url.getHost());
-            instance.setPort(url.getPort());
-            //instance.setClusterName(url.getString(ALIAS_OPTION));
-            instance.setMetadata(PARAMETER_FUNCTION.apply(url));
-            return instance;
+            Instance ins = new Instance();
+            ins.setIp(url.getHost());
+            ins.setPort(url.getPort());
+            ins.setMetadata(PARAMETER_FUNCTION.apply(url));
+            return ins;
         }
 
         public Instance getInstance() {

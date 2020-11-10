@@ -24,8 +24,8 @@ import com.alibaba.nacos.api.naming.pojo.Instance;
 import io.joyrpc.cluster.discovery.backup.Backup;
 import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
-import io.joyrpc.cluster.discovery.registry.URLKey.RegKey;
 import io.joyrpc.cluster.discovery.registry.URLKey.ClusterKey;
+import io.joyrpc.cluster.discovery.registry.URLKey.RegKey;
 import io.joyrpc.cluster.discovery.registry.nacos.NacosRegistry;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.context.GlobalContext;
@@ -33,21 +33,16 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.SystemClock;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
 
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.constants.Constants.ROLE_OPTION;
 
 /**
  * nacos注册中心
  */
 public class DubboNacosRegistry extends NacosRegistry {
-
-    private static final Logger logger = LoggerFactory.getLogger(DubboNacosRegistry.class);
 
     private final static String DUBBO_PROTOCOL_KEY = "protocol";
     private final static String DUBBO_PROTOCOL_VERSION_KEY = "dubbo";

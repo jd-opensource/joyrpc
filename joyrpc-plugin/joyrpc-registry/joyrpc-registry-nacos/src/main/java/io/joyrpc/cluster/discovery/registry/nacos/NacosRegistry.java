@@ -68,15 +68,6 @@ public class NacosRegistry extends AbstractRegistry {
     public static final String TIMEOUT = "nacos.timeout";
 
     /**
-     * 目录服务
-     */
-    private NamingService namingService;
-    /**
-     * 配置服务
-     */
-    private ConfigService configService;
-
-    /**
      * 构造方法
      *
      * @param name   名称
@@ -103,38 +94,6 @@ public class NacosRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected void doOpen() {
-        try {
-            Properties properties = new Properties();
-            String address = url.getString(ADDRESS_OPTION);
-            URL url = URL.valueOf(address, "http", 8848, null);
-            properties.put(SERVER_ADDR, url.getAddress());
-            namingService = NacosFactory.createNamingService(properties);
-            configService = NacosFactory.createConfigService(properties);
-        } catch (NacosException e) {
-            throw new IllegalStateException(e.getMessage(), e);
-        }
-        super.doOpen();
-    }
-
-    @Override
-    protected void doClose() {
-        if (namingService != null) {
-            try {
-                namingService.shutDown();
-            } catch (NacosException e) {
-            }
-        }
-        if (configService != null) {
-            try {
-                configService.shutDown();
-            } catch (NacosException e) {
-            }
-        }
-        super.doClose();
-    }
-
-    @Override
     protected RegistryController<? extends AbstractRegistry> create() {
         return new NacosRegistryController(this);
     }
@@ -148,6 +107,16 @@ public class NacosRegistry extends AbstractRegistry {
      * nacos控制器
      */
     protected static class NacosRegistryController extends RegistryController<NacosRegistry> {
+
+        /**
+         * 目录服务
+         */
+        protected NamingService namingService;
+        /**
+         * 配置服务
+         */
+        protected ConfigService configService;
+
         /**
          * 构造函数
          *
@@ -155,6 +124,58 @@ public class NacosRegistry extends AbstractRegistry {
          */
         public NacosRegistryController(NacosRegistry registry) {
             super(registry);
+        }
+
+        @Override
+        protected CompletableFuture<Void> doConnect() {
+            try {
+                Properties properties = new Properties();
+                String address = registry.url.getString(ADDRESS_OPTION);
+                URL url = URL.valueOf(address, "http", 8848, null);
+                properties.put(SERVER_ADDR, url.getAddress());
+                namingService = NacosFactory.createNamingService(properties);
+                configService = NacosFactory.createConfigService(properties);
+                return super.doConnect();
+            } catch (Throwable e) {
+                shutdown();
+                return Futures.completeExceptionally(e);
+            }
+        }
+
+        @Override
+        protected CompletableFuture<Void> doDisconnect() {
+            shutdown();
+            return super.doDisconnect();
+        }
+
+        /**
+         * 关闭资源
+         */
+        protected void shutdown() {
+            //连接断开后关闭目录服务和配置服务
+            //关闭时间较长，采用线程异步关闭
+            final NamingService namingService = this.namingService;
+            Thread thread1 = new Thread(() -> {
+                if (namingService != null) {
+                    try {
+                        namingService.shutDown();
+                    } catch (NacosException e) {
+                    }
+                }
+            }, "shutdown-nacos-namingService");
+            thread1.setDaemon(true);
+            thread1.start();
+            final ConfigService configService = this.configService;
+            Thread thread2 = new Thread(() -> {
+                if (configService != null) {
+                    try {
+                        configService.shutDown();
+                    } catch (NacosException e) {
+                    }
+                }
+            }, "shutdown-nacos-configService");
+            thread2.setDaemon(true);
+            thread2.start();
         }
 
         @Override
@@ -171,7 +192,8 @@ public class NacosRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doRegister(final Registion registion) {
             NacosRegistion nr = (NacosRegistion) registion;
             return Futures.call(future -> {
-                registry.namingService.registerInstance(nr.getServiceName(), nr.getGroup(), nr.getInstance());
+                //内部会自动注册
+                namingService.registerInstance(nr.getServiceName(), nr.getGroup(), nr.getInstance());
                 future.complete(null);
             });
         }
@@ -180,7 +202,7 @@ public class NacosRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doDeregister(final Registion registion) {
             NacosRegistion nr = (NacosRegistion) registion;
             return Futures.call(future -> {
-                registry.namingService.deregisterInstance(nr.getServiceName(), nr.getGroup(), nr.getInstance());
+                namingService.deregisterInstance(nr.getServiceName(), nr.getGroup(), nr.getInstance());
                 future.complete(null);
             });
         }
@@ -189,8 +211,8 @@ public class NacosRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doSubscribe(final ClusterBooking booking) {
             return Futures.call(future -> {
                 NacosClusterBooking ncb = (NacosClusterBooking) booking;
-                //订阅
-                registry.namingService.subscribe(ncb.getServiceName(), ncb.getGroup(), ncb);
+                //订阅，内部会自动定时更新，当返回节点为空时候会自我保护
+                namingService.subscribe(ncb.getServiceName(), ncb.getGroup(), ncb);
                 future.complete(null);
             });
         }
@@ -199,7 +221,7 @@ public class NacosRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doUnsubscribe(final ClusterBooking booking) {
             return Futures.call(future -> {
                 NacosClusterBooking ncb = (NacosClusterBooking) booking;
-                registry.namingService.unsubscribe(ncb.getServiceName(), ncb.getGroup(), ncb);
+                namingService.unsubscribe(ncb.getServiceName(), ncb.getGroup(), ncb);
                 future.complete(null);
             });
         }
@@ -211,9 +233,9 @@ public class NacosRegistry extends AbstractRegistry {
                 public void execute(CompletableFuture<Void> future) throws Exception {
                     NacosConfigBooking ncb = (NacosConfigBooking) booking;
                     //同步调用一下
-                    ncb.receiveConfigInfo(registry.configService.getConfig(ncb.getDataId(), ncb.getGroup(), ncb.getTimeout()));
+                    ncb.receiveConfigInfo(configService.getConfig(ncb.getDataId(), ncb.getGroup(), ncb.getTimeout()));
                     //监听器
-                    registry.configService.addListener(ncb.dataId, ncb.group, ncb);
+                    configService.addListener(ncb.dataId, ncb.group, ncb);
                     future.complete(null);
                 }
 
@@ -228,7 +250,7 @@ public class NacosRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doUnsubscribe(final ConfigBooking booking) {
             return Futures.call(future -> {
                 NacosConfigBooking ncb = (NacosConfigBooking) booking;
-                registry.configService.removeListener(ncb.dataId, ncb.group, ncb);
+                configService.removeListener(ncb.dataId, ncb.group, ncb);
                 future.complete(null);
             });
         }
@@ -420,6 +442,7 @@ public class NacosRegistry extends AbstractRegistry {
 
         /**
          * 构建实例
+         *
          * @param url url
          * @return 实例
          */

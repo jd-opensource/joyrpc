@@ -37,8 +37,8 @@ public class Futures {
     /**
      * 链式调用
      *
-     * @param future
-     * @param then
+     * @param future future
+     * @param then   后续future
      * @param <T>
      */
     public static <T> void chain(final CompletableFuture<T> future, final CompletableFuture<T> then) {
@@ -56,8 +56,8 @@ public class Futures {
     /**
      * 链式调用，当第一个Future完成后，以异常结束
      *
-     * @param future
-     * @param then
+     * @param future future
+     * @param then   异常
      * @param <T>
      */
     public static <T> CompletableFuture<T> chain(final CompletableFuture<T> future, final Throwable then) {
@@ -69,8 +69,8 @@ public class Futures {
     /**
      * 出现异常
      *
-     * @param future
-     * @param throwable
+     * @param future    future
+     * @param throwable 异常
      */
     public static <T> void completeExceptionally(final CompletableFuture<T> future, final Throwable throwable) {
         if (future != null) {
@@ -81,8 +81,8 @@ public class Futures {
     /**
      * 完成
      *
-     * @param future
-     * @param value
+     * @param future future
+     * @param value  值
      */
     public static <T> void complete(final CompletableFuture<T> future, final T value) {
         if (future != null) {
@@ -93,8 +93,9 @@ public class Futures {
     /**
      * 构造异常Future
      *
-     * @param throwable
+     * @param throwable 异常
      * @param <T>
+     * @return future
      */
     public static <T> CompletableFuture<T> completeExceptionally(final Throwable throwable) {
         CompletableFuture<T> result = new CompletableFuture<>();
@@ -105,8 +106,8 @@ public class Futures {
     /**
      * 保证确保所有Future执行完毕
      *
-     * @param futures
-     * @return
+     * @param futures future列表
+     * @return future
      */
     public static <T> CompletableFuture<Void> allOf(final Collection<CompletableFuture<T>> futures) {
         int size = futures.size();
@@ -126,8 +127,8 @@ public class Futures {
     /**
      * 保证确有一个Future执行完毕
      *
-     * @param futures
-     * @return
+     * @param futures future列表
+     * @return future
      */
     public static <T> CompletableFuture<Object> anyOf(final Collection<CompletableFuture<T>> futures) {
         int size = futures.size();
@@ -144,10 +145,10 @@ public class Futures {
     /**
      * 确保线程在超时时间内完成
      *
-     * @param future
-     * @param timeout
+     * @param future  future
+     * @param timeout 超时时间
      * @param <T>
-     * @return
+     * @return future
      */
     public static <T> CompletableFuture<T> timeout(final CompletableFuture<T> future, final long timeout) {
         //启动线程判断超时
@@ -228,12 +229,12 @@ public class Futures {
     }
 
     @FunctionalInterface
-    public static interface Executor<T> {
+    public interface Executor<T> {
 
         /**
          * 执行
          *
-         * @param future
+         * @param future future
          * @throws Exception
          */
         void execute(CompletableFuture<T> future) throws Exception;
@@ -241,7 +242,7 @@ public class Futures {
         /**
          * 异常
          *
-         * @param e
+         * @param e 异常
          */
         default void onException(final Exception e) {
 

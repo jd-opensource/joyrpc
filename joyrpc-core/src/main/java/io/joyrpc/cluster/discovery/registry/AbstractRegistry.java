@@ -657,7 +657,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
         public void deregister(final Registion registion, final int maxRetries) {
             Registion remove = registers.remove(registion.getKey());
             if (remove != null) {
-                addNewTask(new Task("registering " + registion.name(), remove.getUrl(),
+                addNewTask(new Task("deregister " + registion.name(), remove.getUrl(),
                         remove.getFuture().getCloseFuture(), () -> doDeregister(remove),
                         0, 0, maxRetries,
                         t -> (t == null || retry(t)) && !registers.containsKey(remove.getKey())));
@@ -1063,7 +1063,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
                 if ((openFuture.isDone() || !openFuture.completeExceptionally(new IllegalStateException()))
                         && !openFuture.isCompletedExceptionally()
                         && !openFuture.isCancelled()) {
-                    addNewTask(new Task("unsubsribing " + v.name(), v.getUrl(), closeFuture,
+                    addNewTask(new Task("unsubscribe " + v.name(), v.getUrl(), closeFuture,
                             () -> function.apply(v), 0, 0, 0, null));
                 } else {
                     closeFuture.complete(v.getUrl());

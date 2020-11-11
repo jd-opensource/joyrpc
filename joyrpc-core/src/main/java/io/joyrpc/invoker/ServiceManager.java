@@ -442,7 +442,7 @@ public class ServiceManager {
                             final ConfigHandler configHandler,
                             final Map<String, Refer> refers) {
         //一个服务接口可以注册多次，每个的参数不一样
-        String key = url.toString(false, true);
+        String key = url.remove(TIMESTAMP_KEY).toString(false, true);
         //添加hashCode参数，去掉HOST减少字符串
         String clusterName = url.add(HASH_CODE, key.hashCode()).setHost(null).
                 toString(false, true, Constants.ALIAS_OPTION.getName(), Constants.COUNTER, HASH_CODE);

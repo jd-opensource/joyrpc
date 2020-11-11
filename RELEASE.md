@@ -5,7 +5,12 @@
 ### Enhancement
 
 - nacos 1.4.0支持，支持配置更新
+
 - 完善consul，注册的服务名称默认增加分组信息，可以在注册中心URL上配置consul.serviceWithGroup=false来禁用
+
+### Bugfixes
+
+- 修复两个完全配置一下的消费者在启动后创建了不同的对象引用的问题
 
 ## 1.4.1-RELEASE(2020-11-05)
 

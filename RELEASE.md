@@ -4,7 +4,8 @@
 
 ### Enhancement
 
-- nacos 1.4.0支持，支持配置更新（todo）
+- nacos 1.4.0支持，支持配置更新
+- consul 注册的服务名称增加分组信息
 
 ## 1.4.1-RELEASE(2020-11-05)
 

@@ -93,7 +93,7 @@
         <hazelcast.version>3.12.5</hazelcast.version>
         <curator.version>4.3.0</curator.version>
         <zookeeper.version>3.5.7</zookeeper.version>
-        <vertx-consul-client>3.9.3</vertx-consul-client>
+        <vertx-consul-client>3.9.4</vertx-consul-client>
         <protobuf.version>3.7.1</protobuf.version>
         <resteasy.version>3.0.8.Final</resteasy.version>
         <commons-jexl3.version>3.1</commons-jexl3.version>

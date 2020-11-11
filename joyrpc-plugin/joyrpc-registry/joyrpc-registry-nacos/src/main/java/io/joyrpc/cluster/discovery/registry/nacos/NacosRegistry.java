@@ -370,8 +370,8 @@ public class NacosRegistry extends AbstractRegistry {
             if (appName == null || appName.isEmpty()) {
                 appName = "default";
             }
-            String serviceName = url.getString(SERVICE_NAME_KEY, url.getPath());
-            this.dataId = url.getString(DATAID, pre + serviceName);
+            //按照接口粒度进行配置
+            this.dataId = url.getString(DATAID, pre + url.getPath());
             this.group = url.getString(GROUP, url.getString(ALIAS_OPTION));
             this.timeout = url.getPositive(TIMEOUT, 5000L);
         }

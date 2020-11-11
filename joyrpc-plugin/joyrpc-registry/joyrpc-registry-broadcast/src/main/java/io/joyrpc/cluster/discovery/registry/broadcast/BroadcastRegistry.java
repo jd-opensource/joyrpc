@@ -34,6 +34,7 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEventType;
 import io.joyrpc.cluster.event.ConfigEvent;
+import io.joyrpc.constants.Constants;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
@@ -146,7 +147,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         //不创建关闭钩子
         properties.setProperty("hazelcast.shutdownhook.enabled", "false");
         properties.setProperty("hazelcast.prefer.ipv4.stack", String.valueOf(Ipv4.isIpv4()));
-        properties.setProperty("hazelcast.local.localAddress", Ipv4.getLocalIp());
+        properties.setProperty("hazelcast.local.localAddress", url.getString(new URLOption<>("address", Ipv4.getLocalIp())));
 
         //同步复制，可以读取从
         cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).

@@ -44,7 +44,7 @@ public class SimpleEncodeHandler extends MessageToByteEncoder {
      */
     protected Codec codec;
     /**
-     * 同道
+     * 通道
      */
     protected Channel channel;
 

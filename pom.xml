@@ -85,7 +85,7 @@
         <jmh.version>1.26</jmh.version>
         <guava.version>28.0-jre</guava.version>
         <jackson.version>2.11.0</jackson.version>
-        <fastjson.version>1.2.70</fastjson.version>
+        <fastjson.version>1.2.75</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
         <commons-compress.version>1.20</commons-compress.version>
         <byte-buddy.version>1.10.17</byte-buddy.version>

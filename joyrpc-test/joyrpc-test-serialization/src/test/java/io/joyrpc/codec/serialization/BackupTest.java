@@ -24,8 +24,8 @@ import io.joyrpc.cluster.discovery.backup.BackupDatum;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.UnsafeByteArrayOutputStream;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -67,7 +67,7 @@ public class BackupTest {
             serializer.serialize(baos, datum);
             bais = new UnsafeByteArrayInputStream(baos.toByteArray());
             BackupDatum data = serializer.deserialize(bais, BackupDatum.class);
-            Assert.assertEquals(data, datum);
+            Assertions.assertEquals(data, datum);
         }
     }
 

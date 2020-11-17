@@ -23,8 +23,8 @@ package io.joyrpc.codec.compression;
 import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.*;
 import java.util.List;
@@ -55,7 +55,7 @@ public class CompressionTest {
                 ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
                 InputStream is = compression.decompress(bis);
                 is.read(target);
-                Assert.assertArrayEquals(source, target);
+                Assertions.assertArrayEquals(source, target);
             } catch (Throwable e) {
                 System.out.println("compress error " + type);
                 throw e;
@@ -121,40 +121,40 @@ public class CompressionTest {
         acos.write(1);
         acos.write(new byte[120]);
         acos.finish();
-        Assert.assertFalse(acos.isCompressed());
+        Assertions.assertFalse(acos.isCompressed());
 
         acos = new AdaptiveCompressOutputStream(new NettyChannelBuffer(ByteBufAllocator.DEFAULT.buffer(1024)), lz4, 128);
         acos.write(1);
         acos.write(new byte[127]);
         acos.finish();
-        Assert.assertFalse(acos.isCompressed());
+        Assertions.assertFalse(acos.isCompressed());
 
         acos = new AdaptiveCompressOutputStream(new NettyChannelBuffer(ByteBufAllocator.DEFAULT.buffer(1024)), lz4, 128);
         acos.write(1);
         acos.write(new byte[128]);
         acos.finish();
-        Assert.assertTrue(acos.isCompressed());
+        Assertions.assertTrue(acos.isCompressed());
 
         acos = new AdaptiveCompressOutputStream(new NettyChannelBuffer(ByteBufAllocator.DEFAULT.buffer(1024)), lz4, 128);
         acos.write(1);
         acos.write(new byte[127]);
         acos.write(1);
         acos.finish();
-        Assert.assertTrue(acos.isCompressed());
+        Assertions.assertTrue(acos.isCompressed());
 
         acos = new AdaptiveCompressOutputStream(new NettyChannelBuffer(ByteBufAllocator.DEFAULT.buffer(1024)), lz4, 128);
         acos.write(1);
         acos.write(new byte[100]);
         acos.write(new byte[27]);
         acos.finish();
-        Assert.assertFalse(acos.isCompressed());
+        Assertions.assertFalse(acos.isCompressed());
 
         acos = new AdaptiveCompressOutputStream(new NettyChannelBuffer(ByteBufAllocator.DEFAULT.buffer(1024)), lz4, 128);
         acos.write(1);
         acos.write(new byte[100]);
         acos.write(new byte[28]);
         acos.finish();
-        Assert.assertTrue(acos.isCompressed());
+        Assertions.assertTrue(acos.isCompressed());
 
     }
 

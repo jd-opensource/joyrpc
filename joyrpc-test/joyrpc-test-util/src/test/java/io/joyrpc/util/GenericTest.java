@@ -21,8 +21,8 @@ package io.joyrpc.util;
  */
 
 import io.joyrpc.exception.MethodOverloadException;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.lang.reflect.*;
 import java.util.List;
@@ -35,39 +35,39 @@ public class GenericTest {
         Method method = ClassUtils.getPublicMethod(AppleService.class, "getPrice");
         GenericMethod genericMethod = genericClass.get(method);
         GenericType[] genericTypes = genericMethod.getParameters();
-        Assert.assertEquals(genericTypes.length, 1);
-        Assert.assertEquals(genericTypes[0].getGenericType(), Apple.class);
+        Assertions.assertEquals(genericTypes.length, 1);
+        Assertions.assertEquals(genericTypes[0].getGenericType(), Apple.class);
         method = ClassUtils.getPublicMethod(AppleService.class, "add2ShopCar");
         genericMethod = genericClass.get(method);
         genericTypes = genericMethod.getParameters();
-        Assert.assertEquals(genericTypes.length, 1);
-        Assert.assertTrue(genericTypes[0].getGenericType() instanceof GenericArrayType);
-        Assert.assertEquals(((GenericArrayType) genericTypes[0].getGenericType()).getGenericComponentType(), Apple.class);
+        Assertions.assertEquals(genericTypes.length, 1);
+        Assertions.assertTrue(genericTypes[0].getGenericType() instanceof GenericArrayType);
+        Assertions.assertEquals(((GenericArrayType) genericTypes[0].getGenericType()).getGenericComponentType(), Apple.class);
         method = ClassUtils.getPublicMethod(AppleService.class, "delete");
         genericMethod = genericClass.get(method);
         genericTypes = genericMethod.getParameters();
-        Assert.assertEquals(genericTypes.length, 1);
-        Assert.assertTrue(genericTypes[0].getGenericType() instanceof ParameterizedType);
-        Assert.assertEquals(((ParameterizedType) genericTypes[0].getGenericType()).getActualTypeArguments()[0], Apple.class);
+        Assertions.assertEquals(genericTypes.length, 1);
+        Assertions.assertTrue(genericTypes[0].getGenericType() instanceof ParameterizedType);
+        Assertions.assertEquals(((ParameterizedType) genericTypes[0].getGenericType()).getActualTypeArguments()[0], Apple.class);
 
         method = ClassUtils.getPublicMethod(AppleService.class, "update");
         genericMethod = genericClass.get(method);
         genericTypes = genericMethod.getParameters();
-        Assert.assertEquals(genericTypes.length, 1);
-        Assert.assertTrue(genericTypes[0].getGenericType() instanceof TypeVariable);
+        Assertions.assertEquals(genericTypes.length, 1);
+        Assertions.assertTrue(genericTypes[0].getGenericType() instanceof TypeVariable);
         GenericType.Variable variable = genericTypes[0].getVariable(((TypeVariable) genericTypes[0].getGenericType()).getName());
-        Assert.assertTrue(variable.getGenericType() instanceof TypeVariable);
+        Assertions.assertTrue(variable.getGenericType() instanceof TypeVariable);
         Type bound = ((TypeVariable) variable.getGenericType()).getBounds()[0];
-        Assert.assertTrue(bound instanceof ParameterizedType);
-        Assert.assertEquals(((ParameterizedType) bound).getActualTypeArguments()[0], Apple.class);
+        Assertions.assertTrue(bound instanceof ParameterizedType);
+        Assertions.assertEquals(((ParameterizedType) bound).getActualTypeArguments()[0], Apple.class);
 
         method = ClassUtils.getPublicMethod(AppleService.class, "wildcard");
         genericMethod = genericClass.get(method);
         genericTypes = genericMethod.getParameters();
-        Assert.assertEquals(genericTypes.length, 1);
-        Assert.assertTrue(genericTypes[0].getGenericType() instanceof ParameterizedType);
-        Assert.assertTrue(((ParameterizedType) genericTypes[0].getGenericType()).getActualTypeArguments()[0] instanceof WildcardType);
-        Assert.assertEquals(((WildcardType) ((ParameterizedType) genericTypes[0].getGenericType()).getActualTypeArguments()[0]).getUpperBounds()[0], Apple.class);
+        Assertions.assertEquals(genericTypes.length, 1);
+        Assertions.assertTrue(genericTypes[0].getGenericType() instanceof ParameterizedType);
+        Assertions.assertTrue(((ParameterizedType) genericTypes[0].getGenericType()).getActualTypeArguments()[0] instanceof WildcardType);
+        Assertions.assertEquals(((WildcardType) ((ParameterizedType) genericTypes[0].getGenericType()).getActualTypeArguments()[0]).getUpperBounds()[0], Apple.class);
     }
 
     public static class Fruit {

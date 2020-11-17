@@ -39,9 +39,9 @@ import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.SystemClock;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -73,7 +73,7 @@ public class SerializationTest {
         UnsafeByteArrayInputStream bais = new UnsafeByteArrayInputStream(baos.toByteArray());
         Object data = serializer.deserialize(bais, target.getClass());
         if (consumer == null) {
-            Assert.assertEquals(serialization.getContentType(), data, target);
+            Assertions.assertEquals(serialization.getContentType(), data, target);
         } else {
             consumer.accept(data, target);
         }
@@ -168,8 +168,8 @@ public class SerializationTest {
             System.out.println(time.getClass() + ":" + value1);
             Object time1 = jackson.parseObject(value1, time.getClass());
             Object time2 = fastJson.parseObject(value2, time.getClass());
-            Assert.assertEquals(time, time1);
-            Assert.assertEquals(time, time2);
+            Assertions.assertEquals(time, time1);
+            Assertions.assertEquals(time, time2);
         }
     }
 
@@ -197,14 +197,14 @@ public class SerializationTest {
         payload.setException(new NumberFormatException());
         String value = fastJson.toJSONString(payload);
         ResponsePayload target = jackson.parseObject(value, ResponsePayload.class);
-        Assert.assertNotNull(target.getException());
-        Assert.assertEquals(target.getException().getClass(), NumberFormatException.class);
+        Assertions.assertNotNull(target.getException());
+        Assertions.assertEquals(target.getException().getClass(), NumberFormatException.class);
         payload.setException(null);
         payload.setResponse(new Apple());
         value = fastJson.toJSONString(payload);
         target = jackson.parseObject(value, ResponsePayload.class);
-        Assert.assertNotNull(target.getResponse());
-        Assert.assertEquals(target.getResponse().getClass(), Apple.class);
+        Assertions.assertNotNull(target.getResponse());
+        Assertions.assertEquals(target.getResponse().getClass(), Apple.class);
     }
 
     @Test
@@ -219,8 +219,8 @@ public class SerializationTest {
         invocation.addAttachment("test", Boolean.TRUE);
         String value = fastJson.toJSONString(invocation);
         Invocation target = jackson.parseObject(value, Invocation.class);
-        Assert.assertNotNull(target.getArgs());
-        Assert.assertArrayEquals(target.getArgs(), new Object[]{"111", PhoneType.HOME});
+        Assertions.assertNotNull(target.getArgs());
+        Assertions.assertArrayEquals(target.getArgs(), new Object[]{"111", PhoneType.HOME});
     }
 
     @Test
@@ -242,7 +242,7 @@ public class SerializationTest {
     public void testTransient() {
         TransientObj t1 = new TransientObj(1, 1);
         TransientObj t2 = new TransientObj(1, 0);
-        serializeAndDeserialize(t1, (o1, o2) -> Assert.assertEquals(o1, t2));
+        serializeAndDeserialize(t1, (o1, o2) -> Assertions.assertEquals(o1, t2));
     }
 
     @Test
@@ -286,8 +286,8 @@ public class SerializationTest {
         Object obj = serializer.deserialize(bais, grpcType.getRequest().getClazz());
         List<Field> fields = ClassUtils.getFields(grpcType.getRequest().getClazz());
         fields.forEach(o -> o.setAccessible(true));
-        Assert.assertEquals(phoneNumber.getNumber(), fields.get(0).get(obj));
-        Assert.assertEquals(phoneNumber.getType(), fields.get(1).get(obj));
+        Assertions.assertEquals(phoneNumber.getNumber(), fields.get(0).get(obj));
+        Assertions.assertEquals(phoneNumber.getType(), fields.get(1).get(obj));
     }
 
     @Test
@@ -300,21 +300,21 @@ public class SerializationTest {
     public void testScan() {
         SerializerTypeScanner scanner = new SerializerTypeScanner(HelloWold.class);
         Set<Class<?>> set = scanner.scan();
-        Assert.assertTrue(set.contains(MyBook.class));
-        Assert.assertTrue(set.contains(Map.class));
-        Assert.assertTrue(set.contains(Employee.class));
-        Assert.assertTrue(set.contains(List.class));
-        Assert.assertTrue(set.contains(Person.class));
-        Assert.assertTrue(set.contains(PhoneNumber.class));
-        Assert.assertTrue(set.contains(int.class));
-        Assert.assertTrue(set.contains(long.class));
-        Assert.assertTrue(set.contains(double.class));
-        Assert.assertTrue(set.contains(String.class));
-        Assert.assertTrue(set.contains(PhoneType.class));
-        Assert.assertTrue(set.contains(NotFoundException.class));
-        Assert.assertTrue(set.contains(Integer.class));
-        Assert.assertFalse(set.contains(CompletableFuture.class));
-        Assert.assertTrue(set.contains(Animal.class));
+        Assertions.assertTrue(set.contains(MyBook.class));
+        Assertions.assertTrue(set.contains(Map.class));
+        Assertions.assertTrue(set.contains(Employee.class));
+        Assertions.assertTrue(set.contains(List.class));
+        Assertions.assertTrue(set.contains(Person.class));
+        Assertions.assertTrue(set.contains(PhoneNumber.class));
+        Assertions.assertTrue(set.contains(int.class));
+        Assertions.assertTrue(set.contains(long.class));
+        Assertions.assertTrue(set.contains(double.class));
+        Assertions.assertTrue(set.contains(String.class));
+        Assertions.assertTrue(set.contains(PhoneType.class));
+        Assertions.assertTrue(set.contains(NotFoundException.class));
+        Assertions.assertTrue(set.contains(Integer.class));
+        Assertions.assertFalse(set.contains(CompletableFuture.class));
+        Assertions.assertTrue(set.contains(Animal.class));
     }
 
     @Test

@@ -539,9 +539,13 @@ public abstract class ExtensionManager {
                     name = classify.type(target, meta.getName());
                 } else if (Type.class.isAssignableFrom(pluginClass)) {
                     name = ((Type<M>) target).type();
+                } else if (extension != null && !extension.value().isEmpty()) {
+                    name = (M) extension.value();
+                } else if (plugin.name != null && plugin.name.getName() != null && !plugin.name.getName().isEmpty()) {
+                    //加载Spring插件，可以拿到bean名称
+                    name = (M) plugin.name.getName();
                 } else {
-                    name = (M) (extension != null && !extension.value().isEmpty() ? extension.value() :
-                            pluginClass.getName());
+                    name = (M) pluginClass.getName();
                 }
                 meta.setExtension(new Name<>(pluginClass, name));
                 meta.setOrder(Ordered.class.isAssignableFrom(pluginClass) ? ((Ordered) target).order() :

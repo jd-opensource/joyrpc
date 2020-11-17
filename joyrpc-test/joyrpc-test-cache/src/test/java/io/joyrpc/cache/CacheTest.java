@@ -20,8 +20,8 @@ package io.joyrpc.cache;
  * #L%
  */
 
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.HashMap;
 import java.util.List;
@@ -59,9 +59,9 @@ public class CacheTest {
             //构建缓存
             Cache<String, String> cache = buildCache(type, type, -1);
             cache.put("0", "0").get();
-            Assert.assertEquals(cache.get("0").get().getResult(), "0");
+            Assertions.assertEquals(cache.get("0").get().getResult(), "0");
             cache.remove("0");
-            Assert.assertNull(cache.get("0").get());
+            Assertions.assertNull(cache.get("0").get());
         }
     }
 
@@ -75,9 +75,9 @@ public class CacheTest {
             //构建缓存
             Cache<String, String> cache = buildCache(type, type, 1000);
             cache.put("0", "0").get();
-            Assert.assertEquals(cache.get("0").get().getResult(), "0");
+            Assertions.assertEquals(cache.get("0").get().getResult(), "0");
             lath.await(1000, TimeUnit.MILLISECONDS);
-            Assert.assertNull(cache.get("0").get());
+            Assertions.assertNull(cache.get("0").get());
         }
     }
 

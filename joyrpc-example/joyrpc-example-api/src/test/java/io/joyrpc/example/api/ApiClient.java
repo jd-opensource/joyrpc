@@ -23,8 +23,6 @@ package io.joyrpc.example.api;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.example.service.DemoService;
-import io.joyrpc.example.service.vo.Java8TimeObj;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

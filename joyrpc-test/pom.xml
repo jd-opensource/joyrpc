@@ -19,6 +19,7 @@
         <module>joyrpc-test-transport</module>
         <module>joyrpc-test-quickstart</module>
         <module>joyrpc-test-util</module>
+        <module>joyrpc-test-extension</module>
     </modules>
 
     <dependencies>
@@ -38,20 +39,21 @@
         </dependency>
         <!-- Test libs -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.platform</groupId>
+            <artifactId>junit-platform-runner</artifactId>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>${jmh.version}</version>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>${jmh.version}</version>
         </dependency>
-
 
     </dependencies>
 

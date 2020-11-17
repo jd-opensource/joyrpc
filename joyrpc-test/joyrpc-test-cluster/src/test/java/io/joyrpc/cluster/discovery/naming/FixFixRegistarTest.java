@@ -24,8 +24,8 @@ import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.naming.fix.FixRegistar;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.extension.URL;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -41,15 +41,15 @@ public class FixFixRegistarTest {
         URL url = URL.valueOf("joy://topic1");
         FixRegistar registar = new FixRegistar(URL.valueOf("joy://test?address=192.168.1.1,192.168.1.6?dataCenter=test&region=test"));
         registar.open().whenComplete((v, t) -> {
-            Assert.assertTrue(registar.subscribe(url, handler1));
-            Assert.assertFalse(registar.subscribe(url, handler1));
-            Assert.assertTrue(registar.subscribe(url, handler2));
+            Assertions.assertTrue(registar.subscribe(url, handler1));
+            Assertions.assertFalse(registar.subscribe(url, handler1));
+            Assertions.assertTrue(registar.subscribe(url, handler2));
         });
         latch.await();
-        Assert.assertEquals(handler1.count, 1);
-        Assert.assertEquals(handler1.shards.size(), 2);
-        Assert.assertEquals(handler2.count, 1);
-        Assert.assertEquals(handler2.shards.size(), 2);
+        Assertions.assertEquals(handler1.count, 1);
+        Assertions.assertEquals(handler1.shards.size(), 2);
+        Assertions.assertEquals(handler2.count, 1);
+        Assertions.assertEquals(handler2.shards.size(), 2);
     }
 
     protected static class MyClusterHandler implements ClusterHandler {

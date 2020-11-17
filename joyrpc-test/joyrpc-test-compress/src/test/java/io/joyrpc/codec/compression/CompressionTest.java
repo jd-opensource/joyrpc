@@ -23,7 +23,7 @@ package io.joyrpc.codec.compression;
 import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.netty.buffer.ByteBufAllocator;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import java.io.*;

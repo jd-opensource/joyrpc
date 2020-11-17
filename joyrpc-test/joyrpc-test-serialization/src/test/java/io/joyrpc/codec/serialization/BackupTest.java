@@ -24,8 +24,8 @@ import io.joyrpc.cluster.discovery.backup.BackupDatum;
 import io.joyrpc.cluster.discovery.backup.BackupShard;
 import io.joyrpc.codec.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.UnsafeByteArrayOutputStream;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.LinkedList;

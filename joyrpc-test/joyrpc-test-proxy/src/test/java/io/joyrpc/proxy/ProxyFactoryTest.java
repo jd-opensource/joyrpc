@@ -22,7 +22,7 @@ package io.joyrpc.proxy;
 
 import io.joyrpc.Plugin;
 import io.joyrpc.util.GrpcType;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import java.lang.reflect.Field;

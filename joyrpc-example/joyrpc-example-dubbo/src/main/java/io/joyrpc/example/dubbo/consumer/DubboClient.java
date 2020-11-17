@@ -2,15 +2,12 @@ package io.joyrpc.example.dubbo.consumer;
 
 import io.joyrpc.example.service.DemoService;
 import io.joyrpc.example.service.vo.Java8TimeObj;
-import org.apache.dubbo.config.annotation.Argument;
-import org.apache.dubbo.config.annotation.Method;
 import org.apache.dubbo.config.annotation.Reference;
 import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.junit.Assert;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicLong;
@@ -36,7 +33,10 @@ public class DubboClient {
         // 验证java8 时间对象
         Java8TimeObj java8TimeObj = Java8TimeObj.newJava8TimeObj();
         Java8TimeObj java8TimeObjRes = consumer.echoJava8TimeObj(java8TimeObj);
-        Assert.assertEquals(java8TimeObj, java8TimeObjRes);
+        if (!java8TimeObj.equals(java8TimeObjRes)) {
+            System.out.println("error,expect " + java8TimeObj + " but " + java8TimeObjRes);
+            return;
+        }
         //调用
         AtomicLong counter = new AtomicLong(0);
         while (true) {

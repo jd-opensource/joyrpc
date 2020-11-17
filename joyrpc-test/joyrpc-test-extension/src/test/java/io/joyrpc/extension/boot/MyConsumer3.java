@@ -1,4 +1,4 @@
-package io.joyrpc.util;
+package io.joyrpc.extension.boot;
 
 /*-
  * #%L
@@ -20,20 +20,12 @@ package io.joyrpc.util;
  * #L%
  */
 
-import io.joyrpc.util.model.User;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import io.joyrpc.extension.api.Consumer;
 
-import java.lang.reflect.Method;
-import java.util.Map;
+public class MyConsumer3 implements Consumer {
 
-public class ClassUtilsTest {
-
-    @Test
-    public void testGetterSetter() {
-        Map<String, Method> getter = ClassUtils.getGetter(User.class);
-        Assertions.assertEquals(getter.size(), 2);
-        Assertions.assertTrue(getter.containsKey("name"));
-        Assertions.assertTrue(getter.containsKey("man"));
+    @Override
+    public int order() {
+        return ORDER;
     }
 }

@@ -1,4 +1,4 @@
-package io.joyrpc.util;
+package io.joyrpc.extension.boot;
 
 /*-
  * #%L
@@ -20,20 +20,21 @@ package io.joyrpc.util;
  * #L%
  */
 
-import io.joyrpc.util.model.User;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import io.joyrpc.extension.api.Consumer;
+import io.joyrpc.extension.api.Producer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import java.lang.reflect.Method;
-import java.util.Map;
+@Configuration
+public class ExtensionAutoConfiguration {
 
-public class ClassUtilsTest {
+    @Bean
+    public Consumer myConsumer3() {
+        return new MyConsumer3();
+    }
 
-    @Test
-    public void testGetterSetter() {
-        Map<String, Method> getter = ClassUtils.getGetter(User.class);
-        Assertions.assertEquals(getter.size(), 2);
-        Assertions.assertTrue(getter.containsKey("name"));
-        Assertions.assertTrue(getter.containsKey("man"));
+    @Bean
+    public Producer myProducer1() {
+        return new MyProducer1();
     }
 }

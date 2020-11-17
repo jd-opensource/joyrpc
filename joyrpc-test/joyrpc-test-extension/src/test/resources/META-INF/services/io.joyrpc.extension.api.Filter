@@ -1,0 +1,5 @@
+io.joyrpc.extension.filter.ProcedureFilter1
+io.joyrpc.extension.filter.ConsumerFilter2
+io.joyrpc.extension.filter.ConsumerFilter1
+io.joyrpc.extension.filter.ConsumerFilter3
+io.joyrpc.extension.filter.ConsumerFilter4

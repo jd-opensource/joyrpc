@@ -62,30 +62,44 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         if (registry != null) {
             BeanDefinition definition;
             Class<?> clazz;
+            String className;
+            String factoryBeanName;
+            String factoryMethodName;
+            Class<?> beanClass;
+            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             for (String name : registry.getBeanDefinitionNames()) {
                 definition = registry.getBeanDefinition(name);
-                if (!definition.isAbstract() && !isEmpty(definition.getBeanClassName())) {
-                    try {
-                        clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
-                        //工程方法创建Bean，不支持FactoryBean
-                        String factoryMethodName = definition.getFactoryMethodName();
-                        if (!isEmpty(factoryMethodName) && isEmpty(definition.getFactoryBeanName())) {
-                            //找到方法
-                            Method[] methods = clazz.getMethods();
-                            for (Method method : methods) {
-                                if (method.getName().equals(factoryMethodName)) {
-                                    //获取方法的返回类型
-                                    clazz = method.getReturnType();
-                                    break;
+                factoryBeanName = definition.getFactoryBeanName();
+                factoryMethodName = definition.getFactoryMethodName();
+                className = definition.getBeanClassName();
+                if (!definition.isAbstract()) {
+                    if (isEmpty(className)) {
+                        if (!isEmpty(factoryBeanName)) {
+                            className = registry.getBeanDefinition(factoryBeanName).getBeanClassName();
+                        }
+                    }
+                    if (!isEmpty(className)) {
+                        try {
+                            clazz = ClassUtils.forName(className, classLoader);
+                            //工程方法创建Bean，不支持FactoryBean
+                            if (!isEmpty(factoryMethodName)) {
+                                //找到方法
+                                Method[] methods = clazz.getMethods();
+                                for (Method method : methods) {
+                                    if (method.getName().equals(factoryMethodName)) {
+                                        //获取方法的返回类型
+                                        clazz = method.getReturnType();
+                                        break;
+                                    }
                                 }
                             }
+                            if (extensible.isAssignableFrom(clazz)) {
+                                //延迟加载，防止Bean还没有初始化好
+                                result.add(new Plugin<T>(new Name<>((Class<T>) clazz, name), instance,
+                                        definition.isSingleton(), null, this));
+                            }
+                        } catch (Exception ignored) {
                         }
-                        if (extensible.isAssignableFrom(clazz)) {
-                            //延迟加载，防止Bean还没有初始化好
-                            result.add(new Plugin<T>(new Name<>((Class<T>) clazz, name), instance,
-                                    definition.isSingleton(), null, this));
-                        }
-                    } catch (Exception ignored) {
                     }
                 }
             }

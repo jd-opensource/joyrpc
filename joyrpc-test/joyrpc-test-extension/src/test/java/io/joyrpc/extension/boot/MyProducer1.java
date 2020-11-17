@@ -1,4 +1,4 @@
-package io.joyrpc.util;
+package io.joyrpc.extension.boot;
 
 /*-
  * #%L
@@ -20,20 +20,7 @@ package io.joyrpc.util;
  * #L%
  */
 
-import io.joyrpc.util.model.User;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import io.joyrpc.extension.api.Producer;
 
-import java.lang.reflect.Method;
-import java.util.Map;
-
-public class ClassUtilsTest {
-
-    @Test
-    public void testGetterSetter() {
-        Map<String, Method> getter = ClassUtils.getGetter(User.class);
-        Assertions.assertEquals(getter.size(), 2);
-        Assertions.assertTrue(getter.containsKey("name"));
-        Assertions.assertTrue(getter.containsKey("man"));
-    }
+public class MyProducer1 implements Producer {
 }

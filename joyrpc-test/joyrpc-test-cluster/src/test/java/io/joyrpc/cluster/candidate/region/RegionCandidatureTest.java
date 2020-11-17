@@ -28,8 +28,8 @@ import io.joyrpc.cluster.Shard.ShardState;
 import io.joyrpc.cluster.candidate.Candidature;
 import io.joyrpc.context.circuit.CircuitConfiguration;
 import io.joyrpc.extension.URL;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
 
@@ -67,22 +67,22 @@ public class RegionCandidatureTest {
 
         Candidate.Builder builder = Candidate.builder().region(new Region.DefaultRegion("huabei", "lf")).nodes(nodes);
         Candidature.Result result = candidature.candidate(null, builder.size(5).build());
-        Assert.assertEquals(result.getCandidates().size(), 10);
-        Assert.assertEquals(result.getStandbys().size(), 1);
-        Assert.assertEquals(result.getBackups().size(), 4);
-        Assert.assertEquals(result.getDiscards().size(), 7);
-        Assert.assertEquals(result.getCandidates().get(0).getName(), "shard5");
-        Assert.assertEquals(result.getCandidates().get(1).getName(), "shard6");
-        Assert.assertEquals(result.getStandbys().get(0).getName(), "shard15");
+        Assertions.assertEquals(result.getCandidates().size(), 10);
+        Assertions.assertEquals(result.getStandbys().size(), 1);
+        Assertions.assertEquals(result.getBackups().size(), 4);
+        Assertions.assertEquals(result.getDiscards().size(), 7);
+        Assertions.assertEquals(result.getCandidates().get(0).getName(), "shard5");
+        Assertions.assertEquals(result.getCandidates().get(1).getName(), "shard6");
+        Assertions.assertEquals(result.getStandbys().get(0).getName(), "shard15");
 
 
         result = candidature.candidate(null, builder.size(12).build());
-        Assert.assertEquals(result.getCandidates().size(), 12);
-        Assert.assertEquals(result.getStandbys().size(), 0);
-        Assert.assertEquals(result.getBackups().size(), 3);
-        Assert.assertEquals(result.getCandidates().get(0).getName(), "shard5");
-        Assert.assertEquals(result.getCandidates().get(1).getName(), "shard6");
-        Assert.assertEquals(result.getCandidates().get(10).getName(), "shard15");
+        Assertions.assertEquals(result.getCandidates().size(), 12);
+        Assertions.assertEquals(result.getStandbys().size(), 0);
+        Assertions.assertEquals(result.getBackups().size(), 3);
+        Assertions.assertEquals(result.getCandidates().get(0).getName(), "shard5");
+        Assertions.assertEquals(result.getCandidates().get(1).getName(), "shard6");
+        Assertions.assertEquals(result.getCandidates().get(10).getName(), "shard15");
     }
 
     @Test
@@ -107,9 +107,9 @@ public class RegionCandidatureTest {
 
         Candidate.Builder builder = Candidate.builder().region(new Region.DefaultRegion("huabei", "")).nodes(nodes);
         Candidature.Result result = candidature.candidate(null, builder.size(5).build());
-        Assert.assertEquals(result.getCandidates().size(), 8);
-        Assert.assertEquals(result.getStandbys().size(), 0);
-        Assert.assertEquals(result.getBackups().size(), 0);
+        Assertions.assertEquals(result.getCandidates().size(), 8);
+        Assertions.assertEquals(result.getStandbys().size(), 0);
+        Assertions.assertEquals(result.getBackups().size(), 0);
     }
 
     @Test
@@ -134,9 +134,9 @@ public class RegionCandidatureTest {
 
         Candidate.Builder builder = Candidate.builder().region(new Region.DefaultRegion("", "")).nodes(nodes);
         Candidature.Result result = candidature.candidate(null, builder.size(5).build());
-        Assert.assertEquals(result.getCandidates().size(), 8);
-        Assert.assertEquals(result.getStandbys().size(), 0);
-        Assert.assertEquals(result.getBackups().size(), 0);
+        Assertions.assertEquals(result.getCandidates().size(), 8);
+        Assertions.assertEquals(result.getStandbys().size(), 0);
+        Assertions.assertEquals(result.getBackups().size(), 0);
     }
 
     @Test
@@ -172,9 +172,9 @@ public class RegionCandidatureTest {
         CircuitConfiguration.CIRCUIT.update(map);
         Candidate.Builder builder = Candidate.builder().region(new Region.DefaultRegion("huabei1", "lf1")).nodes(nodes);
         Candidature.Result result = candidature.candidate(null, builder.size(5).build());
-        Assert.assertEquals(result.getCandidates().size(), 10);
-        Assert.assertEquals(result.getStandbys().size(), 0);
-        Assert.assertEquals(result.getBackups().size(), 0);
+        Assertions.assertEquals(result.getCandidates().size(), 10);
+        Assertions.assertEquals(result.getStandbys().size(), 0);
+        Assertions.assertEquals(result.getBackups().size(), 0);
 
     }
 }

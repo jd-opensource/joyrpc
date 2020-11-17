@@ -22,8 +22,8 @@ package io.joyrpc.proxy;
 
 import io.joyrpc.Plugin;
 import io.joyrpc.util.GrpcType;
-import org.junit.Assert;
 import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
@@ -87,10 +87,10 @@ public class ProxyFactoryTest {
             GrpcType type = factory.generate(HelloService.class, method, supplier);
             Class<?> clazz = type.getRequest().getClazz();
             Field[] fields = clazz.getDeclaredFields();
-            Assert.assertEquals(fields.length, 1);
+            Assertions.assertEquals(fields.length, 1);
             clazz = type.getResponse().getClazz();
             fields = clazz.getDeclaredFields();
-            Assert.assertEquals(fields.length, 1);
+            Assertions.assertEquals(fields.length, 1);
         }
     }
 

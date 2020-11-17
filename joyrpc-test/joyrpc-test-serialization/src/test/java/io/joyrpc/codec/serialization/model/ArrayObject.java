@@ -21,7 +21,6 @@ package io.joyrpc.codec.serialization.model;
  */
 
 import java.util.Arrays;
-import java.util.Objects;
 
 public class ArrayObject {
 

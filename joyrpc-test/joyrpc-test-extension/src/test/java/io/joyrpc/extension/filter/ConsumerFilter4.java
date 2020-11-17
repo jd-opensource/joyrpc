@@ -1,4 +1,4 @@
-package io.joyrpc.util;
+package io.joyrpc.extension.filter;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.util;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,20 +20,13 @@ package io.joyrpc.util;
  * #L%
  */
 
-import io.joyrpc.util.model.User;
-import org.junit.Test;
-import org.junit.jupiter.api.Assertions;
+import io.joyrpc.extension.Extension;
+import io.joyrpc.extension.api.Filter;
 
-import java.lang.reflect.Method;
-import java.util.Map;
-
-public class ClassUtilsTest {
-
-    @Test
-    public void testGetterSetter() {
-        Map<String, Method> getter = ClassUtils.getGetter(User.class);
-        Assertions.assertEquals(getter.size(), 2);
-        Assertions.assertTrue(getter.containsKey("name"));
-        Assertions.assertTrue(getter.containsKey("man"));
+@Extension("filter4")
+public class ConsumerFilter4 implements Filter {
+    @Override
+    public boolean isConsumer() {
+        return true;
     }
 }

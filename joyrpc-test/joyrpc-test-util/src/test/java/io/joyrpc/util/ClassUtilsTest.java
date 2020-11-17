@@ -21,7 +21,7 @@ package io.joyrpc.util;
  */
 
 import io.joyrpc.util.model.User;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import java.lang.reflect.Method;

@@ -39,9 +39,9 @@ import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.GrpcType;
 import io.joyrpc.util.SystemClock;
-import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -60,7 +60,7 @@ import static io.joyrpc.Plugin.*;
 
 public class SerializationTest {
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         SerializerWhiteList.getGlobalWhitelist().setEnabled(false);
     }
@@ -73,7 +73,7 @@ public class SerializationTest {
         UnsafeByteArrayInputStream bais = new UnsafeByteArrayInputStream(baos.toByteArray());
         Object data = serializer.deserialize(bais, target.getClass());
         if (consumer == null) {
-            Assertions.assertEquals(serialization.getContentType(), data, target);
+            Assertions.assertEquals(data, target, serialization.getContentType());
         } else {
             consumer.accept(data, target);
         }

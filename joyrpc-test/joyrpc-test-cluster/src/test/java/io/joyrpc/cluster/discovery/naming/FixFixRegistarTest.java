@@ -24,7 +24,7 @@ import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.discovery.naming.fix.FixRegistar;
 import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.extension.URL;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.LinkedList;

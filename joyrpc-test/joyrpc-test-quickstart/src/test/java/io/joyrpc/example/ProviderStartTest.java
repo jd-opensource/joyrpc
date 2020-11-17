@@ -25,7 +25,7 @@ import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.example.service.DemoService;
 import io.joyrpc.example.service.DemoServiceImpl;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ProviderStartTest {
 

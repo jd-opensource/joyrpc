@@ -21,7 +21,7 @@ package io.joyrpc.util;
  */
 
 import io.joyrpc.exception.MethodOverloadException;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
 
 import java.lang.reflect.*;

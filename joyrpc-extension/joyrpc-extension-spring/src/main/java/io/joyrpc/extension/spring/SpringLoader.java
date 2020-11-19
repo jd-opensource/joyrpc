@@ -24,6 +24,7 @@ import io.joyrpc.extension.*;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
 import org.springframework.context.ApplicationContext;
@@ -62,49 +63,61 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         if (registry != null) {
             BeanDefinition definition;
             Class<?> clazz;
-            String className;
-            String factoryBeanName;
-            String factoryMethodName;
-            Class<?> beanClass;
-            ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
             for (String name : registry.getBeanDefinitionNames()) {
                 definition = registry.getBeanDefinition(name);
-                factoryBeanName = definition.getFactoryBeanName();
-                factoryMethodName = definition.getFactoryMethodName();
-                className = definition.getBeanClassName();
                 if (!definition.isAbstract()) {
-                    if (isEmpty(className)) {
-                        if (!isEmpty(factoryBeanName)) {
-                            className = registry.getBeanDefinition(factoryBeanName).getBeanClassName();
-                        }
-                    }
-                    if (!isEmpty(className)) {
-                        try {
-                            clazz = ClassUtils.forName(className, classLoader);
-                            //工程方法创建Bean，不支持FactoryBean
-                            if (!isEmpty(factoryMethodName)) {
-                                //找到方法
-                                Method[] methods = clazz.getMethods();
-                                for (Method method : methods) {
-                                    if (method.getName().equals(factoryMethodName)) {
-                                        //获取方法的返回类型
-                                        clazz = method.getReturnType();
-                                        break;
-                                    }
-                                }
-                            }
-                            if (extensible.isAssignableFrom(clazz)) {
-                                //延迟加载，防止Bean还没有初始化好
-                                result.add(new Plugin<T>(new Name<>((Class<T>) clazz, name), instance,
-                                        definition.isSingleton(), null, this));
-                            }
-                        } catch (Exception ignored) {
-                        }
+                    clazz = getBeanClass(definition);
+                    if (clazz != null && extensible.isAssignableFrom(clazz)) {
+                        //延迟加载，防止Bean还没有初始化好
+                        result.add(new Plugin<T>(new Name<>((Class<T>) clazz, name), instance,
+                                definition.isSingleton(), null, this));
                     }
                 }
             }
         }
         return result;
+    }
+
+    /**
+     * 获取Bean的类
+     *
+     * @param definition 定义
+     * @return Bean的类
+     */
+    protected Class<?> getBeanClass(BeanDefinition definition) {
+        if (definition == null) {
+            return null;
+        }
+        //判断spring是否已经获得了Class
+        Class<?> clazz = null;
+        if (definition instanceof AbstractBeanDefinition) {
+            AbstractBeanDefinition abd = (AbstractBeanDefinition) definition;
+            if (abd.hasBeanClass()) {
+                return abd.getBeanClass();
+            }
+        }
+        //拿到定义
+        if (isEmpty(definition.getBeanClassName())) {
+            if (!isEmpty(definition.getFactoryBeanName())) {
+                clazz = getBeanClass(registry.getBeanDefinition(definition.getFactoryBeanName()));
+            }
+        } else {
+            try {
+                clazz = ClassUtils.forName(definition.getBeanClassName(), Thread.currentThread().getContextClassLoader());
+            } catch (Exception ignored) {
+            }
+        }
+        if (clazz != null && !isEmpty(definition.getFactoryMethodName())) {
+            //找到方法
+            Method[] methods = clazz.getMethods();
+            for (Method method : methods) {
+                if (method.getName().equals(definition.getFactoryMethodName())) {
+                    //获取方法的返回类型
+                    return method.getReturnType();
+                }
+            }
+        }
+        return null;
     }
 
     @Override

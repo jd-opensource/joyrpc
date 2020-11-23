@@ -146,7 +146,8 @@ public class BroadcastRegistry extends AbstractRegistry {
         //不创建关闭钩子
         properties.setProperty("hazelcast.shutdownhook.enabled", "false");
         properties.setProperty("hazelcast.prefer.ipv4.stack", String.valueOf(Ipv4.isIpv4()));
-        properties.setProperty("hazelcast.local.localAddress", Ipv4.getLocalIp());
+        //注册中心broadcast支持配置address，解决注册中心为broadcast时，因为网络环境隔离问题，hazelcast采用多播组网失败而导致服务发现失败。
+        properties.setProperty("hazelcast.local.localAddress", url.getString("address", Ipv4.getLocalIp()));
 
         //同步复制，可以读取从
         cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).

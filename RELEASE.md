@@ -8,6 +8,8 @@
 
 - 完善consul，注册的服务名称默认增加分组信息，可以在注册中心URL上配置consul.serviceWithGroup=false来禁用
 
+- Broadcast模式，支持配置广播地址参数
+
 - Dependency
 
   - 升级Fastjson为1.2.75版本
@@ -17,6 +19,8 @@
 - 修复两个完全配置一下的消费者在启动后创建了不同的对象引用的问题
 
 - 修改Springboot配置的插件可能加载不了的问题
+
+- 修复GenericService实例调用非$invoke方法时有数组越界异常的问题
 
 ## 1.4.1-RELEASE(2020-11-05)
 

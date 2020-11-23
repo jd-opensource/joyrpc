@@ -850,6 +850,10 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          */
         static String METHOD_NAME_HASHCODE = "hashCode";
         /**
+         * The Method name getClass.
+         */
+        static String METHOD_NAME_GET_CLASS = "getClass";
+        /**
          * The Method name equals.
          */
         static String METHOD_NAME_EQUALS = "equals";
@@ -979,16 +983,19 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
         protected Object invokeObjectMethod(final Object proxy, final Method method, final Object[] param) {
             Object[] args = param;
             String name = method.getName();
-            if (generic) {
+            int count = args == null ? 0 : args.length;
+            if (generic && count == 2) {
+                //判断是$asyc和$invoke方法
                 args = (Object[]) param[2];
                 name = (String) param[0];
             }
-            int count = args == null ? 0 : args.length;
             if (count == 0) {
                 if (METHOD_NAME_TO_STRING.equals(name)) {
                     return proxy.getClass().getName() + "@" + Integer.toHexString(invoker.hashCode());
                 } else if (METHOD_NAME_HASHCODE.equals(name)) {
                     return invoker.hashCode();
+                } else if (METHOD_NAME_GET_CLASS.equals(name)) {
+                    return proxy.getClass();
                 }
             } else if (count == 1 && METHOD_NAME_EQUALS.equals(name)) {
                 return invoker.equals(args[0]);

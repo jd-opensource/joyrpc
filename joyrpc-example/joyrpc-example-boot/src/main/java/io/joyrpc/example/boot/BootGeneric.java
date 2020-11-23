@@ -35,6 +35,7 @@ public class BootGeneric {
         System.setProperty("spring.profiles.active", "generic");
         ConfigurableApplicationContext run = SpringApplication.run(BootGeneric.class, args);
         GenericService consumer = run.getBean(GenericService.class);
+        System.out.println(consumer.hashCode());
 
         Map<String, Object> param = new HashMap<>();
         //header

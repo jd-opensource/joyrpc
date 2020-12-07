@@ -208,6 +208,7 @@
 public class DemoServiceImpl implements DemoService {
     
     public String sayHello(String str){
+        System.out.println("Hi " + str + ", request from consumer.");
         return  return "Hi " + str + ", response from provider. ";
     }
 }
@@ -219,8 +220,9 @@ public class DemoServiceImpl implements DemoService {
 rpc.packages[0]=io.joyrpc.service.DemoService
 # server
 rpc.server.port=22000
-# provider
-rpc.providers[0].name=provider-demoService
+# provider，可以配置额外的参数或覆盖@Provider提供的内容
+#rpc.providers[0].name=provider-demoService
+#rpc.providers[0].alias=2.0-Boot
 # registry
 rpc.registry.registry=memory
 ```
@@ -247,7 +249,6 @@ spring.application.name=joyrpc-example-client
 rpc.registry.registry=memory
 #消费者
 rpc.consumers[0].interfaceClazz=io.joyrpc.service.DemoService
-rpc.consumers[0].loadbalance=adaptive
 rpc.consumers[0].alias=2.0-Boot
 ```
 
@@ -260,13 +261,8 @@ public class BootClient {
     public static void main(String[] args) {
         ConfigurableApplicationContext run = SpringApplication.run(BootClient.class, args);
         DemoService consumer = run.getBean(DemoService.class);
-        try {
-            String result = service.sayHello("hello");
-            LOGGER.info("response msg from server :{}", result);
-        } catch (Exception e) {
-        }
-   
-        System.in.read();//终端输入任意字符，shutdown进程
+        String hello = service.sayHello("hello");
+        System.out.println(hello);
     }
 }
 ```

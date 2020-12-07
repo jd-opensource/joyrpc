@@ -28,6 +28,7 @@ import io.joyrpc.transport.event.HeartbeatEvent;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,8 +92,9 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
     @Override
     public void run() {
         Message hbMsg;
-        Supplier<Message> heartbeat = strategy.getHeartbeat();
-        if (heartbeat != null && (hbMsg = heartbeat.get()) != null) {
+        Supplier<Message> supplier = strategy.getHeartbeat();
+        //关机状态不发送心跳了
+        if (!Shutdown.isShutdown() && supplier != null && (hbMsg = supplier.get()) != null) {
             if (channel.isActive()) {
                 FutureManager<Long, Message> futureManager = channel.getFutureManager();
                 //设置id

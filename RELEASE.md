@@ -1,5 +1,11 @@
 # 版本说明
 
+## 1.4.3-SNAPSHOT
+
+### Enhancement
+
+- 进程关闭状态不再发送心跳
+
 ## 1.4.2-RELEASE(2020-11-30)
 
 ### Enhancement

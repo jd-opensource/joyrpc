@@ -57,6 +57,7 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ClientTransport;
 import io.joyrpc.util.Futures;
+import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
@@ -1436,13 +1437,16 @@ public class Node implements Shard {
 
         @Override
         protected void doRun() {
-            switch (node.state) {
-                case CONNECTING:
-                case CONNECTED:
-                case WEAK:
-                    node.sessionbeat(client);
-                    time = SystemClock.now() + node.sessionbeatInterval;
-                    timer().add(this);
+            //关闭的情况不再发送会话心跳
+            if (!Shutdown.isShutdown()) {
+                switch (node.state) {
+                    case CONNECTING:
+                    case CONNECTED:
+                    case WEAK:
+                        node.sessionbeat(client);
+                        time = SystemClock.now() + node.sessionbeatInterval;
+                        timer().add(this);
+                }
             }
         }
     }
@@ -1469,7 +1473,6 @@ public class Node implements Shard {
 
         @Override
         public long getTime() {
-            //五秒关闭
             return SystemClock.now() + 200L;
         }
 

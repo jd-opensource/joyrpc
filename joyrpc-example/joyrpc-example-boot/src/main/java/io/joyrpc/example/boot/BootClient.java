@@ -38,7 +38,7 @@ public class BootClient {
         AtomicLong counter = new AtomicLong(0);
         while (true) {
             try {
-                String hello = consumer.generic(String.valueOf(counter.incrementAndGet()));
+                String hello = consumer.sayHello(String.valueOf(counter.incrementAndGet()));
                 System.out.println(hello);
                 Thread.sleep(100L);
             } catch (InterruptedException e) {

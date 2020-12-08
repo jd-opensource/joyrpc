@@ -1,10 +1,14 @@
 # 版本说明
 
-## 1.4.3-SNAPSHOT
+## 1.4.3-RELEASE(2020-12-08)
 
 ### Enhancement
 
 - 进程关闭状态不再发送心跳
+
+### Bugfixes
+
+- 修改Springboot配置的插件可能加载不了的问题
 
 ## 1.4.2-RELEASE(2020-11-30)
 

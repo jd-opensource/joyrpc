@@ -7,7 +7,7 @@
     <artifactId>joyrpc</artifactId>
     <name>joyrpc</name>
     <packaging>pom</packaging>
-    <version>1.4.3-SNAPSHOT</version>
+    <version>1.4.3-RELEASE</version>
     <url>https://github.com/joyrpc/joyrpc.git</url>
     <description>joy rpc framework</description>
 
@@ -110,7 +110,7 @@
         <dubbo.version>2.7.6</dubbo.version>
         <protostuff.version>1.6.2</protostuff.version>
         <nacos.version>1.4.0</nacos.version>
-        <skywalking.version>7.0.0</skywalking.version>
+        <skywalking.version>8.3.0</skywalking.version>
         <jaeger.version>1.2.0</jaeger.version>
         <hmily.version>2.1.1</hmily.version>
 

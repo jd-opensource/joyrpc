@@ -150,9 +150,14 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         this.environment = environment;
         this.resourceLoader = resourceLoader;
         this.counter = Counter.getOrCreate(applicationContext);
-        this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
         //值引用前缀
         this.refPrefix = environment.getProperty(REF_PREFIX_KEY, REF_PREFIX);
+    }
+
+    @Override
+    public void postProcessBeanDefinitionRegistry(final BeanDefinitionRegistry registry) throws BeansException {
+        //避免放在构造函数里面，因为有些bean还没有定义好
+        this.rpcProperties = Binder.get(environment).bind(RPC_PREFIX, RpcProperties.class).orElseGet(RpcProperties::new);
         //添加消费者
         if (rpcProperties.getConsumers() != null) {
             rpcProperties.getConsumers().forEach(c -> addConfig(c, CONSUMER_PREFIX, consumerNameCounters, consumers));
@@ -165,10 +170,7 @@ public class RpcDefinitionPostProcessor implements BeanDefinitionRegistryPostPro
         if (rpcProperties.getProviders() != null) {
             rpcProperties.getProviders().forEach(c -> addConfig(c, PROVIDER_PREFIX, providerNameCounters, providers));
         }
-    }
 
-    @Override
-    public void postProcessBeanDefinitionRegistry(final BeanDefinitionRegistry registry) throws BeansException {
         //扫描知道包下面的消费者和服务提供者注解
         Set<String> packages = new LinkedHashSet<>();
         if (rpcProperties.getPackages() != null) {

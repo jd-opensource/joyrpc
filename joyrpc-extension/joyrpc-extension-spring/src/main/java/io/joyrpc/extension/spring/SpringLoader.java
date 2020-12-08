@@ -92,7 +92,8 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         Class<?> clazz = null;
         if (definition instanceof AbstractBeanDefinition) {
             AbstractBeanDefinition abd = (AbstractBeanDefinition) definition;
-            if (abd.hasBeanClass()) {
+            //动态创建的bean，beanDefinition上的getBeanClass返回的是创建该bean的类
+            if (abd.hasBeanClass() && isEmpty(definition.getFactoryMethodName())) {
                 return abd.getBeanClass();
             }
         }

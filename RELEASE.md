@@ -6,9 +6,13 @@
 
 - 进程关闭状态不再发送心跳
 
+- Dependency
+
+  - 升级Skywalking为8.3.0版本
+
 ### Bugfixes
 
-- 修改Springboot配置的插件可能加载不了的问题
+- 修改Springboot配置的插件加载不了的问题
 
 ## 1.4.2-RELEASE(2020-11-30)
 

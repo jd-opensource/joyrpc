@@ -111,7 +111,8 @@
 |validation|Boolean|否|false|是否校验参数|
 |compress|String|否||压缩算法：lz4、snappy、zlib|
 |interfaceValidator|String|否|standard|接口验证器插件名称，同validation参数配合使用|
-|warmup|String|否|standard|预热插件名称|
+|warmup|String|否| |预热插件名称|
+|serviceName|String|否| |服务名称，以服务名称取代接口名称进行注册|
 
   >一级元素，下面可以有method或者parameter节点。对应io.rpc.config.ProviderConfig
   >发布joyrpc服务Provider使用。 
@@ -176,6 +177,7 @@
 |candidature|String|否|""|候选者算法插件|
 |warmupWeight|int|否|0|预热权重，默认取consumer端用户设置；用户未设置时，取provider端设置的权重|
 |warmupDuration|int|否|60000|单位时间内预热权重到达100，默认60000毫秒（即1分钟）|
+|serviceName|String|否| |服务名称，以服务名称取代接口名称进行寻址|
 
   >作为一级元素，下面可以有method或者parameter节点，对应io.joyrpc.config.ConsumerConfig。
   作为二级元素，ConsumerGroup下的元素。
@@ -283,6 +285,7 @@
 |payload|int|8388608|允许数据包大小|
 |highWaterMark|int|65536|Netty通信通道高水位值，最大值不能超过Integer.MAX_VALUE|
 |lowWaterMark|int|32768|Netty通信通道低水位值，其值不能超过高水位值，最小值不能低于8192|
+|appService|String| |设置全局服务提供在注册的服务名称，默认查找接口设置的服务名称，如果没有则查找全局服务名称，如果没有则使用接口名称来进行注册|
 
 #### 消费者组配置
 

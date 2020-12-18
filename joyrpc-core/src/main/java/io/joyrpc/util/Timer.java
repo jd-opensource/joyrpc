@@ -185,7 +185,7 @@ public class Timer {
             synchronized (Timer.class) {
                 if (timer == null) {
                     Parametric parametric = new MapParametric<>(GlobalContext.getContext());
-                    timer = new Timer("default", 200, 300,
+                    timer = new Timer("default-timer", 200, 300,
                             parametric.getPositive(TIMER_THREADS, Math.min(ENVIRONMENT.get().cpuCores() * 2 + 2, 10)));
                 }
             }

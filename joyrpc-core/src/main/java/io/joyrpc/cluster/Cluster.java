@@ -692,8 +692,10 @@ public class Cluster {
                 Set<String> names = new HashSet<>();
                 //遍历节点，进行添加
                 for (ShardEvent e : events) {
-                    names.add(e.getShard().getName());
-                    add += onAddShard(e.getShard()) ? 1 : 0;
+                    //防止注册中心有重复数据的情况
+                    if (names.add(e.getShard().getName())) {
+                        add += onAddShard(e.getShard()) ? 1 : 0;
+                    }
                 }
                 //判断哪些节点被删除了
                 for (Map.Entry<String, Node> node : nodes.entrySet()) {

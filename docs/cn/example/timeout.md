@@ -25,3 +25,10 @@
     </joyrpc:consumer>
   </beans>
   ```
+
+### 请求级别设置
+  ```java
+
+    RequestContext.setAttachment("timeout",7000);
+
+  ```

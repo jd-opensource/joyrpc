@@ -518,10 +518,11 @@ public class Constants {
      */
     public static final URLBiOption<Boolean> ALIAS_EMPTY_OPTION = new URLBiOption<>("alias.empty", "emptyAlias", false);
 
+    public static final String TIMEOUT_KEY = "timeout";
     /**
      * 消费者调用超时时间
      */
-    public static final URLOption<Integer> TIMEOUT_OPTION = new URLOption<>("timeout", DEFAULT_TIMEOUT);
+    public static final URLOption<Integer> TIMEOUT_OPTION = new URLOption<>(TIMEOUT_KEY, DEFAULT_TIMEOUT);
     public static final URLOption<Boolean> REGISTER_OPTION = new URLOption<>("register", true);
     public static final URLOption<Boolean> SUBSCRIBE_OPTION = new URLOption<>("subscribe", true);
     public static final URLOption<String> SERVICE_NAME_OPTION = new URLOption<>(SERVICE_NAME_KEY, "");

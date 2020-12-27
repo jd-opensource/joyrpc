@@ -430,7 +430,7 @@ public class CallbackManager implements Closeable {
             //超时时间放在后面，Invocation已经注入了请求上下文参数，隐藏参数等等
             if (request.getHeader().getTimeout() <= 0) {
                 Parametric parametric = new MapParametric(invocation.getAttachments());
-                int timeout = parametric.getPositive(HIDDEN_KEY_TIME_OUT, Constants.DEFAULT_TIMEOUT);
+                int timeout = parametric.getPositive(TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
                 //超时时间
                 request.setTimeout(timeout);
                 rh.setTimeout(timeout);

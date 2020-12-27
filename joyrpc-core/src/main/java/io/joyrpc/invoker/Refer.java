@@ -421,7 +421,7 @@ public class Refer extends AbstractService {
         //超时时间放在后面，Invocation已经注入了请求上下文参数，隐藏参数等等
         if (request.getHeader().getTimeout() <= 0) {
             Parametric parametric = new MapParametric(invocation.getAttachments());
-            int timeout = parametric.getPositive(HIDDEN_KEY_TIME_OUT, option.getTimeout());
+            int timeout = parametric.getPositive(TIMEOUT_KEY, option.getTimeout());
             //超时时间
             request.setTimeout(timeout);
             request.getHeader().setTimeout(timeout);

@@ -8,6 +8,8 @@
 
 - 手动设置请求超时的Key从.timeout改为timeout，便于兼容
 
+- ConumserConfig的refer出现异常先unrefer，再触发其他事件
+
 ## 1.4.3-RELEASE(2020-12-08)
 
 ### Enhancement

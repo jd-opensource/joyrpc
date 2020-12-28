@@ -309,8 +309,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
             controller.open().whenComplete((v, t) -> {
                 if (openFuture != future || t == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
                     logger.info(String.format("Failed exporting provider %s. caused by state is illegal", name()));
-                    future.completeExceptionally(new InitializationException("Status is illegal."));
                     controller.close();
+                    future.completeExceptionally(new InitializationException("Status is illegal."));
                 } else if (t != null) {
                     //会自动关闭
                     logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
@@ -319,9 +319,9 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                     future.completeExceptionally(t);
                 } else {
                     logger.info(String.format("Success opening provider %s.", name()));
-                    future.complete(null);
                     //触发配置更新
                     controller.update();
+                    future.complete(null);
                 }
             });
         }

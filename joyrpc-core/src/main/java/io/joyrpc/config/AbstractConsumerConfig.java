@@ -316,22 +316,25 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             cc.open().whenComplete((v, e) -> {
                 if (openFuture != f || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
                     logger.error(String.format("Error occurs while referring %s with bean id %s,caused by state is illegal. ", name(), id));
-                    //已经被关闭了
+                    //先关闭控制器
+                    cc.close();
+                    //抛出异常
                     Throwable throwable = new InitializationException("state is illegal.");
                     f.completeExceptionally(throwable);
                     Optional.ofNullable(future).ifPresent(o -> o.completeExceptionally(throwable));
-                    cc.close();
                 } else if (e != null) {
                     logger.error(String.format("Error occurs while referring %s with bean id %s,caused by %s. ", name(), id, e.getMessage()), e);
+                    //先关闭
+                    unrefer(false);
+                    //抛出异常
                     f.completeExceptionally(e);
                     Optional.ofNullable(future).ifPresent(o -> o.completeExceptionally(e));
-                    unrefer(false);
                 } else {
                     logger.info(String.format("Success refering consumer %s with bean id %s", name(), id));
-                    f.complete(null);
-                    Optional.ofNullable(future).ifPresent(o -> o.complete(null));
                     //触发配置更新
                     cc.update();
+                    f.complete(null);
+                    Optional.ofNullable(future).ifPresent(o -> o.complete(null));
                 }
             });
         } else {

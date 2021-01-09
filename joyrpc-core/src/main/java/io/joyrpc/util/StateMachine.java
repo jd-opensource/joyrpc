@@ -321,8 +321,12 @@ public class StateMachine<T extends StateMachine.Controller> {
      * @param handler   处理器
      */
     protected void publish(final EventType type, final Throwable throwable, final EventHandler handler) {
+        StateEvent event = new StateEvent(type, throwable);
         if (handler != null) {
-            handler.handle(new StateEvent(type, throwable));
+            handler.handle(event);
+        }
+        if (controller instanceof EventHandler) {
+            ((EventHandler) controller).handle(event);
         }
     }
 

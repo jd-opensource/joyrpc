@@ -186,7 +186,6 @@ public class StateMachine<T extends StateMachine.Controller> {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
             publish(EventType.START_CLOSE, handler);
-            controller.broken();
             stateFuture.getOpenFuture().whenComplete((v, e) -> {
                 if (runnable != null) {
                     runnable.run();
@@ -200,8 +199,8 @@ public class StateMachine<T extends StateMachine.Controller> {
             return future;
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSED
-            publish(EventType.START_CLOSE, handler);
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
+            publish(EventType.START_CLOSE, handler);
             if (runnable != null) {
                 runnable.run();
             }
@@ -402,12 +401,6 @@ public class StateMachine<T extends StateMachine.Controller> {
          */
         CompletableFuture<Void> close(boolean gracefully);
 
-        /**
-         * 关闭前中断等待
-         */
-        default void broken() {
-
-        }
     }
 
     /**

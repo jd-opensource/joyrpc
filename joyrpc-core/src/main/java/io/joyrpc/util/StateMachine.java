@@ -240,10 +240,12 @@ public class StateMachine<T extends StateMachine.Controller> {
      * @return 状态是否匹配
      */
     public boolean when(final Predicate<Status> predicate, final Consumer<T> consumer) {
-        if (consumer != null && (predicate == null || predicate.test(status))) {
+        if (predicate == null || predicate.test(status)) {
             T c = controller;
             if (c != null) {
-                consumer.accept(c);
+                if (consumer != null) {
+                    consumer.accept(c);
+                }
                 return true;
             }
         }
@@ -272,6 +274,16 @@ public class StateMachine<T extends StateMachine.Controller> {
 
     public T getController() {
         return controller;
+    }
+
+    /**
+     * 获取控制器
+     *
+     * @param predicate 条件
+     * @return 控制器
+     */
+    public T getController(final Predicate<Status> predicate) {
+        return predicate == null || predicate.test(status) ? controller : null;
     }
 
     public Status getStatus() {

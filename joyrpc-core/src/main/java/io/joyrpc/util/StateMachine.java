@@ -125,7 +125,7 @@ public class StateMachine<T extends StateMachine.Controller> {
                     publish(EventType.FAIL_OPEN, e, handler);
                     future.completeExceptionally(e);
                 } else {
-                    publish(EventType.START_OPEN, null, handler);
+                    publish(EventType.SUCCESS_OPEN, null, handler);
                     future.complete(null);
                 }
             });
@@ -185,6 +185,8 @@ public class StateMachine<T extends StateMachine.Controller> {
     public CompletableFuture<Void> close(final boolean gracefully, final Runnable runnable, final EventHandler<StateEvent> handler) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
+            //触发控制器中断等待
+            controller.broken();
             publish(EventType.START_CLOSE, handler);
             stateFuture.getOpenFuture().whenComplete((v, e) -> {
                 if (runnable != null) {
@@ -292,6 +294,20 @@ public class StateMachine<T extends StateMachine.Controller> {
 
     public boolean isOpen(final Controller controller) {
         return controller == this.controller && status.isOpen();
+    }
+
+    public boolean isOpened(final Controller controller) {
+        return controller == this.controller && status == OPENED;
+    }
+
+    /**
+     * 判断控制器是否需要关闭
+     *
+     * @param controller 控制器
+     * @return 需要关闭标识
+     */
+    public boolean isClose(final Controller controller) {
+        return controller != null && controller != this.controller || status.isClose();
     }
 
     /**
@@ -408,6 +424,13 @@ public class StateMachine<T extends StateMachine.Controller> {
          * @return CompletableFuture
          */
         CompletableFuture<Void> open();
+
+        /**
+         * 关闭前进行中断
+         */
+        default void broken() {
+
+        }
 
         /**
          * 优雅关闭

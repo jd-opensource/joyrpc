@@ -26,6 +26,7 @@ import io.joyrpc.exception.InitializationException;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -63,12 +64,10 @@ public class StateMachine<T extends StateMachine.Controller> {
      */
     protected T controller;
 
-    /**
-     * 构造函数
-     *
-     * @param supplier
-     * @param handler
-     */
+    public StateMachine(final Supplier<T> supplier) {
+        this.supplier = supplier;
+    }
+
     public StateMachine(final Supplier<T> supplier, final EventHandler<StateEvent> handler) {
         this.supplier = supplier;
         this.handler = handler;
@@ -77,24 +76,35 @@ public class StateMachine<T extends StateMachine.Controller> {
     /**
      * 大开
      *
-     * @return
+     * @return Future
      */
     public CompletableFuture<Void> open() {
-        return open(null);
+        return open(null, handler);
     }
 
     /**
      * 大开
      *
      * @param runnable 执行块
-     * @return
+     * @return Future
      */
     public CompletableFuture<Void> open(final Runnable runnable) {
+        return open(runnable, handler);
+    }
+
+    /**
+     * 大开
+     *
+     * @param runnable 执行块
+     * @param handler  事件处理器
+     * @return Future
+     */
+    public CompletableFuture<Void> open(final Runnable runnable, final EventHandler<StateEvent> handler) {
         if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.OPENING)) {
             //这个时候才创建Future，存在并发风险，并发调用getOpenFuture为空
             final CompletableFuture<Void> future = stateFuture.newOpenFuture();
             //把通知事件放在newOpenFuture后，可以减少并发问题
-            publish(EventType.START_OPEN);
+            publish(EventType.START_OPEN, null, handler);
             final T cc = supplier.get();
             controller = cc;
             //在赋值controller之后执行
@@ -104,17 +114,18 @@ public class StateMachine<T extends StateMachine.Controller> {
             cc.open().whenComplete((v, e) -> {
                 if (stateFuture.getOpenFuture() != future
                         || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
-                    publish(EventType.FAIL_OPEN_ILLEGAL_STATE);
-                    //已经被关闭了
-                    Throwable throwable = new InitializationException("state is illegal.");
-                    future.completeExceptionally(throwable);
+                    //先关闭
                     cc.close(false);
+                    InitializationException ex = new InitializationException("state is illegal.");
+                    publish(EventType.FAIL_OPEN_ILLEGAL_STATE, ex, handler);
+                    future.completeExceptionally(ex);
                 } else if (e != null) {
-                    publish(EventType.FAIL_OPEN);
-                    future.completeExceptionally(e);
+                    //先关闭，防止事件触发判断状态还是OPENED
                     close(false);
+                    publish(EventType.FAIL_OPEN, e, handler);
+                    future.completeExceptionally(e);
                 } else {
-                    publish(EventType.START_OPEN);
+                    publish(EventType.START_OPEN, null, handler);
                     future.complete(null);
                 }
             });
@@ -124,8 +135,11 @@ public class StateMachine<T extends StateMachine.Controller> {
             while (result == null) {
                 switch (status) {
                     case OPENING:
-                        //并发问题，这个时候可能还没有创建好Future，循环一下
                         result = stateFuture.getOpenFuture();
+                        if (result == null) {
+                            //并发问题，这个时候可能还没有创建好Future，等待一下
+                            LockSupport.parkNanos(1);
+                        }
                         break;
                     case OPENED:
                         //可重入，没有并发调用
@@ -143,10 +157,10 @@ public class StateMachine<T extends StateMachine.Controller> {
      * 关闭
      *
      * @param gracefully 优雅关闭标识
-     * @return
+     * @return Future
      */
     public CompletableFuture<Void> close(final boolean gracefully) {
-        return close(gracefully, null);
+        return close(gracefully, null, handler);
     }
 
     /**
@@ -154,19 +168,31 @@ public class StateMachine<T extends StateMachine.Controller> {
      *
      * @param gracefully 优雅关闭标识
      * @param runnable   额外关闭操作
-     * @return
+     * @return Future
      */
     public CompletableFuture<Void> close(final boolean gracefully, final Runnable runnable) {
+        return close(gracefully, runnable, handler);
+    }
+
+    /**
+     * 关闭
+     *
+     * @param gracefully 优雅关闭标识
+     * @param runnable   额外关闭操作
+     * @param handler    事件处理器
+     * @return Future
+     */
+    public CompletableFuture<Void> close(final boolean gracefully, final Runnable runnable, final EventHandler<StateEvent> handler) {
         if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
-            publish(EventType.START_CLOSE);
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
+            publish(EventType.START_CLOSE, handler);
             controller.broken();
             stateFuture.getOpenFuture().whenComplete((v, e) -> {
                 if (runnable != null) {
                     runnable.run();
                 }
                 //openFuture完成后会自动关闭控制器
-                publish(EventType.SUCCESS_CLOSE);
+                publish(EventType.SUCCESS_CLOSE, handler);
                 status = CLOSED;
                 controller = null;
                 future.complete(null);
@@ -174,26 +200,36 @@ public class StateMachine<T extends StateMachine.Controller> {
             return future;
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSED
-            publish(EventType.START_CLOSE);
+            publish(EventType.START_CLOSE, handler);
             CompletableFuture<Void> future = stateFuture.newCloseFuture();
             if (runnable != null) {
                 runnable.run();
             }
             controller.close(gracefully).whenComplete((o, s) -> {
-                publish(EventType.SUCCESS_CLOSE);
                 status = CLOSED;
                 controller = null;
+                publish(EventType.SUCCESS_CLOSE, handler);
                 future.complete(null);
             });
             return future;
         } else {
-            switch (status) {
-                case CLOSING:
-                case CLOSED:
-                    return stateFuture.getCloseFuture();
-                default:
-                    return Futures.completeExceptionally(new IllegalStateException("Status is illegal."));
+            CompletableFuture<Void> result = null;
+            while (result == null) {
+                switch (status) {
+                    case CLOSING:
+                        result = stateFuture.getCloseFuture();
+                        if (result == null) {
+                            //并发问题，这个时候可能还没有创建好Future，等待一下
+                            LockSupport.parkNanos(1);
+                        }
+                        break;
+                    case CLOSED:
+                        return stateFuture.getCloseFuture();
+                    default:
+                        return Futures.completeExceptionally(new IllegalStateException("Status is illegal."));
+                }
             }
+            return result;
         }
     }
 
@@ -202,7 +238,7 @@ public class StateMachine<T extends StateMachine.Controller> {
      *
      * @param predicate 条件
      * @param consumer  消费者
-     * @return
+     * @return 状态是否匹配
      */
     public boolean when(final Predicate<Status> predicate, final Consumer<T> consumer) {
         if (consumer != null && (predicate == null || predicate.test(status))) {
@@ -219,7 +255,7 @@ public class StateMachine<T extends StateMachine.Controller> {
      * 在打开状态下执行
      *
      * @param consumer 消费者
-     * @return
+     * @return 没有关闭标识
      */
     public boolean whenOpen(final Consumer<T> consumer) {
         return when(Status::isOpen, consumer);
@@ -229,7 +265,7 @@ public class StateMachine<T extends StateMachine.Controller> {
      * 在打开状态下执行
      *
      * @param consumer 消费者
-     * @return
+     * @return 打开标识
      */
     public boolean whenOpened(final Consumer<T> consumer) {
         return when(s -> s == OPENED, consumer);
@@ -250,11 +286,32 @@ public class StateMachine<T extends StateMachine.Controller> {
     /**
      * 发布事件
      *
-     * @param type
+     * @param type 类型
      */
     protected void publish(final EventType type) {
+        publish(type, null, handler);
+    }
+
+    /**
+     * 发布事件
+     *
+     * @param type    类型
+     * @param handler 处理器
+     */
+    protected void publish(final EventType type, final EventHandler handler) {
+        publish(type, null, handler);
+    }
+
+    /**
+     * 发布事件
+     *
+     * @param type      类型
+     * @param throwable 异常
+     * @param handler   处理器
+     */
+    protected void publish(final EventType type, final Throwable throwable, final EventHandler handler) {
         if (handler != null) {
-            handler.handle(new StateEvent(type));
+            handler.handle(new StateEvent(type, throwable));
         }
     }
 
@@ -333,15 +390,15 @@ public class StateMachine<T extends StateMachine.Controller> {
         /**
          * 打开
          *
-         * @return
+         * @return CompletableFuture
          */
         CompletableFuture<Void> open();
 
         /**
          * 优雅关闭
          *
-         * @param gracefully
-         * @return
+         * @param gracefully 优雅关闭标识
+         * @return CompletableFuture
          */
         CompletableFuture<Void> close(boolean gracefully);
 
@@ -391,13 +448,26 @@ public class StateMachine<T extends StateMachine.Controller> {
          * 事件类型
          */
         protected final EventType type;
+        /**
+         * 异常
+         */
+        protected final Throwable throwable;
 
         public StateEvent(EventType type) {
+            this(type, null);
+        }
+
+        public StateEvent(EventType type, Throwable exception) {
             this.type = type;
+            this.throwable = exception;
         }
 
         public EventType getType() {
             return type;
+        }
+
+        public Throwable getThrowable() {
+            return throwable;
         }
     }
 

@@ -104,9 +104,10 @@ public class StateMachine<T extends StateMachine.Controller> {
             //这个时候才创建Future，存在并发风险，并发调用getOpenFuture为空
             final CompletableFuture<Void> future = stateFuture.newOpenFuture();
             //把通知事件放在newOpenFuture后，可以减少并发问题
-            publish(EventType.START_OPEN, null, handler);
             final T cc = supplier.get();
             controller = cc;
+            //在controller赋值后再触发事件
+            publish(EventType.START_OPEN, null, handler);
             //在赋值controller之后执行
             if (runnable != null) {
                 runnable.run();

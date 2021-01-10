@@ -22,7 +22,6 @@ package io.joyrpc.cluster.discovery.registry.nacos.dubbo;
 
 import com.alibaba.nacos.api.naming.pojo.Instance;
 import io.joyrpc.cluster.discovery.backup.Backup;
-import io.joyrpc.cluster.discovery.registry.AbstractRegistry;
 import io.joyrpc.cluster.discovery.registry.URLKey;
 import io.joyrpc.cluster.discovery.registry.URLKey.ClusterKey;
 import io.joyrpc.cluster.discovery.registry.URLKey.RegKey;
@@ -72,7 +71,7 @@ public class DubboNacosRegistry extends NacosRegistry {
     }
 
     @Override
-    protected RegistryController<? extends AbstractRegistry> create() {
+    protected RegistryPilot create() {
         return new DubboNacosRegistryController(this);
     }
 

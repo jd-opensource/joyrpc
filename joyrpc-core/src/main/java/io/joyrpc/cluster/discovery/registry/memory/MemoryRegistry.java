@@ -97,7 +97,7 @@ public class MemoryRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected RegistryController<? extends AbstractRegistry> create() {
+    protected RegistryPilot create() {
         return new MemoryController(this);
     }
 
@@ -111,7 +111,7 @@ public class MemoryRegistry extends AbstractRegistry {
         if (url == null) {
             return;
         }
-        URLKey key=new URLKey.ConfigKey(url);
+        URLKey key = new URLKey.ConfigKey(url);
         update(key.getKey(), values);
     }
 

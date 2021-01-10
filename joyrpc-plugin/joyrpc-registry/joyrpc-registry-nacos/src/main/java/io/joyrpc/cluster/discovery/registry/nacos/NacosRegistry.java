@@ -94,7 +94,7 @@ public class NacosRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected RegistryController<? extends AbstractRegistry> create() {
+    protected RegistryPilot create() {
         return new NacosRegistryController(this);
     }
 

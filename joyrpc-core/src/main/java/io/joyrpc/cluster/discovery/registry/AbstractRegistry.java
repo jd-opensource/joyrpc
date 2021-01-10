@@ -118,7 +118,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected transient StateMachine<RegistryController<? extends AbstractRegistry>> state = new StateMachine<>(this::create, null);
+    protected transient StateMachine<RegistryPilot> state = new StateMachine<>(this::create);
 
     /**
      * 构造函数
@@ -162,7 +162,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      *
      * @return 新建的控制器
      */
-    protected RegistryController<? extends AbstractRegistry> create() {
+    protected RegistryPilot create() {
         return new RegistryController<>(this);
     }
 
@@ -276,7 +276,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @return 订阅成功标识
      */
     protected <T extends Subscription<?>> boolean subscribe(final Set<T> subscriptions, final T subscription,
-                                                            final BiConsumer<RegistryController<?>, T> consumer) {
+                                                            final BiConsumer<RegistryPilot, T> consumer) {
         if (subscriptions.add(subscription)) {
             state.whenOpen(c -> consumer.accept(c, subscription));
             return true;
@@ -295,7 +295,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
      * @return 取消订阅成功标识
      */
     protected <T extends Subscription<?>> boolean unsubscribe(final Set<T> subscriptions, final T subscription,
-                                                              final BiConsumer<RegistryController<?>, T> consumer) {
+                                                              final BiConsumer<RegistryPilot, T> consumer) {
         if (subscriptions.remove(subscription)) {
             state.whenOpen(c -> consumer.accept(c, subscription));
             return true;
@@ -308,29 +308,28 @@ public abstract class AbstractRegistry implements Registry, Configure {
     public boolean subscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return subscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), RegistryController::subscribe);
+        return subscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), (pilot,subscription)->pilot.subscribe(subscription));
     }
-
 
     @Override
     public boolean unsubscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), RegistryController::unsubscribe);
+        return unsubscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), (pilot,subscription)->pilot.unsubscribe(subscription));
     }
 
     @Override
     public boolean subscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return subscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), RegistryController::subscribe);
+        return subscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), (pilot,subscription)->pilot.subscribe(subscription));
     }
 
     @Override
     public boolean unsubscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), RegistryController::unsubscribe);
+        return unsubscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), (pilot,subscription)->pilot.unsubscribe(subscription));
     }
 
     @Override
@@ -548,10 +547,57 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
     }
 
+    protected interface RegistryPilot extends StateMachine.Controller{
+
+        /**
+         * 注册
+         *
+         * @param registion 注册
+         */
+         void register(final Registion registion);
+
+        /**
+         * 注销
+         *
+         * @param registion  注册
+         * @param maxRetries 最大重试次数
+         */
+        void deregister( Registion registion, final int maxRetries);
+
+        /**
+         * 订阅集群
+         *
+         * @param subscription 订阅
+         */
+         void subscribe( ClusterSubscription subscription);
+
+        /**
+         * 取消订阅集群
+         *
+         * @param subscription 订阅
+         */
+         void unsubscribe( ClusterSubscription subscription);
+
+        /**
+         * 订阅配置
+         *
+         * @param subscription 订阅
+         */
+         void subscribe( ConfigSubscription subscription) ;
+
+        /**
+         * 取消订阅配置
+         *
+         * @param subscription 订阅
+         */
+         void unsubscribe(final ConfigSubscription subscription);
+
+    }
+
     /**
      * 控制器
      */
-    protected static class RegistryController<R extends AbstractRegistry> implements StateMachine.Controller {
+    protected static class RegistryController<R extends AbstractRegistry> implements RegistryPilot {
         /**
          * 注册
          */
@@ -637,23 +683,14 @@ public abstract class AbstractRegistry implements Registry, Configure {
             });
         }
 
-        /**
-         * 注册
-         *
-         * @param registion 注册
-         */
+        @Override
         public void register(final Registion registion) {
             if (registers.putIfAbsent(registion.getKey(), registion) == null) {
                 addBookingTask(registers, registion, this::doRegister);
             }
         }
 
-        /**
-         * 注销
-         *
-         * @param registion  注册
-         * @param maxRetries 最大重试次数
-         */
+        @Override
         public void deregister(final Registion registion, final int maxRetries) {
             Registion remove = registers.remove(registion.getKey());
             if (remove != null) {
@@ -664,39 +701,23 @@ public abstract class AbstractRegistry implements Registry, Configure {
             }
         }
 
-        /**
-         * 订阅集群
-         *
-         * @param subscription 订阅
-         */
+        @Override
         public void subscribe(final ClusterSubscription subscription) {
             //在锁里面
             subscribe(clusters, subscription, this::createClusterBooking, this::doSubscribe);
         }
 
-        /**
-         * 取消订阅集群
-         *
-         * @param subscription 订阅
-         */
+        @Override
         public void unsubscribe(final ClusterSubscription subscription) {
             unsubscribe(clusters, subscription);
         }
 
-        /**
-         * 订阅配置
-         *
-         * @param subscription 订阅
-         */
+        @Override
         public void subscribe(final ConfigSubscription subscription) {
             subscribe(configs, subscription, this::createConfigBooking, this::doSubscribe);
         }
 
-        /**
-         * 取消订阅配置
-         *
-         * @param subscription 订阅
-         */
+       @Override
         public void unsubscribe(final ConfigSubscription subscription) {
             unsubscribe(configs, subscription);
         }

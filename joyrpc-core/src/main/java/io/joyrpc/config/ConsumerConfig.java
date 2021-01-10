@@ -25,8 +25,8 @@ import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
-import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.invoker.Refer;
+import io.joyrpc.invoker.ServiceManager;
 
 import java.io.Serializable;
 import java.util.concurrent.CompletableFuture;
@@ -55,8 +55,8 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
     }
 
     @Override
-    protected ConsumerController<T> create() {
-        return new ConsumerController<>(this);
+    protected ConsumerPilot create() {
+        return new ConsumerPilot<>(this);
     }
 
     @Override
@@ -65,11 +65,13 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
     }
 
     public URL getServiceUrl() {
+        ConsumerPilot controller = (ConsumerPilot) stateMachine.getController();
         return controller == null ? null : controller.getServiceUrl();
     }
 
     public Refer getRefer() {
-        return controller == null ? null : ((ConsumerController) controller).getRefer();
+        ConsumerPilot controller = (ConsumerPilot) stateMachine.getController();
+        return controller == null ? null : controller.getRefer();
     }
 
     /**
@@ -77,7 +79,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
      *
      * @param <T>
      */
-    protected static class ConsumerController<T> extends AbstractConsumerController<T, ConsumerConfig<T>> {
+    protected static class ConsumerPilot<T> extends AbstractConsumerPilot<T, ConsumerConfig<T>> {
         /**
          * 注册中心
          */
@@ -92,7 +94,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
          *
          * @param config
          */
-        public ConsumerController(ConsumerConfig<T> config) {
+        public ConsumerPilot(ConsumerConfig<T> config) {
             super(config);
         }
 
@@ -114,7 +116,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                     //打开
                     chain(refer.open(), future, s -> {
                         //构建调用器
-                        invokeHandler = new ConsumerInvokeHandler(refer, proxyClass, refer.getUrl());
+                        invocationHandler = new ConsumerInvocationHandler(refer, proxyClass, refer.getUrl());
                         future.complete(null);
                     });
                 } catch (Throwable ex) {
@@ -129,10 +131,12 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
         public CompletableFuture<Void> close(final boolean gracefully) {
             CompletableFuture<Void> future = new CompletableFuture<>();
             //拒绝新请求
-            invokeHandler = null;
+            invocationHandler = null;
             latch = null;
             if (refer != null) {
-                refer.close(gracefully).whenComplete((v, t) -> future.complete(null));
+                refer.close(gracefully).whenComplete((v, t) -> {
+                    future.complete(null);
+                });
             } else {
                 future.complete(null);
             }
@@ -168,7 +172,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                     resubscribe(newSubscribeUrl, true);
                     serviceUrl = newUrl;
                     registerUrl = newRegisterUrl;
-                    invokeHandler = new ConsumerInvokeHandler(refer, proxyClass, newRefer.getUrl());
+                    invocationHandler = new ConsumerInvocationHandler(refer, proxyClass, newRefer.getUrl());
                     refer = newRefer;
                     oldRefer.close(true);
                     //再次判断是否在关闭，防止前面复制的

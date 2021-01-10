@@ -172,7 +172,7 @@ public class BroadcastRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected RegistryController<? extends AbstractRegistry> create() {
+    protected RegistryPilot create() {
         return new BroadcastController(this);
     }
 

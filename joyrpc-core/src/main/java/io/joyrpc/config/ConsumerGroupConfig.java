@@ -85,8 +85,8 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     }
 
     @Override
-    protected ConsumerGroupController<T> create() {
-        return new ConsumerGroupController<>(this);
+    protected ConsumerPilot create() {
+        return new ConsumerGroupPilot<>(this);
     }
 
     /**
@@ -118,13 +118,13 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
     /**
      * 消费者控制器
      */
-    public static class ConsumerGroupController<T> extends AbstractConsumerController<T, ConsumerGroupConfig<T>> {
+    public static class ConsumerGroupPilot<T> extends AbstractConsumerPilot<T, ConsumerGroupConfig<T>> {
         /**
          * 分组调用
          */
         protected transient GroupInvoker route;
 
-        public ConsumerGroupController(ConsumerGroupConfig<T> config) {
+        public ConsumerGroupPilot(ConsumerGroupConfig<T> config) {
             super(config);
         }
 
@@ -139,7 +139,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
             route.setConfigFunction(config::createGroupConfig);
             route.setup();
             //创建桩
-            invokeHandler = new ConsumerInvokeHandler(route, config.getProxyClass(), serviceUrl);
+            invocationHandler = new ConsumerInvocationHandler(route, config.getProxyClass(), serviceUrl);
             latch.countDown();
             config.proxy();
             //创建消费者
@@ -156,7 +156,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
         @Override
         public CompletableFuture<Void> close(boolean gracefully) {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            invokeHandler = null;
+            invocationHandler = null;
             latch = null;
             if (route != null) {
                 route.close().whenComplete((v, t) -> future.complete(null));

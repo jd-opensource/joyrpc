@@ -49,6 +49,10 @@ public class StateMachine<T extends StateMachine.Controller> {
      * 事件处理器
      */
     protected EventHandler<StateEvent> handler;
+    /**
+     * 延迟加载
+     */
+    protected Delay delay;
 
     /**
      * 打开的结果
@@ -68,9 +72,10 @@ public class StateMachine<T extends StateMachine.Controller> {
         this.supplier = supplier;
     }
 
-    public StateMachine(final Supplier<T> supplier, final EventHandler<StateEvent> handler) {
+    public StateMachine(final Supplier<T> supplier, final EventHandler<StateEvent> handler, final Delay delay) {
         this.supplier = supplier;
         this.handler = handler;
+        this.delay = delay;
     }
 
     /**
@@ -112,24 +117,43 @@ public class StateMachine<T extends StateMachine.Controller> {
             if (runnable != null) {
                 runnable.run();
             }
-            cc.open().whenComplete((v, e) -> {
-                if (stateFuture.getOpenFuture() != future
-                        || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
-                    //先关闭
+            //延迟加载
+            CompletableFuture<Void> delayFuture = delay == null ? CompletableFuture.completedFuture(null) : delay.delay();
+            delayFuture.whenComplete((d, t) -> {
+                if (stateFuture.getOpenFuture() != future || status != OPENING) {
+                    //状态异常，关闭服务
                     cc.close(false);
                     InitializationException ex = new InitializationException("state is illegal.");
                     publish(EventType.FAIL_OPEN_ILLEGAL_STATE, ex, handler);
                     future.completeExceptionally(ex);
-                } else if (e != null) {
-                    //先关闭，防止事件触发判断状态还是OPENED
+                } else if (t != null) {
+                    //加载异常先关闭服务，防止事件触发判断状态还是OPENED
                     close(false);
-                    publish(EventType.FAIL_OPEN, e, handler);
-                    future.completeExceptionally(e);
+                    publish(EventType.FAIL_OPEN, t, handler);
+                    future.completeExceptionally(t);
                 } else {
-                    publish(EventType.SUCCESS_OPEN, null, handler);
-                    future.complete(null);
+                    //打开
+                    cc.open().whenComplete((v, e) -> {
+                        if (stateFuture.getOpenFuture() != future
+                                || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
+                            //先关闭
+                            cc.close(false);
+                            InitializationException ex = new InitializationException("state is illegal.");
+                            publish(EventType.FAIL_OPEN_ILLEGAL_STATE, ex, handler);
+                            future.completeExceptionally(ex);
+                        } else if (e != null) {
+                            //先关闭，防止事件触发判断状态还是OPENED
+                            close(false);
+                            publish(EventType.FAIL_OPEN, e, handler);
+                            future.completeExceptionally(e);
+                        } else {
+                            publish(EventType.SUCCESS_OPEN, null, handler);
+                            future.complete(null);
+                        }
+                    });
                 }
             });
+
             return future;
         } else {
             CompletableFuture<Void> result = null;
@@ -193,9 +217,10 @@ public class StateMachine<T extends StateMachine.Controller> {
                 if (runnable != null) {
                     runnable.run();
                 }
+                status = CLOSED;
                 //openFuture完成后会自动关闭控制器
                 publish(EventType.SUCCESS_CLOSE, handler);
-                status = CLOSED;
+                //控制器在事件通知之后清空，因为事件通知会用到controller
                 controller = null;
                 future.complete(null);
             });
@@ -209,8 +234,9 @@ public class StateMachine<T extends StateMachine.Controller> {
             }
             controller.close(gracefully).whenComplete((o, s) -> {
                 status = CLOSED;
-                controller = null;
                 publish(EventType.SUCCESS_CLOSE, handler);
+                //控制器在事件通知之后清空，因为事件通知会用到controller
+                controller = null;
                 future.complete(null);
             });
             return future;
@@ -441,6 +467,19 @@ public class StateMachine<T extends StateMachine.Controller> {
          */
         CompletableFuture<Void> close(boolean gracefully);
 
+    }
+
+    /**
+     * 延迟加载
+     */
+    public interface Delay {
+
+        /**
+         * 延迟
+         *
+         * @return CompletableFuture
+         */
+        CompletableFuture<Void> delay();
     }
 
     /**

@@ -130,7 +130,7 @@ public class EtcdRegistry extends AbstractRegistry {
     }
 
     @Override
-    protected RegistryController<? extends AbstractRegistry> create() {
+    protected RegistryPilot create() {
         return new EtcdController(this);
     }
 

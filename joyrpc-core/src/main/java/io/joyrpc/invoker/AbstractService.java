@@ -32,22 +32,19 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
+import io.joyrpc.util.StateMachine;
 import io.joyrpc.util.Status;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.TRANSMIT;
-import static io.joyrpc.util.Status.*;
 
 /**
  * 抽象服务调用
  */
 public abstract class AbstractService implements Invoker {
-    protected static final AtomicReferenceFieldUpdater<AbstractService, Status> STATE_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractService.class, Status.class, "status");
     /**
      * 代理的接口类
      */
@@ -97,21 +94,22 @@ public abstract class AbstractService implements Invoker {
      */
     protected AtomicLong requests = new AtomicLong(0);
     /**
-     * 打开的结果
+     * 状态机
      */
-    protected volatile CompletableFuture<Void> openFuture;
-    /**
-     * 关闭Future
-     */
-    protected volatile CompletableFuture<Void> closeFuture;
-    /**
-     * 等到请求处理完
-     */
-    protected volatile CompletableFuture<Void> flyingFuture;
-    /**
-     * 状态
-     */
-    protected volatile Status status = CLOSED;
+    protected StateMachine<StateMachine.Controller> stateMachine = new StateMachine<>(
+            () -> new StateMachine.Controller() {
+                @Override
+                public CompletableFuture<Void> open() {
+                    return doOpen();
+                }
+
+                @Override
+                public CompletableFuture<Void> close(final boolean gracefully) {
+                    return doClose();
+                }
+            },
+            new StateMachine.StateFuture<>(null, () -> requests.get() <= 0 ? CompletableFuture.completedFuture(null) : new CompletableFuture<>()),
+            null);
     /**
      * 构建器
      */
@@ -153,8 +151,8 @@ public abstract class AbstractService implements Invoker {
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
         CompletableFuture<Result> future;
         //判断状态
-        if ((Shutdown.isShutdown() || status != Status.OPENED) && !system) {
-            //系统状服务允许执行，例如注册中心在关闭的时候进行注销操作
+        if ((Shutdown.isShutdown() || stateMachine.getStatus() != Status.OPENED) && !system) {
+            //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
             if (request.getOption() == null) {
                 try {
                     setup(request);
@@ -179,9 +177,9 @@ public abstract class AbstractService implements Invoker {
             }
         }
         future.whenComplete((result, throwable) -> {
-            if (requests.decrementAndGet() == 0 && flyingFuture != null) {
+            if (requests.decrementAndGet() == 0) {
                 //通知请求已经完成，触发优雅关闭
-                flyingFuture.complete(null);
+                stateMachine.pass();
             }
         });
         return future;
@@ -204,72 +202,12 @@ public abstract class AbstractService implements Invoker {
      * @return CompletableFuture
      */
     public CompletableFuture<Void> open() {
-        if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-            final CompletableFuture<Void> future = new CompletableFuture<>();
-            openFuture = future;
-            closeFuture = null;
-            flyingFuture = null;
-            doOpen().whenComplete((v, t) -> {
-                if (openFuture != future || t == null && !STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                    future.completeExceptionally(new IllegalStateException("state is illegal."));
-                } else if (t != null) {
-                    //出现了异常
-                    future.completeExceptionally(t);
-                    //自动关闭
-                    close();
-                } else {
-                    future.complete(null);
-                }
-            });
-            return future;
-        } else {
-            switch (status) {
-                case OPENING:
-                case OPENED:
-                    //可重入，没有并发调用
-                    return openFuture;
-                default:
-                    //其它状态不应该并发执行
-                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
-            }
-        }
+        return stateMachine.open();
     }
 
     @Override
     public CompletableFuture<Void> close(final boolean gracefully) {
-        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            //请求数肯定为0
-            closeFuture = future;
-            openFuture.whenComplete((v, t) -> {
-                status = CLOSED;
-                future.complete(null);
-            });
-            return future;
-        } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
-            //状态从打开到关闭中，该状态只能变更为CLOSED
-            CompletableFuture<Void> future = new CompletableFuture<>();
-            closeFuture = future;
-            flyingFuture = new CompletableFuture<>();
-            flyingFuture.whenComplete((v, t) -> doClose().whenComplete((o, s) -> {
-                status = CLOSED;
-                future.complete(null);
-            }));
-            //判断是否请求已经完成
-            if (!gracefully || requests.get() == 0) {
-                flyingFuture.complete(null);
-            }
-            return future;
-        } else {
-            switch (status) {
-                case CLOSING:
-                case CLOSED:
-                    return closeFuture;
-                default:
-                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
-            }
-        }
-
+        return stateMachine.close(gracefully);
     }
 
     /**
@@ -301,4 +239,5 @@ public abstract class AbstractService implements Invoker {
     public Consumer<InvokerAware> getBuilder() {
         return builder;
     }
+
 }

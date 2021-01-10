@@ -50,15 +50,9 @@ public class StateMachine<T extends StateMachine.Controller> {
      */
     protected EventHandler<StateEvent> handler;
     /**
-     * 延迟加载
-     */
-    protected Delay delay;
-
-    /**
      * 打开的结果
      */
-    protected StateFuture<Void> stateFuture = new StateFuture<>(null, null);
-
+    protected StateFuture<Void> stateFuture;
     /**
      * 状态
      */
@@ -69,13 +63,17 @@ public class StateMachine<T extends StateMachine.Controller> {
     protected T controller;
 
     public StateMachine(final Supplier<T> supplier) {
-        this.supplier = supplier;
+        this(supplier, new StateFuture<>(null, null, null, null), null);
     }
 
-    public StateMachine(final Supplier<T> supplier, final EventHandler<StateEvent> handler, final Delay delay) {
+    public StateMachine(final Supplier<T> supplier, final EventHandler<StateEvent> handler) {
+        this(supplier, new StateFuture<>(null, null, null, null), handler);
+    }
+
+    public StateMachine(Supplier<T> supplier, StateFuture<Void> stateFuture, EventHandler<StateEvent> handler) {
         this.supplier = supplier;
+        this.stateFuture = stateFuture == null ? new StateFuture<>(null, null, null, null) : stateFuture;
         this.handler = handler;
-        this.delay = delay;
     }
 
     /**
@@ -118,8 +116,8 @@ public class StateMachine<T extends StateMachine.Controller> {
                 runnable.run();
             }
             //延迟加载
-            CompletableFuture<Void> delayFuture = delay == null ? CompletableFuture.completedFuture(null) : delay.delay();
-            delayFuture.whenComplete((d, t) -> {
+            stateFuture.barrierFuture = null;
+            stateFuture.newPrepareFuture().whenComplete((d, t) -> {
                 if (stateFuture.getOpenFuture() != future || status != OPENING) {
                     //状态异常，关闭服务
                     cc.close(false);
@@ -227,19 +225,21 @@ public class StateMachine<T extends StateMachine.Controller> {
             return future;
         } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
             //状态从打开到关闭中，该状态只能变更为CLOSED
-            CompletableFuture<Void> future = stateFuture.newCloseFuture();
+            CompletableFuture<Void> closeFuture = stateFuture.newCloseFuture();
+            CompletableFuture<Void> barrierFuture = stateFuture.newBarrierFuture(gracefully);
             publish(EventType.START_CLOSE, handler);
             if (runnable != null) {
                 runnable.run();
             }
-            controller.close(gracefully).whenComplete((o, s) -> {
+            //关闭栅栏准备好了
+            barrierFuture.whenComplete((v, t) -> controller.close(gracefully).whenComplete((o, s) -> {
                 status = CLOSED;
                 publish(EventType.SUCCESS_CLOSE, handler);
                 //控制器在事件通知之后清空，因为事件通知会用到controller
                 controller = null;
-                future.complete(null);
-            });
-            return future;
+                closeFuture.complete(null);
+            }));
+            return closeFuture;
         } else {
             CompletableFuture<Void> result = null;
             while (result == null) {
@@ -258,6 +258,18 @@ public class StateMachine<T extends StateMachine.Controller> {
                 }
             }
             return result;
+        }
+    }
+
+    /**
+     * 打开关闭的栅栏
+     */
+    public void pass() {
+        if(status.isClose()) {
+            CompletableFuture<Void> future = stateFuture.getBarrierFuture();
+            if (future != null) {
+                future.complete(null);
+            }
         }
     }
 
@@ -387,14 +399,40 @@ public class StateMachine<T extends StateMachine.Controller> {
          * 关闭Future
          */
         protected volatile CompletableFuture<T> closeFuture;
+        /**
+         * 构建关闭栅栏Future
+         */
+        protected volatile CompletableFuture<T> barrierFuture;
+        /**
+         * 打开前准备工作提供者
+         */
+        protected Supplier<CompletableFuture<T>> prepareSupplier;
+        /**
+         * 等待关闭提供者
+         */
+        protected Supplier<CompletableFuture<T>> barrierSupplier;
 
         public StateFuture() {
-            this(new CompletableFuture<>(), new CompletableFuture<>());
+            this(new CompletableFuture<>(), new CompletableFuture<>(), null, null);
+        }
+
+        public StateFuture(final Supplier<CompletableFuture<T>> prepareSupplier,
+                           final Supplier<CompletableFuture<T>> barrierSupplier) {
+            this(new CompletableFuture<>(), new CompletableFuture<>(), prepareSupplier, barrierSupplier);
         }
 
         public StateFuture(CompletableFuture<T> openFuture, CompletableFuture<T> closeFuture) {
-            this.openFuture = openFuture;
-            this.closeFuture = closeFuture;
+            this(openFuture, closeFuture, null, null);
+        }
+
+        public StateFuture(final CompletableFuture<T> openFuture,
+                           final CompletableFuture<T> closeFuture,
+                           final Supplier<CompletableFuture<T>> prepareSupplier,
+                           final Supplier<CompletableFuture<T>> barrierSupplier) {
+            this.openFuture = openFuture==null?new CompletableFuture<>():openFuture;
+            this.closeFuture = closeFuture==null?new CompletableFuture<>():closeFuture;
+            this.prepareSupplier = prepareSupplier;
+            this.barrierSupplier = barrierSupplier;
         }
 
         public CompletableFuture<T> getOpenFuture() {
@@ -403,6 +441,10 @@ public class StateMachine<T extends StateMachine.Controller> {
 
         public CompletableFuture<T> getCloseFuture() {
             return closeFuture;
+        }
+
+        public CompletableFuture<T> getBarrierFuture() {
+            return barrierFuture;
         }
 
         /**
@@ -424,6 +466,16 @@ public class StateMachine<T extends StateMachine.Controller> {
         public CompletableFuture<T> newCloseFuture() {
             CompletableFuture<T> result = new CompletableFuture<>();
             closeFuture = result;
+            return result;
+        }
+
+        public CompletableFuture<T> newPrepareFuture() {
+            return prepareSupplier == null ? CompletableFuture.completedFuture(null) : prepareSupplier.get();
+        }
+
+        public CompletableFuture<T> newBarrierFuture(final boolean gracefully) {
+            CompletableFuture<T> result = !gracefully || barrierSupplier == null ? CompletableFuture.completedFuture(null) : barrierSupplier.get();
+            barrierFuture = result;
             return result;
         }
 
@@ -467,19 +519,6 @@ public class StateMachine<T extends StateMachine.Controller> {
          */
         CompletableFuture<Void> close(boolean gracefully);
 
-    }
-
-    /**
-     * 延迟加载
-     */
-    public interface Delay {
-
-        /**
-         * 延迟
-         *
-         * @return CompletableFuture
-         */
-        CompletableFuture<Void> delay();
     }
 
     /**

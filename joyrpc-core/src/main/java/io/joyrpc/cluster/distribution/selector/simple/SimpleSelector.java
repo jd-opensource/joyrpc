@@ -1,4 +1,4 @@
-package io.joyrpc.cluster.distribution.selector.tag;
+package io.joyrpc.cluster.distribution.selector.simple;
 
 /*-
  * #%L
@@ -30,14 +30,14 @@ import io.joyrpc.protocol.message.RequestMessage;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 
-import static io.joyrpc.constants.Constants.TAG_KEY_OPTION;
+import static io.joyrpc.constants.Constants.SIMPLE_SELECTOR_OPTION;
 
-@Extension(value = TagSelector.TAG_SELECTOR)
-public class TagSelector implements NodeSelector {
+@Extension(value = SimpleSelector.SIMPLE_SELECTOR)
+public class SimpleSelector implements NodeSelector {
 
-    public static final String TAG_SELECTOR = "tagSelector";
+    public static final String SIMPLE_SELECTOR = "simpleSelector";
 
     /**
      * URL配置
@@ -46,11 +46,7 @@ public class TagSelector implements NodeSelector {
     /**
      * 标签key
      */
-    protected String tagKey;
-    /**
-     * 配置的标签值
-     */
-    protected String tagValue;
+    protected int simple;
 
     @Override
     public void setUrl(final URL url) {
@@ -59,25 +55,25 @@ public class TagSelector implements NodeSelector {
 
     @Override
     public void setup() {
-        this.tagKey = url.getString(TAG_KEY_OPTION);
-        this.tagValue = url.getString(tagKey);
+        this.simple = url.getPositiveInt(SIMPLE_SELECTOR_OPTION);
     }
 
     @Override
-    public List<Node> select(Candidate candidate, RequestMessage<Invocation> request) {
-        String tag = request.getPayLoad().getAttachment(tagKey, tagValue);
-        if (tag == null || tag.isEmpty()) {
-            return candidate.getNodes();
+    public List<Node> select(final Candidate candidate, final RequestMessage<Invocation> request) {
+        List<Node> nodes = candidate.getNodes();
+        if (nodes.size() <= simple) {
+            return nodes;
         }
         List<Node> result = new LinkedList<>();
-        List<Node> nodes = candidate.getNodes();
-        URL url;
-        //先遍历服务列表
-        for (Node node : nodes) {
-            url = node.getUrl();
-            String nodeTag = url == null ? null : url.getString(tagKey);
-            if (Objects.equals(tag, nodeTag)) {
-                result.add(node);
+        int rnd = ThreadLocalRandom.current().nextInt(nodes.size());
+        int max = Math.min(rnd + simple, nodes.size());
+        for (int i = rnd; i <= max; i++) {
+            result.add(nodes.get(i));
+        }
+        if (nodes.size() < simple) {
+            max = simple - nodes.size();
+            for (int i = 0; i <= max; i++) {
+                result.add(nodes.get(i));
             }
         }
         return result;

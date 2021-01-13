@@ -37,7 +37,7 @@ import java.util.function.BiPredicate;
 /**
  * 基于方法的条件路由
  */
-@Extension(value = "methodRouter")
+@Extension(value = "methodSelector")
 public class MethodSelector implements NodeSelector {
     /**
      * URL配置

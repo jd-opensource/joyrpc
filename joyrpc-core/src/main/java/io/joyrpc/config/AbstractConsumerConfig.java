@@ -163,7 +163,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 节点选择器
      */
-    @ValidatePlugin(extensible = NodeSelector.class, name = "NODE_SELECTOR")
+    @ValidatePlugin(extensible = NodeSelector.class, name = "NODE_SELECTOR",multiple = true)
     protected String nodeSelector;
     /**
      * 预热权重

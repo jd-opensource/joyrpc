@@ -62,6 +62,13 @@ public @interface ValidatePlugin {
     String defaultValue() default "";
 
     /**
+     * 多个插件,以逗号分隔
+     *
+     * @return 多个值标识
+     */
+    boolean multiple() default false;
+
+    /**
      * 是否可以为空
      *
      * @return 为空标识

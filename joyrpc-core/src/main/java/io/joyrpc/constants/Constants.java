@@ -557,7 +557,7 @@ public class Constants {
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);
     public static final URLOption<String> TAG_KEY_OPTION = new URLOption<>("tagKey", () -> GlobalContext.getString("tagKey", "serviceTag"));
-    public static final URLOption<Integer> SIMPLE_SELECTOR_OPTION = new URLOption<>("simple", 100);
+    public static final URLOption<Integer> SIMPLE_SELECTOR_OPTION = new URLOption<>("nodeSimple", 100);
     /**
      * 默认连接工厂
      */

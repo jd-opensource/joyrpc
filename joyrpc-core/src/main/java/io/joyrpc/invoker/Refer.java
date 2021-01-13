@@ -62,6 +62,7 @@ import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
+import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +81,7 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_NO_ALIVE_PROVIDER;
+import static io.joyrpc.util.StringUtils.split;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -120,7 +122,7 @@ public class Refer extends AbstractService {
     /**
      * 路由节点选择器
      */
-    protected NodeSelector nodeSelector;
+    protected NodeSelector[] nodeSelectors;
     /**
      * 回调容器
      */
@@ -217,8 +219,8 @@ public class Refer extends AbstractService {
 
         this.inJvm = url.getBoolean(Constants.IN_JVM_OPTION);
         this.exporterName = EXPORTER_NAME_FUNC.apply(interfaceName, alias);
-        //路由器
-        this.nodeSelector = configure(NODE_SELECTOR.get(url.getString(Constants.NODE_SELECTOR_OPTION)));
+        //节点选择器
+        this.nodeSelectors = buildSelectors();
         //方法选项
         this.option = INTERFACE_OPTION_FACTORY.get().create(interfaceClass, interfaceName, url, this::configure,
                 loadBalance instanceof AdaptiveScorer ? (method, cfg) -> ((AdaptiveScorer) loadBalance).score(cluster, method, cfg) : null);
@@ -363,18 +365,25 @@ public class Refer extends AbstractService {
     /**
      * 配置路由器
      *
-     * @param selector 路由节点选择器
      * @return 路由节点选择器
      */
-    protected NodeSelector configure(final NodeSelector selector) {
-        if (selector != null) {
-            selector.setUrl(url);
-            selector.setClass(interfaceClass);
-            selector.setClassName(interfaceName);
-            selector.setup();
+    protected NodeSelector[] buildSelectors() {
+        NodeSelector[] result = null;
+        String value = url.getString(NODE_SELECTOR_OPTION);
+        if (value != null && !value.isEmpty()) {
+            String[] parts = split(value, ',');
+            result = nodeSelectors = new NodeSelector[parts.length];
+            for (int i = 0; i < parts.length; i++) {
+                nodeSelectors[i] = NODE_SELECTOR.get(parts[i]);
+                nodeSelectors[i].setUrl(url);
+                nodeSelectors[i].setClass(interfaceClass);
+                nodeSelectors[i].setClassName(interfaceName);
+                nodeSelectors[i].setup();
+            }
         }
-        return selector;
+        return result;
     }
+
 
     /**
      * 配置分发策略
@@ -448,9 +457,19 @@ public class Refer extends AbstractService {
         }
         //集群节点
         List<Node> nodes = cluster.getNodes();
-        if (!nodes.isEmpty() && nodeSelector != null) {
-            //路由选择
-            nodes = nodeSelector.select(new Candidate(cluster, null, nodes, nodes.size()), request);
+        if (!nodes.isEmpty() && nodeSelectors != null) {
+            //节点选择
+            Candidate candidate = new Candidate(cluster, null, nodes, nodes.size());
+            NodeSelector selector;
+            int count = 0;
+            //遍历选择器，筛选节点
+            for (int i = 0; i < nodeSelectors.length; i++) {
+                selector = nodeSelectors[i];
+                if (selector != null) {
+                    nodes = selector.select(count == 0 ? candidate : new Candidate(candidate, nodes), request);
+                    count++;
+                }
+            }
         }
         if (nodes == null || nodes.isEmpty()) {
             //节点为空

@@ -28,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -46,6 +47,10 @@ public class StateMachine<T extends StateMachine.Controller> {
      */
     protected Supplier<T> supplier;
     /**
+     * 异常提供者
+     */
+    protected Function<String, Throwable> errorFunc;
+    /**
      * 事件处理器
      */
     protected EventHandler<StateEvent> handler;
@@ -63,15 +68,24 @@ public class StateMachine<T extends StateMachine.Controller> {
     protected T controller;
 
     public StateMachine(final Supplier<T> supplier) {
-        this(supplier, new StateFuture<>(null, null, null, null), null);
+        this(supplier, null, null, null);
+    }
+
+    public StateMachine(Supplier<T> supplier, Function<String, Throwable> errorFunc) {
+        this(supplier, errorFunc, null, null);
     }
 
     public StateMachine(final Supplier<T> supplier, final EventHandler<StateEvent> handler) {
-        this(supplier, new StateFuture<>(null, null, null, null), handler);
+        this(supplier, null, null, handler);
     }
 
     public StateMachine(Supplier<T> supplier, StateFuture<Void> stateFuture, EventHandler<StateEvent> handler) {
+        this(supplier, null, stateFuture, handler);
+    }
+
+    public StateMachine(Supplier<T> supplier, Function<String, Throwable> errorFunc, StateFuture<Void> stateFuture, EventHandler<StateEvent> handler) {
         this.supplier = supplier;
+        this.errorFunc = errorFunc == null ? s -> new IllegalStateException(s) : errorFunc;
         this.stateFuture = stateFuture == null ? new StateFuture<>(null, null, null, null) : stateFuture;
         this.handler = handler;
     }
@@ -121,7 +135,7 @@ public class StateMachine<T extends StateMachine.Controller> {
                 if (stateFuture.getOpenFuture() != future || status != OPENING) {
                     //状态异常，关闭服务
                     cc.close(false);
-                    InitializationException ex = new InitializationException("state is illegal.");
+                    Throwable ex = errorFunc.apply("state is illegal.");
                     publish(EventType.FAIL_OPEN_ILLEGAL_STATE, ex, handler);
                     future.completeExceptionally(ex);
                 } else if (t != null) {
@@ -136,7 +150,7 @@ public class StateMachine<T extends StateMachine.Controller> {
                                 || e == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
                             //先关闭
                             cc.close(false);
-                            InitializationException ex = new InitializationException("state is illegal.");
+                            Throwable ex = errorFunc.apply("state is illegal.");
                             publish(EventType.FAIL_OPEN_ILLEGAL_STATE, ex, handler);
                             future.completeExceptionally(ex);
                         } else if (e != null) {
@@ -169,7 +183,7 @@ public class StateMachine<T extends StateMachine.Controller> {
                         return stateFuture.getOpenFuture();
                     default:
                         //其它状态不应该并发执行
-                        return Futures.completeExceptionally(new InitializationException("state is illegal."));
+                        return Futures.completeExceptionally(errorFunc.apply("state is illegal."));
                 }
             }
             return result;
@@ -254,7 +268,7 @@ public class StateMachine<T extends StateMachine.Controller> {
                     case CLOSED:
                         return stateFuture.getCloseFuture();
                     default:
-                        return Futures.completeExceptionally(new IllegalStateException("Status is illegal."));
+                        return Futures.completeExceptionally(errorFunc.apply("Status is illegal."));
                 }
             }
             return result;
@@ -265,7 +279,7 @@ public class StateMachine<T extends StateMachine.Controller> {
      * 打开关闭的栅栏
      */
     public void pass() {
-        if(status.isClose()) {
+        if (status.isClose()) {
             CompletableFuture<Void> future = stateFuture.getBarrierFuture();
             if (future != null) {
                 future.complete(null);
@@ -429,8 +443,8 @@ public class StateMachine<T extends StateMachine.Controller> {
                            final CompletableFuture<T> closeFuture,
                            final Supplier<CompletableFuture<T>> prepareSupplier,
                            final Supplier<CompletableFuture<T>> barrierSupplier) {
-            this.openFuture = openFuture==null?new CompletableFuture<>():openFuture;
-            this.closeFuture = closeFuture==null?new CompletableFuture<>():closeFuture;
+            this.openFuture = openFuture == null ? new CompletableFuture<>() : openFuture;
+            this.closeFuture = closeFuture == null ? new CompletableFuture<>() : closeFuture;
             this.prepareSupplier = prepareSupplier;
             this.barrierSupplier = barrierSupplier;
         }

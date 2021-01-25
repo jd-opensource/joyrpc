@@ -20,12 +20,12 @@ package io.joyrpc.transport.channel;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 /**
@@ -45,13 +45,8 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
-    public boolean close() {
+    public CompletableFuture<Channel> close() {
         return channel.close();
-    }
-
-    @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        channel.close(consumer);
     }
 
     @Override

@@ -29,7 +29,6 @@ import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.MetricEvent;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.event.PublisherConfig;
@@ -55,7 +54,6 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -63,7 +61,6 @@ import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.CANDIDATURE_OPTION;
-import static io.joyrpc.util.Status.CLOSED;
 import static io.joyrpc.util.StringUtils.toSimpleString;
 import static io.joyrpc.util.Timer.timer;
 
@@ -73,14 +70,13 @@ import static io.joyrpc.util.Timer.timer;
 public class Cluster {
 
     private static final Logger logger = LoggerFactory.getLogger(Cluster.class);
-    protected static final AtomicReferenceFieldUpdater<Cluster, Status> STATE_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(Cluster.class, Status.class, "state");
     public static final URLOption<Long> RECONNECT_INTERVAL = new URLOption<>("reconnectInterval", 2000L);
     protected static final AtomicLong idCounter = new AtomicLong();
     public static final String EVENT_PUBLISHER_METRIC = "event.metric";
     public static final PublisherConfig EVENT_PUBLISHER_METRIC_CONF = PublisherConfig.builder().timeout(1000).build();
     public static final String EVENT_PUBLISHER_CLUSTER = "event.cluster";
     public static final PublisherConfig EVENT_PUBLISHER_CLUSTER_CONF = PublisherConfig.builder().timeout(1000).build();
+    public static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new InitializationException(error);
     /**
      * 名称
      */
@@ -150,25 +146,9 @@ public class Cluster {
      */
     protected Dashboard dashboard;
     /**
-     * 打开的次数
+     * 状态机
      */
-    protected AtomicLong versions = new AtomicLong(0);
-    /**
-     * 控制器
-     */
-    protected volatile Controller controller;
-    /**
-     * 状态
-     */
-    protected volatile Status state = CLOSED;
-    /**
-     * 打开的结果
-     */
-    protected volatile CompletableFuture<Cluster> openFuture;
-    /**
-     * 关闭的结果
-     */
-    protected volatile CompletableFuture<Cluster> closeFuture;
+    protected StateMachine<Void, ClusterController> stateMachine = new StateMachine<>(() -> new ClusterController(this), THROWABLE_FUNCTION);
 
     public Cluster(final URL url) {
         this(null, url, null, null, null, null, null, null, null);
@@ -195,8 +175,7 @@ public class Cluster {
         this.name = name == null || name.isEmpty() ? url.toString(false, false) : name;
         //不需要添加环境变量，由外层处理合并
         this.url = url;
-        this.registar = registar == null ? REGISTAR.get(url.getString("registar", url.getProtocol())) : registar;
-        Objects.requireNonNull(this.registar, "registar can not be null.");
+        this.registar = Objects.requireNonNull(registar == null ? REGISTAR.get(url.getString("registar", url.getProtocol())) : registar, "registar can not be null.");
         this.candidature = candidature != null ? candidature : CANDIDATURE.get(url.getString(CANDIDATURE_OPTION), CANDIDATURE_OPTION.getValue());
         this.factory = factory != null ? factory : ENDPOINT_FACTORY.getOrDefault(url.getString("endpointFactory"));
         this.authentication = authentication;
@@ -225,103 +204,16 @@ public class Cluster {
 
     /**
      * 打开集群
-     *
-     * @param consumer 等到连接成功的标识，确保达到初始化连接数
      */
-    public void open(final Consumer<AsyncResult<Cluster>> consumer) {
-        //修改状态
-        if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.OPENING)) {
-            final long version = versions.incrementAndGet();
-            final CompletableFuture<Cluster> future = new CompletableFuture<>();
-            final Consumer<AsyncResult<Cluster>> c = Futures.chain(consumer, future);
-            //提前赋值，避免Controller的通知提前到达
-            openFuture = future;
-            clusterPublisher.start();
-            //启动事件监听器
-            Optional.ofNullable(metricPublisher).ifPresent(Publisher::start);
-            //定期触发控制器
-            Optional.ofNullable(dashboard).ifPresent(o -> timer().add(new DashboardTask(this, version)));
-            //当initSize<=0，改成了异步触发
-            final Controller s = new Controller(this, version, r -> {
-                if (future != openFuture || r.isSuccess() && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
-                    //被关闭或重入了，取消订阅并清理节点
-                    Controller res = r.getResult();
-                    registar.unsubscribe(url, res.getClusterHandler());
-                    //不用等待所有节点关闭，这样可以快速关闭
-                    res.close();
-                    c.accept(new AsyncResult<>(this, new InitializationException("cluster state is illegal.")));
-                } else if (!r.isSuccess()) {
-                    //失败主动关闭
-                    future.completeExceptionally(r.getThrowable());
-                    close(o -> c.accept(new AsyncResult<>(r.getThrowable())));
-                } else {
-                    c.accept(new AsyncResult<>(this));
-                }
-            });
-            controller = s;
-            //订阅集群
-            registar.subscribe(url, s.getClusterHandler());
-        } else if (consumer != null) {
-            switch (state) {
-                case OPENING:
-                    Futures.chain(openFuture, consumer);
-                    break;
-                case OPENED:
-                    consumer.accept(new AsyncResult<>(this));
-                    break;
-                default:
-                    consumer.accept(new AsyncResult<>(new InitializationException("cluster state is illegal.")));
-            }
-        }
+    public CompletableFuture<Void> open() {
+        return stateMachine.open();
     }
 
     /**
      * 关闭集群
-     *
-     * @param consumer 消费者
      */
-    public void close(final Consumer<AsyncResult<Cluster>> consumer) {
-        //修改状态
-        if (STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.CLOSING)) {
-            closeFuture = new CompletableFuture<>();
-            //让在等待就绪的线程超时
-            controller.fire();
-            Futures.chain(openFuture, o -> doClose(Futures.chain(consumer, closeFuture)));
-        } else if (STATE_UPDATER.compareAndSet(this, Status.OPENED, Status.CLOSING)) {
-            closeFuture = new CompletableFuture<>();
-            doClose(Futures.chain(consumer, closeFuture));
-        } else if (consumer != null) {
-            switch (state) {
-                case CLOSING:
-                    Futures.chain(closeFuture, consumer);
-                    break;
-                case CLOSED:
-                    consumer.accept(new AsyncResult<>(true));
-                    break;
-                default:
-                    consumer.accept(new AsyncResult<>(new IllegalStateException("status is illegal.")));
-            }
-        }
-    }
-
-    /**
-     * 关闭
-     *
-     * @param consumer 消费者
-     */
-    protected void doClose(final Consumer<AsyncResult<Cluster>> consumer) {
-        Controller s = controller;
-        controller = null;
-        Close.close(clusterPublisher);
-        Close.close(metricPublisher);
-        if (s != null) {
-            registar.unsubscribe(url, s.getClusterHandler());
-            //不用等待所有节点关闭，这样可以快速关闭
-            s.close();
-        }
-        //放在最后一步
-        state = CLOSED;
-        consumer.accept(new AsyncResult<>(this));
+    public CompletableFuture<Void> close() {
+        return stateMachine.close(false);
     }
 
     /**
@@ -419,13 +311,7 @@ public class Cluster {
      * @return 启动标识
      */
     public boolean isOpened() {
-        switch (state) {
-            case OPENING:
-            case OPENED:
-                return true;
-            default:
-                return false;
-        }
+        return stateMachine.getState().isOpen();
     }
 
     /**
@@ -454,7 +340,7 @@ public class Cluster {
      * @return the nodes
      */
     public List<Node> getNodes() {
-        Controller snapshot = this.controller;
+        ClusterController snapshot = stateMachine.getController();
         return snapshot == null ? new ArrayList<>(0) : snapshot.readys;
     }
 
@@ -494,15 +380,11 @@ public class Cluster {
      * 避免锁，集群事件，节点事件和节点打开回调都放入队列，由定时器单线程执行。<br/>
      * 集群关闭和定时器存在并发访问节点问题
      */
-    protected static class Controller {
+    protected static class ClusterController implements StateController<Void> {
         /**
          * 集群
          */
         protected final Cluster cluster;
-        /**
-         * 版本
-         */
-        protected final long version;
         /**
          * 任务队列
          */
@@ -556,25 +438,43 @@ public class Cluster {
          * 构造函数
          *
          * @param cluster 集群
-         * @param version 版本
-         * @param ready   就绪事件
          */
-        public Controller(final Cluster cluster, final long version, final Consumer<AsyncResult<Controller>> ready) {
+        public ClusterController(final Cluster cluster) {
             this.cluster = cluster;
-            this.version = version;
             this.supplyTask = "SupplyTask-" + cluster.name;
+        }
+
+        @Override
+        public CompletableFuture<Void> open() {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            //启动事件监听器
+            cluster.clusterPublisher.start();
+            Optional.ofNullable(cluster.metricPublisher).ifPresent(Publisher::start);
+            //定期触发控制器
+            Optional.ofNullable(cluster.dashboard).ifPresent(o -> timer().add(new DashboardTask(cluster, this)));
+            //订阅集群
+            cluster.registar.subscribe(cluster.url, clusterHandler);
             if (cluster.initSize <= 0) {
                 //不需要等到初始化连接，异步通知，避免在Open线程里面触发
-                timer().add("ReadyTask-" + cluster.name, SystemClock.now(), () -> ready.accept(new AsyncResult<>(this)));
+                timer().add("ReadyTask-" + cluster.name, SystemClock.now(), () -> future.complete(null));
             } else {
                 long beginTime = SystemClock.now();
                 this.trigger = new Trigger(cluster.name, cluster.initSize,
                         cluster.initTimeout, cluster.initConnectTimeout, () -> cluster.check,
-                        () -> ready.accept(new AsyncResult<>(this)),
-                        () -> ready.accept(new AsyncResult<>(this,
-                                new InitializationException(
-                                        String.format("initialization timeout, used %d ms, maybe has no enough provider nodes.", SystemClock.now() - beginTime)))));
+                        () -> future.complete(null),
+                        () -> future.completeExceptionally(new InitializationException(
+                                String.format("initialization timeout, used %d ms, maybe has no enough provider nodes.", SystemClock.now() - beginTime))));
             }
+            return future;
+        }
+
+        @Override
+        public CompletableFuture<Void> close(boolean gracefully) {
+            cluster.registar.unsubscribe(cluster.url, clusterHandler);
+            Close.close(cluster.clusterPublisher);
+            Close.close(cluster.metricPublisher);
+            this.trigger = null;
+            return CompletableFuture.completedFuture(null);
         }
 
         /***
@@ -620,10 +520,8 @@ public class Cluster {
             //确保不在选举和关闭中
             if (type == NodeEvent.EventType.DISCONNECT) {
                 logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                offer(() -> node.close(r -> {
-                    //连接断开了，则进行关闭
-                    onNodeDisconnect(node, cluster.getRetryTime(null));
-                }));
+                //连接断开了，则进行关闭
+                offer(() -> node.close().thenRun(() -> onNodeDisconnect(node, cluster.getRetryTime(null))));
             }
             cluster.clusterPublisher.offer(event);
         }
@@ -638,7 +536,7 @@ public class Cluster {
                 logger.warn(String.format("Cluster %s receive cluster event, but "
                                 + (event == null ? "event is null" : "controller was not opened")
                                 + ", cluster status is %s.",
-                        this.cluster.name, this.cluster.state.name()));
+                        this.cluster.name, this.cluster.stateMachine.getState().name()));
                 return;
             }
             offer(() -> {
@@ -677,7 +575,7 @@ public class Cluster {
             backups.clear();
             connects.clear();
             readys = new ArrayList<>(0);
-            close();
+            closeNodes();
         }
 
         /**
@@ -731,32 +629,13 @@ public class Cluster {
             return add;
         }
 
-        /**
-         * 触发超时通知
-         */
-        public void fire() {
+        @Override
+        public void fireClose() {
             Optional.ofNullable(trigger).ifPresent(Trigger::close);
         }
 
-        public long getVersion() {
-            return version;
-        }
-
-        public ClusterHandler getClusterHandler() {
-            return clusterHandler;
-        }
-
-        /**
-         * 获取节点处理器
-         *
-         * @return 节点处理器
-         */
-        public NodeHandler getNodeHandler() {
-            return nodeHandler;
-        }
-
         protected boolean isOpened() {
-            return cluster.isOpened() & cluster.controller == this;
+            return cluster.stateMachine.isOpened(this);
         }
 
         /**
@@ -774,16 +653,15 @@ public class Cluster {
          *
          * @return 关闭的Future
          */
-        public CompletableFuture<Cluster> close() {
+        public CompletableFuture<Cluster> closeNodes() {
             final CompletableFuture<Cluster> result = new CompletableFuture<>();
             List<Node> copy = new LinkedList<>(nodes.values());
             final AtomicInteger counter = new AtomicInteger(copy.size());
-            final Consumer<AsyncResult<Node>> consumer = r -> {
+            copy.forEach(o -> o.close().thenRun(() -> {
                 if (counter.decrementAndGet() == 0) {
                     result.complete(cluster);
                 }
-            };
-            copy.forEach(o -> o.close(consumer));
+            }));
             copy.clear();
             return result;
         }
@@ -858,7 +736,7 @@ public class Cluster {
          */
         protected void discard(final Node node) {
             //关闭节点
-            node.close(null);
+            node.close();
             //删除连接节点
             connects.remove(node.getName(), node);
         }
@@ -870,7 +748,7 @@ public class Cluster {
          */
         protected void backup(final Node node) {
             //关闭节点
-            node.close(null);
+            node.close();
             //删除连接节点
             connects.remove(node.getName(), node);
             //备份节点
@@ -892,7 +770,7 @@ public class Cluster {
          * @param node     节点
          * @param consumer consumer
          */
-        protected void connect(final Node node, Consumer<AsyncResult<Node>> consumer) {
+        protected void connect(final Node node, final Consumer<Node> consumer) {
             if (!isOpened()) {
                 return;
             }
@@ -900,16 +778,48 @@ public class Cluster {
             node.getState().candidate(node::setState);
             //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
             if (node.getState() == Shard.ShardState.CANDIDATE) {
-                node.open(r -> {
-                    //如果已经关闭了，则关闭该节点
-                    if (!isOpened() && r.isSuccess()) {
-                        node.close(null);
+                node.open().whenComplete((v, error) -> {
+                    //已经关闭了
+                    if (!isOpened() && error == null) {
+                        node.close();
                     }
-                    offer(() -> onNodeOpen(r));
+                    //异步处理
+                    offer(() -> onNodeOpen(node, error));
                     if (consumer != null) {
-                        consumer.accept(r);
+                        consumer.accept(node);
                     }
                 });
+            }
+        }
+
+        /**
+         * 节点打开
+         *
+         * @param node  节点
+         * @param error 异常
+         */
+        protected void onNodeOpen(final Node node, final Throwable error) {
+            if (!isOpened()) {
+                node.close();
+                logger.warn(String.format("Close the unused node instance %s. because the cluster is closed or reopened. ", node.getName()));
+            } else if (!exists(node)) {
+                //不存在了，或者变更成了其它实例
+                node.close();
+                logger.info(String.format("Close the unused node instance %s. because it is removed or updated. ", node.getName()));
+            } else if (error == null) {
+                onNodeConnected(node);
+                logger.info(String.format("Success connecting node %s.", node.getName()));
+            } else {
+                if (error instanceof TransportException) {
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
+                } else if (error instanceof ProtocolException) {
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
+                } else if (error instanceof AuthenticationException) {
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
+                } else {
+                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), error.getMessage()), error);
+                }
+                onNodeDisconnect(node, cluster.getRetryTime(error));
             }
         }
 
@@ -961,40 +871,6 @@ public class Cluster {
         }
 
         /**
-         * 节点打开事件，异步回调，需要重新判断状态
-         *
-         * @param result 结果
-         */
-        protected void onNodeOpen(final AsyncResult<Node> result) {
-            Node node = result.getResult();
-            if (!isOpened()) {
-                node.close(null);
-                logger.warn(String.format("Close the unused node instance %s. because the cluster is closed or reopened. ", node.getName()));
-            } else if (!exists(node)) {
-                //不存在了，或者变更成了其它实例
-                node.close(null);
-                logger.info(String.format("Close the unused node instance %s. because it is removed or updated. ", node.getName()));
-            } else if (result.isSuccess()) {
-                onNodeConnected(node);
-                logger.info(String.format("Success connecting node %s.", node.getName()));
-            } else {
-                Throwable e = result.getThrowable();
-                if (e == null) {
-                    logger.error(String.format("Failed connecting node %s.", node.getName()));
-                } else if (e instanceof TransportException) {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
-                } else if (e instanceof ProtocolException) {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
-                } else if (e instanceof AuthenticationException) {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(e)));
-                } else {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), e.getMessage()), e);
-                }
-                onNodeDisconnect(node, cluster.getRetryTime(e));
-            }
-        }
-
-        /**
          * 节点连接上
          *
          * @param node 节点
@@ -1006,7 +882,7 @@ public class Cluster {
                 return;
             } else if (old != null) {
                 //不同的节点
-                old.close(null);
+                old.close();
             }
             readys = new ArrayList<>(connects.values());
             Optional.ofNullable(trigger).ifPresent(o -> {
@@ -1053,7 +929,7 @@ public class Cluster {
             if (node != null) {
                 logger.info(String.format("delete shard %s", shard.getName()));
                 //由于注册中心的事件晚于服务端直接发送的下线命令，所以这里可以做到优雅关闭节点
-                node.close(null);
+                node.close();
                 if (connects.remove(name) != null) {
                     //重新设置就绪节点
                     readys = new ArrayList<>(connects.values());
@@ -1097,7 +973,7 @@ public class Cluster {
             if (previous != null) {
                 //确保前置节点关闭，防止并发open，报连接关闭异常
                 CompletableFuture<Void> waiting = new CompletableFuture<>();
-                previous.close((result) -> waiting.complete(null));
+                previous.close().thenRun(() -> waiting.complete(null));
                 node.setPrecondition(waiting);
             }
             //新增节点初始化状态
@@ -1316,7 +1192,7 @@ public class Cluster {
         /**
          * 打开的对象
          */
-        protected final long version;
+        protected final StateController<?> controller;
         /**
          * 时间窗口
          */
@@ -1334,13 +1210,13 @@ public class Cluster {
         /**
          * 构造函数
          *
-         * @param cluster 集群
-         * @param version 版本
+         * @param cluster    集群
+         * @param controller 控制器
          */
-        public DashboardTask(final Cluster cluster, final long version) {
+        public DashboardTask(final Cluster cluster, final StateController<?> controller) {
             this.cluster = cluster;
             this.dashboard = cluster.dashboard;
-            this.version = version;
+            this.controller = controller;
             //把集群指标过期分布到1秒钟以内，避免同时进行控制器
             long lastSnapshotTime = SystemClock.now() + ThreadLocalRandom.current().nextInt(1000);
             this.windowTime = dashboard.getMetric().getWindowTime();
@@ -1361,7 +1237,9 @@ public class Cluster {
 
         @Override
         public void run() {
-            if (cluster.versions.get() == version && cluster.isOpened()) {
+            StateMachine<Void, ClusterController> stateMachine = cluster.stateMachine;
+            //启动的时候有可能在Opening状态
+            if (stateMachine.isOpen(controller)) {
                 dashboard.snapshot();
                 time = SystemClock.now() + windowTime;
                 timer().add(this);

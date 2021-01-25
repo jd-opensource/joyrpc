@@ -21,7 +21,6 @@ package io.joyrpc.transport.channel;
  */
 
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
@@ -29,6 +28,7 @@ import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -57,9 +57,10 @@ public interface Channel {
     /**
      * 连接转字符串
      *
-     * @return
+     * @param channel 通道
+     * @return 字符串
      */
-    static String toString(Channel channel) {
+    static String toString(final Channel channel) {
         return toString(channel.getLocalAddress()) + " -> " + toString(channel.getRemoteAddress());
 
     }
@@ -83,7 +84,7 @@ public interface Channel {
     /**
      * 发送一个object信息
      *
-     * @param object
+     * @param object 对象
      */
     default void send(Object object) {
         send(object, null);
@@ -92,8 +93,8 @@ public interface Channel {
     /**
      * 发送一个object信息
      *
-     * @param object
-     * @param consumer
+     * @param object   对象
+     * @param consumer 消费者
      */
     void send(Object object, Consumer<SendResult> consumer);
 
@@ -102,59 +103,52 @@ public interface Channel {
      *
      * @return
      */
-    boolean close();
-
-    /**
-     * 异步关闭channel
-     *
-     * @param consumer
-     */
-    void close(Consumer<AsyncResult<Channel>> consumer);
+    CompletableFuture<Channel> close();
 
     /**
      * 获取本地地址
      *
-     * @return
+     * @return 本地地址
      */
     InetSocketAddress getLocalAddress();
 
     /**
      * 获取远程地址
      *
-     * @return
+     * @return 远端地址
      */
     InetSocketAddress getRemoteAddress();
 
     /**
      * 是否可写
      *
-     * @return
+     * @return 可写标识
      */
     boolean isWritable();
 
     /**
      * 是否存活
      *
-     * @return
+     * @return 存活标识
      */
     boolean isActive();
 
     /**
      * 获取属性
      *
-     * @param key
+     * @param key 键
      * @param <T>
-     * @return
+     * @return 值
      */
     <T> T getAttribute(String key);
 
     /**
      * 获取属性，如果为null返回默认值
      *
-     * @param key
-     * @param def
+     * @param key 键
+     * @param def 默认值
      * @param <T>
-     * @return
+     * @return 值
      */
     default <T> T getAttribute(String key, T def) {
         T result = getAttribute(key);
@@ -164,10 +158,10 @@ public interface Channel {
     /**
      * 获取属性，没有的时候调用Function创建
      *
-     * @param key
-     * @param function
+     * @param key      键
+     * @param function 函数
      * @param <T>
-     * @return
+     * @return 值
      */
     default <T> T getAttribute(final String key, final Function<String, T> function) {
         if (key == null) {
@@ -184,19 +178,19 @@ public interface Channel {
     /**
      * 设置属性
      *
-     * @param key
-     * @param value
-     * @return
+     * @param key   键
+     * @param value 值
+     * @return 通道
      */
     Channel setAttribute(String key, Object value);
 
     /**
      * 设置属性
      *
-     * @param key
-     * @param value
-     * @param predicate
-     * @return
+     * @param key       键
+     * @param value     值
+     * @param predicate 断言
+     * @return 通道
      */
     default Channel setAttribute(final String key, final Object value, final BiPredicate<String, Object> predicate) {
         if (predicate.test(key, value)) {
@@ -208,8 +202,8 @@ public interface Channel {
     /**
      * 删除属性
      *
-     * @param key
-     * @return
+     * @param key 键
+     * @return 值
      */
     Object removeAttribute(String key);
 
@@ -261,8 +255,8 @@ public interface Channel {
     /**
      * 获取会话
      *
-     * @param sessionId
-     * @return
+     * @param sessionId 会话ID
+     * @return 会话
      */
     default Session getSession(final int sessionId) {
         return getSessionManager().get(sessionId);
@@ -271,9 +265,9 @@ public interface Channel {
     /**
      * 设置会话
      *
-     * @param sessionId
-     * @param session
-     * @return
+     * @param sessionId 会话ID
+     * @param session   会话
+     * @return 会话
      */
     default Session addSession(final int sessionId, final Session session) {
         return getSessionManager().put(sessionId, session);
@@ -282,9 +276,9 @@ public interface Channel {
     /**
      * 添加会话
      *
-     * @param sessionId
-     * @param session
-     * @return
+     * @param sessionId 会话ID
+     * @param session   会话
+     * @return 会话
      */
     default Session addIfAbsentSession(final int sessionId, final Session session) {
         return getSessionManager().putIfAbsent(sessionId, session);
@@ -293,7 +287,7 @@ public interface Channel {
     /**
      * 删除会话
      *
-     * @param sessionId
+     * @param sessionId 会话ID
      * @return
      */
     default Session removeSession(final int sessionId) {
@@ -310,7 +304,7 @@ public interface Channel {
     /**
      * 会话心跳
      *
-     * @param sessionId
+     * @param sessionId 会话ID
      */
     default boolean beatSession(final int sessionId) {
         return getSessionManager().beat(sessionId);
@@ -319,7 +313,7 @@ public interface Channel {
     /**
      * 触发异常事件
      *
-     * @param caught
+     * @param caught 异常
      */
     void fireCaught(Throwable caught);
 

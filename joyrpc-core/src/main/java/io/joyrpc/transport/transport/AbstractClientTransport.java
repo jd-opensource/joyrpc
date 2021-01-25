@@ -20,7 +20,6 @@ package io.joyrpc.transport.transport;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
@@ -33,28 +32,24 @@ import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
-import io.joyrpc.util.Futures;
-import io.joyrpc.util.Status;
+import io.joyrpc.util.State;
+import io.joyrpc.util.StateController;
+import io.joyrpc.util.StateMachine;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static io.joyrpc.Plugin.CHANNEL_MANAGER_FACTORY;
 import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.Status.*;
 
 /**
  * 抽象的客户端通道，不支持并发打开关闭
  */
 public abstract class AbstractClientTransport extends DefaultChannelTransport implements ClientTransport {
 
-    protected static final AtomicReferenceFieldUpdater<AbstractClientTransport, Status> STATE_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(AbstractClientTransport.class, Status.class, "status");
+    protected static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new ConnectionException(error);
     /**
      * 编解码
      */
@@ -90,15 +85,27 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     /**
      * 打开的结果
      */
-    protected volatile CompletableFuture<Channel> openFuture;
-    /**
-     * 关闭的结果
-     */
-    protected volatile CompletableFuture<Channel> closeFuture;
-    /**
-     * 状态
-     */
-    protected volatile Status status = CLOSED;
+    protected StateMachine<Channel, StateController<Channel>> stateMachine = new StateMachine<>(ver -> new StateController<Channel>() {
+        @Override
+        public CompletableFuture<Channel> open() {
+            return channelManager.getChannel(AbstractClientTransport.this, getConnector()).whenComplete((ch, error) -> channel = ch);
+        }
+
+        @Override
+        public CompletableFuture<Channel> close(boolean gracefully) {
+            int id = transportId;
+            Channel ch = channel;
+            if (ch == null) {
+                return CompletableFuture.completedFuture(null);
+            } else {
+                return ch.close().whenComplete((c, error) -> {
+                    //channel不设置为null，防止正在处理的请求报空指针错误
+                    //channel = null;
+                    ch.removeSession(id);
+                });
+            }
+        }
+    }, THROWABLE_FUNCTION);
 
     /**
      * 构造函数
@@ -113,121 +120,14 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     }
 
     @Override
-    public Channel open() throws ConnectionException, InterruptedException {
-        CountDownLatch latch = new CountDownLatch(1);
-        ConnectionException[] ex = new ConnectionException[1];
-        open(r -> {
-            try {
-                if (!r.isSuccess()) {
-                    Throwable throwable = r.getThrowable();
-                    if (throwable != null) {
-                        if (throwable instanceof ConnectionException) {
-                            ex[0] = (ConnectionException) throwable;
-                        } else {
-                            ex[0] = new ConnectionException(throwable.getMessage(), throwable);
-                        }
-                    } else {
-                        ex[0] = new ConnectionException("Unknown error.");
-                    }
-                }
-            } finally {
-                latch.countDown();
-            }
-        });
-        latch.await(url.getNaturalInt(CONNECT_TIMEOUT_OPTION), TimeUnit.MILLISECONDS);
-        if (ex[0] != null) {
-            throw ex[0];
-        }
-        return this.channel;
+    public CompletableFuture<Channel> open() {
+        return stateMachine.open();
     }
 
     @Override
-    public void open(final Consumer<AsyncResult<Channel>> consumer) {
-        if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-            final CompletableFuture<Channel> future = new CompletableFuture<>();
-            final Consumer<AsyncResult<Channel>> c = Futures.chain(consumer, openFuture);
-            openFuture = future;
-            channelManager.getChannel(this, r -> {
-                //异步回调再次进行判断，在OPENING可以直接关闭
-                if (r.isSuccess()) {
-                    //成功，更新为打开状态
-                    Channel ch = r.getResult();
-                    if (openFuture != future || !STATE_UPDATER.compareAndSet(this, OPENING, OPENED)) {
-                        //OPENING->CLOSING，自动关闭
-                        ch.close(o -> c.accept(new AsyncResult<>(new ConnectionException("state is illegal."))));
-                    } else {
-                        //设置连接，并触发通知
-                        channel = ch;
-                        c.accept(r);
-                    }
-                } else if (openFuture != future) {
-                    //失败
-                    c.accept(r);
-                } else {
-                    //失败关闭
-                    future.completeExceptionally(r.getThrowable());
-                    close(o -> consumer.accept(r));
-                }
-            }, getConnector());
-        } else if (consumer != null) {
-            switch (status) {
-                case OPENING:
-                    Futures.chain(openFuture, consumer);
-                    break;
-                case OPENED:
-                    //可重入，没有并发调用
-                    consumer.accept(new AsyncResult<>(channel));
-                    break;
-                default:
-                    //其它状态不应该并发执行
-                    consumer.accept(new AsyncResult<>(channel, new ConnectionException("state is illegal.")));
-            }
-        }
+    public CompletableFuture<Channel> close() {
+        return stateMachine.close(false);
     }
-
-    @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        if (STATE_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
-            closeFuture = new CompletableFuture<>();
-            Futures.chain(openFuture, o -> doClose(Futures.chain(consumer, closeFuture)));
-        } else if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
-            //状态从打开到关闭中，该状态只能变更为CLOSED
-            closeFuture = new CompletableFuture<>();
-            doClose(Futures.chain(consumer, closeFuture));
-        } else if (consumer != null) {
-            switch (status) {
-                case CLOSING:
-                    Futures.chain(closeFuture, consumer);
-                    break;
-                case CLOSED:
-                    consumer.accept(new AsyncResult<>(true));
-                    break;
-                default:
-                    consumer.accept(new AsyncResult<>(new IllegalStateException("status is illegal.")));
-            }
-        }
-    }
-
-    /**
-     * 关闭
-     *
-     * @param consumer
-     */
-    protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
-        if (channel != null) {
-            channel.close(r -> {
-                channel.removeSession(transportId);
-                //channel不设置为null，防止正在处理的请求报空指针错误
-                //channel = null;
-                status = CLOSED;
-                consumer.accept(r);
-            });
-        } else {
-            status = CLOSED;
-            consumer.accept(new AsyncResult<>(true));
-        }
-    }
-
 
     /**
      * 获取连接器
@@ -262,8 +162,8 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     }
 
     @Override
-    public Status getStatus() {
-        return status;
+    public State getState() {
+        return stateMachine.getState();
     }
 
     @Override
@@ -317,4 +217,5 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
             channel.setAttribute(Channel.PROTOCOL, protocol);
         }
     }
+
 }

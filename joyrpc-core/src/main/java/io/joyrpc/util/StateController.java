@@ -20,52 +20,49 @@ package io.joyrpc.util;
  * #L%
  */
 
+
+import java.util.concurrent.CompletableFuture;
+
 /**
- * 服务状态
+ * 状态控制器，用于处理打开和关闭的业务逻辑
  */
-public enum Status {
-    /**
-     * 关闭
-     */
-    CLOSED {
-        @Override
-        public boolean isClose() {
-            return true;
-        }
-    },
-    /**
-     * 打开中
-     */
-    OPENING,
-    /**
-     * 打开
-     */
-    OPENED,
-    /**
-     * 关闭中
-     */
-    CLOSING {
-        @Override
-        public boolean isClose() {
-            return true;
-        }
-    };
+public interface StateController<T> {
 
     /**
-     * 是否关闭
+     * 打开
      *
-     * @return 关闭标识
+     * @return CompletableFuture
      */
-    public boolean isClose() {
-        return false;
+    CompletableFuture<T> open();
+
+    /**
+     * 优雅关闭
+     *
+     * @param gracefully 优雅关闭标识
+     * @return CompletableFuture
+     */
+    CompletableFuture<T> close(boolean gracefully);
+
+    /**
+     * 关闭前进行中断
+     */
+    default void fireClose() {
+
     }
 
     /**
-     * 是否在打开
-     * @return 打开标识
+     * 增强状态控制器
+     *
+     * @param <T>
      */
-    public boolean isOpen() {
-        return !isClose();
+    interface ExStateController<T> extends StateController<T> {
+
+        /**
+         * 导出
+         *
+         * @return CompletableFuture
+         */
+        CompletableFuture<T> export();
     }
 
 }

@@ -9,9 +9,9 @@ package io.joyrpc.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,11 +20,10 @@ package io.joyrpc.transport;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
-import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -52,33 +51,20 @@ public class ShareServer extends DecoratorServer<Server> {
     }
 
     @Override
-    public Channel open() throws ConnectionException, InterruptedException {
+    public CompletableFuture<Channel> open() {
         counter.incrementAndGet();
         return super.open();
     }
 
     @Override
-    public void open(final Consumer<AsyncResult<Channel>> consumer) {
-        counter.incrementAndGet();
-        super.open(consumer);
-    }
-
-    @Override
-    public void close() throws Exception {
-        if (counter.decrementAndGet() == 0) {
-            super.close();
-        }
-    }
-
-    @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
+    public CompletableFuture<Channel> close() {
         if (counter.decrementAndGet() == 0) {
             if (closing != null) {
                 closing.accept(this);
             }
-            super.close(consumer);
-        } else if (consumer != null) {
-            consumer.accept(new AsyncResult<>(getServerChannel()));
+            return super.close();
+        } else {
+            return CompletableFuture.completedFuture(getServerChannel());
         }
     }
 }

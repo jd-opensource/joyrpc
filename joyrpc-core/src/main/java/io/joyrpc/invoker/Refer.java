@@ -62,7 +62,6 @@ import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.StringUtils;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -556,14 +555,7 @@ public class Refer extends AbstractService {
             }
         });
         //打开集群不需要等到注册成功，因为可以从本地文件恢复。打开之前，已经提前进行了订阅获取全局配置
-        cluster.open(o -> {
-            if (o.isSuccess()) {
-                result.complete(null);
-            } else {
-                result.completeExceptionally(o.getThrowable());
-            }
-        });
-        return result;
+        return cluster.open();
     }
 
     @Override
@@ -577,10 +569,8 @@ public class Refer extends AbstractService {
         //取消配置订阅
         CompletableFuture<Void> future2 = unsubscribe().whenComplete((v, t) -> logger.info("Success unsubscribe consumer config " + name));
         //关闭集群
-        final CompletableFuture<Void> future3 = new CompletableFuture<>();
-        cluster.close(r -> {
+        CompletableFuture<Void> future3 = cluster.close().whenComplete((v, error) -> {
             logger.info("Success close cluster " + name);
-            future3.complete(null);
         });
         //关闭过滤链
         CompletableFuture<Void> future4 = chain.close().whenComplete((v, t) -> logger.info("Success close filter chain " + name));

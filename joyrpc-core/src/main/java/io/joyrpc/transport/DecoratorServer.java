@@ -20,9 +20,7 @@ package io.joyrpc.transport;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
-import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
@@ -31,15 +29,15 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolAdapter;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.transport.transport.ServerTransport;
-import io.joyrpc.util.Status;
+import io.joyrpc.util.State;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.function.Consumer;
 
 /**
- * @date: 2019/2/21
+ * 装饰服务
  */
 public class DecoratorServer<T extends ServerTransport> implements Server {
 
@@ -56,13 +54,13 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
     }
 
     @Override
-    public Channel open() throws ConnectionException, InterruptedException {
+    public CompletableFuture<Channel> open() {
         return transport.open();
     }
 
     @Override
-    public void open(final Consumer<AsyncResult<Channel>> consumer) {
-        transport.open(consumer);
+    public CompletableFuture<Channel> close() {
+        return transport.close();
     }
 
     @Override
@@ -123,19 +121,10 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
         }
     }
 
-    @Override
-    public void close() throws Exception {
-        transport.close();
-    }
 
     @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        transport.close(consumer);
-    }
-
-    @Override
-    public Status getStatus() {
-        return transport.getStatus();
+    public State getState() {
+        return transport.getState();
     }
 
     @Override

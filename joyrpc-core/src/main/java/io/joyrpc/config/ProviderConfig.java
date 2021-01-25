@@ -26,15 +26,17 @@ import io.joyrpc.cluster.discovery.registry.RegistryFactory;
 import io.joyrpc.config.validator.ValidateInterface;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
+import io.joyrpc.event.EventHandler;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.ServiceManager;
-import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.Futures;
-import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.*;
+import io.joyrpc.util.StateController.ExStateController;
+import io.joyrpc.util.StateFuture.ExStateFuture;
+import io.joyrpc.util.StateMachine.ExStateMachine;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +48,6 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -61,8 +62,6 @@ import static io.joyrpc.util.StringUtils.split;
  */
 @ValidateInterface
 public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serializable {
-    protected static final AtomicReferenceFieldUpdater<ProviderConfig, Status> STATE_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(ProviderConfig.class, Status.class, "status");
     private static final Logger logger = LoggerFactory.getLogger(ProviderConfig.class);
     /**
      * 全局的应用服务名称提供者
@@ -125,24 +124,10 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     /**
      * 控制器
      */
-    protected transient volatile Controller<T> controller;
-
-    /**
-     * 暴露服务的结果
-     */
-    protected transient volatile CompletableFuture<Void> exportFuture;
-    /**
-     * 打开的结果
-     */
-    protected transient volatile CompletableFuture<Void> openFuture;
-    /**
-     * 关闭Future
-     */
-    protected transient volatile CompletableFuture<Void> closeFuture = CompletableFuture.completedFuture(null);
-    /**
-     * 状态
-     */
-    protected transient volatile Status status = Status.CLOSED;
+    protected ExStateMachine<Void, ExStateController<Void>> stateMachine = new ExStateMachine<>(
+            () -> new ProviderController<>(this),
+            error -> new InitializationException(error),
+            new ExStateFuture<>(() -> delay(), null, null, null));
 
     @Override
     public String getAlias() {
@@ -166,7 +151,11 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
 
     @Override
     protected boolean isClose() {
-        return status.isClose() || super.isClose();
+        return isClose(null);
+    }
+
+    protected boolean isClose(final StateController<Void> controller) {
+        return stateMachine.isClose(controller) || super.isClose();
     }
 
     /**
@@ -218,168 +207,23 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
      * 订阅全局配置并创建服务，不开启服务
      */
     public CompletableFuture<Void> export() {
-        if (STATE_UPDATER.compareAndSet(this, Status.CLOSED, Status.EXPORTING)) {
-            GlobalContext.getContext();
-            logger.info("Start exporting provider " + name());
-            final CompletableFuture<Void> future = new CompletableFuture<>();
-            exportFuture = future;
-            openFuture = new CompletableFuture<>();
-            controller = new Controller(this);
-            //延迟加载
-            delay().whenComplete((v, t) -> {
-                if (status != Status.EXPORTING || future != exportFuture) {
-                    logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", name()));
-                    future.completeExceptionally(new InitializationException("state is illegal."));
-                } else if (t != null) {
-                    logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
-                    future.completeExceptionally(t);
-                    unexport();
-                } else {
-                    //开始创建服务
-                    controller.export().whenComplete((o, s) -> {
-                        if (future != exportFuture || s == null && !STATE_UPDATER.compareAndSet(this, Status.EXPORTING, Status.EXPORTED)) {
-                            future.completeExceptionally(new InitializationException("state is illegal."));
-                            logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", name()));
-                        } else if (s != null) {
-                            //export失败会自动关闭
-                            future.completeExceptionally(s);
-                            logger.info(String.format("Failed exporting provider %s. caused by %s", name(), s.getMessage()));
-                            unexport();
-                        } else {
-                            logger.info("Success exporting provider " + name());
-                            future.complete(null);
-                        }
-                    });
-                }
-            });
-            return future;
-        } else {
-            switch (status) {
-                case EXPORTING:
-                case EXPORTED:
-                case OPENING:
-                case OPENED:
-                    //可重入，没有并发调用
-                    return exportFuture;
-                default:
-                    //其它状态不应该并发执行
-                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
-            }
-        }
+        return stateMachine.export();
     }
 
     /**
      * 开启服务
      */
     public CompletableFuture<Void> open() {
-        CompletableFuture<Void> future;
-        switch (status) {
-            case EXPORTING:
-                future = openFuture;
-                exportFuture.whenComplete((v, t) -> {
-                    if (t != null) {
-                        future.completeExceptionally(t);
-                    } else {
-                        doOpen(future);
-                    }
-                });
-                return future;
-            case EXPORTED:
-                future = openFuture;
-                doOpen(future);
-                return future;
-            case OPENED:
-                return openFuture;
-            default:
-                return Futures.completeExceptionally(new InitializationException("Status is illegal."));
-        }
+        return stateMachine.open();
     }
 
-    /**
-     * 打开
-     *
-     * @param future
-     */
-    protected void doOpen(final CompletableFuture<Void> future) {
-        if (!STATE_UPDATER.compareAndSet(this, Status.EXPORTED, Status.OPENING)) {
-            logger.info(String.format("Failed opening provider %s. caused by state is illegal.", name()));
-            future.completeExceptionally(new InitializationException("state is illegal."));
-        } else {
-            logger.info(String.format("Start opening provider %s.", name()));
-            controller.open().whenComplete((v, t) -> {
-                if (openFuture != future || t == null && !STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.OPENED)) {
-                    logger.info(String.format("Failed exporting provider %s. caused by state is illegal", name()));
-                    controller.close();
-                    future.completeExceptionally(new InitializationException("Status is illegal."));
-                } else if (t != null) {
-                    //会自动关闭
-                    logger.info(String.format("Failed exporting provider %s. caused by %s", name(), t.getMessage()));
-                    //状态回滚
-                    STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.EXPORTED);
-                    future.completeExceptionally(t);
-                } else {
-                    logger.info(String.format("Success opening provider %s.", name()));
-                    //触发配置更新
-                    controller.update();
-                    future.complete(null);
-                }
-            });
-        }
-    }
 
     /**
      * 取消发布
      */
     public CompletableFuture<Void> unexport() {
         Parametric parametric = new MapParametric(GlobalContext.getContext());
-        return unexport(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
-    }
-
-    /**
-     * 取消发布
-     *
-     * @param gracefully 是否优雅关闭
-     * @return
-     */
-    public CompletableFuture<Void> unexport(boolean gracefully) {
-        if (STATE_UPDATER.compareAndSet(this, Status.EXPORTING, Status.CLOSING)) {
-            //终止等待的请求
-            controller.broken();
-            return doUnexport(() -> exportFuture);
-        } else if (STATE_UPDATER.compareAndSet(this, Status.EXPORTED, Status.CLOSING)) {
-            return doUnexport(() -> controller.close(false));
-        } else if (STATE_UPDATER.compareAndSet(this, Status.OPENING, Status.CLOSING)) {
-            return doUnexport(() -> openFuture);
-        } else if (STATE_UPDATER.compareAndSet(this, Status.OPENED, Status.CLOSING)) {
-            return doUnexport(() -> controller.close(gracefully));
-        } else {
-            switch (status) {
-                case CLOSING:
-                case CLOSED:
-                    return closeFuture;
-                default:
-                    //其它状态不应该并发执行
-                    return Futures.completeExceptionally(new IllegalStateException("state is illegal."));
-            }
-        }
-    }
-
-    /**
-     * 取消发布
-     *
-     * @param supplier
-     * @return
-     */
-    protected CompletableFuture<Void> doUnexport(final Supplier<CompletableFuture<Void>> supplier) {
-        logger.info("Start unexporting provider " + name());
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        closeFuture = future;
-        supplier.get().whenComplete((v, t) -> {
-            status = Status.CLOSED;
-            future.complete(null);
-            logger.info("Success unexporting provider " + name());
-        });
-        return future;
+        return stateMachine.close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
     }
 
     @Override
@@ -586,7 +430,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     /**
      * 控制器
      */
-    protected static class Controller<T> extends AbstractController<ProviderConfig<T>> {
+    protected static class ProviderController<T> extends AbstractController<ProviderConfig<T>> implements ExStateController<Void>, EventHandler<StateEvent> {
         /**
          * 已发布
          */
@@ -601,25 +445,66 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
          *
          * @param config
          */
-        public Controller(ProviderConfig<T> config) {
+        public ProviderController(ProviderConfig<T> config) {
             super(config);
         }
 
         @Override
         protected boolean isClose() {
-            return config.isClose() || config.controller != this;
+            return config.isClose(this);
         }
 
         @Override
         protected boolean isOpened() {
-            return config.status == Status.OPENED;
+            return config.stateMachine.isOpened(this);
         }
 
-        /**
-         * 暴露服务
-         *
-         * @return
-         */
+        @Override
+        public void fireClose() {
+            //TODO 终止Delay线程
+            super.fireClose();
+        }
+
+        @Override
+        public void handle(final StateEvent event) {
+            switch (event.getType()) {
+                case StateEvent.START_EXPORT:
+                    GlobalContext.getContext();
+                    logger.info("Start exporting provider " + config.name());
+                    break;
+                case StateEvent.SUCCESS_EXPORT:
+                    logger.info("Success exporting provider " + config.name());
+                    break;
+                case StateEvent.FAIL_EXPORT:
+                    logger.info(String.format("Failed exporting provider %s. caused by %s", config.name(), event.getThrowable().getMessage()));
+                    break;
+                case StateEvent.FAIL_EXPORT_ILLEGAL_STATE:
+                    logger.info(String.format("Failed exporting provider %s. caused by state is illegal.", config.name()));
+                    break;
+                case StateEvent.START_OPEN:
+                    logger.info(String.format("Start opening provider %s.", config.name()));
+                    break;
+                case StateEvent.SUCCESS_OPEN:
+                    logger.info(String.format("Success opening provider %s.", config.name()));
+                    //触发配置更新
+                    update();
+                    break;
+                case StateEvent.FAIL_OPEN:
+                    logger.info(String.format("Failed exporting provider %s. caused by %s", config.name(), event.getThrowable().getMessage()));
+                    break;
+                case StateEvent.FAIL_OPEN_ILLEGAL_STATE:
+                    logger.info(String.format("Failed exporting provider %s. caused by state is illegal", config.name()));
+                    break;
+                case StateEvent.START_CLOSE:
+                    logger.info("Start unexporting provider " + config.name());
+                    break;
+                case StateEvent.SUCCESS_CLOSE:
+                    logger.info("Success unexporting provider " + config.name());
+                    break;
+            }
+        }
+
+        @Override
         public CompletableFuture<Void> export() {
             CompletableFuture<Void> future = new CompletableFuture<>();
             try {
@@ -659,33 +544,13 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
             return future;
         }
 
-        /**
-         * 打开服务
-         *
-         * @return
-         */
+        @Override
         public CompletableFuture<Void> open() {
-            Exporter r = exporter;
-            return r == null ? Futures.completeExceptionally(new InitializationException("Status is illegal.")) : r.open();
+            return exporter.open();
         }
 
-        /**
-         * 关闭服务
-         *
-         * @return
-         */
-        public CompletableFuture<Void> close() {
-            Parametric parametric = new MapParametric(GlobalContext.getContext());
-            return close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
-        }
-
-        /**
-         * 关闭服务
-         *
-         * @param gracefully 是否优雅关闭
-         * @return
-         */
-        public CompletableFuture<Void> close(boolean gracefully) {
+        @Override
+        public CompletableFuture<Void> close(final boolean gracefully) {
             Exporter r = exporter;
             return r == null ? CompletableFuture.completedFuture(null) : r.close(gracefully);
         }
@@ -825,56 +690,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         public int getPort() {
             return port;
         }
-    }
-
-    /**
-     * 服务状态
-     */
-    public enum Status {
-        /**
-         * 关闭
-         */
-        CLOSED {
-            @Override
-            public boolean isClose() {
-                return true;
-            }
-        },
-        /**
-         * 暴露服务中
-         */
-        EXPORTING,
-        /**
-         * 暴露服务已完成
-         */
-        EXPORTED,
-        /**
-         * 打开中
-         */
-        OPENING,
-        /**
-         * 打开
-         */
-        OPENED,
-        /**
-         * 关闭中
-         */
-        CLOSING {
-            @Override
-            public boolean isClose() {
-                return true;
-            }
-        };
-
-        /**
-         * 是否关闭
-         *
-         * @return
-         */
-        public boolean isClose() {
-            return false;
-        }
-
     }
 
 }

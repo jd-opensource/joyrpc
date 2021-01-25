@@ -21,7 +21,6 @@ package io.joyrpc.transport.netty4.transport;
  */
 
 import io.joyrpc.constants.Constants;
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
@@ -46,7 +45,6 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -90,12 +88,13 @@ public class NettyServerTransport extends AbstractServerTransport {
     }
 
     @Override
-    protected void bind(final String host, final int port, final Consumer<AsyncResult<Channel>> consumer) {
+    protected CompletableFuture<Channel> bind(final String host, final int port) {
+        CompletableFuture<Channel> future = new CompletableFuture<>();
         //消费者不会为空
         if (codec == null && adapter == null) {
-            consumer.accept(new AsyncResult<>(new ConnectionException(
+            future.completeExceptionally(new ConnectionException(
                     String.format("Failed binding server at %s:%d, caused by codec or adapter can not be null!",
-                            host, port))));
+                            host, port)));
         } else {
             try {
                 SslContext sslContext = SslContextManager.getServerSslContext(url);
@@ -105,20 +104,20 @@ public class NettyServerTransport extends AbstractServerTransport {
                 bootstrap.bind(new InetSocketAddress(host, port)).addListener((ChannelFutureListener) f -> {
                     NettyServerChannel channel = new NettyServerChannel(f.channel(), bossGroup, workerGroup, supplier);
                     if (f.isSuccess()) {
-                        consumer.accept(new AsyncResult<>(channel));
+                        future.complete(channel);
                     } else {
                         //自动解绑
                         Throwable error = f.cause();
-                        channel.close(o -> consumer.accept(new AsyncResult<>(
-                                new ConnectionException(
-                                        String.format("Failed binding server at %s:%d, caused by %s",
-                                                host, port, error.getMessage()), error))));
+                        channel.close(o -> future.completeExceptionally(new ConnectionException(
+                                String.format("Failed binding server at %s:%d, caused by %s",
+                                        host, port, error.getMessage()), error)));
                     }
                 });
             } catch (Throwable e) {
-                consumer.accept(new AsyncResult<>(e));
+                future.completeExceptionally(e);
             }
         }
+        return future;
     }
 
     /**

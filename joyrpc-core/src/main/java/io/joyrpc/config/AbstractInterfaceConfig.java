@@ -739,7 +739,7 @@ public abstract class AbstractInterfaceConfig extends AbstractIdConfig {
         /**
          * 中断
          */
-        public void broken() {
+        public void fireClose() {
             if (!waitingConfig.isDone()) {
                 waitingConfig.completeExceptionally(new InitializationException("Unexport interrupted waiting config."));
             }

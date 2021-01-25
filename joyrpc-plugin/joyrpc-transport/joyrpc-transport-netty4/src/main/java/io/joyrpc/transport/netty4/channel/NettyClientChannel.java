@@ -20,12 +20,12 @@ package io.joyrpc.transport.netty4.channel;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
+import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 /**
  * 客户端Channel
@@ -49,24 +49,23 @@ public class NettyClientChannel extends NettyChannel {
     }
 
     @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        super.close(o -> {
-            if (consumer != null && ioGroup == null) {
-                //不需要等到
-                consumer.accept(o);
-            } else if (consumer != null) {
-                //强制关闭
-                try {
-                    ioGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).addListener(f -> consumer.accept(o));
-                } catch (Throwable e) {
-                    consumer.accept(o);
-                }
-            } else if (ioGroup != null) {
-                try {
-                    ioGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS);
-                } catch (Throwable e) {
-                }
+    public CompletableFuture<Channel> close() {
+        CompletableFuture<Channel> future = new CompletableFuture<>();
+        super.close().whenComplete((ch, error) -> {
+            try {
+                ioGroup.shutdownGracefully(0, 5, TimeUnit.SECONDS).addListener(f -> {
+                    if (error != null) {
+                        future.completeExceptionally(error);
+                    } else if (!f.isSuccess()) {
+                        future.completeExceptionally(f.cause() == null ? new TransportException(("unknown exception.")) : f.cause());
+                    } else {
+                        future.complete(ch);
+                    }
+                });
+            } catch (Throwable e) {
+                future.completeExceptionally(error == null ? e : error);
             }
         });
+        return future;
     }
 }

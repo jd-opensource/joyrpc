@@ -21,11 +21,9 @@ package io.joyrpc.transport.channel;
  */
 
 
-import io.joyrpc.event.AsyncResult;
-import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.transport.ClientTransport;
 
-import java.util.function.Consumer;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @date: 2019/2/21
@@ -33,22 +31,21 @@ import java.util.function.Consumer;
 public interface ChannelManager {
 
     /**
-     * 异步获取channel
+     * 获取channel
      *
      * @param transport 客户端通道
-     * @param consumer  消费者
      * @param connector 连接器
+     * @return CompletableFuture
      */
-    void getChannel(ClientTransport transport, Consumer<AsyncResult<Channel>> consumer, Connector connector);
+    CompletableFuture<Channel> getChannel(ClientTransport transport, Connector connector);
 
     /**
      * 获取存储channel的key
      *
-     * @param transport
-     * @return
+     * @param transport 通道
+     * @return key
      */
     String getChannelKey(ClientTransport transport);
-
 
     /**
      * 连接器
@@ -58,10 +55,7 @@ public interface ChannelManager {
 
         /**
          * 创建Channel
-         *
-         * @param consumer 事件回调
-         * @throws TransportException
          */
-        void connect(Consumer<AsyncResult<Channel>> consumer);
+        CompletableFuture<Channel> connect();
     }
 }

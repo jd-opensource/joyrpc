@@ -20,10 +20,8 @@ package io.joyrpc.transport;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
-import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
@@ -35,7 +33,7 @@ import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.transport.ClientTransport;
-import io.joyrpc.util.Status;
+import io.joyrpc.util.State;
 
 import java.net.InetSocketAddress;
 import java.util.Objects;
@@ -43,7 +41,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * @date: 2019/2/21
@@ -71,35 +68,23 @@ public class DecoratorClient<T extends ClientTransport> implements Client {
     }
 
     public DecoratorClient(URL url, T transport) {
-        Objects.requireNonNull(transport, "transport can not be null.");
-        Objects.requireNonNull(url, "url can not be null.");
-        this.url = url;
-        this.transport = transport;
+        this.url = Objects.requireNonNull(url, "url can not be null.");
+        this.transport = Objects.requireNonNull(transport, "transport can not be null.");
     }
 
     @Override
-    public Channel open() throws ConnectionException, InterruptedException {
+    public CompletableFuture<Channel> open() {
         return transport.open();
     }
 
     @Override
-    public void open(final Consumer<AsyncResult<Channel>> consumer) {
-        transport.open(consumer);
+    public CompletableFuture<Channel> close() {
+        return transport.close();
     }
 
     @Override
-    public Status getStatus() {
-        return transport.getStatus();
-    }
-
-    @Override
-    public void close() throws Exception {
-        transport.close();
-    }
-
-    @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        transport.close(consumer);
+    public State getState() {
+        return transport.getState();
     }
 
     @Override

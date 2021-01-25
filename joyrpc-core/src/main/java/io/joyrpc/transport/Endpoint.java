@@ -21,69 +21,33 @@ package io.joyrpc.transport;
  */
 
 
-import io.joyrpc.event.AsyncResult;
-import io.joyrpc.exception.ConnectionException;
-import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.util.Status;
+import io.joyrpc.util.State;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.function.Consumer;
 
 /**
  * Endpoint
  */
-public interface Endpoint extends AutoCloseable {
+public interface Endpoint {
 
     /**
-     * 打开一个channel
+     * 打开
      *
-     * @return
-     * @throws ConnectionException
-     * @throws InterruptedException
+     * @return CompletableFuture
      */
-    Channel open() throws ConnectionException, InterruptedException;
+    CompletableFuture<Channel> open();
 
     /**
-     * 异步打开channel
+     * 关闭
      *
-     * @param consumer
-     * @throws ConnectionException
+     * @return CompletableFuture
      */
-    void open(Consumer<AsyncResult<Channel>> consumer);
-
-    /**
-     * 同步关闭
-     */
-    @Override
-    default void close() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        Exception[] exceptions = new Exception[1];
-        close(r -> {
-            if (!r.isSuccess()) {
-                Throwable throwable = r.getThrowable();
-                exceptions[0] = new TransportException(throwable == null ? "unknown exception." : throwable.getMessage(), throwable);
-            }
-            latch.countDown();
-        });
-        latch.await();
-        if (exceptions[0] != null) {
-            throw exceptions[0];
-        }
-
-    }
-
-    /**
-     * 异步关闭
-     *
-     * @param consumer
-     */
-    void close(Consumer<AsyncResult<Channel>> consumer);
+    CompletableFuture<Channel> close();
 
     /**
      * 获取本地地址
@@ -95,9 +59,9 @@ public interface Endpoint extends AutoCloseable {
     /**
      * 获取当前状态
      *
-     * @return
+     * @return 状态查询
      */
-    Status getStatus();
+    State getState();
 
     /**
      * 绑定初始 ChannelHandlerChain
@@ -116,21 +80,21 @@ public interface Endpoint extends AutoCloseable {
     /**
      * 设置业务线程池
      *
-     * @param bizThreadPool
+     * @param bizThreadPool 线程池
      */
     void setBizThreadPool(ThreadPoolExecutor bizThreadPool);
 
     /**
      * 获取当前配置的线程池
      *
-     * @return
+     * @return 线程池
      */
     ThreadPoolExecutor getBizThreadPool();
 
     /**
      * 线程池异步执行
      *
-     * @param runnable
+     * @param runnable 执行块
      */
     default void runAsync(Runnable runnable) {
         ThreadPoolExecutor executor = getBizThreadPool();

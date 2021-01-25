@@ -20,41 +20,32 @@ package io.joyrpc.transport.channel;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.LafException;
-import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.DefaultHeartbeatTrigger;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
 import io.joyrpc.transport.transport.ClientTransport;
-import io.joyrpc.util.Status;
-import io.joyrpc.util.SystemClock;
-import io.joyrpc.util.Timer;
+import io.joyrpc.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
-import static io.joyrpc.util.Status.*;
 import static io.joyrpc.util.Timer.timer;
 
 /**
- * @date: 2019/3/7
+ * 抽象的通道管理器
  */
 public abstract class AbstractChannelManager implements ChannelManager {
 
@@ -69,7 +60,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
      */
     protected Consumer<PoolChannel> beforeClose;
 
-
     /**
      * 构造函数
      *
@@ -80,18 +70,15 @@ public abstract class AbstractChannelManager implements ChannelManager {
     }
 
     @Override
-    public void getChannel(final ClientTransport transport,
-                           final Consumer<AsyncResult<Channel>> consumer,
-                           final Connector connector) {
+    public CompletableFuture<Channel> getChannel(final ClientTransport transport, final Connector connector) {
         if (connector == null) {
-            if (consumer != null) {
-                consumer.accept(new AsyncResult<>(new ConnectionException("opener can not be null.")));
-            }
-            return;
+            return Futures.completeExceptionally(new ConnectionException("opener can not be null."));
+        } else {
+            //创建缓存通道
+            PoolChannel poolChannel = channels.computeIfAbsent(transport.getChannelName(),
+                    o -> new PoolChannel(transport, connector, beforeClose));
+            return poolChannel.connect();
         }
-        //创建缓存通道
-        channels.computeIfAbsent(transport.getChannelName(),
-                o -> new PoolChannel(transport, connector, beforeClose)).connect(consumer);
     }
 
     @Override
@@ -100,9 +87,8 @@ public abstract class AbstractChannelManager implements ChannelManager {
     /**
      * 池化的通道
      */
-    protected static class PoolChannel extends DecoratorChannel {
-        protected static final AtomicReferenceFieldUpdater<PoolChannel, Status> STATE_UPDATER =
-                AtomicReferenceFieldUpdater.newUpdater(PoolChannel.class, Status.class, "status");
+    protected static class PoolChannel extends DecoratorChannel implements Connector {
+        protected static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new ConnectionException(error);
         /**
          * 消息发布
          */
@@ -128,14 +114,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected Connector connector;
         /**
-         * 消费者
-         */
-        protected Queue<Consumer<AsyncResult<Channel>>> consumers = new ConcurrentLinkedQueue<>();
-        /**
-         * 状态
-         */
-        protected volatile Status status = CLOSED;
-        /**
          * 计数器
          */
         protected AtomicLong counter = new AtomicLong(0);
@@ -144,17 +122,17 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected Consumer<PoolChannel> beforeClose;
         /**
-         * 连接消费者
+         * 状态机
          */
-        protected Consumer<AsyncResult<Channel>> afterConnect;
-
+        protected StateMachine<Channel, StateController<Channel>> stateMachine = new StateMachine<>(
+                ver -> new PoolChannelController(), THROWABLE_FUNCTION);
 
         /**
          * 构造函数
          *
-         * @param transport
-         * @param connector
-         * @param beforeClose
+         * @param transport   通道
+         * @param connector   连接器
+         * @param beforeClose 关闭前事件
          */
         protected PoolChannel(final ClientTransport transport,
                               final Connector connector,
@@ -165,187 +143,136 @@ public abstract class AbstractChannelManager implements ChannelManager {
             this.connector = connector;
             this.beforeClose = beforeClose;
             this.strategy = transport.getHeartbeatStrategy();
-
-            this.afterConnect = event -> {
-                if (event.isSuccess()) {
-                    addRef();
-                }
-            };
         }
 
-        /**
-         * 建立连接
-         *
-         * @param consumer
-         */
-        protected void connect(final Consumer<AsyncResult<Channel>> consumer) {
-            //连接成功处理器
-            final Consumer<AsyncResult<Channel>> c = consumer == null ? afterConnect : afterConnect.andThen(consumer);
-            //修改状态
-            if (STATE_UPDATER.compareAndSet(this, CLOSED, OPENING)) {
-                consumers.offer(c);
-                connector.connect(r -> {
-                            if (r.isSuccess()) {
-                                channel = r.getResult();
-                                channel.setAttribute(CHANNEL_KEY, name);
-                                channel.setAttribute(EVENT_PUBLISHER, publisher);
-                                channel.getFutureManager().open();
-                                STATE_UPDATER.set(this, OPENED);
-                                //后面添加心跳，防止心跳检查状态退出
-                                trigger = strategy == null || strategy.getHeartbeat() == null ? null :
-                                        new DefaultHeartbeatTrigger(this, url, strategy, publisher);
-                                if (trigger != null) {
-                                    switch (strategy.getHeartbeatMode()) {
-                                        case IDLE:
-                                            //利用Channel的Idle事件进行心跳检测
-                                            channel.setAttribute(Channel.IDLE_HEARTBEAT_TRIGGER, trigger);
-                                            break;
-                                        case TIMING:
-                                            //定时心跳
-                                            timer().add(new HeartbeatTask(this));
-                                    }
-                                }
+        public State getState() {
+            return stateMachine.getState();
+        }
 
-                                publisher.start();
-                                publish(new AsyncResult<>(PoolChannel.this));
-                            } else {
-                                STATE_UPDATER.set(this, CLOSED);
-                                publish(new AsyncResult<>(r.getThrowable()));
-                            }
+        @Override
+        public CompletableFuture<Channel> connect() {
+            CompletableFuture<Channel> future = new CompletableFuture<>();
+            stateMachine.open().whenComplete((ch, error) -> {
+                if (error == null) {
+                    //后面添加心跳，防止心跳检查状态退出
+                    trigger = strategy == null || strategy.getHeartbeat() == null ? null :
+                            new DefaultHeartbeatTrigger(this, url, strategy, publisher);
+                    if (trigger != null) {
+                        switch (strategy.getHeartbeatMode()) {
+                            case IDLE:
+                                //利用Channel的Idle事件进行心跳检测
+                                ch.setAttribute(Channel.IDLE_HEARTBEAT_TRIGGER, trigger);
+                                break;
+                            case TIMING:
+                                //定时心跳
+                                timer().add(new HeartbeatTask(this));
                         }
-                );
-            } else {
-                switch (status) {
-                    case OPENED:
-                        c.accept(new AsyncResult(PoolChannel.this));
-                        break;
-                    case OPENING:
-                        consumers.add(c);
-                        //二次判断，防止并发
-                        switch (status) {
-                            case OPENING:
-                                break;
-                            case OPENED:
-                                publish(new AsyncResult<>(PoolChannel.this));
-                                break;
-                            default:
-                                publish(new AsyncResult<>(new ConnectionException()));
-                                break;
-                        }
-                        break;
-                    default:
-                        c.accept(new AsyncResult<>(new ConnectionException()));
-
+                    }
+                    counter.incrementAndGet();
+                    future.complete(ch);
+                } else {
+                    future.completeExceptionally(error);
                 }
-            }
+            });
+            return future;
         }
 
         /**
-         * 发布消息
+         * 建连
          *
-         * @param result
+         * @return CompletableFuture
          */
-        protected void publish(final AsyncResult result) {
-            Consumer<AsyncResult<Channel>> consumer;
-            while ((consumer = consumers.poll()) != null) {
-                consumer.accept(result);
-            }
-        }
-
-        /**
-         * 怎讲引用计数
-         *
-         * @return
-         */
-        protected long addRef() {
-            return counter.incrementAndGet();
+        protected CompletableFuture<Channel> doConnect() {
+            CompletableFuture<Channel> future = new CompletableFuture<>();
+            connector.connect().whenComplete((ch, error) -> {
+                if (error == null) {
+                    channel = ch;
+                    channel.setAttribute(CHANNEL_KEY, name);
+                    channel.setAttribute(EVENT_PUBLISHER, publisher);
+                    channel.getFutureManager().open();
+                    publisher.start();
+                    future.complete(ch);
+                } else {
+                    future.completeExceptionally(error);
+                }
+            });
+            return future;
         }
 
         @Override
         public void send(final Object object, final Consumer<SendResult> consumer) {
-            switch (status) {
-                case OPENED:
-                    super.send(object, consumer);
-                    break;
-                default:
-                    LafException throwable = new ChannelClosedException(
-                            String.format("Send request exception, causing channel is not opened. at  %s : %s",
-                                    Channel.toString(this), object.toString()));
-                    if (consumer != null) {
-                        consumer.accept(new SendResult(throwable, this));
-                    } else {
-                        throw throwable;
-                    }
+            if (stateMachine.isOpened()) {
+                super.send(object, consumer);
+            } else {
+                LafException throwable = new ChannelClosedException(
+                        String.format("Send request exception, causing channel is not opened. at  %s : %s",
+                                Channel.toString(this), object.toString()));
+                if (consumer != null) {
+                    consumer.accept(new SendResult(throwable, this));
+                } else {
+                    throw throwable;
+                }
             }
         }
 
         @Override
         public boolean isActive() {
-            return super.isActive() && status == OPENED;
+            return super.isActive() && stateMachine.isOpened();
+        }
+
+        /**
+         * 判断是否还有正在处理的请求
+         *
+         * @return 是否还有正在处理的请求标识
+         */
+        protected boolean isEmpty() {
+            return channel.getFutureManager().isEmpty() || !channel.isActive();
         }
 
         @Override
-        public boolean close() {
-            CountDownLatch latch = new CountDownLatch(1);
-            final Throwable[] err = new Throwable[1];
-            final boolean[] res = new boolean[]{false};
-            try {
-                close(r -> {
-                    if (r.getThrowable() != null) {
-                        err[0] = r.getThrowable();
-                    } else if (!r.isSuccess()) {
-                        res[0] = false;
-                    }
-                });
-                latch.await();
-            } catch (InterruptedException e) {
-            }
-            if (err[0] != null) {
-                throw new TransportException(err[0]);
-            }
-            return res[0];
-        }
-
-        @Override
-        public void close(final Consumer<AsyncResult<Channel>> consumer) {
+        public CompletableFuture<Channel> close() {
             if (counter.decrementAndGet() == 0) {
-                beforeClose.accept(this);
-                if (STATE_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
-                    if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
-                        //没有请求，或者channel已经不可以，立即关闭
-                        doClose(consumer);
-                    } else {
-                        //异步关闭
-                        timer().add(new CloseChannelTask(this, consumer));
-                    }
-                } else {
-                    switch (status) {
-                        case OPENING:
-                        case OPENED:
-                            timer().add(new CloseChannelTask(this, consumer));
-                            break;
-                        default:
-                            Optional.ofNullable(consumer).ifPresent(o -> o.accept(new AsyncResult<>(this)));
-                    }
-                }
+                //从池中移除掉
+                return stateMachine.close(false, () -> beforeClose.accept(this));
             } else {
-                Optional.ofNullable(consumer).ifPresent(o -> o.accept(new AsyncResult<>(this)));
+                return CompletableFuture.completedFuture(channel);
             }
         }
 
         /**
          * 关闭
          *
-         * @param consumer
+         * @param future
          */
-        protected void doClose(final Consumer<AsyncResult<Channel>> consumer) {
-            channel.close(r -> {
-                STATE_UPDATER.set(this, CLOSED);
+        protected void doClose(final CompletableFuture<Channel> future) {
+            channel.close().whenComplete((ch, error) -> {
                 publisher.close();
-                consumer.accept(r);
+                future.complete(ch);
             });
         }
 
+        /**
+         * 控制器
+         */
+        protected class PoolChannelController implements StateController<Channel> {
+            @Override
+            public CompletableFuture<Channel> open() {
+                return doConnect();
+            }
+
+            @Override
+            public CompletableFuture<Channel> close(boolean gracefully) {
+                CompletableFuture future = new CompletableFuture();
+                if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
+                    //没有请求，或者channel已经不可以，立即关闭
+                    doClose(future);
+                } else {
+                    //异步关闭
+                    timer().add(new CloseChannelTask(PoolChannel.this, future));
+                }
+                return future;
+            }
+        }
     }
 
     /**
@@ -360,17 +287,17 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 消费者
          */
-        protected Consumer<AsyncResult<Channel>> consumer;
+        protected CompletableFuture<Channel> future;
 
         /**
          * 构造函数
          *
          * @param channel
-         * @param consumer
+         * @param future
          */
-        public CloseChannelTask(PoolChannel channel, Consumer<AsyncResult<Channel>> consumer) {
+        public CloseChannelTask(final PoolChannel channel, final CompletableFuture<Channel> future) {
             this.channel = channel;
-            this.consumer = consumer;
+            this.future = future;
         }
 
         @Override
@@ -385,9 +312,9 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public void run() {
-            if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
-                //没有请求了,或channel已经不可用
-                channel.doClose(consumer);
+            if (channel.isEmpty()) {
+                //没有请求了
+                channel.doClose(future);
             } else {
                 //等等
                 timer().add(this);
@@ -403,7 +330,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * Channel
          */
-        protected PoolChannel channel;
+        protected final PoolChannel channel;
         /**
          * 策略
          */
@@ -451,7 +378,8 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public void run() {
-            if (channel.status == OPENED) {//只有在该状态下执行，手工关闭状态不要触发
+            if (channel.getState().isOpened()) {
+                //只有在该状态下执行，手工关闭状态不要触发
                 try {
                     trigger.run();
                 } catch (Exception e) {
@@ -460,9 +388,11 @@ public abstract class AbstractChannelManager implements ChannelManager {
                 }
                 time = SystemClock.now() + interval;
                 timer().add(this);
+                if (logger.isDebugEnabled()) {
+                    logger.debug(String.format("Heartbeat task was run, channel %s status is %s, next time is %d.",
+                            Channel.toString(channel.getRemoteAddress()), channel.getState().name(), time));
+                }
             }
-            logger.debug(String.format("Heartbeat task was run, channel %s status is %s, next time is %d.",
-                    Channel.toString(channel.getRemoteAddress()), channel.status.name(), time));
         }
     }
 

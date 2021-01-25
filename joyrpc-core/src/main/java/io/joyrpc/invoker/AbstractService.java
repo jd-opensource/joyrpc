@@ -30,10 +30,8 @@ import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.StateMachine;
-import io.joyrpc.util.Status;
+import io.joyrpc.util.*;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -96,8 +94,8 @@ public abstract class AbstractService implements Invoker {
     /**
      * 状态机
      */
-    protected StateMachine<StateMachine.Controller> stateMachine = new StateMachine<>(
-            () -> new StateMachine.Controller() {
+    protected StateMachine<Void, StateController<Void>> stateMachine = new StateMachine<>(
+            () -> new StateController<Void>() {
                 @Override
                 public CompletableFuture<Void> open() {
                     return doOpen();
@@ -108,8 +106,7 @@ public abstract class AbstractService implements Invoker {
                     return doClose();
                 }
             },
-            new StateMachine.StateFuture<>(null, () -> requests.get() <= 0 ? CompletableFuture.completedFuture(null) : new CompletableFuture<>()),
-            null);
+            new StateFuture<>(null, () -> requests.get() <= 0 ? CompletableFuture.completedFuture(null) : new CompletableFuture<>()));
     /**
      * 构建器
      */
@@ -151,7 +148,7 @@ public abstract class AbstractService implements Invoker {
     public CompletableFuture<Result> invoke(final RequestMessage<Invocation> request) {
         CompletableFuture<Result> future;
         //判断状态
-        if ((Shutdown.isShutdown() || stateMachine.getStatus() != Status.OPENED) && !system) {
+        if ((Shutdown.isShutdown() || !stateMachine.isOpened()) && !system) {
             //系统服务允许执行，例如注册中心在关闭的时候进行注销操作
             if (request.getOption() == null) {
                 try {

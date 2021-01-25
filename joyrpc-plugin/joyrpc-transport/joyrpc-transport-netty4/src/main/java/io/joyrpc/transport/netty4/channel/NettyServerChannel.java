@@ -20,7 +20,6 @@ package io.joyrpc.transport.netty4.channel;
  * #L%
  */
 
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ServerChannel;
@@ -29,8 +28,8 @@ import io.netty.util.concurrent.Future;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -76,8 +75,9 @@ public class NettyServerChannel extends NettyChannel implements ServerChannel {
     }
 
     @Override
-    public void close(final Consumer<AsyncResult<Channel>> consumer) {
-        super.close(o -> {
+    public CompletableFuture<Channel> close() {
+        CompletableFuture<Channel> result = new CompletableFuture<>();
+        super.close().whenComplete((ch, error) -> {
             List<Future> futures = new LinkedList<>();
             if (bossGroup != null) {
                 futures.add(bossGroup.shutdownGracefully());
@@ -85,14 +85,18 @@ public class NettyServerChannel extends NettyChannel implements ServerChannel {
             if (workerGroup != null) {
                 futures.add(workerGroup.shutdownGracefully());
             }
-            if (consumer != null && futures.isEmpty()) {
+            if (futures.isEmpty()) {
                 //不需要等到
-                consumer.accept(o.isSuccess() ? new AsyncResult<>(this) : new AsyncResult<>(this, o.getThrowable()));
-            } else if (consumer != null) {
+                if (error == null) {
+                    result.complete(ch);
+                } else {
+                    result.completeExceptionally(error);
+                }
+            } else {
                 //等待线程关闭
                 LinkedList<Throwable> throwables = new LinkedList<>();
-                if (!o.isSuccess()) {
-                    throwables.add(o.getThrowable());
+                if (error != null) {
+                    throwables.add(error);
                 }
                 AtomicInteger counter = new AtomicInteger(futures.size());
                 for (Future future : futures) {
@@ -102,14 +106,15 @@ public class NettyServerChannel extends NettyChannel implements ServerChannel {
                         }
                         if (counter.decrementAndGet() == 0) {
                             if (!throwables.isEmpty()) {
-                                consumer.accept(new AsyncResult<>(this, throwables.peek()));
+                                result.completeExceptionally(throwables.peek());
                             } else {
-                                consumer.accept(new AsyncResult<>(this));
+                                result.complete(ch);
                             }
                         }
                     });
                 }
             }
         });
+        return result;
     }
 }

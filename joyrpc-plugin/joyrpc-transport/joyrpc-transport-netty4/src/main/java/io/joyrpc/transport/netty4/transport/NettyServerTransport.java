@@ -108,7 +108,7 @@ public class NettyServerTransport extends AbstractServerTransport {
                     } else {
                         //自动解绑
                         Throwable error = f.cause();
-                        channel.close(o -> future.completeExceptionally(new ConnectionException(
+                        channel.close().whenComplete((v, e) -> future.completeExceptionally(new ConnectionException(
                                 String.format("Failed binding server at %s:%d, caused by %s",
                                         host, port, error.getMessage()), error)));
                     }

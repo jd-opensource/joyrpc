@@ -70,6 +70,7 @@ import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.util.Futures.whenComplete;
 import static io.joyrpc.util.Timer.timer;
 
 /**
@@ -486,10 +487,10 @@ public class Node implements Shard {
                         //发起协商，如果协商失败，则关闭连接
                         negotiation(cl).whenComplete((response, e) -> {
                             if (e != null) {
-                                cl.close().thenRun(() -> future.completeExceptionally(e));
+                                whenComplete(cl.close(), () -> future.completeExceptionally(e));
                             } else if (!cl.getChannel().isActive()) {
                                 //再次判断连接状态，如果断开了，担心clientHandler收不到事件
-                                cl.close().thenRun(() -> future.completeExceptionally(new ChannelClosedException("channel is closed.")));
+                                whenComplete(cl.close(), () -> future.completeExceptionally(new ChannelClosedException("channel is closed.")));
                             } else {
                                 //认证成功
                                 authorizationResponse = response;
@@ -525,9 +526,7 @@ public class Node implements Shard {
         public CompletableFuture<Void> close(final boolean gracefully) {
             //移除Dashboard的监听器
             Optional.ofNullable(node.publisher).ifPresent(o -> o.removeHandler(node.handler));
-            return client.close().thenRun(() -> {
-
-            });
+            return client.close().handle((v, e) -> null);
         }
 
         /**
@@ -732,7 +731,7 @@ public class Node implements Shard {
          */
         protected void onOffline(final OfflineEvent event) {
             //优雅下线
-            disconnect(false).thenRun(() -> {
+            disconnect(false).whenComplete((v, e) -> {
                 if (client.getRequests() == 0) {
                     //下线的时候没有请求，则直接关闭连接，并广播断连事件
                     closeAndPublish();
@@ -747,7 +746,7 @@ public class Node implements Shard {
          * 关闭连接，并广播事件，触发重连逻辑
          */
         protected void closeAndPublish() {
-            client.close().thenRun(() -> {
+            client.close().whenComplete((v, e) -> {
                 if (node.stateMachine.test(state -> state.isDisconnect(), this)) {
                     node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
                 }
@@ -780,7 +779,7 @@ public class Node implements Shard {
                 if (node.stateMachine.getState().tryDisconnect() == StateTransition.SUCCESS) {
                     if (autoClose) {
                         //抛出异常，这样触发cluster的自动重连
-                        client.close().thenRun(() -> node.sendEvent(NodeEvent.EventType.DISCONNECT, client));
+                        client.close().whenComplete((v, e) -> node.sendEvent(NodeEvent.EventType.DISCONNECT, client));
                     } else {
                         //不自动关闭，5秒后触发关闭事件
                         future.complete(null);

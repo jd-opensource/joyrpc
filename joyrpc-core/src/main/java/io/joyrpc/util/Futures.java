@@ -35,6 +35,19 @@ import java.util.function.Consumer;
 public class Futures {
 
     /**
+     * 执行完，调用额外的逻辑
+     *
+     * @param future   future
+     * @param runnable 执行块
+     * @param <T>
+     */
+    public static <T> void whenComplete(final CompletableFuture<T> future, final Runnable runnable) {
+        if (runnable != null) {
+            future.whenComplete((v, t) -> runnable.run());
+        }
+    }
+
+    /**
      * 链式调用
      *
      * @param future future

@@ -213,14 +213,14 @@ public class Exporter extends AbstractService {
                 if (warmup != null) {
                     logger.info("Success warmuping provider " + name);
                 }
-                server.open(r -> {
-                    if (!r.isSuccess()) {
-                        result.completeExceptionally(new InitializationException(String.format("Error occurs while open server : %s error", name), r.getThrowable()));
+                server.open().whenComplete((c, e) -> {
+                    if (e != null) {
+                        result.completeExceptionally(new InitializationException(String.format("Error occurs while open server : %s error", name), e));
                     } else {
                         //如果服务感知配置
                         configAware().whenComplete((o, s) -> {
                             if (s != null) {
-                                result.completeExceptionally(new InitializationException(String.format("Error occurs while setup server : %s error", name), r.getThrowable()));
+                                result.completeExceptionally(new InitializationException(String.format("Error occurs while setup server : %s error", name), s));
                             } else {
                                 //注册服务
                                 Futures.chain(doRegister(registries), result);
@@ -275,7 +275,7 @@ public class Exporter extends AbstractService {
         //关闭服务
         CompletableFuture<Void> future3 = new CompletableFuture<>();
         if (server != null) {
-            server.close(o -> {
+            server.close().whenComplete((v, e) -> {
                 //在这里安全关闭外部线程池
                 Close.close(server.getBizThreadPool(), 0);
                 future3.complete(null);

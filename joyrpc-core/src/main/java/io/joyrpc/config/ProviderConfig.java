@@ -33,10 +33,13 @@ import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.ServiceManager;
-import io.joyrpc.util.*;
+import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.StateController.ExStateController;
+import io.joyrpc.util.StateEvent;
 import io.joyrpc.util.StateFuture.ExStateFuture;
 import io.joyrpc.util.StateMachine.ExStateMachine;
+import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,7 +157,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         return isClose(null);
     }
 
-    protected boolean isClose(final StateController<Void> controller) {
+    protected boolean isClose(final ExStateController<Void> controller) {
         return stateMachine.isClose(controller) || super.isClose();
     }
 
@@ -217,13 +220,20 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         return stateMachine.open();
     }
 
-
     /**
      * 取消发布
      */
     public CompletableFuture<Void> unexport() {
         Parametric parametric = new MapParametric(GlobalContext.getContext());
-        return stateMachine.close(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+        return unexport(parametric.getBoolean(Constants.GRACEFULLY_SHUTDOWN_OPTION));
+    }
+
+    /**
+     * 取消发布
+     * @param gracefully 优雅关闭
+     */
+    public CompletableFuture<Void> unexport(final boolean gracefully) {
+        return stateMachine.close(gracefully);
     }
 
     @Override

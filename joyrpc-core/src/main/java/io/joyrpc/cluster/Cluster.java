@@ -524,7 +524,7 @@ public class Cluster {
             if (type == NodeEvent.EventType.DISCONNECT) {
                 logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
                 //连接断开了，则进行关闭
-                offer(() -> node.close().thenRun(() -> onNodeDisconnect(node, cluster.getRetryTime(null))));
+                offer(() -> node.close().whenComplete((v, e) -> onNodeDisconnect(node, cluster.getRetryTime(null))));
             }
             cluster.clusterPublisher.offer(event);
         }
@@ -660,7 +660,7 @@ public class Cluster {
             final CompletableFuture<Cluster> result = new CompletableFuture<>();
             List<Node> copy = new LinkedList<>(nodes.values());
             final AtomicInteger counter = new AtomicInteger(copy.size());
-            copy.forEach(o -> o.close().thenRun(() -> {
+            copy.forEach(o -> o.close().whenComplete((v, e) -> {
                 if (counter.decrementAndGet() == 0) {
                     result.complete(cluster);
                 }
@@ -976,7 +976,7 @@ public class Cluster {
             if (previous != null) {
                 //确保前置节点关闭，防止并发open，报连接关闭异常
                 CompletableFuture<Void> waiting = new CompletableFuture<>();
-                previous.close().thenRun(() -> waiting.complete(null));
+                previous.close().whenComplete((v, e) -> waiting.complete(null));
                 node.setPrecondition(waiting);
             }
             //新增节点初始化状态

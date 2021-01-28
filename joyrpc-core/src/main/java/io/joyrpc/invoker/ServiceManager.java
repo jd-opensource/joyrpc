@@ -73,6 +73,7 @@ import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.constants.ExceptionCode.CONSUMER_DUPLICATE_REFER;
 import static io.joyrpc.constants.ExceptionCode.PROVIDER_DUPLICATE_EXPORT;
 import static io.joyrpc.permission.SerializerWhiteList.addGlobalWhite;
+import static io.joyrpc.util.Futures.whenComplete;
 
 /**
  * 服务管理器
@@ -646,10 +647,7 @@ public class ServiceManager {
                     refers = new ConcurrentHashMap<>();
                     callbackManager.close();
                     //关闭服务
-                    servers.forEach((o, r) -> r.close(x -> {
-                        //在这里安全关闭外部线程池
-                        Close.close(r.getBizThreadPool(), 0);
-                    }));
+                    servers.forEach((o, r) -> whenComplete(r.close(),()->Close.close(r.getBizThreadPool(), 0)));
                     servers = new ConcurrentHashMap<>();
                     //关闭系统内容消费者（如：注册中心消费者）
                     systems.forEach((o, r) -> r.close());

@@ -21,24 +21,13 @@ package io.joyrpc.util;
  */
 
 import io.joyrpc.util.model.User;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Method;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class ClassUtilsTest {
-
-    @Test
-    public void testFuture(){
-        CompletableFuture<Void> future=new CompletableFuture<>();
-        future.completeExceptionally(new RuntimeException("xxx"));
-        future.whenComplete((v,e)->{
-            System.out.println("1111111111111111");
-        });
-        System.out.println("22222222222222222");
-    }
 
     @Test
     public void testGetterSetter() {

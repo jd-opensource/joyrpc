@@ -20,15 +20,15 @@ package io.joyrpc.util;
  * #L%
  */
 
+import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
+import static io.joyrpc.util.Memory.UNSAFE;
 
 /**
  * 整数状态
  */
 public class StateInt implements StateTransition {
-
-    protected static final AtomicReferenceFieldUpdater<StateInt, Integer> STATUS_UPDATER =
-            AtomicReferenceFieldUpdater.newUpdater(StateInt.class, Integer.class, "status");
 
     /**
      * 已关闭
@@ -55,7 +55,17 @@ public class StateInt implements StateTransition {
      */
     protected static final int OPENED = 5;
 
+    protected static long valueOffset;
+
     protected volatile int status = CLOSED;
+
+    static {
+        try {
+            Field valueField = StateInt.class.getDeclaredField("status");
+            valueOffset = UNSAFE.objectFieldOffset(valueField);
+        } catch (NoSuchFieldException e) {
+        }
+    }
 
     @Override
     public boolean isOpening() {
@@ -89,12 +99,12 @@ public class StateInt implements StateTransition {
 
     @Override
     public int tryOpening() {
-        return STATUS_UPDATER.compareAndSet(this, CLOSED, OPENING) ? SUCCESS : FAILED;
+        return UNSAFE.compareAndSwapInt(this, valueOffset, CLOSED, OPENING) ? SUCCESS : FAILED;
     }
 
     @Override
     public int tryOpened() {
-        return STATUS_UPDATER.compareAndSet(this, OPENING, OPENED) ? SUCCESS : FAILED;
+        return UNSAFE.compareAndSwapInt(this, valueOffset, OPENING, OPENED) ? SUCCESS : FAILED;
     }
 
     @Override
@@ -102,12 +112,12 @@ public class StateInt implements StateTransition {
         while (true) {
             switch (status) {
                 case OPENING:
-                    if (STATUS_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
+                    if (UNSAFE.compareAndSwapInt(this, valueOffset, OPENING, CLOSING)) {
                         return SUCCESS_OPENING_TO_CLOSING;
                     }
                     break;
                 case OPENED:
-                    if (STATUS_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
+                    if (UNSAFE.compareAndSwapInt(this, valueOffset, OPENED, CLOSING)) {
                         return SUCCESS_OPENED_TO_CLOSING;
                     }
                     break;
@@ -119,7 +129,7 @@ public class StateInt implements StateTransition {
 
     @Override
     public int tryClosed() {
-        return STATUS_UPDATER.compareAndSet(this, CLOSING, CLOSED) ? SUCCESS : FAILED;
+        return UNSAFE.compareAndSwapInt(this, valueOffset, CLOSING, CLOSED) ? SUCCESS : FAILED;
     }
 
     @Override
@@ -135,7 +145,7 @@ public class StateInt implements StateTransition {
      * @return 成功标识
      */
     public int translate(int from, int to) {
-        return STATUS_UPDATER.compareAndSet(this, from, to) ? SUCCESS : FAILED;
+        return UNSAFE.compareAndSwapInt(this, valueOffset, from, to) ? SUCCESS : FAILED;
     }
 
     @Override
@@ -160,17 +170,17 @@ public class StateInt implements StateTransition {
 
         @Override
         public int tryExporting() {
-            return STATUS_UPDATER.compareAndSet(this, CLOSED, EXPORTING) ? SUCCESS : FAILED;
+            return UNSAFE.compareAndSwapInt(this, valueOffset, CLOSED, EXPORTING) ? SUCCESS : FAILED;
         }
 
         @Override
         public int tryExported() {
-            return STATUS_UPDATER.compareAndSet(this, EXPORTING, EXPORTED) ? SUCCESS : FAILED;
+            return UNSAFE.compareAndSwapInt(this, valueOffset, EXPORTING, EXPORTED) ? SUCCESS : FAILED;
         }
 
         @Override
         public int tryOpening() {
-            return STATUS_UPDATER.compareAndSet(this, EXPORTED, OPENING) ? SUCCESS : FAILED;
+            return UNSAFE.compareAndSwapInt(this, valueOffset, EXPORTED, OPENING) ? SUCCESS : FAILED;
         }
 
         @Override
@@ -178,22 +188,22 @@ public class StateInt implements StateTransition {
             while (true) {
                 switch (status) {
                     case EXPORTING:
-                        if (STATUS_UPDATER.compareAndSet(this, EXPORTING, CLOSING)) {
+                        if (UNSAFE.compareAndSwapInt(this, valueOffset, EXPORTING, CLOSING)) {
                             return SUCCESS_EXPORTING_TO_CLOSING;
                         }
                         break;
                     case EXPORTED:
-                        if (STATUS_UPDATER.compareAndSet(this, EXPORTED, CLOSING)) {
+                        if (UNSAFE.compareAndSwapInt(this, valueOffset, EXPORTED, CLOSING)) {
                             return SUCCESS_EXPORTED_TO_CLOSING;
                         }
                         break;
                     case OPENING:
-                        if (STATUS_UPDATER.compareAndSet(this, OPENING, CLOSING)) {
+                        if (UNSAFE.compareAndSwapInt(this, valueOffset, OPENING, CLOSING)) {
                             return SUCCESS_OPENING_TO_CLOSING;
                         }
                         break;
                     case OPENED:
-                        if (STATUS_UPDATER.compareAndSet(this, OPENED, CLOSING)) {
+                        if (UNSAFE.compareAndSwapInt(this, valueOffset, OPENED, CLOSING)) {
                             return SUCCESS_OPENED_TO_CLOSING;
                         }
                         break;

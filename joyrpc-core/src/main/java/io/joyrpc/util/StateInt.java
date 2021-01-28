@@ -21,7 +21,6 @@ package io.joyrpc.util;
  */
 
 import java.lang.reflect.Field;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.joyrpc.util.Memory.UNSAFE;
 

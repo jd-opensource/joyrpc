@@ -42,6 +42,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.util.*;
 import io.joyrpc.util.Daemon.Waiting;
 import io.joyrpc.util.StateFuture;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,7 +119,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected transient StateMachine<Void,RegistryPilot> state = new StateMachine<>(()->create());
+    protected transient IntStateMachine<Void,RegistryPilot> state = new IntStateMachine<>(()->create());
 
     /**
      * 构造函数

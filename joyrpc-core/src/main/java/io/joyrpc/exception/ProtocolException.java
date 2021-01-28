@@ -58,4 +58,15 @@ public class ProtocolException extends RpcException {
     public ProtocolException(Throwable cause, String errorCode) {
         super(cause == null ? null : cause.toString(), cause, false, false, errorCode, false);
     }
+
+    /**
+     * 协议插件不存在异常
+     *
+     * @param type 类型
+     * @param name 名称
+     * @return 异常
+     */
+    public static ProtocolException noneOf(final String type, final String name) {
+        return new ProtocolException(String.format("%s plugin %s is not found.", type, name));
+    }
 }

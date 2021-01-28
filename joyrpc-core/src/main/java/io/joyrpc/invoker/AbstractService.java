@@ -30,8 +30,11 @@ import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
-import io.joyrpc.util.*;
+import io.joyrpc.util.StateController;
+import io.joyrpc.util.StateFuture;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -94,7 +97,7 @@ public abstract class AbstractService implements Invoker {
     /**
      * 状态机
      */
-    protected StateMachine<Void, StateController<Void>> stateMachine = new StateMachine<>(
+    protected IntStateMachine<Void, StateController<Void>> stateMachine = new IntStateMachine<>(
             () -> new StateController<Void>() {
                 @Override
                 public CompletableFuture<Void> open() {

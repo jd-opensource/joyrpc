@@ -33,6 +33,7 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolAdapter;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.util.*;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,7 +113,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 状态机
      */
-    protected StateMachine<Channel, StateController<Channel>> stateMachine = new StateMachine<>(
+    protected IntStateMachine<Channel, StateController<Channel>> stateMachine = new IntStateMachine<>(
             () -> new TransportController(), THROWABLE_FUNCTION,
             new StateFuture<>(
                     () -> beforeOpen == null ? null : beforeOpen.apply(AbstractServerTransport.this),

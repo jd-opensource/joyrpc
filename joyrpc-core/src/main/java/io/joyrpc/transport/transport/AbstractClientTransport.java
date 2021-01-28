@@ -34,7 +34,7 @@ import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.util.State;
 import io.joyrpc.util.StateController;
-import io.joyrpc.util.StateMachine;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -85,27 +85,28 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     /**
      * 打开的结果
      */
-    protected StateMachine<Channel, StateController<Channel>> stateMachine = new StateMachine<>(ver -> new StateController<Channel>() {
-        @Override
-        public CompletableFuture<Channel> open() {
-            return channelManager.getChannel(AbstractClientTransport.this, getConnector()).whenComplete((ch, error) -> channel = ch);
-        }
+    protected IntStateMachine<Channel, StateController<Channel>> stateMachine = new IntStateMachine<>(
+            () -> new StateController<Channel>() {
+                @Override
+                public CompletableFuture<Channel> open() {
+                    return channelManager.getChannel(AbstractClientTransport.this, getConnector()).whenComplete((ch, error) -> channel = ch);
+                }
 
-        @Override
-        public CompletableFuture<Channel> close(boolean gracefully) {
-            int id = transportId;
-            Channel ch = channel;
-            if (ch == null) {
-                return CompletableFuture.completedFuture(null);
-            } else {
-                return ch.close().whenComplete((c, error) -> {
-                    //channel不设置为null，防止正在处理的请求报空指针错误
-                    //channel = null;
-                    ch.removeSession(id);
-                });
-            }
-        }
-    }, THROWABLE_FUNCTION);
+                @Override
+                public CompletableFuture<Channel> close(boolean gracefully) {
+                    int id = transportId;
+                    Channel ch = channel;
+                    if (ch == null) {
+                        return CompletableFuture.completedFuture(null);
+                    } else {
+                        return ch.close().whenComplete((c, error) -> {
+                            //channel不设置为null，防止正在处理的请求报空指针错误
+                            //channel = null;
+                            ch.removeSession(id);
+                        });
+                    }
+                }
+            }, THROWABLE_FUNCTION);
 
     /**
      * 构造函数

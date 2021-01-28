@@ -37,6 +37,10 @@ public class ShardStateTransition implements StateTransition {
         return state == Shard.ShardState.CLOSING;
     }
 
+    public boolean isDisconnect() {
+        return state == Shard.ShardState.DISCONNECT;
+    }
+
     @Override
     public boolean isClosed() {
         return state == Shard.ShardState.DISCONNECT || state == Shard.ShardState.INITIAL;

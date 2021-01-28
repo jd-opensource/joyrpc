@@ -31,6 +31,7 @@ import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
 import io.joyrpc.transport.transport.ClientTransport;
 import io.joyrpc.util.*;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -124,8 +125,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 状态机
          */
-        protected StateMachine<Channel, StateController<Channel>> stateMachine = new StateMachine<>(
-                ver -> new PoolChannelController(), THROWABLE_FUNCTION);
+        protected IntStateMachine<Channel, PoolChannelController> stateMachine = new IntStateMachine<>(() -> new PoolChannelController(), THROWABLE_FUNCTION);
 
         /**
          * 构造函数

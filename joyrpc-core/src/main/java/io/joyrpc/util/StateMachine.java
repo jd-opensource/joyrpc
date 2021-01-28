@@ -37,8 +37,12 @@ import static io.joyrpc.util.StateTransition.*;
 /**
  * 状态机
  */
-public class StateMachine<T, M extends StateController<T>> {
+public class StateMachine<T, S extends StateTransition, M extends StateController<T>> {
 
+    /**
+     * 名称
+     */
+    protected String name;
     /**
      * 控制器提供者
      */
@@ -58,35 +62,22 @@ public class StateMachine<T, M extends StateController<T>> {
     /**
      * 状态
      */
-    protected StateTransition state;
+    protected S state;
     /**
      * 控制器
      */
     protected M controller;
 
-    public StateMachine(final Supplier<M> controllerSupplier) {
-        this(controllerSupplier, null, null, null, null);
-    }
-
-    public StateMachine(final Supplier<M> controllerSupplier, final Function<String, Throwable> errorFunc) {
-        this(controllerSupplier, errorFunc, null, null, null);
-    }
-
-    public StateMachine(final Supplier<M> controllerSupplier, final StateFuture<T> stateFuture) {
-        this(controllerSupplier, null, null, stateFuture, null);
-    }
-
-    public StateMachine(final Supplier<M> controllerSupplier, final Function<String, Throwable> errorFunc,
-                        final StateFuture<T> stateFuture) {
-        this(controllerSupplier, errorFunc, null, stateFuture, null);
-    }
-
-    public StateMachine(final Supplier<M> controllerSupplier, final Function<String, Throwable> errorFunc,
-                        final StateTransition state, final StateFuture<T> stateFuture,
+    public StateMachine(final String name,
+                        final Supplier<M> controllerSupplier,
+                        final Function<String, Throwable> errorFunc,
+                        final S state,
+                        final StateFuture<T> stateFuture,
                         final EventHandler<StateEvent> handler) {
+        this.name = name;
         this.controllerSupplier = controllerSupplier;
         this.errorFunc = errorFunc == null ? s -> new IllegalStateException(s) : errorFunc;
-        this.state = state == null ? new StateInt() : state;
+        this.state = state;
         this.stateFuture = stateFuture == null ? new StateFuture<>(null, null, null, null, null) : stateFuture;
         this.handler = handler;
     }
@@ -137,17 +128,21 @@ public class StateMachine<T, M extends StateController<T>> {
                     onFailedOpen(t, handler, future);
                 } else {
                     //打开
-                    cc.open().whenComplete((v, e) -> {
-                        if (stateFuture.getOpenFuture() != future || e == null && state.tryOpened() != SUCCESS) {
-                            //先关闭
-                            onIllegalStateOpen(cc, handler, future);
-                        } else if (e != null) {
-                            //先关闭，防止事件触发判断状态还是OPENED
-                            onFailedOpen(e, handler, future);
-                        } else {
-                            onSuccessOpen(handler, future);
-                        }
-                    });
+                    try {
+                        cc.open().whenComplete((v, e) -> {
+                            if (stateFuture.getOpenFuture() != future || e == null && state.tryOpened() != SUCCESS) {
+                                //先关闭
+                                onIllegalStateOpen(cc, handler, future);
+                            } else if (e != null) {
+                                //先关闭，防止事件触发判断状态还是OPENED
+                                onFailedOpen(e, handler, future);
+                            } else {
+                                onSuccessOpen(handler, future);
+                            }
+                        });
+                    } catch (Throwable e) {
+                        onFailedOpen(e, handler, future);
+                    }
                 }
             });
 
@@ -194,7 +189,8 @@ public class StateMachine<T, M extends StateController<T>> {
      */
     protected void onIllegalStateOpen(final M controller, final EventHandler<StateEvent> handler, final CompletableFuture<T> future) {
         controller.close(false);
-        Throwable ex = errorFunc.apply("state is illegal.");
+        Throwable ex = errorFunc.apply(name == null || name.isEmpty() ? "state is illegal." :
+                String.format("the state of %s is illegal.", name));
         publish(StateEvent.FAIL_OPEN_ILLEGAL_STATE, ex, handler);
         future.completeExceptionally(ex);
     }
@@ -225,7 +221,9 @@ public class StateMachine<T, M extends StateController<T>> {
      * @return CompletableFuture
      */
     protected CompletableFuture<T> checkOpen() {
-        return state.isOpen() ? stateFuture.getOpenFuture() : Futures.completeExceptionally(errorFunc.apply("state is illegal."));
+        return state.isOpen() ? stateFuture.getOpenFuture() : Futures.completeExceptionally(errorFunc.apply(
+                name == null || name.isEmpty() ? "state is illegal." :
+                        String.format("the state of %s is illegal.", name)));
     }
 
     /**
@@ -337,12 +335,22 @@ public class StateMachine<T, M extends StateController<T>> {
     }
 
     /**
+     * 构建不合法状态异常
+     *
+     * @return 异常
+     */
+    protected Throwable createIllegalStateError() {
+        return errorFunc.apply(name == null || name.isEmpty() ? "state is illegal." :
+                String.format("the state of %s is illegal.", name));
+    }
+
+    /**
      * 检查关闭就绪
      *
      * @return CompletableFuture
      */
     protected CompletableFuture<T> checkClose() {
-        return state.isClose() ? stateFuture.getCloseFuture() : Futures.completeExceptionally(errorFunc.apply("Status is illegal."));
+        return state.isClose() ? stateFuture.getCloseFuture() : Futures.completeExceptionally(createIllegalStateError());
     }
 
     /**
@@ -407,24 +415,28 @@ public class StateMachine<T, M extends StateController<T>> {
      * @param predicate 条件
      * @return 控制器
      */
-    public M getController(final Predicate<State> predicate) {
+    public M getController(final Predicate<S> predicate) {
         return predicate == null || predicate.test(state) ? controller : null;
     }
 
-    public State getState() {
+    public S getState() {
         return state;
     }
 
-    public boolean isOpen(final StateController controller) {
+    public boolean isOpen(final M controller) {
         return controller == this.controller && state.isOpen();
     }
 
-    public boolean isOpened(final StateController controller) {
+    public boolean isOpened(final M controller) {
         return controller == this.controller && state.isOpened();
     }
 
     public boolean isOpened() {
         return state.isOpened();
+    }
+
+    public boolean test(final Predicate<S> predicate, final M controller) {
+        return (predicate == null || predicate.test(state)) && controller == this.controller;
     }
 
     /**
@@ -433,7 +445,7 @@ public class StateMachine<T, M extends StateController<T>> {
      * @param controller 控制器
      * @return 需要关闭标识
      */
-    public boolean isClose(final StateController<T> controller) {
+    public boolean isClose(final M controller) {
         return controller != null && controller != this.controller || state.isClose();
     }
 
@@ -474,21 +486,84 @@ public class StateMachine<T, M extends StateController<T>> {
     }
 
     /**
+     * 基于整数的状态机
+     *
+     * @param <T>
+     * @param <M>
+     */
+    public static class IntStateMachine<T, M extends StateController<T>> extends StateMachine<T, StateInt, M> {
+
+        public IntStateMachine(Supplier<M> controllerSupplier) {
+            this(controllerSupplier, null, null, null, null);
+        }
+
+        public IntStateMachine(Supplier<M> controllerSupplier, Function<String, Throwable> errorFunc) {
+            this(controllerSupplier, errorFunc, null, null, null);
+        }
+
+        public IntStateMachine(Supplier<M> controllerSupplier, StateFuture<T> stateFuture) {
+            this(controllerSupplier, null, null, stateFuture, null);
+        }
+
+        public IntStateMachine(Supplier<M> controllerSupplier, Function<String, Throwable> errorFunc, StateFuture<T> stateFuture) {
+            this(controllerSupplier, errorFunc, null, stateFuture, null);
+        }
+
+        public IntStateMachine(Supplier<M> controllerSupplier, Function<String, Throwable> errorFunc, StateInt state, StateFuture<T> stateFuture, EventHandler<StateEvent> handler) {
+            super(null, controllerSupplier, errorFunc, state == null ? new StateInt() : state, stateFuture, handler);
+        }
+
+        public IntStateMachine(String name, Supplier<M> controllerSupplier) {
+            this(name, controllerSupplier, null, null, null, null);
+        }
+
+        public IntStateMachine(String name, Supplier<M> controllerSupplier, Function<String, Throwable> errorFunc) {
+            this(name, controllerSupplier, errorFunc, null, null, null);
+        }
+
+        public IntStateMachine(String name, Supplier<M> controllerSupplier, StateFuture<T> stateFuture) {
+            this(name, controllerSupplier, null, null, stateFuture, null);
+        }
+
+        public IntStateMachine(String name, Supplier<M> controllerSupplier, Function<String, Throwable> errorFunc, StateFuture<T> stateFuture) {
+            this(name, controllerSupplier, errorFunc, null, stateFuture, null);
+        }
+
+        public IntStateMachine(String name, Supplier<M> controllerSupplier, Function<String, Throwable> errorFunc, StateInt state, StateFuture<T> stateFuture, EventHandler<StateEvent> handler) {
+            super(name, controllerSupplier, errorFunc, state == null ? new StateInt() : state, stateFuture, handler);
+        }
+    }
+
+    /**
      * 增强服务提供者状态机
      */
-    public static class ExStateMachine<T, M extends ExStateController<T>> extends StateMachine<T, M> {
+    public static class ExStateMachine<T, M extends ExStateController<T>> extends StateMachine<T, StateInt, M> {
 
         public ExStateMachine(final Supplier<M> controllerSupplier,
                               final Function<String, Throwable> errorFunc,
                               final ExStateFuture<T> stateFuture) {
-            this(controllerSupplier, errorFunc, stateFuture, null);
+            this(null, controllerSupplier, errorFunc, stateFuture, null);
         }
 
         public ExStateMachine(final Supplier<M> controllerSupplier,
                               final Function<String, Throwable> errorFunc,
                               final ExStateFuture<T> stateFuture,
                               final EventHandler<StateEvent> handler) {
-            super(controllerSupplier, errorFunc, new ExStateInt(), stateFuture, handler);
+            this(null, controllerSupplier, errorFunc, stateFuture, handler);
+        }
+
+        public ExStateMachine(final String name, final Supplier<M> controllerSupplier,
+                              final Function<String, Throwable> errorFunc,
+                              final ExStateFuture<T> stateFuture) {
+            this(name, controllerSupplier, errorFunc, stateFuture, null);
+        }
+
+        public ExStateMachine(final String name,
+                              final Supplier<M> controllerSupplier,
+                              final Function<String, Throwable> errorFunc,
+                              final ExStateFuture<T> stateFuture,
+                              final EventHandler<StateEvent> handler) {
+            super(name, controllerSupplier, errorFunc, new ExStateInt(), stateFuture, handler);
         }
 
         /**
@@ -647,7 +722,7 @@ public class StateMachine<T, M extends StateController<T>> {
         protected void onIllegalStateExport(M controller, CompletableFuture<T> future) {
             //状态异常，关闭服务
             controller.close(false);
-            Throwable ex = errorFunc.apply("state is illegal.");
+            Throwable ex = createIllegalStateError();
             publish(StateEvent.FAIL_EXPORT_ILLEGAL_STATE, ex, handler);
             future.completeExceptionally(ex);
         }
@@ -674,7 +749,7 @@ public class StateMachine<T, M extends StateController<T>> {
         protected CompletableFuture<T> checkExport() {
             ExStateInt exState = (ExStateInt) state;
             ExStateFuture<T> exStateFuture = (ExStateFuture) stateFuture;
-            return exState.isExport() ? exStateFuture.getExportFuture() : Futures.completeExceptionally(errorFunc.apply("state is illegal."));
+            return exState.isExport() ? exStateFuture.getExportFuture() : Futures.completeExceptionally(createIllegalStateError());
         }
 
     }

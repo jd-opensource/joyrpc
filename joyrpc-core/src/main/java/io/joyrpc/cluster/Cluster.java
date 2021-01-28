@@ -43,8 +43,11 @@ import io.joyrpc.metric.Dashboard.DashboardType;
 import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.message.Message;
+import io.joyrpc.util.Close;
+import io.joyrpc.util.StateController;
+import io.joyrpc.util.StateMachine.IntStateMachine;
+import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
-import io.joyrpc.util.*;
 import io.joyrpc.util.network.Ping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -148,7 +151,7 @@ public class Cluster {
     /**
      * 状态机
      */
-    protected StateMachine<Void, ClusterController> stateMachine = new StateMachine<>(() -> new ClusterController(this), THROWABLE_FUNCTION);
+    protected IntStateMachine<Void, ClusterController> stateMachine = new IntStateMachine<>(() -> new ClusterController(this), THROWABLE_FUNCTION);
 
     public Cluster(final URL url) {
         this(null, url, null, null, null, null, null, null, null);
@@ -775,7 +778,7 @@ public class Cluster {
                 return;
             }
             //把初始化状态改成候选状态
-            node.getState().candidate(node::setState);
+            node.getTransistion().tryCandidate();
             //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
             if (node.getState() == Shard.ShardState.CANDIDATE) {
                 node.open().whenComplete((v, error) -> {
@@ -861,7 +864,7 @@ public class Cluster {
          * @param node 节点
          */
         protected void supply(final Node node) {
-            node.getState().initial(node::setState);
+            node.getTransistion().tryInitial();
             offer(() -> {
                 if (exists(node)) {
                     node.retry.incrementTimes();
@@ -907,7 +910,7 @@ public class Cluster {
             //节点断开，这个时候有可能注册中心事件造成不存在了
             if (exists(node)) {
                 //强制设置一下连接断开，避免在open失败没有正常设置好就触发了
-                node.getState().disconnect(node::setState);
+                node.getTransistion().tryDisconnect();
                 //如果没有下线，则尝试重连
                 node.getRetry().setRetryTime(retryTime);
                 //把当前节点放回到后备节点
@@ -977,7 +980,7 @@ public class Cluster {
                 node.setPrecondition(waiting);
             }
             //新增节点初始化状态
-            node.getState().initial(node::setState);
+            node.getTransistion().tryInitial();
             return true;
         }
     }
@@ -1192,7 +1195,7 @@ public class Cluster {
         /**
          * 打开的对象
          */
-        protected final StateController<?> controller;
+        protected final ClusterController controller;
         /**
          * 时间窗口
          */
@@ -1213,7 +1216,7 @@ public class Cluster {
          * @param cluster    集群
          * @param controller 控制器
          */
-        public DashboardTask(final Cluster cluster, final StateController<?> controller) {
+        public DashboardTask(final Cluster cluster, final ClusterController controller) {
             this.cluster = cluster;
             this.dashboard = cluster.dashboard;
             this.controller = controller;
@@ -1237,7 +1240,7 @@ public class Cluster {
 
         @Override
         public void run() {
-            StateMachine<Void, ClusterController> stateMachine = cluster.stateMachine;
+            IntStateMachine<Void, ClusterController> stateMachine = cluster.stateMachine;
             //启动的时候有可能在Opening状态
             if (stateMachine.isOpen(controller)) {
                 dashboard.snapshot();

@@ -43,6 +43,7 @@ import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.util.*;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -184,7 +185,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 状态机
      */
-    protected transient volatile StateMachine<Void, ConsumerPilot> stateMachine = new StateMachine<>(()->create());
+    protected transient volatile IntStateMachine<Void, ConsumerPilot> stateMachine = new IntStateMachine<>(()->create());
 
     public AbstractConsumerConfig() {
     }

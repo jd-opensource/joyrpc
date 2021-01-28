@@ -451,19 +451,20 @@ public class Node implements Shard {
          */
         protected final Node node;
         /**
+         * 心跳连续失败次数
+         */
+        protected final AtomicLong successiveHeartbeatFails = new AtomicLong();
+
+        protected final EventHandler<TransportEvent> handler = this::onEvent;
+
+        /**
          * 客户端
          */
         protected Client client;
         /**
-         * 心跳连续失败次数
-         */
-        protected AtomicLong successiveHeartbeatFails = new AtomicLong();
-        /**
          * 认证结果
          */
         protected Response authorizationResponse;
-
-        protected EventHandler<TransportEvent> handler = this::onEvent;
 
         public NodeController(final Node node) {
             this.node = node;

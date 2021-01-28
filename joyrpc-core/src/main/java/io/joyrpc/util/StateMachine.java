@@ -339,7 +339,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
      *
      * @return 异常
      */
-    protected Throwable createIllegalStateError() {
+    public Throwable createIllegalStateException() {
         return errorFunc.apply(name == null || name.isEmpty() ? "state is illegal." :
                 String.format("the state of %s is illegal.", name));
     }
@@ -350,7 +350,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
      * @return CompletableFuture
      */
     protected CompletableFuture<T> checkClose() {
-        return state.isClose() ? stateFuture.getCloseFuture() : Futures.completeExceptionally(createIllegalStateError());
+        return state.isClose() ? stateFuture.getCloseFuture() : Futures.completeExceptionally(createIllegalStateException());
     }
 
     /**
@@ -722,7 +722,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
         protected void onIllegalStateExport(M controller, CompletableFuture<T> future) {
             //状态异常，关闭服务
             controller.close(false);
-            Throwable ex = createIllegalStateError();
+            Throwable ex = createIllegalStateException();
             publish(StateEvent.FAIL_EXPORT_ILLEGAL_STATE, ex, handler);
             future.completeExceptionally(ex);
         }
@@ -749,7 +749,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
         protected CompletableFuture<T> checkExport() {
             ExStateInt exState = (ExStateInt) state;
             ExStateFuture<T> exStateFuture = (ExStateFuture) stateFuture;
-            return exState.isExport() ? exStateFuture.getExportFuture() : Futures.completeExceptionally(createIllegalStateError());
+            return exState.isExport() ? exStateFuture.getExportFuture() : Futures.completeExceptionally(createIllegalStateException());
         }
 
     }

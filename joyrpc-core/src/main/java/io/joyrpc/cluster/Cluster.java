@@ -241,7 +241,7 @@ public class Cluster {
     protected void filter(final Collection<Node> nodes, final List<Node> candidates, final List<Node> discards) {
         //遍历节点，过滤掉协议不支持的节点
         for (Node node : nodes) {
-            if (node.getClientProtocol() != null && sslEnable == node.sslEnable) {
+            if (node.getClientProtocol() != null && sslEnable == node.isSslEnable()) {
                 candidates.add(node);
             } else {
                 discards.add(node);
@@ -778,7 +778,7 @@ public class Cluster {
                 return;
             }
             //把初始化状态改成候选状态
-            node.getTransistion().tryCandidate();
+            node.getTransition().tryCandidate();
             //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
             if (node.getState() == Shard.ShardState.CANDIDATE) {
                 node.open().whenComplete((v, error) -> {
@@ -864,7 +864,7 @@ public class Cluster {
          * @param node 节点
          */
         protected void supply(final Node node) {
-            node.getTransistion().tryInitial();
+            node.getTransition().tryInitial();
             offer(() -> {
                 if (exists(node)) {
                     node.retry.incrementTimes();
@@ -910,7 +910,7 @@ public class Cluster {
             //节点断开，这个时候有可能注册中心事件造成不存在了
             if (exists(node)) {
                 //强制设置一下连接断开，避免在open失败没有正常设置好就触发了
-                node.getTransistion().tryDisconnect();
+                node.getTransition().tryDisconnect();
                 //如果没有下线，则尝试重连
                 node.getRetry().setRetryTime(retryTime);
                 //把当前节点放回到后备节点
@@ -980,7 +980,7 @@ public class Cluster {
                 node.setPrecondition(waiting);
             }
             //新增节点初始化状态
-            node.getTransistion().tryInitial();
+            node.getTransition().tryInitial();
             return true;
         }
     }

@@ -122,11 +122,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
 
     @Override
     public CompletableFuture<Channel> open() {
-        return stateMachine.open().whenComplete((ch, e) -> {
-            if (e == null) {
-                channel = ch;
-            }
-        });
+        return stateMachine.open();
     }
 
     @Override

@@ -169,7 +169,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
                         }
                     }
                     counter.incrementAndGet();
-                    future.complete(ch);
+                    future.complete(this);
                 } else {
                     future.completeExceptionally(error);
                 }

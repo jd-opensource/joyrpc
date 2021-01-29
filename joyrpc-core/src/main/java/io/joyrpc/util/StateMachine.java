@@ -137,7 +137,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
                                 //先关闭，防止事件触发判断状态还是OPENED
                                 onFailedOpen(e, handler, future);
                             } else {
-                                onSuccessOpen(handler, future);
+                                onSuccessOpen(v,handler, future);
                             }
                         });
                     } catch (Throwable e) {
@@ -162,9 +162,9 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
      * @param handler 事件处理器
      * @param future  CompletableFuture
      */
-    private void onSuccessOpen(final EventHandler<StateEvent> handler, final CompletableFuture<T> future) {
+    protected void onSuccessOpen(final T value,final EventHandler<StateEvent> handler, final CompletableFuture<T> future) {
         publish(StateEvent.SUCCESS_OPEN, null, handler);
-        future.complete(null);
+        future.complete(value);
     }
 
     /**

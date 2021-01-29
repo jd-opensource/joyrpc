@@ -128,19 +128,22 @@ public class StateFuture<T> {
     }
 
     public CompletableFuture<Void> newBeforeOpenFuture() {
-        CompletableFuture<Void> result = beforeOpenSupplier == null ? CompletableFuture.completedFuture(null) : beforeOpenSupplier.get();
+        CompletableFuture<Void> result = beforeOpenSupplier == null ? null : beforeOpenSupplier.get();
+        result = result == null ? CompletableFuture.completedFuture(null) : result;
         beforeOpenFuture = result;
         return result;
     }
 
     public CompletableFuture<Void> newBeforeCloseFuture(final boolean gracefully) {
-        CompletableFuture<Void> result = !gracefully || beforeCloseSupplier == null ? CompletableFuture.completedFuture(null) : beforeCloseSupplier.get();
+        CompletableFuture<Void> result = !gracefully || beforeCloseSupplier == null ? null : beforeCloseSupplier.get();
+        result = result == null ? CompletableFuture.completedFuture(null) : result;
         beforeCloseFuture = result;
         return result;
     }
 
     public CompletableFuture<Void> newAfterCloseFuture(final boolean gracefully) {
-        CompletableFuture<Void> result = !gracefully || afterCloseSupplier == null ? CompletableFuture.completedFuture(null) : afterCloseSupplier.get();
+        CompletableFuture<Void> result = !gracefully || afterCloseSupplier == null ? null : afterCloseSupplier.get();
+        result = result == null ? CompletableFuture.completedFuture(null) : result;
         afterCloseFuture = result;
         return result;
     }

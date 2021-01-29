@@ -314,7 +314,7 @@ public class Cluster {
      * @return 启动标识
      */
     public boolean isOpened() {
-        return stateMachine.getState().isOpen();
+        return stateMachine.getState().isOpened();
     }
 
     /**
@@ -343,8 +343,8 @@ public class Cluster {
      * @return the nodes
      */
     public List<Node> getNodes() {
-        ClusterController snapshot = stateMachine.getController();
-        return snapshot == null ? new ArrayList<>(0) : snapshot.readys;
+        ClusterController controller = stateMachine.getController();
+        return controller == null ? new ArrayList<>(0) : controller.readys;
     }
 
     public Dashboard getDashboard() {
@@ -488,12 +488,12 @@ public class Cluster {
             if (task != null) {
                 tasks.offer(task);
             }
-            if (isOpened() && !tasks.isEmpty() && taskOwner.compareAndSet(false, true)) {
+            if (isOpen() && !tasks.isEmpty() && taskOwner.compareAndSet(false, true)) {
                 //添加定时任务
                 timer().add("ClusterTask-" + cluster.name, SystemClock.now(), () -> {
                     //遍历任务执行
                     Runnable runnable;
-                    while ((runnable = tasks.poll()) != null && isOpened()) {
+                    while ((runnable = tasks.poll()) != null && isOpen()) {
                         //捕获异常，避免运行时
                         try {
                             runnable.run();
@@ -515,7 +515,7 @@ public class Cluster {
          * @param event 事件
          */
         protected void onNodeEvent(final NodeEvent event) {
-            if (!isOpened()) {
+            if (!isOpen()) {
                 return;
             }
             Node node = event.getNode();
@@ -535,7 +535,7 @@ public class Cluster {
          * @param event 事件
          */
         protected void onClusterEvent(final ClusterEvent event) {
-            if (event == null || !isOpened()) {
+            if (event == null || !isOpen()) {
                 logger.warn(String.format("Cluster %s receive cluster event, but "
                                 + (event == null ? "event is null" : "controller was not opened")
                                 + ", cluster status is %s.",
@@ -637,8 +637,8 @@ public class Cluster {
             Optional.ofNullable(trigger).ifPresent(Trigger::close);
         }
 
-        protected boolean isOpened() {
-            return cluster.stateMachine.isOpened(this);
+        protected boolean isOpen() {
+            return cluster.stateMachine.isOpen(this);
         }
 
         /**
@@ -774,7 +774,7 @@ public class Cluster {
          * @param consumer consumer
          */
         protected void connect(final Node node, final Consumer<Node> consumer) {
-            if (!isOpened()) {
+            if (!isOpen()) {
                 return;
             }
             //把初始化状态改成候选状态
@@ -783,7 +783,7 @@ public class Cluster {
             if (node.getState() == Shard.ShardState.CANDIDATE) {
                 node.open().whenComplete((v, error) -> {
                     //已经关闭了
-                    if (!isOpened() && error == null) {
+                    if (!isOpen() && error == null) {
                         node.close();
                     }
                     //异步处理
@@ -802,7 +802,7 @@ public class Cluster {
          * @param error 异常
          */
         protected void onNodeOpen(final Node node, final Throwable error) {
-            if (!isOpened()) {
+            if (!isOpen()) {
                 node.close();
                 logger.warn(String.format("Close the unused node instance %s. because the cluster is closed or reopened. ", node.getName()));
             } else if (!exists(node)) {
@@ -833,7 +833,7 @@ public class Cluster {
          */
         protected void supply(boolean owner) {
             //判断是否启动了定时任务
-            if (isOpened() && supplies.get() > 0
+            if (isOpen() && supplies.get() > 0
                     && (!owner || supplyOwner.compareAndSet(false, true))) {
                 DelayedNode delay;
                 while ((delay = backups.poll()) != null) {

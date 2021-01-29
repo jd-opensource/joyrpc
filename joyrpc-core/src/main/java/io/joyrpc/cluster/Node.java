@@ -256,8 +256,7 @@ public class Node implements Shard {
         this.clientProtocol = CLIENT_PROTOCOL_SELECTOR.select(new ProtocolVersion(url.getProtocol(), url.getString(VERSION_KEY)));
         this.stateMachine = new StateMachine<>("node " + shard.getName(),
                 () -> new NodeController(this), null, new ShardStateTransition(shard.getState()),
-                new StateFuture<>(() -> precondition == null ? CompletableFuture.completedFuture(null) : precondition, null),
-                null);
+                new StateFuture<>(() -> precondition, null), null);
     }
 
     /**
@@ -410,7 +409,8 @@ public class Node implements Shard {
      */
     protected Client newClient(final EventHandler<TransportEvent> handler) {
         Client client = factory.createClient(url, t -> publisher == null ?
-                new NodeClient(url, t, handler) : new MetricClient(url, t, handler, this));
+                new NodeClient(url, t, handler) :
+                new MetricClient(url, t, handler, this));
         if (client != null) {
             client.setProtocol(clientProtocol);
             //心跳间隔>0才需要绑定心跳策略
@@ -473,13 +473,11 @@ public class Node implements Shard {
         @Override
         public CompletableFuture<Void> open() {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            URL url = node.url;
-            //若开关未打开，打开节点，若开关打开，重连节点
             successiveHeartbeatFails.set(0);
             //Cluster中确保调用该方法只有CONNECTING状态
             final Client cl = node.newClient(handler);
             if (cl == null) {
-                future.completeExceptionally(ProtocolException.noneOf("transport factory", url.getString(TRANSPORT_FACTORY_OPTION)));
+                future.completeExceptionally(ProtocolException.noneOf("transport factory", node.url.getString(TRANSPORT_FACTORY_OPTION)));
             } else {
                 cl.open().whenComplete((ch, error) -> {
                     if (error != null) {
@@ -989,14 +987,14 @@ public class Node implements Shard {
         /**
          * 构造函数
          *
-         * @param client
-         * @param clusterUrl
+         * @param client     客户端
+         * @param clusterUrl 集群URL
          */
         public MyHeartbeatStrategy(final Client client, final URL clusterUrl) {
             this.client = client;
             this.clusterUrl = clusterUrl;
-            this.interval = clusterUrl.getPositive(HEARTBEAT_INTERVAL_OPTION.getName(), HEARTBEAT_INTERVAL_OPTION.get());
-            this.timeout = clusterUrl.getPositive(HEARTBEAT_TIMEOUT_OPTION.getName(), HEARTBEAT_TIMEOUT_OPTION.get());
+            this.interval = clusterUrl.getPositiveInt(HEARTBEAT_INTERVAL_OPTION);
+            this.timeout = clusterUrl.getPositiveInt(HEARTBEAT_TIMEOUT_OPTION);
             try {
                 mode = HeartbeatMode.valueOf(clusterUrl.getString(HEARTBEAT_MODE_OPTION));
             } catch (IllegalArgumentException e) {

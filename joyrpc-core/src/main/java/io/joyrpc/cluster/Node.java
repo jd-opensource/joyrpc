@@ -443,6 +443,39 @@ public class Node implements Shard {
     }
 
     /**
+     * 创建认证消息
+     * @param client 客户端
+     * @return 认证消息
+     */
+    protected Message createAuthenticationMessage(final Client client) {
+        Session session = client.session();
+        Message message =authentication == null ? client.getProtocol().authenticate(clusterUrl, client) : authentication.apply(clusterUrl);
+        if (message != null && session != null) {
+            Header header = message.getHeader();
+            header.setSerialization(session.getSerializationType());
+            header.setChecksum(session.getChecksumType());
+        }
+        return message;
+    }
+
+    /**
+     * 创建协商消息
+     * @param client 客户端
+     * @return 协商消息
+     */
+    protected Message createNegotiateMessage(final Client client) {
+        Message message = client.getProtocol().negotiate(clusterUrl, client);
+        if (message != null) {
+            //设置协商协议的序列化方式
+            Header header = message.getHeader();
+            if (header.getSerialization() == 0) {
+                header.setSerialization((byte) Serialization.JAVA_ID);
+            }
+        }
+        return message;
+    }
+
+    /**
      * 节点控制器
      */
     protected static class NodeController implements StateController<Void> {
@@ -603,17 +636,7 @@ public class Node implements Shard {
          */
         protected CompletableFuture<Response> negotiation(final Client client) {
             return handshake(client,
-                    () -> {
-                        Message message = client.getProtocol().negotiate(node.clusterUrl, client);
-                        if (message != null) {
-                            //设置协商协议的序列化方式
-                            Header header = message.getHeader();
-                            if (header.getSerialization() == 0) {
-                                header.setSerialization((byte) Serialization.JAVA_ID);
-                            }
-                        }
-                        return message;
-                    },
+                    () -> node.createNegotiateMessage(client),
                     (message, future) -> {
                         Object result = message == null ? null : message.getPayLoad();
                         if (result instanceof NegotiationResponse) {
@@ -661,18 +684,7 @@ public class Node implements Shard {
          * @param client 客户端
          */
         protected CompletableFuture<Response> authenticate(final Client client) {
-            return handshake(client,
-                    () -> {
-                        Session session = client.session();
-                        Message message = node.authentication == null ? client.getProtocol().authenticate(node.clusterUrl, client) :
-                                node.authentication.apply(node.clusterUrl);
-                        if (message != null && session != null) {
-                            Header header = message.getHeader();
-                            header.setSerialization(session.getSerializationType());
-                            header.setChecksum(session.getChecksumType());
-                        }
-                        return message;
-                    },
+            return handshake(client, () -> node.createAuthenticationMessage(client),
                     (message, future) -> {
                         SuccessResponse response = message == null ? null : (SuccessResponse) message.getPayLoad();
                         if (response == null || response.isSuccess()) {
@@ -683,6 +695,8 @@ public class Node implements Shard {
                         }
                     });
         }
+
+
 
         /**
          * 心跳事件

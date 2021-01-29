@@ -187,9 +187,9 @@ public abstract class AbstractChannelManager implements ChannelManager {
             connector.connect().whenComplete((ch, error) -> {
                 if (error == null) {
                     channel = ch;
-                    channel.setAttribute(CHANNEL_KEY, name);
-                    channel.setAttribute(EVENT_PUBLISHER, publisher);
-                    channel.getFutureManager().open();
+                    ch.setAttribute(CHANNEL_KEY, name);
+                    ch.setAttribute(EVENT_PUBLISHER, publisher);
+                    ch.getFutureManager().open();
                     publisher.start();
                     future.complete(ch);
                 } else {

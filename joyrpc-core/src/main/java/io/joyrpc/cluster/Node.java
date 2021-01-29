@@ -616,8 +616,8 @@ public class Node implements Shard {
                         }
                         return message;
                     },
-                    (o, future) -> {
-                        Object result = o.getPayLoad();
+                    (message, future) -> {
+                        Object result = message == null ? null : message.getPayLoad();
                         if (result instanceof NegotiationResponse) {
                             NegotiationResponse response = (NegotiationResponse) result;
                             if (!response.isSuccess()) {
@@ -675,13 +675,13 @@ public class Node implements Shard {
                         }
                         return message;
                     },
-                    (o, future) -> {
-                        SuccessResponse response = (SuccessResponse) o.getPayLoad();
-                        if (!response.isSuccess()) {
-                            future.completeExceptionally(new AuthenticationException(response.getMessage()));
-                        } else {
+                    (message, future) -> {
+                        SuccessResponse response = message == null ? null : (SuccessResponse) message.getPayLoad();
+                        if (response == null || response.isSuccess()) {
                             logger.info(String.format("Success authenticating with node(%s) of shard(%s)", client.getUrl().getAddress(), node.getName()));
                             future.complete(response);
+                        } else {
+                            future.completeExceptionally(new AuthenticationException(response.getMessage()));
                         }
                     });
         }

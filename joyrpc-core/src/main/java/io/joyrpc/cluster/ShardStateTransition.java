@@ -12,7 +12,7 @@ public class ShardStateTransition implements StateTransition {
     protected static final AtomicReferenceFieldUpdater<ShardStateTransition, Shard.ShardState> STATE_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(ShardStateTransition.class, Shard.ShardState.class, "state");
 
-    protected Shard.ShardState state;
+    protected volatile Shard.ShardState state;
 
     public ShardStateTransition() {
         this(Shard.ShardState.INITIAL);

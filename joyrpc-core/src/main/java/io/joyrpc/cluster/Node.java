@@ -138,7 +138,6 @@ public class Node implements Shard {
      * 权重：经过预热计算后
      */
     protected int weight;
-
     /**
      * 会话心跳间隔
      */
@@ -180,8 +179,12 @@ public class Node implements Shard {
      * 客户端协议
      */
     protected ClientProtocol clientProtocol;
+    /**
+     * 客户端
+     */
+    protected Client client;
 
-    protected StateMachine<Void, ShardStateTransition, NodeController> stateMachine;
+    protected StateMachine<Client, ShardStateTransition, NodeController> stateMachine;
 
     /**
      * 构造函数
@@ -268,19 +271,33 @@ public class Node implements Shard {
         if (clientProtocol == null) {
             return Futures.completeExceptionally(ProtocolException.noneOf("protocol", url.getString(VERSION, url.getProtocol())));
         }
-        return stateMachine.open().whenComplete((v, e) -> {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        stateMachine.open().whenComplete((c, e) -> {
             if (e == null) {
                 //连续重连次数设置为0
+                client = c;
                 retry.times = 0;
+                future.complete(null);
+            } else {
+                future.completeExceptionally(e);
             }
         });
+        return future;
     }
 
     /**
      * 关闭，不会触发断开连接事件
      */
     protected CompletableFuture<Void> close() {
-        return stateMachine.close(false);
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        stateMachine.close(false).whenComplete((c, e) -> {
+            if (e != null) {
+                future.completeExceptionally(e);
+            } else {
+                future.complete(null);
+            }
+        });
+        return future;
     }
 
     protected Retry getRetry() {
@@ -293,7 +310,7 @@ public class Node implements Shard {
     }
 
     public Client getClient() {
-        return stateMachine.getController().client;
+        return client;
     }
 
     @Override
@@ -444,12 +461,13 @@ public class Node implements Shard {
 
     /**
      * 创建认证消息
+     *
      * @param client 客户端
      * @return 认证消息
      */
     protected Message createAuthenticationMessage(final Client client) {
         Session session = client.session();
-        Message message =authentication == null ? client.getProtocol().authenticate(clusterUrl, client) : authentication.apply(clusterUrl);
+        Message message = authentication == null ? client.getProtocol().authenticate(clusterUrl, client) : authentication.apply(clusterUrl);
         if (message != null && session != null) {
             Header header = message.getHeader();
             header.setSerialization(session.getSerializationType());
@@ -460,6 +478,7 @@ public class Node implements Shard {
 
     /**
      * 创建协商消息
+     *
      * @param client 客户端
      * @return 协商消息
      */
@@ -478,7 +497,7 @@ public class Node implements Shard {
     /**
      * 节点控制器
      */
-    protected static class NodeController implements StateController<Void> {
+    protected static class NodeController implements StateController<Client> {
         /**
          * 节点
          */
@@ -504,8 +523,8 @@ public class Node implements Shard {
         }
 
         @Override
-        public CompletableFuture<Void> open() {
-            CompletableFuture<Void> future = new CompletableFuture<>();
+        public CompletableFuture<Client> open() {
+            CompletableFuture<Client> future = new CompletableFuture<>();
             successiveHeartbeatFails.set(0);
             //Cluster中确保调用该方法只有CONNECTING状态
             final Client cl = node.newClient(handler);
@@ -538,7 +557,7 @@ public class Node implements Shard {
                                 //面板刷新
                                 Optional.ofNullable(node.dashboard).ifPresent(d -> timer().add(new DashboardTask(node, this)));
                                 node.sendEvent(NodeEvent.EventType.CONNECT);
-                                future.complete(null);
+                                future.complete(cl);
                             }
                         });
                     }
@@ -555,10 +574,16 @@ public class Node implements Shard {
         }
 
         @Override
-        public CompletableFuture<Void> close(final boolean gracefully) {
+        public CompletableFuture<Client> close(final boolean gracefully) {
+            CompletableFuture<Client> future = new CompletableFuture<>();
             //移除Dashboard的监听器
             Optional.ofNullable(node.publisher).ifPresent(o -> o.removeHandler(node.handler));
-            return client.close().handle((v, e) -> null);
+            if (client != null) {
+                client.close().whenComplete((ch, e) -> future.complete(client));
+            } else {
+                future.complete(null);
+            }
+            return future;
         }
 
         /**
@@ -695,7 +720,6 @@ public class Node implements Shard {
                         }
                     });
         }
-
 
 
         /**

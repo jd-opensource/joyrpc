@@ -43,7 +43,6 @@ public interface Candidature {
      */
     Result candidate(URL url, Candidate candidate);
 
-
     /**
      * 选择结果
      */

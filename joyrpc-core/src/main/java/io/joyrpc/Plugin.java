@@ -31,6 +31,7 @@ import io.joyrpc.cluster.distribution.*;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Arbiter;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Election;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Judge;
+import io.joyrpc.cluster.filter.NodeFilter;
 import io.joyrpc.codec.CodecType;
 import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
@@ -403,6 +404,10 @@ public interface Plugin {
 
     ExtensionPoint<EndpointFactory, String> ENDPOINT_FACTORY = new ExtensionPointLazy<>(EndpointFactory.class);
 
+    /**
+     * 节点过滤插件
+     */
+    ExtensionPoint<NodeFilter, String> NODE_FILTER = new ExtensionPointLazy<>(NodeFilter.class);
     /**
      * 候选者算法插件
      */

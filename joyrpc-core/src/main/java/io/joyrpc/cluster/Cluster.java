@@ -28,6 +28,7 @@ import io.joyrpc.cluster.event.ClusterEvent;
 import io.joyrpc.cluster.event.ClusterEvent.ShardEvent;
 import io.joyrpc.cluster.event.MetricEvent;
 import io.joyrpc.cluster.event.NodeEvent;
+import io.joyrpc.cluster.filter.NodeFilter;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
@@ -315,6 +316,15 @@ public class Cluster {
      */
     public boolean isOpened() {
         return stateMachine.getState().isOpened();
+    }
+
+    /**
+     * 是否启用了SSL
+     *
+     * @return 启用SSL标识
+     */
+    public boolean isSslEnable() {
+        return sslEnable;
     }
 
     /**
@@ -954,24 +964,29 @@ public class Cluster {
                 //节点没有地址，则删除掉
                 return false;
             }
-            Node previous = nodes.get(shard.getName());
+            //创建节点
+            Node node = cluster.createNode(shard, nodeHandler);
+            //过滤掉无效的节点
+            for (NodeFilter filter : NODE_FILTER.extensions()) {
+                if (filter.filter(cluster, node)) {
+                    logger.info(String.format("discard shard %s(region=%s,dataCenter=%s,protocol=%s,version=%s,weight=%d) for cluster %s",
+                            shard.getName(), shard.getRegion(), shard.getDataCenter(), shard.getProtocol(),
+                            shard.getUrl().getString("version", ""), shard.getWeight(), cluster.name));
+                    onDeleteShard(shard);
+                    return false;
+                }
+            }
             //比较是否发生变化
+            Node previous = nodes.get(shard.getName());
             if (!cluster.isChanged(shard, previous)) {
                 return false;
             }
-
             if (logger.isInfoEnabled()) {
                 logger.info(String.format("add shard %s(region=%s,dataCenter=%s,protocol=%s,version=%s,weight=%d) for cluster %s",
-                        shard.getName(),
-                        shard.getRegion(),
-                        shard.getDataCenter(),
-                        shard.getProtocol(),
-                        shard.getUrl().getString("version", ""),
-                        shard.getWeight(),
-                        cluster.name));
+                        shard.getName(), shard.getRegion(), shard.getDataCenter(), shard.getProtocol(),
+                        shard.getUrl().getString("version", ""), shard.getWeight(), cluster.name));
             }
             //新增节点都进行覆盖，防止分片数量发生了变化
-            Node node = cluster.createNode(shard, nodeHandler);
             previous = nodes.put(shard.getName(), node);
             if (previous != null) {
                 //确保前置节点关闭，防止并发open，报连接关闭异常

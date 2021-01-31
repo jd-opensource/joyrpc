@@ -25,6 +25,7 @@ import io.joyrpc.util.StateController.ExStateController;
 import io.joyrpc.util.StateFuture.ExStateFuture;
 import io.joyrpc.util.StateInt.ExStateInt;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
@@ -137,7 +138,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
                                 //先关闭，防止事件触发判断状态还是OPENED
                                 onFailedOpen(e, handler, future);
                             } else {
-                                onSuccessOpen(v,handler, future);
+                                onSuccessOpen(v, handler, future);
                             }
                         });
                     } catch (Throwable e) {
@@ -162,7 +163,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
      * @param handler 事件处理器
      * @param future  CompletableFuture
      */
-    protected void onSuccessOpen(final T value,final EventHandler<StateEvent> handler, final CompletableFuture<T> future) {
+    protected void onSuccessOpen(final T value, final EventHandler<StateEvent> handler, final CompletableFuture<T> future) {
         publish(StateEvent.SUCCESS_OPEN, null, handler);
         future.complete(value);
     }
@@ -318,7 +319,7 @@ public class StateMachine<T, S extends StateTransition, M extends StateControlle
     protected CompletableFuture<T> onOpening2Closing(Runnable runnable, EventHandler<StateEvent> handler) {
         CompletableFuture<T> future = stateFuture.newCloseFuture();
         //触发控制器中断等待
-        controller.fireClose();
+        Optional.ofNullable(controller).ifPresent(c -> c.fireClose());
         publish(StateEvent.START_CLOSE, handler);
         stateFuture.getOpenFuture().whenComplete((v, e) -> {
             if (runnable != null) {

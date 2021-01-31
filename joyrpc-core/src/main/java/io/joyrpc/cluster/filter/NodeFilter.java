@@ -25,9 +25,9 @@ import io.joyrpc.cluster.Node;
 import io.joyrpc.extension.Extensible;
 
 /**
- * 节点过滤
+ * 无效节点过滤
  */
-@Extensible("NodeFilter")
+@Extensible("nodeFilter")
 public interface NodeFilter {
 
     /**

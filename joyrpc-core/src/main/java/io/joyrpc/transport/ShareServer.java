@@ -58,7 +58,8 @@ public class ShareServer extends DecoratorServer<Server> {
 
     @Override
     public CompletableFuture<Channel> close() {
-        if (counter.decrementAndGet() == 0) {
+        long ref = counter.decrementAndGet();
+        if (ref == 0) {
             if (closing != null) {
                 closing.accept(this);
             }

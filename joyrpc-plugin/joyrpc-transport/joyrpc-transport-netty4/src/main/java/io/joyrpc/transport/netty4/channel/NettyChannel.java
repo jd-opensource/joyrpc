@@ -109,11 +109,11 @@ public class NettyChannel implements Channel {
 
     @Override
     public CompletableFuture<Channel> close() {
-        CompletableFuture future = new CompletableFuture();
+        CompletableFuture<Channel> future = new CompletableFuture();
         try {
             channel.close().addListener(f -> {
                 if (f.isSuccess()) {
-                    future.complete(channel);
+                    future.complete(this);
                 } else {
                     future.completeExceptionally(f.cause());
                 }

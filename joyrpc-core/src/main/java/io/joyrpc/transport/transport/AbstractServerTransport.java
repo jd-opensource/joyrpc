@@ -114,7 +114,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
      * 状态机
      */
     protected IntStateMachine<Channel, StateController<Channel>> stateMachine = new IntStateMachine<>(
-            () -> new TransportController(), THROWABLE_FUNCTION,
+            () -> new TransportController(this), THROWABLE_FUNCTION,
             new StateFuture<>(
                     () -> beforeOpen == null ? null : beforeOpen.apply(AbstractServerTransport.this),
                     () -> afterClose == null ? null : afterClose.apply(AbstractServerTransport.this)));
@@ -314,39 +314,50 @@ public abstract class AbstractServerTransport implements ServerTransport {
         }
     }
 
-    protected class TransportController implements StateController<Channel>, EventHandler<StateEvent> {
+    /**
+     * 控制器
+     */
+    protected static class TransportController implements StateController<Channel>, EventHandler<StateEvent> {
+        /**
+         * 通道
+         */
+        protected AbstractServerTransport transport;
+
+        public TransportController(AbstractServerTransport transport) {
+            this.transport = transport;
+        }
 
         @Override
-        public void handle(StateEvent event) {
+        public void handle(final StateEvent event) {
             switch (event.getType()) {
                 case StateEvent.SUCCESS_OPEN:
-                    logger.info(String.format("Success binding server to %s:%d", host, url.getPort()));
+                    logger.info(String.format("Success binding server to %s:%d", transport.host, transport.url.getPort()));
                     break;
                 case StateEvent.FAIL_OPEN:
-                    logger.error(String.format("Failed binding server to %s:%d", host, url.getPort()));
+                    logger.error(String.format("Failed binding server to %s:%d", transport.host, transport.url.getPort()));
                     break;
                 case StateEvent.SUCCESS_CLOSE:
-                    logger.info(String.format("Success destroying server at %s:%d", host, url.getPort()));
+                    logger.info(String.format("Success destroying server at %s:%d", transport.host, transport.url.getPort()));
                     break;
             }
         }
 
         @Override
         public CompletableFuture<Channel> open() {
-            return bind(host, url.getPort()).whenComplete((ch, e) -> {
+            return transport.bind(transport.host, transport.url.getPort()).whenComplete((ch, e) -> {
                 if (e == null) {
-                    serverChannel = (ServerChannel) ch;
-                    publisher.start();
+                    transport.serverChannel = (ServerChannel) ch;
+                    transport.publisher.start();
                 }
             });
         }
 
         @Override
         public CompletableFuture<Channel> close(boolean gracefully) {
-            ServerChannel ch = serverChannel;
+            ServerChannel ch = transport.serverChannel;
             CompletableFuture<Channel> future = (ch == null ? CompletableFuture.completedFuture(null) : ch.close());
             return future.whenComplete((c, error) -> {
-                publisher.close();
+                transport.publisher.close();
                 //channel不设置为null，防止正在处理的请求报空指针错误
                 //serverChannel = null;
             });

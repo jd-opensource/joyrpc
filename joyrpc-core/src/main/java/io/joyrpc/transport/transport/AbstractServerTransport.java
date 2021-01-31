@@ -30,7 +30,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.codec.ProtocolAdapter;
+import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.util.*;
 import io.joyrpc.util.StateMachine.IntStateMachine;
@@ -53,7 +53,7 @@ import static io.joyrpc.constants.Constants.EVENT_PUBLISHER_TRANSPORT_CONF;
 import static io.joyrpc.util.Timer.timer;
 
 /**
- * 抽象的服务通道
+ * 抽象的服务传输通道
  */
 public abstract class AbstractServerTransport implements ServerTransport {
     private static final Logger logger = LoggerFactory.getLogger(AbstractServerTransport.class);
@@ -69,7 +69,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 协议适配器
      */
-    protected ProtocolAdapter adapter;
+    protected ProtocolDeduction deduction;
     /**
      * 处理链
      */
@@ -86,6 +86,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
      * 服务通道
      */
     protected ServerChannel serverChannel;
+    //TODO 海量连接，数据流很大
     /**
      * 上下文
      */
@@ -197,8 +198,8 @@ public abstract class AbstractServerTransport implements ServerTransport {
     }
 
     @Override
-    public void setAdapter(final ProtocolAdapter adapter) {
-        this.adapter = adapter;
+    public void setDeduction(final ProtocolDeduction deduction) {
+        this.deduction = deduction;
     }
 
     @Override
@@ -229,26 +230,20 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 绑定Channel和Transport
      *
-     * @param channel
-     * @param transport
+     * @param channel   连接通道
+     * @param transport 传输通道
      */
     protected void addChannel(final Channel channel, final ChannelTransport transport) {
         if (channel != null && transport != null) {
             transports.put(channel, transport);
-            try {
-                timer().add(new EvictSessionTask(channel));
-            } catch (Exception e) {
-                logger.error(String.format("Error occurs while add evict session task for channel %s,  caused by: %s",
-                        Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
-                throw e;
-            }
+            timer().add(new EvictSessionTask(channel));
         }
     }
 
     /**
      * 删除Channel
      *
-     * @param channel
+     * @param channel 连接通道
      */
     protected void removeChannel(final Channel channel) {
         if (channel != null) {
@@ -301,13 +296,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
         @Override
         public void run() {
             if (channel.isActive()) {
-                try {
-                    channel.evictSession();
-                } catch (Exception e) {
-                    logger.error(
-                            String.format("Error occurs while run evict session task for channel %s,  caused by: %s",
-                                    Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
-                }
+                channel.evictSession();
                 time = SystemClock.now() + interval;
                 timer().add(this);
             }

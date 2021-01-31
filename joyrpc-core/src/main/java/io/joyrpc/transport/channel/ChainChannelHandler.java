@@ -26,13 +26,20 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Function;
 
 /**
- * @date: 2019/1/15
+ * 包装处理链的处理器
  */
 public class ChainChannelHandler implements ChannelHandler {
-
+    /**
+     * 业务处理链
+     */
     protected ChannelHandlerChain chain;
+    /**
+     * 线程池
+     */
     protected ThreadPoolExecutor executor;
-
+    /**
+     * 运行函数
+     */
     protected Function<Runnable, Runnable> runFunc;
 
     public ChainChannelHandler(ChannelHandlerChain chain) {
@@ -44,6 +51,7 @@ public class ChainChannelHandler implements ChannelHandler {
         this.executor = executor;
         if (executor != null) {
             BlockingQueue queue = executor.getQueue();
+            //判断是否是优先级队列
             if (queue instanceof PriorityBlockingQueue && ((PriorityBlockingQueue) queue).comparator() == null) {
                 runFunc = ComparableRunnable::new;
             } else {
@@ -75,15 +83,14 @@ public class ChainChannelHandler implements ChannelHandler {
     @Override
     public Object received(final ChannelContext context, final Object message) {
         if (executor != null) {
-            executor.execute(
-                    runFunc.apply(() -> {
-                        try {
-                            doReceived(context, message);
-                        } catch (Exception e) {
-                            //发生异常，触发异常事件
-                            context.getChannel().fireCaught(e);
-                        }
-                    }));
+            executor.execute(runFunc.apply(() -> {
+                try {
+                    doReceived(context, message);
+                } catch (Exception e) {
+                    //发生异常，触发异常事件
+                    context.getChannel().fireCaught(e);
+                }
+            }));
             return null;
         } else {
             //在IO线程中，发生异常，有底层插件捕获
@@ -94,9 +101,9 @@ public class ChainChannelHandler implements ChannelHandler {
     /**
      * 接收消息处理
      *
-     * @param context
-     * @param message
-     * @return
+     * @param context 上下文
+     * @param message 消息
+     * @return 转换的消息
      */
     protected Object doReceived(final ChannelContext context, final Object message) {
         Object msg = message;
@@ -133,8 +140,14 @@ public class ChainChannelHandler implements ChannelHandler {
         }
     }
 
+    /**
+     * 运行
+     */
     protected class ComparableRunnable implements Runnable, Comparable {
 
+        /**
+         * 包装的运行
+         */
         protected Runnable runnable;
 
         public ComparableRunnable(Runnable runnable) {

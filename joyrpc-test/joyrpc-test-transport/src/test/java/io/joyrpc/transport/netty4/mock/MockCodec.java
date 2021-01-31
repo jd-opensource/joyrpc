@@ -28,12 +28,12 @@ import io.joyrpc.transport.codec.EncodeContext;
 import io.joyrpc.transport.codec.LengthFieldFrameCodec;
 
 /**
- * @date: 2019/1/28
+ * Mock编解码
  */
 public class MockCodec implements LengthFieldFrameCodec {
 
     @Override
-    public Object decode(DecodeContext context, ChannelBuffer buffer) throws CodecException {
+    public Object decode(final DecodeContext context, final ChannelBuffer buffer) throws CodecException {
         MockMessage mockMessage = new MockMessage();
         int len = buffer.readInt();
         int id = buffer.readInt();
@@ -46,7 +46,6 @@ public class MockCodec implements LengthFieldFrameCodec {
         mockMessage.setPayLoad(data);
         return mockMessage;
     }
-
 
     @Override
     public LengthFieldFrame getLengthFieldFrame() {

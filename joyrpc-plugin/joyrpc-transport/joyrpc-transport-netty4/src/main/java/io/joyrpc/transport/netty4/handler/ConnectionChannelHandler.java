@@ -31,7 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 连接处理器
+ * 连接处理器，触发连接和断连事件
  */
 public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
 
@@ -43,32 +43,32 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
     /**
      * 事件发布器
      */
-    protected Publisher<TransportEvent> eventPublisher;
+    protected Publisher<TransportEvent> publisher;
 
     /**
      * 构造函数
      *
      * @param channel
-     * @param eventPublisher
+     * @param publisher
      */
-    public ConnectionChannelHandler(Channel channel, Publisher<TransportEvent> eventPublisher) {
+    public ConnectionChannelHandler(Channel channel, Publisher<TransportEvent> publisher) {
         this.channel = channel;
-        this.eventPublisher = eventPublisher;
+        this.publisher = publisher;
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         try {
             channel.getFutureManager().close();
         } finally {
-            eventPublisher.offer(new InactiveEvent(channel));
+            publisher.offer(new InactiveEvent(channel));
             ctx.fireChannelInactive();
         }
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        eventPublisher.offer(new ActiveEvent(channel));
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
+        publisher.offer(new ActiveEvent(channel));
         ctx.fireChannelActive();
     }
 }

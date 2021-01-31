@@ -35,10 +35,10 @@ import static io.joyrpc.transport.session.Session.AUTH_SESSION_NONE;
 public interface ServerProtocol extends Protocol {
 
     /**
-     * 判断当前数据包是否是该协议的
+     * 判断当前数据包是否是该协议的，不移动缓冲区位置
      *
-     * @param channelBuffer
-     * @return
+     * @param channelBuffer 连接通道缓冲区
+     * @return 匹配标识
      */
     default boolean match(final ChannelBuffer channelBuffer) {
         byte[] magicCodes = getMagicCode();
@@ -62,6 +62,7 @@ public interface ServerProtocol extends Protocol {
     /**
      * 认证会话
      *
+     * @param session 会话
      * @return 判断会话是否认证成功
      */
     default int authenticate(final Session session) {
@@ -72,7 +73,7 @@ public interface ServerProtocol extends Protocol {
      * 下线消息
      *
      * @param url url
-     * @return Message
+     * @return 下线消息
      */
     default Message offline(final URL url) {
         return null;

@@ -27,8 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 会话管理器
- *
- * @date: 2019/5/15
  */
 public class SessionManager {
     /**
@@ -43,7 +41,7 @@ public class SessionManager {
     /**
      * 构造函数
      *
-     * @param server
+     * @param server 服务端标识
      */
     public SessionManager(boolean server) {
         this.server = server;
@@ -52,8 +50,8 @@ public class SessionManager {
     /**
      * 获取会话
      *
-     * @param sessionId
-     * @return
+     * @param sessionId 会话ID
+     * @return 会话
      */
     public Session get(final int sessionId) {
         return sessions.get(sessionId);
@@ -62,9 +60,9 @@ public class SessionManager {
     /**
      * 添加会话
      *
-     * @param sessionId
-     * @param session
-     * @return
+     * @param sessionId 会话ID
+     * @param session   会话
+     * @return 老的会话
      */
     public Session putIfAbsent(final int sessionId, final Session session) {
         if (session == null) {
@@ -77,9 +75,9 @@ public class SessionManager {
     /**
      * 修改会话
      *
-     * @param sessionId
-     * @param session
-     * @return
+     * @param sessionId 会话ID
+     * @param session   会话
+     * @return 老的会话
      */
     public Session put(int sessionId, Session session) {
         if (session == null) {
@@ -92,18 +90,18 @@ public class SessionManager {
     /**
      * 移除会话
      *
-     * @param sessionId
-     * @return
+     * @param sessionId 会话ID
+     * @return 会话
      */
     public Session remove(int sessionId) {
         return sessions.remove(sessionId);
     }
 
     /**
-     * 心跳
+     * 记录心跳时间
      *
-     * @param sessionId
-     * @return
+     * @param sessionId 会话ID
+     * @return 成功标识
      */
     public boolean beat(final int sessionId) {
         if (!server) {

@@ -28,7 +28,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 /**
- * @date: 2019/1/7
+ * 连接通道缓冲区
  */
 public interface ChannelBuffer {
 

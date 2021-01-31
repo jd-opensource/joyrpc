@@ -44,9 +44,10 @@ import io.joyrpc.metric.DashboardAware;
 import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.permission.SerializerTypeScanner;
 import io.joyrpc.protocol.ServerProtocol;
-import io.joyrpc.protocol.handler.DefaultProtocolAdapter;
+import io.joyrpc.protocol.handler.DefaultProtocolDeduction;
 import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.ShareServer;
 import io.joyrpc.transport.channel.Channel;
@@ -572,19 +573,22 @@ public class ServiceManager {
     }
 
     /**
-     * 获取Server
+     * 获取服务
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 服务
      */
     protected Server getServer(final URL url) {
         return servers.computeIfAbsent(url.getPort(), port -> {
-            Server server = ENDPOINT_FACTORY.getOrDefault(url.getString(ENDPOINT_FACTORY_OPTION)).createServer(url);
-            server.setAdapter(new DefaultProtocolAdapter());
+            EndpointFactory factory = ENDPOINT_FACTORY.getOrDefault(url.getString(ENDPOINT_FACTORY_OPTION));
+            Server server = factory.createServer(url);
+            server.setDeduction(new DefaultProtocolDeduction());
             server.addEventHandler(event -> {
+                //连接通道关闭事件
                 if (event instanceof InactiveEvent) {
                     Channel channel = ((InactiveEvent) event).getChannel();
                     ChannelTransport transport = channel.getAttribute(Channel.CHANNEL_TRANSPORT);
+                    //移除回调
                     callbackManager.getProducer().removeCallback(transport);
                 }
             });
@@ -597,8 +601,8 @@ public class ServiceManager {
     /**
      * 创建业务线程池
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 线程池
      */
     protected ThreadPoolExecutor getBizThreadPool(final URL url) {
         ThreadPool pool = THREAD_POOL.getOrDefault(url.getString(THREADPOOL_OPTION));
@@ -647,7 +651,7 @@ public class ServiceManager {
                     refers = new ConcurrentHashMap<>();
                     callbackManager.close();
                     //关闭服务
-                    servers.forEach((o, r) -> whenComplete(r.close(),()->Close.close(r.getBizThreadPool(), 0)));
+                    servers.forEach((o, r) -> whenComplete(r.close(), () -> Close.close(r.getBizThreadPool(), 0)));
                     servers = new ConcurrentHashMap<>();
                     //关闭系统内容消费者（如：注册中心消费者）
                     systems.forEach((o, r) -> r.close());

@@ -24,32 +24,30 @@ import io.joyrpc.exception.ProtocolException;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.codec.AdapterContext;
-import io.joyrpc.transport.codec.ProtocolAdapter;
+import io.joyrpc.transport.codec.DeductionContext;
+import io.joyrpc.transport.codec.ProtocolDeduction;
 
 import static io.joyrpc.Plugin.SERVER_PROTOCOL;
 
 /**
- * @date: 2019/4/1
+ * 默认协推断
  */
-public class DefaultProtocolAdapter implements ProtocolAdapter {
+public class DefaultProtocolDeduction implements ProtocolDeduction {
 
     @Override
-    public void adapter(AdapterContext context, ChannelBuffer buffer) {
+    public void deduce(final DeductionContext context, final ChannelBuffer buffer) {
         if (buffer.readableBytes() < 1) {
             return;
         }
 
-        int readerIndex = buffer.readerIndex();
-        // 遍历协议集进行匹配
+        //遍历协议进行匹配
         for (ServerProtocol protocol : SERVER_PROTOCOL.extensions()) {
+            //判断协议是否匹配，match不会移动读取位置
             if (protocol.match(buffer)) {
+                //绑定协议的编解码和处理链
                 context.bind(protocol.getCodec(), protocol.buildChain());
                 context.getChannel().setAttribute(Channel.PROTOCOL, protocol);
-                buffer.readerIndex(readerIndex);
                 return;
-            } else {
-                buffer.readerIndex(readerIndex);
             }
         }
         throw new ProtocolException("No matching protocol found");

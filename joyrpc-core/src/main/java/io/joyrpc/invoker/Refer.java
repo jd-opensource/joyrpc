@@ -273,10 +273,9 @@ public class Refer extends AbstractService {
         }
         //捕获内部异常，可能在重试线程里面调用，用户线程异常捕获不了异常
         try {
-            Session session = client.session();
             //header 使用协商结果
             MessageHeader header = request.getHeader();
-            header.copy(session);
+            header.copy(client.session());
             //条件透传注入
             for (NodeReqInjection injection : injections) {
                 if (last != null) {
@@ -291,27 +290,49 @@ public class Refer extends AbstractService {
                 container.addCallback(request, client);
             }
             //异步发起调用
-            CompletableFuture<Message> msgFuture = client.async(request, header.getTimeout());
+            CompletableFuture<Message> future = client.async(request, header.getTimeout());
 
             //返回future
-            return msgFuture.handle((msg, err) -> {
-                Result result;
+            return future.handle((response, err) -> {
                 //线程恢复统一改在consumerInvokerHandler里面
-                if (err != null) {
-                    result = new Result(request.getContext(), err, msg);
-                } else {
-                    result = buildResult(request, msg, client.getProtocol());
-                }
+                Result result = err != null ? new Result(request.getContext(), err, response) : response2Result(request, client, response);
                 if (result.isException()) {
                     //异常处理
                     onException(request, result, client);
                 }
-
                 return result;
             });
         } catch (Throwable e) {
             return Futures.completeExceptionally(e);
         }
+    }
+
+    /**
+     * 把应答消息转换成调用结果
+     *
+     * @param request  请求
+     * @param client   客户端
+     * @param response 应答消息
+     * @return 调用结果
+     */
+    protected Result response2Result(final RequestMessage<Invocation> request, final Client client, final Message response) {
+        ClientProtocol protocol = client.getProtocol();
+        //拿到Response对象
+        ResponsePayload payLoad = (ResponsePayload) response.getPayLoad();
+        //返回值为空或为void，response可能为空
+        if (payLoad == null) {
+            payLoad = new ResponsePayload();
+            response.setPayLoad(payLoad);
+        }
+        //根据协议拿到应答消息转换器，在网关调用会用到
+        MessageConverter converter = protocol.inMessage();
+        BiFunction<Message, Object, Object> function = converter == null ? null : converter.response();
+        //构造返回值
+        Result result = payLoad.isError() ?
+                new Result(request.getContext(), payLoad.getException(), response) :
+                new Result(request.getContext(), function == null ? payLoad.getResponse() :
+                        function.apply(request, payLoad.getResponse()), response);
+        return result;
     }
 
     /**
@@ -332,33 +353,6 @@ public class Refer extends AbstractService {
         if (exceptionHandlers != null) {
             exceptionHandlers.forEach(h -> h.handle(client, result.getException()));
         }
-    }
-
-    /**
-     * 转换成结果对象
-     *
-     * @param request  请求
-     * @param response 应答
-     * @param protocol 协议
-     * @return 结果
-     */
-    protected Result buildResult(final RequestMessage<Invocation> request, final Message response,
-                                 final ClientProtocol protocol) {
-        //拿到Response对象
-        ResponsePayload payLoad = (ResponsePayload) response.getPayLoad();
-        //返回值为空或为void，response可能为空
-        if (payLoad == null) {
-            payLoad = new ResponsePayload();
-            response.setPayLoad(payLoad);
-        }
-        //根据协议拿到应答消息转换器，在网关调用会用到
-        MessageConverter converter = protocol.inMessage();
-        BiFunction<Message, Object, Object> function = converter == null ? null : converter.response();
-        //构造返回值
-        return payLoad.isError() ? new Result(request.getContext(), payLoad.getException(), response) :
-                new Result(request.getContext(),
-                        function == null ? payLoad.getResponse() :
-                                function.apply(request, payLoad.getResponse()), response);
     }
 
     /**

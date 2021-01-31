@@ -30,7 +30,7 @@ public interface CodecContext {
     /**
      * 获取连接通道
      *
-     * @return
+     * @return 连接通道
      */
     Channel getChannel();
 

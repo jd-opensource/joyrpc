@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /**
- * @date: 2019/3/6
+ * Netty服务端连接通道
  */
 public class NettyServerChannel extends NettyChannel implements ServerChannel {
 
@@ -41,7 +41,6 @@ public class NettyServerChannel extends NettyChannel implements ServerChannel {
      * 服务端上下文
      */
     protected Supplier<List<Channel>> supplier;
-
     /**
      * boss线程池
      */
@@ -54,10 +53,10 @@ public class NettyServerChannel extends NettyChannel implements ServerChannel {
     /**
      * 构造函数
      *
-     * @param channel
-     * @param bossGroup
-     * @param workerGroup
-     * @param supplier
+     * @param channel     Netty连接通道
+     * @param bossGroup   主线程池
+     * @param workerGroup 工作线程池
+     * @param supplier    连接通道集合提供者
      */
     public NettyServerChannel(final io.netty.channel.Channel channel,
                               final EventLoopGroup bossGroup,

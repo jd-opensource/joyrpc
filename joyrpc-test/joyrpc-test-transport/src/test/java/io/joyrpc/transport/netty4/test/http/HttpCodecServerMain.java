@@ -33,7 +33,7 @@ public class HttpCodecServerMain {
     public static void main(String[] orgs) throws InterruptedException {
         URL url = URL.valueOf("mock://127.0.0.1:22000");
         Server server = Plugin.ENDPOINT_FACTORY.get().createServer(url);
-        server.setAdapter(new SimpleAdapter());
+        server.setDeduction(new SimpleDeduction());
         server.setChannelHandlerChain(
                 new ChannelHandlerChain()
                         .addLast(new MockChannelHandler())

@@ -26,7 +26,7 @@ import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.netty4.mock.MockChannelHandler;
 import io.joyrpc.transport.netty4.mock.MockCodec;
-import io.joyrpc.transport.netty4.test.http.SimpleAdapter;
+import io.joyrpc.transport.netty4.test.http.SimpleDeduction;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -47,7 +47,7 @@ public class SslServerMain {
                 .addIfAbsent(SSL_CLIENT_AUTH.getName(), "REQUIRE")
                 .addIfAbsent(SSL_PASSWORD.getName(), "nettyDemo");
         Server server = new DefaultEndpointFactory().createServer(url);
-        server.setAdapter(new SimpleAdapter());
+        server.setDeduction(new SimpleDeduction());
         server.setCodec(new MockCodec());
         server.setChannelHandlerChain(
                 new ChannelHandlerChain()

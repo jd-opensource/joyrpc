@@ -21,14 +21,12 @@ package io.joyrpc.transport.netty4.transport;
  */
 
 import io.joyrpc.constants.Constants;
-import io.joyrpc.event.AsyncResult;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.SslException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy.HeartbeatMode;
-import io.joyrpc.transport.netty4.Plugin;
 import io.joyrpc.transport.netty4.binder.HandlerBinder;
 import io.joyrpc.transport.netty4.channel.NettyClientChannel;
 import io.joyrpc.transport.netty4.handler.ConnectionChannelHandler;
@@ -47,12 +45,12 @@ import io.netty.handler.timeout.IdleStateHandler;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.transport.netty4.Plugin.HANDLER_BINDER;
 
 /**
- * @date: 2019/2/21
+ * Netty客户端连接
  */
 public class NettyClientTransport extends AbstractClientTransport {
     /**
@@ -142,7 +140,7 @@ public class NettyClientTransport extends AbstractClientTransport {
                         //添加连接事件监听
                         ch.pipeline().addLast("connection", new ConnectionChannelHandler(channels[0], publisher));
                         //添加编解码和处理链
-                        HandlerBinder binder = Plugin.HANDLER_BINDER.get(codec.binder());
+                        HandlerBinder binder = HANDLER_BINDER.get(codec.binder());
                         binder.bind(ch.pipeline(), codec, handlerChain, channels[0]);
                         //若配置idle心跳策略，配置心跳handler
                         if (heartbeatStrategy != null && heartbeatStrategy.getHeartbeatMode() == HeartbeatMode.IDLE) {
@@ -177,10 +175,10 @@ public class NettyClientTransport extends AbstractClientTransport {
     }
 
     /**
-     * 连接异常
+     * 异常转换
      *
-     * @param throwable
-     * @return
+     * @param throwable 异常
+     * @return 异常
      */
     protected Throwable error(final Throwable throwable) {
         return throwable == null ?

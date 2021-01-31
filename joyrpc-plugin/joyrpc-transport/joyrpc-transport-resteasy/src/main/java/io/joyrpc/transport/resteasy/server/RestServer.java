@@ -28,7 +28,7 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.codec.ProtocolAdapter;
+import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
 import io.joyrpc.transport.resteasy.mapper.ApplicationExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.ClientErrorExceptionMapper;
@@ -125,7 +125,7 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
     }
 
     @Override
-    public void setAdapter(ProtocolAdapter adapter) {
+    public void setDeduction(ProtocolDeduction deduction) {
     }
 
     @Override

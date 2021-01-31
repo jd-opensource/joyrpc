@@ -31,12 +31,16 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 /**
- * @date: 2019/1/15
+ * Netty连接通道缓冲区
  */
 public class NettyChannelBuffer implements ChannelBuffer {
-
+    /**
+     * 字节缓冲区
+     */
     protected final ByteBuf byteBuf;
-
+    /**
+     * 释放标识
+     */
     protected boolean released = false;
 
     public NettyChannelBuffer(ByteBuf byteBuf) {

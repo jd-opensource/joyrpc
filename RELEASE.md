@@ -12,6 +12,10 @@
 
 - 优化代码，完善状态机
 
+## Bugfixes
+
+- 修复连接通道处理器的inactive不能正常触发的问题
+
 ## 1.4.4-RELEASE(2021-01-09)
 
 ### Enhancement

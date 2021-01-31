@@ -26,7 +26,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandlerChain;
 import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.codec.ProtocolAdapter;
+import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.transport.ChannelTransport;
 import io.joyrpc.transport.transport.ServerTransport;
 import io.joyrpc.util.State;
@@ -84,8 +84,8 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
     }
 
     @Override
-    public void setAdapter(final ProtocolAdapter adapter) {
-        transport.setAdapter(adapter);
+    public void setDeduction(final ProtocolDeduction deduction) {
+        transport.setDeduction(deduction);
     }
 
     @Override

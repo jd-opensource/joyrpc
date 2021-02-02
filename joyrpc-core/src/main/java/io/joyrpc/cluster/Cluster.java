@@ -277,20 +277,47 @@ public class Cluster {
      * @return 重试时间
      */
     protected long getRetryTime(final Throwable throwable) {
-        if (throwable == null) {
-            return SystemClock.now() + reconnectInterval + ThreadLocalRandom.current().nextInt(1000);
-        } else if (throwable instanceof ProtocolException) {
+        if (throwable instanceof ProtocolException) {
             //协商失败，最少20秒重连
-            return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
+            return getRetryTime(Math.max(reconnectInterval, 20000L));
         } else if (throwable instanceof AuthenticationException) {
             //认证失败，最少20秒重连
-            return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
+            return getRetryTime(Math.max(reconnectInterval, 20000L));
         } else if (Ping.detectDead(throwable)) {
             //目标节点不存在了，最少20秒重连
-            return SystemClock.now() + Math.max(reconnectInterval, 20000L) + ThreadLocalRandom.current().nextInt(1000);
+            return getRetryTime(Math.max(reconnectInterval, 20000L));
         } else {
-            return SystemClock.now() + reconnectInterval + ThreadLocalRandom.current().nextInt(1000);
+            return getRetryTime(reconnectInterval);
         }
+    }
+
+    /**
+     * 获取重试时间
+     *
+     * @return 重试时间
+     */
+    protected long getRetryTime() {
+        return getRetryTime(reconnectInterval);
+    }
+
+    /**
+     * 获取下线后的重连时间
+     *
+     * @return 重连时间
+     */
+    protected long getRetryTimeWhenOffline() {
+        //最小35秒超时，可以覆盖大量注册中心的超时设置
+        return getRetryTime(Math.max(reconnectInterval, 35000L));
+    }
+
+    /**
+     * 获取重试时间
+     *
+     * @param interval 时间间隔
+     * @return 重试时间
+     */
+    protected long getRetryTime(final long interval) {
+        return SystemClock.now() + interval + ThreadLocalRandom.current().nextInt(1000);
     }
 
     /**
@@ -530,11 +557,22 @@ public class Cluster {
             }
             Node node = event.getNode();
             NodeEvent.EventType type = event.getType();
-            //确保不在选举和关闭中
-            if (type == NodeEvent.EventType.DISCONNECT) {
-                logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                //连接断开了，则进行关闭
-                offer(() -> node.close().whenComplete((v, e) -> onNodeDisconnect(node, cluster.getRetryTime(null))));
+            switch (type) {
+                case OFFLINING:
+                    //收到服务端下线通知，正在优雅关闭连接中，需要提前从就绪节点列表中删除
+                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
+                    offer(() -> onNodeDisconnecting(node));
+                    break;
+                case OFFLINE:
+                    //服务端下线了，则进行关闭
+                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
+                    offer(() -> node.close().whenComplete((v, e) -> onNodeDisconnect(node, cluster.getRetryTimeWhenOffline())));
+                    break;
+                case DISCONNECT:
+                    //连接断开了，则进行关闭
+                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
+                    offer(() -> node.close().whenComplete((v, e) -> onNodeDisconnect(node, cluster.getRetryTime())));
+                    break;
             }
             cluster.clusterPublisher.offer(event);
         }
@@ -928,6 +966,18 @@ public class Cluster {
                 //补充新节点
                 supplies.incrementAndGet();
                 supply(true);
+            }
+        }
+
+        /**
+         * 收到服务端下线通知，正在优雅关闭连接中，需要提前从就绪节点列表中删除
+         *
+         * @param node 节点
+         */
+        protected void onNodeDisconnecting(final Node node) {
+            //把它从连接节点里面删除
+            if (connects.remove(node.getName(), node)) {
+                readys = new ArrayList<>(connects.values());
             }
         }
 

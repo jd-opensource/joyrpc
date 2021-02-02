@@ -22,6 +22,7 @@ package io.joyrpc.cluster;
 
 import io.joyrpc.cluster.event.MetricEvent;
 import io.joyrpc.cluster.event.NodeEvent;
+import io.joyrpc.cluster.event.NodeEvent.EventType;
 import io.joyrpc.cluster.event.OfflineEvent;
 import io.joyrpc.cluster.event.SessionLostEvent;
 import io.joyrpc.codec.checksum.Checksum;
@@ -401,7 +402,7 @@ public class Node implements Shard {
      *
      * @param type 类型
      */
-    protected void sendEvent(final NodeEvent.EventType type) {
+    protected void sendEvent(final EventType type) {
         if (nodeHandler != null) {
             nodeHandler.handle(new NodeEvent(type, this, null));
         }
@@ -413,7 +414,7 @@ public class Node implements Shard {
      * @param type    事件类型
      * @param payload 载体
      */
-    protected void sendEvent(final NodeEvent.EventType type, final Object payload) {
+    protected void sendEvent(final EventType type, final Object payload) {
         if (nodeHandler != null) {
             nodeHandler.handle(new NodeEvent(type, this, payload));
         }
@@ -556,7 +557,7 @@ public class Node implements Shard {
                                 timer().add(new WarmupTask(node, this));
                                 //面板刷新
                                 Optional.ofNullable(node.dashboard).ifPresent(d -> timer().add(new DashboardTask(node, this)));
-                                node.sendEvent(NodeEvent.EventType.CONNECT);
+                                node.sendEvent(EventType.CONNECT);
                                 future.complete(cl);
                             }
                         });
@@ -754,12 +755,11 @@ public class Node implements Shard {
                     }
                     //心跳存在业务逻辑，需要通知出去
                     if (payload instanceof HeartbeatAware) {
-                        node.sendEvent(NodeEvent.EventType.HEARTBEAT, payload);
+                        node.sendEvent(EventType.HEARTBEAT, payload);
                     }
                 }
             }
         }
-
 
         /**
          * 下线事件
@@ -771,21 +771,22 @@ public class Node implements Shard {
             disconnect(false).whenComplete((v, e) -> {
                 if (client.getRequests() == 0) {
                     //下线的时候没有请求，则直接关闭连接，并广播断连事件
-                    closeAndPublish();
+                    offline();
                 } else {
                     //优雅关闭，定时器检测没有请求后或超过2秒关闭
+                    node.sendEvent(EventType.OFFLINING, client);
                     timer().add(new OfflineTask(node, this));
                 }
             });
         }
 
         /**
-         * 关闭连接，并广播事件，触发重连逻辑
+         * 服务端下线了，关闭连接，并广播事件，触发重连逻辑
          */
-        protected void closeAndPublish() {
+        protected void offline() {
             client.close().whenComplete((v, e) -> {
                 if (node.stateMachine.test(state -> state.isDisconnect(), this)) {
-                    node.sendEvent(NodeEvent.EventType.DISCONNECT, client);
+                    node.sendEvent(EventType.OFFLINE, client);
                 }
             });
         }
@@ -816,7 +817,7 @@ public class Node implements Shard {
                 if (node.stateMachine.getState().tryDisconnect() == StateTransition.SUCCESS) {
                     if (autoClose) {
                         //抛出异常，这样触发cluster的自动重连
-                        client.close().whenComplete((v, e) -> node.sendEvent(NodeEvent.EventType.DISCONNECT, client));
+                        client.close().whenComplete((v, e) -> node.sendEvent(EventType.DISCONNECT, client));
                     } else {
                         //不自动关闭，5秒后触发关闭事件
                         future.complete(null);
@@ -1294,7 +1295,7 @@ public class Node implements Shard {
             if (node.stateMachine.test(state -> state.isDisconnect(), controller)) {
                 //最大2秒后关闭客户端
                 if (controller.client.getRequests() == 0 || SystemClock.now() - startTime > 2000L) {
-                    controller.closeAndPublish();
+                    controller.offline();
                 } else {
                     //重新添加
                     timer().add(this);

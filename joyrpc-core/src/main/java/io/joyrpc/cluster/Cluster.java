@@ -560,7 +560,6 @@ public class Cluster {
             switch (type) {
                 case OFFLINING:
                     //收到服务端下线通知，正在优雅关闭连接中，需要提前从就绪节点列表中删除
-                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
                     offer(() -> onNodeDisconnecting(node));
                     break;
                 case OFFLINE:

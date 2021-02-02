@@ -27,8 +27,8 @@ import io.joyrpc.extension.Extension;
 /**
  * 过滤掉不支持的客户端协议
  */
-@Extension("clientProtocol")
-public class ClientProtocolFilter implements NodeFilter {
+@Extension("protocol")
+public class ProtocolFilter implements NodeFilter {
 
     @Override
     public boolean filter(final Cluster cluster, final Node node) {

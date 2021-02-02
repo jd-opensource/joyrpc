@@ -64,8 +64,8 @@ public class FutureManager<I, M> {
     /**
      * 构造函数
      *
-     * @param channel
-     * @param idGenerator
+     * @param channel     连接通道
+     * @param idGenerator id生成器
      */
     public FutureManager(final Channel channel, final Supplier<I> idGenerator) {
         this.channel = channel;
@@ -143,8 +143,8 @@ public class FutureManager<I, M> {
     /**
      * 根据msgId获取future
      *
-     * @param messageId
-     * @return
+     * @param messageId 消息ID
+     * @return 增强的CompletableFuture
      */
     public EnhanceCompletableFuture<I, M> get(final I messageId) {
         return futures.get(messageId);

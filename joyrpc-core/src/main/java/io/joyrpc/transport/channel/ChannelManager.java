@@ -26,7 +26,7 @@ import io.joyrpc.transport.transport.ClientTransport;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * @date: 2019/2/21
+ * 连接通道管理器
  */
 public interface ChannelManager {
 

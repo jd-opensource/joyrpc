@@ -56,6 +56,7 @@ import java.util.stream.Collectors;
 
 import static io.joyrpc.Plugin.REGISTRY;
 import static io.joyrpc.constants.Constants.*;
+import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
 
@@ -89,7 +90,6 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     /**
      * 配置的协议列表
      */
-    @NotNull(message = "serverConfig can not be null.")
     @Valid
     protected ServerConfig serverConfig;
     /**
@@ -230,6 +230,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
 
     /**
      * 取消发布
+     *
      * @param gracefully 优雅关闭
      */
     public CompletableFuture<Void> unexport(final boolean gracefully) {
@@ -245,7 +246,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         addElement2Map(params, Constants.ROLE_OPTION, Constants.SIDE_PROVIDER);
         addElement2Map(params, Constants.TIMESTAMP_KEY, String.valueOf(SystemClock.now()));
         //从serverConfig获取SSL_ENABLE配置
-        String sslEnable = serverConfig.parameters == null ? "false" : serverConfig.parameters.getOrDefault(SSL_ENABLE.getName(), String.valueOf(SSL_ENABLE.getValue()));
+        String sslEnable = serverConfig == null || serverConfig.parameters == null ? "false" :
+                serverConfig.parameters.getOrDefault(SSL_ENABLE.getName(), String.valueOf(SSL_ENABLE.getValue()));
         addElement2Map(params, SSL_ENABLE, sslEnable);
         //分析过滤的方法
         Set<String> excludes = new HashSet<>();
@@ -425,7 +427,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
     protected static ServerAddress getAddress(final ServerConfig config, final String remote) {
         String host;
         String bindIp = null;
-        if (Ipv4.isLocalHost(config.getHost())) {
+        if (config == null || Ipv4.isLocalHost(config.getHost())) {
             //拿到本机地址
             host = getLocalHost(remote);
             //绑定地址
@@ -433,7 +435,8 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
         } else {
             host = config.getHost();
         }
-        int port = config.getPort() == null ? PORT_OPTION.getValue() : config.getPort();
+        //可以从环境变量里面配置默认端口
+        int port = config == null || config.getPort() == null ? VARIABLE.getPositive(SERVER_PORT_KEY, DEFAULT_PORT) : config.getPort();
         return new ServerAddress(host, bindIp, port);
     }
 
@@ -526,7 +529,7 @@ public class ProviderConfig<T> extends AbstractInterfaceConfig implements Serial
                 String remote = urls.get(0).getString(ADDRESS_OPTION);
                 ServerAddress address = getAddress(serverConfig, remote);
                 //生成注册的URL
-                Map<String, String> map = config.addAttribute2Map(serverConfig.addAttribute2Map());
+                Map<String, String> map = config.addAttribute2Map(serverConfig==null?new HashMap<>():serverConfig.addAttribute2Map());
                 if (address.bindIp != null) {
                     map.put(BIND_IP_KEY, address.bindIp);
                 }

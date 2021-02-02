@@ -48,8 +48,8 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
     /**
      * 构造函数
      *
-     * @param channel
-     * @param publisher
+     * @param channel   连接通道
+     * @param publisher 事件发布器
      */
     public ConnectionChannelHandler(Channel channel, Publisher<TransportEvent> publisher) {
         this.channel = channel;

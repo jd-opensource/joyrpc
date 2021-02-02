@@ -322,6 +322,10 @@ public class Ipv4 {
         if (LOCAL_IP == null) {
             try {
                 LOCAL_IP = getLocalIp(NET_INTERFACE, MANAGE_IP);
+                //防止网卡没有获取到
+                if (LOCAL_IP == null) {
+                    LOCAL_IP = "127.0.0.1";
+                }
             } catch (SocketException ignored) {
             }
         }

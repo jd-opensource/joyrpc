@@ -699,9 +699,13 @@ public class Constants {
      */
     public static final URLOption<Integer> BUFFER_OPTION = new URLOption<>("buffer", 8 * 1024);
     /**
-     * 默认启动端口，包括不配置或者随机，都从此端口开始计算
+     * 服务端口配置键
      */
-    public static final URLOption<Integer> PORT_OPTION = new URLOption<>("port", 22000);
+    public static final String SERVER_PORT_KEY = "server.port";
+    /**
+     * 默认服务端口
+     */
+    public static final int DEFAULT_PORT = 22000;
     /**
      * 默认客户端和服务端创建工厂
      */

@@ -1,2 +1,2 @@
-io.joyrpc.cluster.filter.ClientProtocolFilter
+io.joyrpc.cluster.filter.ProtocolFilter
 io.joyrpc.cluster.filter.SslFilter

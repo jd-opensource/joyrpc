@@ -41,7 +41,6 @@ import io.joyrpc.event.UpdateEvent.UpdateType;
 import io.joyrpc.extension.URL;
 import io.joyrpc.util.*;
 import io.joyrpc.util.Daemon.Waiting;
-import io.joyrpc.util.StateFuture;
 import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -119,7 +118,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     /**
      * 控制器
      */
-    protected transient IntStateMachine<Void,RegistryPilot> state = new IntStateMachine<>(()->create());
+    protected transient IntStateMachine<Void, RegistryPilot> state = new IntStateMachine<>(() -> create());
 
     /**
      * 构造函数
@@ -169,7 +168,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
 
     @Override
     public CompletableFuture<Void> open() {
-        return state.open(()->doOpen());
+        return state.open(() -> doOpen());
     }
 
     /**
@@ -224,15 +223,19 @@ public abstract class AbstractRegistry implements Registry, Configure {
         final CompletableFuture<URL>[] results = new CompletableFuture[1];
         URLKey key = buildRegKey(url);
         registers.compute(key.getKey(), (s, reg) -> {
-            if (reg == null || reg.decRef() > 0) {
+            if (reg == null) {
                 results[0] = CompletableFuture.completedFuture(url);
+                return null;
+            } else if (reg.decRef() > 0) {
+                results[0] = CompletableFuture.completedFuture(url);
+                return reg;
             } else {
                 results[0] = reg.getFuture().getCloseFuture();
                 if (!state.whenOpen(c -> c.deregister(reg, maxRetryTimes))) {
                     results[0].complete(url);
                 }
+                return null;
             }
-            return null;
         });
         return results[0];
     }
@@ -309,28 +312,28 @@ public abstract class AbstractRegistry implements Registry, Configure {
     public boolean subscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return subscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), (pilot,subscription)->pilot.subscribe(subscription));
+        return subscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), (pilot, subscription) -> pilot.subscribe(subscription));
     }
 
     @Override
     public boolean unsubscribe(final URL url, final ClusterHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), (pilot,subscription)->pilot.unsubscribe(subscription));
+        return unsubscribe(clusters, new ClusterSubscription(buildClusterKey(url), handler), (pilot, subscription) -> pilot.unsubscribe(subscription));
     }
 
     @Override
     public boolean subscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return subscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), (pilot,subscription)->pilot.subscribe(subscription));
+        return subscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), (pilot, subscription) -> pilot.subscribe(subscription));
     }
 
     @Override
     public boolean unsubscribe(final URL url, final ConfigHandler handler) {
         Objects.requireNonNull(url, "url can not be null.");
         Objects.requireNonNull(handler, "handler can not be null.");
-        return unsubscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), (pilot,subscription)->pilot.unsubscribe(subscription));
+        return unsubscribe(configs, new ConfigSubscription(buildConfigKey(url), handler), (pilot, subscription) -> pilot.unsubscribe(subscription));
     }
 
     @Override
@@ -555,7 +558,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
          *
          * @param registion 注册
          */
-         void register(final Registion registion);
+        void register(final Registion registion);
 
         /**
          * 注销
@@ -563,35 +566,35 @@ public abstract class AbstractRegistry implements Registry, Configure {
          * @param registion  注册
          * @param maxRetries 最大重试次数
          */
-        void deregister( Registion registion, final int maxRetries);
+        void deregister(Registion registion, final int maxRetries);
 
         /**
          * 订阅集群
          *
          * @param subscription 订阅
          */
-         void subscribe( ClusterSubscription subscription);
+        void subscribe(ClusterSubscription subscription);
 
         /**
          * 取消订阅集群
          *
          * @param subscription 订阅
          */
-         void unsubscribe( ClusterSubscription subscription);
+        void unsubscribe(ClusterSubscription subscription);
 
         /**
          * 订阅配置
          *
          * @param subscription 订阅
          */
-         void subscribe( ConfigSubscription subscription) ;
+        void subscribe(ConfigSubscription subscription);
 
         /**
          * 取消订阅配置
          *
          * @param subscription 订阅
          */
-         void unsubscribe(final ConfigSubscription subscription);
+        void unsubscribe(final ConfigSubscription subscription);
 
     }
 
@@ -718,7 +721,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
             subscribe(configs, subscription, this::createConfigBooking, this::doSubscribe);
         }
 
-       @Override
+        @Override
         public void unsubscribe(final ConfigSubscription subscription) {
             unsubscribe(configs, subscription);
         }

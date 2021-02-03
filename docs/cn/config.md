@@ -159,14 +159,14 @@
 |retries|int|否|0（0表示失败后不重试）|失败后重试次数（需要和cluster=failover结合使用，单实例设置retries无效）|
 |retryOnlyOncePerNode|Boolean|否| |每个节点只调用一次 |
 |failoverWhenThrowable|String|否| | 可以重试的异常全路径类名，多个用逗号分隔 |
-|failoverPredication|String|否| | 重试异常判断接口插件 |
-|failoverSelector|String|否| |  异常重试目标节点选择器 |
+|failoverPredication|String|否| | 异常重试判断接口插件名 |
+|failoverSelector|String|否| |  异常重试目标节点选择器插件名 |
 |loadbalance|String|否|randomWeight|负载均衡算法插件名称：roundRobin、randomWeight、adaptive|
 |sticky|Boolean|否|false|是否粘滞连接（除非断开连接，只调一个）|
 |injvm|Boolean|否|true|是否走injvm调用（如果同一jvm内发布了服务，则不走远程调用）|
 |check|Boolean|否|false|是否强依赖服务端（无可用服务端启动失败）|
 |serialization|String|否|hessian|序列化插件名称：protostuff、msgpack、json(json@fastjson和json@jackson)、fst、kryo、hessian、java，选用protostuff性能更高，使用时需要注意集合中不能有null元素|
-|nodeSelector|String|否| |目标节点选择器名称，可以用逗号分隔来配置多个选择器，依次筛选<br/><li>methodSelector：基于方法参数的路由</li><li>tagSelector：标签选择器，根据目标节点的URL参数进行匹配,可配置的参数有tagKey和tagValue</li><li>simpleSelector：采样选择器，当节点数过多的时候，可以通过采样来减少CPU消耗，默认采样100条，可以通过参数nodeSimple来控制</li>|
+|nodeSelector|String|否| simple |目标节点选择器名称，可以用逗号分隔来配置多个选择器，依次筛选<br/><li>methodSelector：基于方法参数的路由</li><li>tagSelector：标签选择器，根据目标节点的URL参数进行匹配,可配置的参数有tagKey和tagValue</li><li>simple：采样选择器，当节点数过多的时候，可以通过采样来减少CPU消耗，默认采样100条，可以通过参数nodeSimple来控制</li><li>none:不选择</li>|
 |concurrency|int|否|-1|接口下**每方法**的最大可并行执行请求数，配置-1关闭并发过滤器，等于0表示开启过滤但是不限制|
 |validation|Boolean|否|false|是否校验参数|
 |compress|String|否| |压缩算法：lz4、snappy、zlib|

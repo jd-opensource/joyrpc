@@ -3,3 +3,4 @@ io.joyrpc.cluster.distribution.selector.method.MethodRouter
 io.joyrpc.cluster.distribution.selector.tag.TagSelector
 io.joyrpc.cluster.distribution.selector.tag.TagRouter
 io.joyrpc.cluster.distribution.selector.simple.SimpleSelector
+io.joyrpc.cluster.distribution.selector.none.NoneSelector

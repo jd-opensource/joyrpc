@@ -67,6 +67,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -361,20 +362,24 @@ public class Refer extends AbstractService {
      * @return 路由节点选择器
      */
     protected NodeSelector[] buildSelectors() {
-        NodeSelector[] result = null;
         String value = url.getString(NODE_SELECTOR_OPTION);
         if (value != null && !value.isEmpty()) {
             String[] parts = split(value, ',');
-            result = nodeSelectors = new NodeSelector[parts.length];
+            List<NodeSelector> selectors = new ArrayList<>(parts.length);
+            NodeSelector selector;
             for (int i = 0; i < parts.length; i++) {
-                nodeSelectors[i] = NODE_SELECTOR.get(parts[i]);
-                nodeSelectors[i].setUrl(url);
-                nodeSelectors[i].setClass(interfaceClass);
-                nodeSelectors[i].setClassName(interfaceName);
-                nodeSelectors[i].setup();
+                selector = NODE_SELECTOR.get(parts[i]);
+                if (selector != null) {
+                    selector.setUrl(url);
+                    selector.setClass(interfaceClass);
+                    selector.setClassName(interfaceName);
+                    selector.setup();
+                    selectors.add(selector);
+                }
             }
+            return selectors.toArray(new NodeSelector[0]);
         }
-        return result;
+        return null;
     }
 
 

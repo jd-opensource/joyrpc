@@ -34,10 +34,13 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static io.joyrpc.constants.Constants.SIMPLE_SELECTOR_OPTION;
 
+/**
+ * 采样选择器
+ */
 @Extension(value = SimpleSelector.SIMPLE_SELECTOR)
 public class SimpleSelector implements NodeSelector {
 
-    public static final String SIMPLE_SELECTOR = "simpleSelector";
+    public static final String SIMPLE_SELECTOR = "simple";
 
     /**
      * URL配置

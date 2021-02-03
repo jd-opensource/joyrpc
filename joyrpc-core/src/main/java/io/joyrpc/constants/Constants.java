@@ -552,7 +552,7 @@ public class Constants {
     /**
      * 节点选择器选项
      */
-    public static final URLOption<String> NODE_SELECTOR_OPTION = new URLOption<>("nodeSelector", (String) null);
+    public static final URLOption<String> NODE_SELECTOR_OPTION = new URLOption<>("nodeSelector", "simple");
     public static final URLOption<String> FAILOVER_WHEN_THROWABLE_OPTION = new URLOption<>("failoverWhenThrowable", "");
     public static final URLOption<String> FAILOVER_PREDICATION_OPTION = new URLOption<>("failoverPredication", "");
     public static final URLOption<Boolean> FROM_GROUP_OPTION = new URLOption<>("_fromGroup", false);

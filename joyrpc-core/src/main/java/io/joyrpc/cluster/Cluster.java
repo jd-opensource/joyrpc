@@ -560,17 +560,17 @@ public class Cluster {
             switch (type) {
                 case OFFLINING:
                     //收到服务端下线通知，正在优雅关闭连接中，需要提前从就绪节点列表中删除
-                    offer(() -> onNodeDisconnecting(node));
+                    offer(() -> onOffline(node));
                     break;
                 case OFFLINE:
                     //服务端下线了，则进行关闭
                     logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    offer(() -> node.close().whenComplete((v, e) -> onNodeDisconnect(node, cluster.getRetryTimeWhenOffline())));
+                    offer(() -> node.close().whenComplete((v, e) -> onDisconnect(node, cluster.getRetryTimeWhenOffline())));
                     break;
                 case DISCONNECT:
                     //连接断开了，则进行关闭
                     logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    offer(() -> node.close().whenComplete((v, e) -> onNodeDisconnect(node, cluster.getRetryTime())));
+                    offer(() -> node.close().whenComplete((v, e) -> onDisconnect(node, cluster.getRetryTime())));
                     break;
             }
             cluster.clusterPublisher.offer(event);
@@ -642,13 +642,13 @@ public class Cluster {
                 for (ShardEvent e : events) {
                     //防止注册中心有重复数据的情况
                     if (names.add(e.getShard().getName())) {
-                        add += onAddShard(e.getShard()) ? 1 : 0;
+                        add += onAdd(e.getShard()) ? 1 : 0;
                     }
                 }
                 //判断哪些节点被删除了
                 for (Map.Entry<String, Node> node : nodes.entrySet()) {
                     if (!names.contains(node.getKey())) {
-                        onDeleteShard(node.getValue());
+                        onDelete(node.getValue());
                     }
                 }
             }
@@ -668,10 +668,10 @@ public class Cluster {
                 for (ShardEvent e : events) {
                     switch (e.getType()) {
                         case DELETE:
-                            onDeleteShard(e.getShard());
+                            onDelete(e.getShard());
                             break;
                         case ADD:
-                            add += onAddShard(e.getShard()) ? 1 : 0;
+                            add += onAdd(e.getShard()) ? 1 : 0;
                             break;
                     }
                 }
@@ -834,7 +834,7 @@ public class Cluster {
                         node.close();
                     }
                     //异步处理
-                    offer(() -> onNodeOpen(node, error));
+                    offer(() -> onOpen(node, error));
                     if (consumer != null) {
                         consumer.accept(node);
                     }
@@ -848,7 +848,7 @@ public class Cluster {
          * @param node  节点
          * @param error 异常
          */
-        protected void onNodeOpen(final Node node, final Throwable error) {
+        protected void onOpen(final Node node, final Throwable error) {
             if (!isOpen()) {
                 node.close();
                 logger.warn(String.format("Close the unused node instance %s. because the cluster is closed or reopened. ", node.getName()));
@@ -857,7 +857,7 @@ public class Cluster {
                 node.close();
                 logger.info(String.format("Close the unused node instance %s. because it is removed or updated. ", node.getName()));
             } else if (error == null) {
-                onNodeConnected(node);
+                onConnected(node);
                 logger.info(String.format("Success connecting node %s.", node.getName()));
             } else {
                 if (error instanceof TransportException) {
@@ -869,7 +869,7 @@ public class Cluster {
                 } else {
                     logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), error.getMessage()), error);
                 }
-                onNodeDisconnect(node, cluster.getRetryTime(error));
+                onDisconnect(node, cluster.getRetryTime(error));
             }
         }
 
@@ -925,7 +925,7 @@ public class Cluster {
          *
          * @param node 节点
          */
-        protected void onNodeConnected(final Node node) {
+        protected void onConnected(final Node node) {
             Node old = connects.put(node.getName(), node);
             if (old == node) {
                 //同一个节点
@@ -949,7 +949,7 @@ public class Cluster {
          * @param node      节点
          * @param retryTime 重连时间
          */
-        protected void onNodeDisconnect(final Node node, final long retryTime) {
+        protected void onDisconnect(final Node node, final long retryTime) {
             //把它从连接节点里面删除
             if (connects.remove(node.getName(), node)) {
                 readys = new ArrayList<>(connects.values());
@@ -973,7 +973,7 @@ public class Cluster {
          *
          * @param node 节点
          */
-        protected void onNodeDisconnecting(final Node node) {
+        protected void onOffline(final Node node) {
             //把它从连接节点里面删除
             if (connects.remove(node.getName(), node)) {
                 readys = new ArrayList<>(connects.values());
@@ -985,7 +985,7 @@ public class Cluster {
          *
          * @param shard 分片
          */
-        protected void onDeleteShard(final Shard shard) {
+        protected void onDelete(final Shard shard) {
             String name = shard.getName();
             Node node = nodes.remove(name);
             if (node != null) {
@@ -1007,7 +1007,7 @@ public class Cluster {
          *
          * @param shard 分片
          */
-        protected boolean onAddShard(final Shard shard) {
+        protected boolean onAdd(final Shard shard) {
             URL url = shard.getUrl();
             if (url == null) {
                 //节点没有地址，则删除掉
@@ -1021,7 +1021,7 @@ public class Cluster {
                     logger.info(String.format("discard shard %s(region=%s,dataCenter=%s,protocol=%s,version=%s,weight=%d) for cluster %s",
                             shard.getName(), shard.getRegion(), shard.getDataCenter(), shard.getProtocol(),
                             shard.getUrl().getString("version", ""), shard.getWeight(), cluster.name));
-                    onDeleteShard(shard);
+                    onDelete(shard);
                     return false;
                 }
             }

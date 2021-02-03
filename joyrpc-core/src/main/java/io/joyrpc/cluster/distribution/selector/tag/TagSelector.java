@@ -34,6 +34,9 @@ import java.util.Objects;
 
 import static io.joyrpc.constants.Constants.TAG_KEY_OPTION;
 
+/**
+ * 基于标签的节点选择器
+ */
 @Extension(value = TagSelector.TAG_SELECTOR)
 public class TagSelector implements NodeSelector {
 

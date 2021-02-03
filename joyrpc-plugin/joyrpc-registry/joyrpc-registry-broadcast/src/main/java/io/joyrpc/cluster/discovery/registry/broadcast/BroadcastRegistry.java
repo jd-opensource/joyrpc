@@ -21,7 +21,11 @@ package io.joyrpc.cluster.discovery.registry.broadcast;
  */
 
 import com.hazelcast.config.Config;
-import com.hazelcast.core.*;
+import com.hazelcast.core.EntryEvent;
+import com.hazelcast.core.Hazelcast;
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.HazelcastInstanceNotActiveException;
+import com.hazelcast.map.IMap;
 import com.hazelcast.map.listener.EntryAddedListener;
 import com.hazelcast.map.listener.EntryExpiredListener;
 import com.hazelcast.map.listener.EntryRemovedListener;
@@ -75,7 +79,7 @@ public class BroadcastRegistry extends AbstractRegistry {
     /**
      * hazelcast集群分组名称
      */
-    public static final URLOption<String> BROADCAST_GROUP_NAME = new URLOption<>("broadCastGroupName", "dev");
+    public static final URLOption<String> BROADCAST_GROUP_NAME = new URLOption<>("broadCastGroupName", "development");
     /**
      * 节点广播端口
      */
@@ -92,6 +96,14 @@ public class BroadcastRegistry extends AbstractRegistry {
      * multicast组播端口
      */
     public static final URLOption<Integer> MULTICAST_PORT = new URLOption<>("multicastPort", 64327);
+    /**
+     * multicast存活时间
+     */
+    public static final URLOption<Integer> MULTICAST_TIME_TO_LIVE = new URLOption<>("multicastTimeToLive", 32);
+    /**
+     * multicast超时时间
+     */
+    public static final URLOption<Integer> MULTICAST_TIMEOUT_SECONDS = new URLOption<>("multicastTimeoutSeconds", 2);
     /**
      * 节点失效时间参数
      */
@@ -152,12 +164,16 @@ public class BroadcastRegistry extends AbstractRegistry {
         //同步复制，可以读取从
         cfg.getMapConfig("default").setBackupCount(url.getPositiveInt(BACKUP_COUNT)).
                 setAsyncBackupCount(url.getNaturalInt(ASYNC_BACKUP_COUNT)).setReadBackupData(false);
-        cfg.getGroupConfig().setName(url.getString(BROADCAST_GROUP_NAME));
+        cfg.setClusterName(url.getString(BROADCAST_GROUP_NAME));
         cfg.getNetworkConfig()
                 .setPort(url.getPositiveInt(NETWORK_PORT))
                 .setPortCount(url.getInteger(NETWORK_PORT_COUNT));
-        cfg.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true)
-                .setMulticastGroup(url.getString(MULTICAST_GROUP)).setMulticastPort(url.getPositiveInt(MULTICAST_PORT));
+        cfg.getNetworkConfig().getJoin().getMulticastConfig()
+                .setEnabled(true)
+                .setMulticastGroup(url.getString(MULTICAST_GROUP))
+                .setMulticastPort(url.getPositiveInt(MULTICAST_PORT))
+                .setMulticastTimeToLive(url.getPositiveInt(MULTICAST_TIME_TO_LIVE))
+                .setMulticastTimeoutSeconds(url.getPositiveInt(MULTICAST_TIMEOUT_SECONDS));
         this.nodeExpiredTime = Math.max(url.getLong(NODE_EXPIRED_TIME), NODE_EXPIRED_TIME.getValue());
         this.root = new RootPath().apply(url);
         this.clusterPath = new ClusterPath(root);
@@ -232,22 +248,17 @@ public class BroadcastRegistry extends AbstractRegistry {
                 try {
                     URL url = registion.getUrl();
                     IMap<String, URL> map = instance.getMap(registion.getPath());
-                    //计算新的ttl，并续期
-                    long newTtl = SystemClock.now() - registion.getRegisterTime() + registry.nodeExpiredTime;
-                    boolean isNotExpired = map.setTtl(registion.getNode(), newTtl, TimeUnit.MILLISECONDS);
+                    //续期
+                    boolean isNotExpired = map.setTtl(registion.getNode(), registry.nodeExpiredTime, TimeUnit.MILLISECONDS);
                     //节点已经过期，重新添加回节点，并修改meta的registerTime
                     if (!isNotExpired) {
-                        map.putAsync(registion.getNode(), url, registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
-                            @Override
-                            public void onResponse(final URL response) {
-                                registion.setRegisterTime(SystemClock.now());
-                            }
-
-                            @Override
-                            public void onFailure(final Throwable t) {
-                                if (!(t instanceof HazelcastInstanceNotActiveException)) {
-                                    logger.error("Error occurs while leasing registion " + registion.getKey(), t);
+                        map.putAsync(registion.getNode(), url, registry.nodeExpiredTime, TimeUnit.MILLISECONDS).whenComplete((u, e) -> {
+                            if (e != null) {
+                                if (!(e instanceof HazelcastInstanceNotActiveException)) {
+                                    logger.error("Error occurs while leasing registion " + registion.getKey(), e);
                                 }
+                            } else {
+                                registion.setRegisterTime(SystemClock.now());
                             }
                         });
                     }
@@ -276,29 +287,23 @@ public class BroadcastRegistry extends AbstractRegistry {
             return Futures.call(future -> {
                 BroadcastRegistion broadcastRegistion = (BroadcastRegistion) registion;
                 IMap<String, URL> iMap = instance.getMap(broadcastRegistion.getPath());
-                iMap.putAsync(broadcastRegistion.getNode(), registion.getUrl(), registry.nodeExpiredTime, TimeUnit.MILLISECONDS).andThen(new ExecutionCallback<URL>() {
-                    @Override
-                    public void onResponse(final URL response) {
-                        if (!isOpen()) {
-                            future.completeExceptionally(new IllegalStateException("controller is closed."));
-                        } else {
-                            long interval = ThreadLocalRandom.current().nextLong(registry.nodeExpiredTime / 3, registry.nodeExpiredTime * 2 / 5);
-                            interval = Math.max(15000, interval);
-                            broadcastRegistion.setRegisterTime(SystemClock.now());
-                            broadcastRegistion.setLeaseInterval(interval);
-                            if (isOpen()) {
-                                timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + interval, () -> lease(broadcastRegistion)));
-                            }
-                            future.complete(null);
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(final Throwable e) {
+                iMap.putAsync(broadcastRegistion.getNode(), registion.getUrl(), registry.nodeExpiredTime, TimeUnit.MILLISECONDS).whenComplete((u, e) -> {
+                    if (e != null) {
                         if (isOpen()) {
                             logger.error(String.format("Error occurs while do register of %s, caused by %s", registion.getKey(), e.getMessage()));
                         }
                         future.completeExceptionally(e);
+                    } else if (!isOpen()) {
+                        future.completeExceptionally(new IllegalStateException("controller is closed."));
+                    } else {
+                        long interval = ThreadLocalRandom.current().nextLong(registry.nodeExpiredTime / 3, registry.nodeExpiredTime * 2 / 5);
+                        interval = Math.max(15000, interval);
+                        broadcastRegistion.setRegisterTime(SystemClock.now());
+                        broadcastRegistion.setLeaseInterval(interval);
+                        if (isOpen()) {
+                            timer().add(new Timer.DelegateTask(leaseTaskName, SystemClock.now() + interval, () -> lease(broadcastRegistion)));
+                        }
+                        future.complete(null);
                     }
                 });
             });
@@ -310,15 +315,11 @@ public class BroadcastRegistry extends AbstractRegistry {
                 String name = registry.servicePath.apply(registion);
                 String key = registry.nodePath.apply(registion);
                 IMap<String, URL> iMap = instance.getMap(name);
-                iMap.removeAsync(key).andThen(new ExecutionCallback<URL>() {
-                    @Override
-                    public void onResponse(final URL response) {
-                        future.complete(null);
-                    }
-
-                    @Override
-                    public void onFailure(final Throwable e) {
+                iMap.removeAsync(key).whenComplete((u, e) -> {
+                    if (e != null) {
                         future.completeExceptionally(e);
+                    } else {
+                        future.complete(null);
                     }
                 });
             });
@@ -353,7 +354,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doUnsubscribe(final ClusterBooking booking) {
             return Futures.call(future -> {
                 BroadcastClusterBooking broadcastBooking = (BroadcastClusterBooking) booking;
-                String listenerId = broadcastBooking.getListenerId();
+                UUID listenerId = broadcastBooking.getListenerId();
                 if (listenerId != null) {
                     IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     map.removeEntryListener(listenerId);
@@ -390,7 +391,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         protected CompletableFuture<Void> doUnsubscribe(final ConfigBooking booking) {
             return Futures.call(future -> {
                 BroadcastConfigBooking broadcastBooking = (BroadcastConfigBooking) booking;
-                String listenerId = broadcastBooking.getListenerId();
+                UUID listenerId = broadcastBooking.getListenerId();
                 if (listenerId != null) {
                     IMap<String, URL> map = instance.getMap(broadcastBooking.getPath());
                     map.removeEntryListener(listenerId);
@@ -462,7 +463,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         /**
          * 监听器ID
          */
-        protected String listenerId;
+        protected UUID listenerId;
 
         public BroadcastClusterBooking(final URLKey key, final Runnable dirty, final Publisher<ClusterEvent> publisher, final String path) {
             super(key, dirty, publisher, path);
@@ -493,11 +494,11 @@ public class BroadcastRegistry extends AbstractRegistry {
                     Collections.singletonList(new ShardEvent(new Shard.DefaultShard(event.getValue()), ShardEventType.UPDATE))));
         }
 
-        public String getListenerId() {
+        public UUID getListenerId() {
             return listenerId;
         }
 
-        public void setListenerId(String listenerId) {
+        public void setListenerId(UUID listenerId) {
             this.listenerId = listenerId;
         }
 
@@ -519,7 +520,7 @@ public class BroadcastRegistry extends AbstractRegistry {
         /**
          * 监听器ID
          */
-        protected String listenerId;
+        protected UUID listenerId;
 
         /**
          * 构造函数
@@ -564,11 +565,11 @@ public class BroadcastRegistry extends AbstractRegistry {
             handle(new ConfigEvent(this, null, stat.incrementAndGet(), data));
         }
 
-        public String getListenerId() {
+        public UUID getListenerId() {
             return listenerId;
         }
 
-        public void setListenerId(String listenerId) {
+        public void setListenerId(UUID listenerId) {
             this.listenerId = listenerId;
         }
 

@@ -15,6 +15,8 @@
 - Dependency
 
   - 升级Bytebuddy为1.10.20版本
+  
+  - 升级Hazelcast为4.1.1版本
 
 ## Bugfixes
 

@@ -12,6 +12,10 @@
 
 - 优化代码，完善状态机
 
+- Dependency
+
+  - 升级Bytebuddy为1.10.20版本
+
 ## Bugfixes
 
 - 修复连接通道处理器的inactive不能正常触发的问题

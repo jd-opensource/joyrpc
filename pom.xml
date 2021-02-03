@@ -88,13 +88,13 @@
         <fastjson.version>1.2.75</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
         <commons-compress.version>1.20</commons-compress.version>
-        <byte-buddy.version>1.10.17</byte-buddy.version>
+        <byte-buddy.version>1.10.20</byte-buddy.version>
         <grpc.version>1.20.0</grpc.version>
         <netty.version>4.1.53.Final</netty.version>
         <hazelcast.version>3.12.5</hazelcast.version>
         <curator.version>4.3.0</curator.version>
         <zookeeper.version>3.5.7</zookeeper.version>
-        <vertx-consul-client>3.9.4</vertx-consul-client>
+        <vertx-consul-client>3.9.5</vertx-consul-client>
         <protobuf.version>3.7.1</protobuf.version>
         <resteasy.version>3.0.8.Final</resteasy.version>
         <commons-jexl3.version>3.1</commons-jexl3.version>

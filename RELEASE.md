@@ -18,6 +18,8 @@
   
   - 升级Hazelcast为4.1.1版本
 
+  - 升级nacos为1.4.1版本
+
 ## Bugfixes
 
 - 修复连接通道处理器的inactive不能正常触发的问题

@@ -58,8 +58,6 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler implements H
      */
     protected Channel channel;
 
-    protected boolean firstSettings = true;
-
     public Http2ServerCodecHandler(Http2ConnectionDecoder decoder,
                                    Http2ConnectionEncoder encoder,
                                    Http2Settings initialSettings,
@@ -76,9 +74,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler implements H
 
     @Override
     public void onSettingsRead(final ChannelHandlerContext ctx, final Http2Settings settings) {
-        if (firstSettings) {
-            firstSettings = false;
-        }
+
     }
 
     @Override

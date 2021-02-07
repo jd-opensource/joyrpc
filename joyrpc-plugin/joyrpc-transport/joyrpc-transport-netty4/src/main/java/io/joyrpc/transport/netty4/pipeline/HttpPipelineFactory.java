@@ -39,10 +39,10 @@ public class HttpPipelineFactory implements PipelineFactory {
 
     @Override
     public HandlerDefinition<ChannelChain>[] handlers() {
-        return new HandlerChainMeta[]{
-                new HandlerChainMeta(HANDLER,
+        return new ChainDefinition[]{
+                new ChainDefinition(HANDLER,
                         (chain, channel) -> new HttpRequestHandler(new ChannelChainHandler(chain, channel.getAttribute(Channel.BIZ_THREAD_POOL)), channel)),
-                new HandlerChainMeta(HTTP_RESPONSE_CONVERTER,
+                new ChainDefinition(HTTP_RESPONSE_CONVERTER,
                         (chain, channel) -> new HttpResponseHandler(new ChannelChainHandler(chain), channel))
         };
     }

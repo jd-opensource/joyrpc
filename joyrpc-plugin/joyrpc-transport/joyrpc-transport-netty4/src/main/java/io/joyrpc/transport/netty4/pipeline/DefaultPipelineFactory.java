@@ -41,12 +41,12 @@ public class DefaultPipelineFactory implements PipelineFactory {
     /**
      * 函数
      */
-    public static final BiFunction<ChannelChain, Channel, ChannelHandler> FUNCTION = (c, l) ->
-            new ChannelHandlerAdapter(new ChannelChainHandler(c, l.getAttribute(Channel.BIZ_THREAD_POOL)), l);
+    public static final BiFunction<ChannelChain, Channel, ChannelHandler> FUNCTION = (chain, channel) ->
+            new ChannelHandlerAdapter(new ChannelChainHandler(chain, channel.getAttribute(Channel.BIZ_THREAD_POOL)), channel);
 
     @Override
     public HandlerDefinition<ChannelChain>[] handlers() {
-        return new HandlerChainMeta[]{new HandlerChainMeta(HANDLER, FUNCTION)};
+        return new ChainDefinition[]{new ChainDefinition(HANDLER, FUNCTION)};
     }
 
     @Override

@@ -128,7 +128,7 @@ public interface PipelineFactory {
     /**
      * 处理链元数据
      */
-    class HandlerChainMeta extends HandlerDefinition<ChannelChain> {
+    class ChainDefinition extends HandlerDefinition<ChannelChain> {
 
         /**
          * 构造函数
@@ -136,7 +136,7 @@ public interface PipelineFactory {
          * @param name     名称
          * @param function 函数
          */
-        public HandlerChainMeta(String name, BiFunction<ChannelChain, Channel, ChannelHandler> function) {
+        public ChainDefinition(String name, BiFunction<ChannelChain, Channel, ChannelHandler> function) {
             super(name, function);
         }
     }

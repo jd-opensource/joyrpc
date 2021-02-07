@@ -52,7 +52,7 @@ public class Http2PipelineFactory implements PipelineFactory {
 
     @Override
     public HandlerDefinition<ChannelChain>[] handlers() {
-        return new HandlerChainMeta[]{new HandlerChainMeta(HANDLER, FUNCTION)};
+        return new ChainDefinition[]{new ChainDefinition(HANDLER, FUNCTION)};
     }
 
     @Override

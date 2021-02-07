@@ -34,16 +34,21 @@ import java.net.URLDecoder;
 import java.util.List;
 
 /**
- * @date: 2019/2/14
+ * http请求处理器
  */
-public class SimpleHttpBizHandler extends MessageToMessageDecoder<FullHttpRequest> {
+public class HttpRequestHandler extends MessageToMessageDecoder<FullHttpRequest> {
+    /**
+     * 通道处理器
+     */
+    protected ChannelHandler handler;
+    /**
+     * 通道
+     */
+    protected Channel channel;
 
-    protected ChannelHandler channelHandler;
-    protected Channel nettyChannel;
-
-    public SimpleHttpBizHandler(ChannelHandler channelHandler, Channel nettyChannel) {
-        this.channelHandler = channelHandler;
-        this.nettyChannel = nettyChannel;
+    public HttpRequestHandler(ChannelHandler handler, Channel channel) {
+        this.handler = handler;
+        this.channel = channel;
     }
 
     @Override
@@ -65,7 +70,7 @@ public class SimpleHttpBizHandler extends MessageToMessageDecoder<FullHttpReques
         //创建HttpRequestMessage对象HttpRequestMessage
         HttpRequestMessage reqMsg = new DefaultHttpRequestMessage(uri, method, httpHeaders, content);
         //触发channlehandler
-        channelHandler.received(new NettyChannelContext(nettyChannel), reqMsg);
+        handler.received(new NettyChannelContext(channel), reqMsg);
     }
 
     protected byte[] getContentByMsg(final FullHttpRequest msg) {

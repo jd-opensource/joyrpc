@@ -1,4 +1,4 @@
-package io.joyrpc.transport.netty4.handler;
+package io.joyrpc.transport.netty4.http2;
 
 /*-
  * #%L
@@ -22,33 +22,26 @@ package io.joyrpc.transport.netty4.handler;
 
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.netty4.handler.NettyChannelContext;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 
-
 /**
- * 把Netty的处理器调用转换成连接通道处理器调用
+ * http2处理适配器
  */
-public class SimpleBizHandler extends ChannelDuplexHandler {
+public class Http2HandlerAdapter extends ChannelDuplexHandler {
 
-    /**
-     * 处理器
-     */
     protected ChannelHandler handler;
-    /**
-     * 同道
-     */
     protected Channel channel;
 
-    public SimpleBizHandler(ChannelHandler handler, Channel channel) {
+    public Http2HandlerAdapter(ChannelHandler handler, Channel channel) {
         this.handler = handler;
         this.channel = channel;
     }
 
     @Override
-    public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
-        //触发业务处理器的接收
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
             handler.received(new NettyChannelContext(channel), msg);
         } catch (Exception e) {
@@ -58,10 +51,9 @@ public class SimpleBizHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
-        //触发业务处理器的写
         try {
             Object resMsg = handler.wrote(new NettyChannelContext(channel), msg);
-            ctx.writeAndFlush(resMsg, promise);
+            ctx.write(resMsg, promise);
         } catch (Exception e) {
             exceptionCaught(ctx, e);
         }
@@ -69,20 +61,16 @@ public class SimpleBizHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) {
-        //触发业务处理器的连接
         handler.active(new NettyChannelContext(channel));
     }
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) {
-        //触发业务处理器的断连
-        handler.inactive(new NettyChannelContext(channel));
+        handler.active(new NettyChannelContext(channel));
     }
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
-        //触发业务处理器的异常捕获
         handler.caught(new NettyChannelContext(channel), cause);
     }
-
 }

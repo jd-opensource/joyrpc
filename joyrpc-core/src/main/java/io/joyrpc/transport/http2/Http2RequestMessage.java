@@ -21,7 +21,7 @@ package io.joyrpc.transport.http2;
  */
 
 /**
- * @date: 2019/4/10
+ * http2请求消息
  */
 public interface Http2RequestMessage extends Http2Message {
 

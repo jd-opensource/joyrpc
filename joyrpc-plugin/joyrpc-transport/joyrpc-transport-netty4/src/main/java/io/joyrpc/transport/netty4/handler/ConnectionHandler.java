@@ -33,9 +33,9 @@ import org.slf4j.LoggerFactory;
 /**
  * 连接处理器，触发连接和断连事件
  */
-public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
+public class ConnectionHandler extends ChannelInboundHandlerAdapter {
 
-    protected final static Logger logger = LoggerFactory.getLogger(ConnectionChannelHandler.class);
+    protected final static Logger logger = LoggerFactory.getLogger(ConnectionHandler.class);
     /**
      * 通道
      */
@@ -51,7 +51,7 @@ public class ConnectionChannelHandler extends ChannelInboundHandlerAdapter {
      * @param channel   连接通道
      * @param publisher 事件发布器
      */
-    public ConnectionChannelHandler(Channel channel, Publisher<TransportEvent> publisher) {
+    public ConnectionHandler(Channel channel, Publisher<TransportEvent> publisher) {
         this.channel = channel;
         this.publisher = publisher;
     }

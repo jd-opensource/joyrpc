@@ -26,7 +26,7 @@ import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.transport.buffer.ChannelBuffer;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.TelnetCodec;
 
@@ -50,7 +50,7 @@ public class TelnetServerProtocol implements ServerProtocol {
     /**
      * 逻辑处理链
      */
-    protected ChannelHandlerChain chain = new ChannelHandlerChain().addFirst(new TelnetChannelHandler());
+    protected ChannelChain chain = new ChannelChain().addFirst(new TelnetChannelHandler());
     /**
      * Telnet处理器
      */
@@ -62,7 +62,7 @@ public class TelnetServerProtocol implements ServerProtocol {
     }
 
     @Override
-    public ChannelHandlerChain buildChain() {
+    public ChannelChain buildChain() {
         return chain;
     }
 

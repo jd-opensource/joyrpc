@@ -24,7 +24,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.EncodeContext;
 
 /**
- * @date: 2019/4/12
+ * http2编码上下文
  */
 public class Http2EncodeContext extends Http2CodecContext implements EncodeContext {
 
@@ -35,10 +35,10 @@ public class Http2EncodeContext extends Http2CodecContext implements EncodeConte
     /**
      * 设置属性
      *
-     * @param key
-     * @param value
+     * @param key   键
+     * @param value 值
      * @param <T>
-     * @return
+     * @return 上下文
      */
     public <T> Http2EncodeContext attribute(String key, T value) {
         setAttr(key, value);

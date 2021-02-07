@@ -22,13 +22,13 @@ package io.joyrpc.transport.netty4.codec;
 
 import io.joyrpc.exception.ProtocolException;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.DeductionContext;
-import io.joyrpc.transport.netty4.binder.HandlerBinder;
+import io.joyrpc.transport.netty4.pipeline.PipelineFactory;
 import io.netty.channel.ChannelPipeline;
 
-import static io.joyrpc.transport.netty4.Plugin.HANDLER_BINDER;
+import static io.joyrpc.transport.netty4.Plugin.PIPELINE_FACTORY;
 
 /**
  * 协议推断上下文
@@ -54,14 +54,14 @@ public class ProtocolDeductionContext implements DeductionContext {
     }
 
     @Override
-    public void bind(final Codec codec, final ChannelHandlerChain chain) {
+    public void bind(final Codec codec, final ChannelChain chain) {
         if (codec == null) {
             throw new NullPointerException("codec is not found.");
         }
-        HandlerBinder binder = HANDLER_BINDER.get(codec.binder());
+        PipelineFactory binder = PIPELINE_FACTORY.get(codec.binder());
         if (binder == null) {
             throw new ProtocolException(String.format("handler binder %s is not found.", codec.binder()));
         }
-        binder.bind(pipeline, codec, chain, channel);
+        binder.build(pipeline, codec, chain, channel);
     }
 }

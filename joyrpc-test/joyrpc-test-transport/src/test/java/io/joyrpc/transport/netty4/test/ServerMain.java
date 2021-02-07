@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DefaultEndpointFactory;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.netty4.mock.MockChannelHandler;
 import io.joyrpc.transport.netty4.mock.MockCodec;
 
@@ -40,7 +40,7 @@ public class ServerMain {
         Server server = new DefaultEndpointFactory().createServer(url);
         server.setCodec(new MockCodec());
         server.setChannelHandlerChain(
-                new ChannelHandlerChain()
+                new ChannelChain()
                         .addLast(new MockChannelHandler())
         );
         server.setBizThreadPool((ThreadPoolExecutor) Executors.newFixedThreadPool(100));

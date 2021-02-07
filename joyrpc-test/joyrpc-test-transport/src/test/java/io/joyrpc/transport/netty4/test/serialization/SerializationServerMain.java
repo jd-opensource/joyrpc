@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.serialization;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DefaultEndpointFactory;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 
 /**
  * @date: 2019/1/28
@@ -35,7 +35,7 @@ public class SerializationServerMain {
         Server server = new DefaultEndpointFactory().createServer(url);
         server.setCodec(new SerializationCodec());
         server.setChannelHandlerChain(
-                new ChannelHandlerChain()
+                new ChannelChain()
                         .addLast(new MockMsgBodyChannelHandler())
         );
         server.open();

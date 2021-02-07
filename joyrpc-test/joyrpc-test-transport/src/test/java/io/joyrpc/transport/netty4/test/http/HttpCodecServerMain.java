@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.http;
 import io.joyrpc.Plugin;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.netty4.mock.MockChannelHandler;
 
 /**
@@ -35,7 +35,7 @@ public class HttpCodecServerMain {
         Server server = Plugin.ENDPOINT_FACTORY.get().createServer(url);
         server.setDeduction(new SimpleDeduction());
         server.setChannelHandlerChain(
-                new ChannelHandlerChain()
+                new ChannelChain()
                         .addLast(new MockChannelHandler())
                         .addLast(new MockHttpChannelHandler())
         );

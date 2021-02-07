@@ -38,7 +38,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_MODIFIED;
 import static java.net.HttpURLConnection.HTTP_OK;
 
 /**
- * @date: 2019/4/10
+ * http客户端的jdk实现
  */
 @Extension(value = "jdk", provider = "java")
 public class JdkHttpClient implements HttpClient {

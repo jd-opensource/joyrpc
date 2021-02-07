@@ -22,7 +22,7 @@ package io.joyrpc.transport.netty4.test.http;
 
 
 import io.joyrpc.transport.buffer.ChannelBuffer;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.DeductionContext;
 import io.joyrpc.transport.codec.HttpCodec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
@@ -37,9 +37,9 @@ public class SimpleDeduction implements ProtocolDeduction {
     @Override
     public void deduce(final DeductionContext context, final ChannelBuffer buffer) {
         if (isHttp(buffer)) {
-            context.bind(new HttpCodec(), new ChannelHandlerChain().addLast(new MockChannelHandler()).addLast(new MockHttpChannelHandler()));
+            context.bind(new HttpCodec(), new ChannelChain().addLast(new MockChannelHandler()).addLast(new MockHttpChannelHandler()));
         } else {
-            context.bind(new MockCodec(), new ChannelHandlerChain().addLast(new MockChannelHandler()).addLast(new MockHttpChannelHandler()));
+            context.bind(new MockCodec(), new ChannelChain().addLast(new MockChannelHandler()).addLast(new MockHttpChannelHandler()));
         }
     }
 

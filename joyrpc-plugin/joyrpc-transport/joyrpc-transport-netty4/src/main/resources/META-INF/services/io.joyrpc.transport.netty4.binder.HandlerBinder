@@ -1,4 +1,0 @@
-io.joyrpc.transport.netty4.binder.DefaultHandlerBinder
-io.joyrpc.transport.netty4.binder.HttpHandlerBinder
-io.joyrpc.transport.netty4.binder.LengthFieldFrameHandlerBinder
-io.joyrpc.transport.netty4.binder.Http2HandlerBinder

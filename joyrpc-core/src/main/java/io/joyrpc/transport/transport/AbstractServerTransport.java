@@ -27,7 +27,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
@@ -73,7 +73,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 处理链
      */
-    protected ChannelHandlerChain chain;
+    protected ChannelChain chain;
     /**
      * 服务URL参数
      */
@@ -188,7 +188,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelHandlerChain chain) {
+    public void setChannelHandlerChain(final ChannelChain chain) {
         this.chain = chain;
     }
 

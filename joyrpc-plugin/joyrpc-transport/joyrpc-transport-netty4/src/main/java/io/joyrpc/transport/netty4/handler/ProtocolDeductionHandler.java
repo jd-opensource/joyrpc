@@ -36,9 +36,9 @@ import static io.joyrpc.transport.codec.ProtocolDeduction.PROTOCOL_DEDUCTION_HAN
 /**
  * 协议推断，用于检测数据协议
  */
-public class ProtocolDeductionAdapter extends ChannelInboundHandlerAdapter {
+public class ProtocolDeductionHandler extends ChannelInboundHandlerAdapter {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProtocolDeductionAdapter.class);
+    private static final Logger logger = LoggerFactory.getLogger(ProtocolDeductionHandler.class);
     /**
      * 协议推断
      */
@@ -48,7 +48,7 @@ public class ProtocolDeductionAdapter extends ChannelInboundHandlerAdapter {
      */
     protected final Channel channel;
 
-    public ProtocolDeductionAdapter(ProtocolDeduction deduction, Channel channel) {
+    public ProtocolDeductionHandler(ProtocolDeduction deduction, Channel channel) {
         this.deduction = deduction;
         this.channel = channel;
     }

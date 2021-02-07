@@ -23,7 +23,7 @@ package io.joyrpc.transport;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
@@ -74,7 +74,7 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelHandlerChain chain) {
+    public void setChannelHandlerChain(final ChannelChain chain) {
         transport.setChannelHandlerChain(chain);
     }
 

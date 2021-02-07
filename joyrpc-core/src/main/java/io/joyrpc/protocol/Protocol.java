@@ -20,7 +20,7 @@ package io.joyrpc.protocol;
  * #L%
  */
 
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Message;
 
@@ -80,7 +80,7 @@ public interface Protocol {
      *
      * @return
      */
-    ChannelHandlerChain buildChain();
+    ChannelChain buildChain();
 
     /**
      * 根据协议版本获取编解码器

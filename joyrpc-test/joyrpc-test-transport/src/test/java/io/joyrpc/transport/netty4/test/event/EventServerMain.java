@@ -24,7 +24,7 @@ import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DefaultEndpointFactory;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.event.ActiveEvent;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.event.TransportEvent;
@@ -45,7 +45,7 @@ public class EventServerMain {
         Server server = new DefaultEndpointFactory().createServer(url);
         server.setCodec(new MockCodec());
         server.setChannelHandlerChain(
-                new ChannelHandlerChain()
+                new ChannelChain()
                         .addLast(new MockChannelHandler())
         );
         server.addEventHandler(

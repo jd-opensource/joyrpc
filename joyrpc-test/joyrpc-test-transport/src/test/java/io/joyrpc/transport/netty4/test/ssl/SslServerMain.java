@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.ssl;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DefaultEndpointFactory;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.netty4.mock.MockChannelHandler;
 import io.joyrpc.transport.netty4.mock.MockCodec;
 import io.joyrpc.transport.netty4.test.http.SimpleDeduction;
@@ -50,7 +50,7 @@ public class SslServerMain {
         server.setDeduction(new SimpleDeduction());
         server.setCodec(new MockCodec());
         server.setChannelHandlerChain(
-                new ChannelHandlerChain()
+                new ChannelChain()
                         .addLast(new MockChannelHandler())
         );
         server.setBizThreadPool((ThreadPoolExecutor) Executors.newFixedThreadPool(100));

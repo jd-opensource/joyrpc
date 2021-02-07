@@ -1,4 +1,4 @@
-package io.joyrpc.transport.netty4.binder;
+package io.joyrpc.transport.netty4.pipeline;
 
 /*-
  * #%L
@@ -21,41 +21,41 @@ package io.joyrpc.transport.netty4.binder;
  */
 
 import io.joyrpc.extension.Extension;
-import io.joyrpc.transport.channel.ChainChannelHandler;
+import io.joyrpc.transport.channel.ChannelChainHandler;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.netty4.handler.SimpleBizHandler;
-import io.joyrpc.transport.netty4.handler.SimpleDecodeHandler;
-import io.joyrpc.transport.netty4.handler.SimpleEncodeHandler;
+import io.joyrpc.transport.netty4.handler.ChannelHandlerAdapter;
+import io.joyrpc.transport.netty4.handler.MessageDecoder;
+import io.joyrpc.transport.netty4.handler.MessageEncoder;
 import io.netty.channel.ChannelHandler;
 
 import java.util.function.BiFunction;
 
 /**
- * 默认处理器绑定
+ * 默认管道工厂
  */
 @Extension("default")
-public class DefaultHandlerBinder implements HandlerBinder {
+public class DefaultPipelineFactory implements PipelineFactory {
 
     /**
      * 函数
      */
-    public static final BiFunction<ChannelHandlerChain, Channel, ChannelHandler> FUNCTION = (c, l) ->
-            new SimpleBizHandler(new ChainChannelHandler(c, l.getAttribute(Channel.BIZ_THREAD_POOL)), l);
+    public static final BiFunction<ChannelChain, Channel, ChannelHandler> FUNCTION = (c, l) ->
+            new ChannelHandlerAdapter(new ChannelChainHandler(c, l.getAttribute(Channel.BIZ_THREAD_POOL)), l);
 
     @Override
-    public HandlerMeta<ChannelHandlerChain>[] handlers() {
+    public HandlerDefinition<ChannelChain>[] handlers() {
         return new HandlerChainMeta[]{new HandlerChainMeta(HANDLER, FUNCTION)};
     }
 
     @Override
-    public HandlerMeta<Codec>[] decoders() {
-        return new CodecMeta[]{new CodecMeta(DECODER, SimpleDecodeHandler.FUNCTION)};
+    public HandlerDefinition<Codec>[] decoders() {
+        return new CodecDefinition[]{new CodecDefinition(DECODER, MessageDecoder.FUNCTION)};
     }
 
     @Override
-    public HandlerMeta<Codec>[] encoders() {
-        return new CodecMeta[]{new CodecMeta(ENCODER, SimpleEncodeHandler.FUNCTION)};
+    public HandlerDefinition<Codec>[] encoders() {
+        return new CodecDefinition[]{new CodecDefinition(ENCODER, MessageEncoder.FUNCTION)};
     }
 }

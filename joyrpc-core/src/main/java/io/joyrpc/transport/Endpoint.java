@@ -22,7 +22,7 @@ package io.joyrpc.transport;
 
 
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.util.State;
 
@@ -68,7 +68,7 @@ public interface Endpoint {
      *
      * @param chain
      */
-    void setChannelHandlerChain(ChannelHandlerChain chain);
+    void setChannelHandlerChain(ChannelChain chain);
 
     /**
      * 绑定初始 codec

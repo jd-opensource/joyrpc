@@ -22,9 +22,9 @@ package io.joyrpc.transport.resteasy.binder;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.netty4.binder.HandlerBinder;
+import io.joyrpc.transport.netty4.pipeline.PipelineFactory;
 import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
 import io.joyrpc.transport.resteasy.handler.ResteasyBizHandler;
 import io.netty.channel.ChannelPipeline;
@@ -39,7 +39,7 @@ import org.jboss.resteasy.plugins.server.netty.RestEasyHttpResponseEncoder;
  * ReastEasy处理器绑定
  */
 @Extension("resteasy")
-public class ResteasyHandlerBinder implements HandlerBinder {
+public class ResteasyPipelineFactory implements PipelineFactory {
 
     private static final String RESTEASY_HTTP_DECODER = "resteasy-http-decoder";
 
@@ -49,22 +49,22 @@ public class ResteasyHandlerBinder implements HandlerBinder {
 
 
     @Override
-    public HandlerMeta<Codec>[] decoders() {
+    public HandlerDefinition<Codec>[] decoders() {
         return null;
     }
 
     @Override
-    public HandlerMeta<Codec>[] encoders() {
+    public HandlerDefinition<Codec>[] encoders() {
         return null;
     }
 
     @Override
-    public HandlerMeta<ChannelHandlerChain>[] handlers() {
+    public HandlerDefinition<ChannelChain>[] handlers() {
         return null;
     }
 
     @Override
-    public void bind(ChannelPipeline pipeline, Codec codec, ChannelHandlerChain chain, Channel channel) {
+    public void build(ChannelPipeline pipeline, Codec codec, ChannelChain chain, Channel channel) {
         ResteasyCodec resteasyCodec = (ResteasyCodec) codec;
         String root = resteasyCodec.getRoot();
         RequestDispatcher dispatcher = resteasyCodec.getDispatcher();

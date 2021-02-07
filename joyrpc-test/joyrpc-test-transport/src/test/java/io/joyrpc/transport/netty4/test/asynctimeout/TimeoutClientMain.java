@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.asynctimeout;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.DefaultEndpointFactory;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.netty4.mock.MockCodec;
 import io.joyrpc.transport.netty4.mock.MockResponseChannelHandler;
 import io.joyrpc.transport.netty4.mock.MsgType;
@@ -43,8 +43,8 @@ public class TimeoutClientMain {
         URL url = URL.valueOf("mock://127.0.0.1:22000");
         Client client = new DefaultEndpointFactory().createClient(url);
         client.setCodec(new MockCodec());
-        ChannelHandlerChain channelHandlerChain =
-                new ChannelHandlerChain()
+        ChannelChain channelHandlerChain =
+                new ChannelChain()
                         .addLast(new MockResponseChannelHandler());
         client.setChannelHandlerChain(channelHandlerChain);
         client.open();

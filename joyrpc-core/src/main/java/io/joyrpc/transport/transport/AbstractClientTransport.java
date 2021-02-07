@@ -26,7 +26,7 @@ import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.channel.ChannelManager;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.codec.Codec;
@@ -57,7 +57,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     /**
      * 处理链
      */
-    protected ChannelHandlerChain handlerChain;
+    protected ChannelChain handlerChain;
     /**
      * Channel管理器
      */
@@ -173,7 +173,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelHandlerChain chain) {
+    public void setChannelHandlerChain(final ChannelChain chain) {
         this.handlerChain = chain;
     }
 

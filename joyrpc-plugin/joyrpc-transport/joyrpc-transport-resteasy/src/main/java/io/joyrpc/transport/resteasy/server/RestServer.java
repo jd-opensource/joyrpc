@@ -26,7 +26,7 @@ import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DecoratorServer;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
@@ -117,7 +117,7 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
     }
 
     @Override
-    public void setChannelHandlerChain(ChannelHandlerChain chain) {
+    public void setChannelHandlerChain(ChannelChain chain) {
     }
 
     @Override

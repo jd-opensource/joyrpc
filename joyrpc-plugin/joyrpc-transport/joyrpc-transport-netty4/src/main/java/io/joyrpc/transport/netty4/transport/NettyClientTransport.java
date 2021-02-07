@@ -27,9 +27,9 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy.HeartbeatMode;
-import io.joyrpc.transport.netty4.binder.HandlerBinder;
+import io.joyrpc.transport.netty4.pipeline.PipelineFactory;
 import io.joyrpc.transport.netty4.channel.NettyClientChannel;
-import io.joyrpc.transport.netty4.handler.ConnectionChannelHandler;
+import io.joyrpc.transport.netty4.handler.ConnectionHandler;
 import io.joyrpc.transport.netty4.handler.IdleHeartbeatHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
 import io.joyrpc.transport.transport.AbstractClientTransport;
@@ -47,7 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.transport.netty4.Plugin.HANDLER_BINDER;
+import static io.joyrpc.transport.netty4.Plugin.PIPELINE_FACTORY;
 
 /**
  * Netty客户端连接
@@ -138,10 +138,10 @@ public class NettyClientTransport extends AbstractClientTransport {
                                 setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
                                 setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
                         //添加连接事件监听
-                        ch.pipeline().addLast("connection", new ConnectionChannelHandler(channels[0], publisher));
+                        ch.pipeline().addLast("connection", new ConnectionHandler(channels[0], publisher));
                         //添加编解码和处理链
-                        HandlerBinder binder = HANDLER_BINDER.get(codec.binder());
-                        binder.bind(ch.pipeline(), codec, handlerChain, channels[0]);
+                        PipelineFactory binder = PIPELINE_FACTORY.get(codec.binder());
+                        binder.build(ch.pipeline(), codec, handlerChain, channels[0]);
                         //若配置idle心跳策略，配置心跳handler
                         if (heartbeatStrategy != null && heartbeatStrategy.getHeartbeatMode() == HeartbeatMode.IDLE) {
                             ch.pipeline().

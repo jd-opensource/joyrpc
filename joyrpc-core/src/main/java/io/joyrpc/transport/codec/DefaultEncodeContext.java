@@ -20,18 +20,21 @@ package io.joyrpc.transport.codec;
  * #L%
  */
 
-import io.joyrpc.transport.channel.ChannelChain;
+import io.joyrpc.transport.channel.Channel;
 
 /**
- * 协议推断上下文
+ * 默认编码上下文
  */
-public interface DeductionContext extends CodecContext {
+public class DefaultEncodeContext implements EncodeContext {
 
-    /**
-     * 绑定编解码和处理链
-     *
-     * @param codec 编解码
-     * @param chain 处理链
-     */
-    void bind(final Codec codec, final ChannelChain chain);
+    protected Channel channel;
+
+    public DefaultEncodeContext(Channel channel) {
+        this.channel = channel;
+    }
+
+    @Override
+    public Channel getChannel() {
+        return channel;
+    }
 }

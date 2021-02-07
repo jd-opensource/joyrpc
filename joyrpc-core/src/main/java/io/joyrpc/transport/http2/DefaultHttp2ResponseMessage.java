@@ -21,7 +21,7 @@ package io.joyrpc.transport.http2;
  */
 
 /**
- * @date: 2019/4/10
+ * 默认http2应答消息
  */
 public class DefaultHttp2ResponseMessage implements Http2ResponseMessage {
 

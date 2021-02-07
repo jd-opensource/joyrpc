@@ -29,7 +29,7 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Header;
 import org.slf4j.Logger;
@@ -64,7 +64,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 处理链
      */
-    protected ChannelHandlerChain chain;
+    protected ChannelChain chain;
     /**
      * 编解码
      */
@@ -175,9 +175,9 @@ public abstract class AbstractProtocol implements Protocol {
     }
 
     @Override
-    public ChannelHandlerChain buildChain() {
+    public ChannelChain buildChain() {
         if (chain == null) {
-            chain = new ChannelHandlerChain()
+            chain = new ChannelChain()
                     .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
                     .addLast(new ResponseChannelHandler());
         }

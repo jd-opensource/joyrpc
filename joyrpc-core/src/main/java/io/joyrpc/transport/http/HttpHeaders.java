@@ -9,9 +9,9 @@ package io.joyrpc.transport.http;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,61 +25,66 @@ import java.util.Map;
 import static io.joyrpc.transport.http.HttpHeaders.Values.KEEP_ALIVE;
 
 /**
- * @date: 2019/2/14
+ * http头
  */
 public interface HttpHeaders {
 
     /**
      * 获取参数
      *
-     * @param name
-     * @return
+     * @param name 名称
+     * @return 参数
      */
     Object get(CharSequence name);
 
     /**
      * 获取所有参数
      *
-     * @return
+     * @return 所有参数
      */
     Map<CharSequence, Object> getAll();
 
     /**
      * 设置参数
      *
-     * @param name
-     * @param value
-     * @return
+     * @param name  名称
+     * @param value 值
+     * @return 原有的值
      */
     Object set(CharSequence name, Object value);
 
     /**
      * 添加参数
      *
-     * @param name
-     * @param value
-     * @return
+     * @param name  名称
+     * @param value 值
+     * @return 是否成功
      */
     boolean add(CharSequence name, Object value);
 
     /**
      * 参数是否参数
      *
-     * @param name
-     * @return
+     * @param name 名称
+     * @return 值
      */
     Object remove(String name);
 
     /**
      * 是否为空
      *
-     * @return
+     * @return 为空标识
      */
     default boolean isEmpty() {
         Map<CharSequence, Object> attrs = getAll();
         return attrs == null || attrs.isEmpty();
     }
 
+    /**
+     * 是否保持存活
+     *
+     * @return 保持存活标识
+     */
     default boolean isKeepAlive() {
         Object keepAlive = get(KEEP_ALIVE);
         if (keepAlive == null) {
@@ -87,10 +92,18 @@ public interface HttpHeaders {
         }
         if (keepAlive == null) {
             return false;
+        } else if (keepAlive instanceof Boolean) {
+            return (Boolean) keepAlive;
+        } else {
+            return Boolean.valueOf(keepAlive.toString());
         }
-        return Boolean.TRUE.equals(keepAlive instanceof Boolean ? keepAlive : Boolean.valueOf(keepAlive.toString()));
     }
 
+    /**
+     * 设置保持存活标识
+     *
+     * @param keepAlive 保持存活标识
+     */
     default void setKeepAlive(boolean keepAlive) {
         set(KEEP_ALIVE, keepAlive);
     }

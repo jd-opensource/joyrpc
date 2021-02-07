@@ -1,4 +1,4 @@
-package io.joyrpc.transport.netty4.binder;
+package io.joyrpc.transport.netty4.pipeline;
 
 /*-
  * #%L
@@ -22,7 +22,7 @@ package io.joyrpc.transport.netty4.binder;
 
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelPipeline;
@@ -30,10 +30,10 @@ import io.netty.channel.ChannelPipeline;
 import java.util.function.BiFunction;
 
 /**
- * 处理器绑定
+ * 管道工厂
  */
-@Extensible("handlerBinder")
-public interface HandlerBinder {
+@Extensible("pipeline")
+public interface PipelineFactory {
 
     String HANDLER = "handler";
     String DECODER = "decoder";
@@ -47,44 +47,44 @@ public interface HandlerBinder {
      *
      * @return 业务处理函数元数据数组
      */
-    HandlerMeta<ChannelHandlerChain>[] handlers();
+    HandlerDefinition<ChannelChain>[] handlers();
 
     /**
      * 返回解码器元数据数组
      *
      * @return 解码器元数据数组
      */
-    HandlerMeta<Codec>[] decoders();
+    HandlerDefinition<Codec>[] decoders();
 
     /**
      * 返回编码器元数据数组
      *
      * @return 编码器元数据数组
      */
-    HandlerMeta<Codec>[] encoders();
+    HandlerDefinition<Codec>[] encoders();
 
     /**
-     * 绑定处理链
+     * 构建处理链
      *
      * @param pipeline 管道
      * @param codec    编解码
      * @param chain    处理链
      * @param channel  连接通道
      */
-    default void bind(final ChannelPipeline pipeline, final Codec codec, final ChannelHandlerChain chain, final Channel channel) {
+    default void build(final ChannelPipeline pipeline, final Codec codec, final ChannelChain chain, final Channel channel) {
         if (codec != null) {
             //解码器
-            for (HandlerMeta<Codec> meta : decoders()) {
+            for (HandlerDefinition<Codec> meta : decoders()) {
                 pipeline.addLast(meta.name, meta.function.apply(codec, channel));
             }
             //编码器
-            for (HandlerMeta<Codec> meta : encoders()) {
+            for (HandlerDefinition<Codec> meta : encoders()) {
                 pipeline.addLast(meta.name, meta.function.apply(codec, channel));
             }
         }
         //处理链
         if (chain != null) {
-            for (HandlerMeta<ChannelHandlerChain> meta : handlers()) {
+            for (HandlerDefinition<ChannelChain> meta : handlers()) {
                 pipeline.addLast(meta.name, meta.function.apply(chain, channel));
             }
         }
@@ -95,7 +95,7 @@ public interface HandlerBinder {
      *
      * @param <T>
      */
-    class HandlerMeta<T> {
+    class HandlerDefinition<T> {
         /**
          * 名称
          */
@@ -111,7 +111,7 @@ public interface HandlerBinder {
          * @param name     名称
          * @param function 函数
          */
-        public HandlerMeta(String name, BiFunction<T, Channel, ChannelHandler> function) {
+        public HandlerDefinition(String name, BiFunction<T, Channel, ChannelHandler> function) {
             this.name = name;
             this.function = function;
         }
@@ -128,7 +128,7 @@ public interface HandlerBinder {
     /**
      * 处理链元数据
      */
-    class HandlerChainMeta extends HandlerMeta<ChannelHandlerChain> {
+    class HandlerChainMeta extends HandlerDefinition<ChannelChain> {
 
         /**
          * 构造函数
@@ -136,7 +136,7 @@ public interface HandlerBinder {
          * @param name     名称
          * @param function 函数
          */
-        public HandlerChainMeta(String name, BiFunction<ChannelHandlerChain, Channel, ChannelHandler> function) {
+        public HandlerChainMeta(String name, BiFunction<ChannelChain, Channel, ChannelHandler> function) {
             super(name, function);
         }
     }
@@ -144,7 +144,7 @@ public interface HandlerBinder {
     /**
      * 编解码元数据
      */
-    class CodecMeta extends HandlerMeta<Codec> {
+    class CodecDefinition extends HandlerDefinition<Codec> {
 
         /**
          * 构造函数
@@ -152,7 +152,7 @@ public interface HandlerBinder {
          * @param name     名称
          * @param function 函数
          */
-        public CodecMeta(String name, BiFunction<Codec, Channel, ChannelHandler> function) {
+        public CodecDefinition(String name, BiFunction<Codec, Channel, ChannelHandler> function) {
             super(name, function);
         }
     }

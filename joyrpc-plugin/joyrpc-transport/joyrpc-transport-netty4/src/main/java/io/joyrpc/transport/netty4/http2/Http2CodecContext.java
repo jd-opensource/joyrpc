@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * @date: 2019/4/12
+ * http2编解码上下文
  */
 public class Http2CodecContext implements CodecContext {
 

@@ -9,9 +9,9 @@ package io.joyrpc.transport.codec;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,7 +24,7 @@ import io.joyrpc.exception.CodecException;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 
 /**
- * @date: 2019/4/10
+ * http2编解码
  */
 public class Http2Codec implements Codec {
 
@@ -33,17 +33,16 @@ public class Http2Codec implements Codec {
     public static String HEADER = "http2Header";
 
     @Override
-    public Object decode(DecodeContext context, ChannelBuffer buffer) throws CodecException {
+    public Object decode(final DecodeContext context, final ChannelBuffer buffer) throws CodecException {
         byte[] bytes = new byte[buffer.readableBytes()];
         buffer.readBytes(bytes);
         return bytes;
     }
 
     @Override
-    public void encode(EncodeContext context, ChannelBuffer buffer, Object message) throws CodecException {
+    public void encode(final EncodeContext context, final ChannelBuffer buffer, final Object message) throws CodecException {
         if (message instanceof byte[]) {
-            byte[] bytes = (byte[]) message;
-            buffer.writeBytes(bytes);
+            buffer.writeBytes((byte[]) message);
         }
     }
 

@@ -26,7 +26,7 @@ import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
@@ -133,7 +133,7 @@ public class DecoratorClient<T extends ClientTransport> implements Client {
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelHandlerChain chain) {
+    public void setChannelHandlerChain(final ChannelChain chain) {
         transport.setChannelHandlerChain(chain);
     }
 

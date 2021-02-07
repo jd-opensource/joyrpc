@@ -28,7 +28,7 @@ import io.joyrpc.protocol.handler.ResponseChannelHandler;
 import io.joyrpc.protocol.http.handler.HttpToJoyHandler;
 import io.joyrpc.protocol.http.handler.JoyToHttpHandler;
 import io.joyrpc.transport.buffer.ChannelBuffer;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.HttpCodec;
 
@@ -59,9 +59,9 @@ public class HttpServerProtocol extends AbstractProtocol implements ServerProtoc
     }
 
     @Override
-    public ChannelHandlerChain buildChain() {
+    public ChannelChain buildChain() {
         if (chain == null) {
-            chain = new ChannelHandlerChain()
+            chain = new ChannelChain()
                     .addLast(new HttpToJoyHandler())
                     .addLast(new RequestChannelHandler<>(io.joyrpc.Plugin.MESSAGE_HANDLER_SELECTOR, this::onException))
                     .addLast(new JoyToHttpHandler())

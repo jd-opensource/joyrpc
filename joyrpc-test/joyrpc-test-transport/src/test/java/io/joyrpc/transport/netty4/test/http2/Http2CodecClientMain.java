@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.http2;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.DefaultEndpointFactory;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.netty4.mock.MockResponseChannelHandler;
 import io.joyrpc.transport.netty4.mock.MsgType;
@@ -45,8 +45,8 @@ public class Http2CodecClientMain {
         URL url = URL.valueOf("http2://127.0.0.1:22000");
         Client client = new DefaultEndpointFactory().createClient(url);
         client.setCodec(new MockHttp2Codec());
-        ChannelHandlerChain channelHandlerChain =
-                new ChannelHandlerChain()
+        ChannelChain channelHandlerChain =
+                new ChannelChain()
                         .addLast(new MockCoverChannelHandler())
                         .addLast(new MockResponseChannelHandler());
         client.setChannelHandlerChain(channelHandlerChain);

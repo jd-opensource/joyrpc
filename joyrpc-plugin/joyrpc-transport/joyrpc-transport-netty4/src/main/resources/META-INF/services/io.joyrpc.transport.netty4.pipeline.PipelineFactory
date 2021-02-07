@@ -1,0 +1,4 @@
+io.joyrpc.transport.netty4.pipeline.DefaultPipelineFactory
+io.joyrpc.transport.netty4.pipeline.HttpPipelineFactory
+io.joyrpc.transport.netty4.pipeline.LengthFieldFramePipelineFactory
+io.joyrpc.transport.netty4.pipeline.Http2PipelineFactory

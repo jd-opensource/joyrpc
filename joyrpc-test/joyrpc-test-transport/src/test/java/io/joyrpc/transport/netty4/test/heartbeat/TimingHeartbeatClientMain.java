@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.heartbeat;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.DefaultEndpointFactory;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.netty4.mock.*;
@@ -45,8 +45,8 @@ public class TimingHeartbeatClientMain {
             new Thread(() -> {
                 Client client = new DefaultEndpointFactory().createClient(url);
                 client.setCodec(new MockCodec());
-                ChannelHandlerChain channelHandlerChain =
-                        new ChannelHandlerChain()
+                ChannelChain channelHandlerChain =
+                        new ChannelChain()
                                 .addLast(new MockResponseChannelHandler())
                                 .addLast(new MockChannelHandler());
                 client.setChannelHandlerChain(channelHandlerChain);

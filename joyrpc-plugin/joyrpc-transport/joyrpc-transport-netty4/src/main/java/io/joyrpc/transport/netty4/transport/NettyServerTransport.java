@@ -25,12 +25,11 @@ import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.DeductionContext;
-import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.netty4.channel.NettyChannel;
 import io.joyrpc.transport.netty4.channel.NettyServerChannel;
 import io.joyrpc.transport.netty4.codec.ProtocolDeductionContext;
-import io.joyrpc.transport.netty4.handler.ConnectionChannelHandler;
-import io.joyrpc.transport.netty4.handler.ProtocolDeductionAdapter;
+import io.joyrpc.transport.netty4.handler.ConnectionHandler;
+import io.joyrpc.transport.netty4.handler.ProtocolDeductionHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
 import io.joyrpc.transport.transport.AbstractServerTransport;
 import io.joyrpc.transport.transport.ChannelTransport;
@@ -182,7 +181,7 @@ public class NettyServerTransport extends AbstractServerTransport {
             if (sslContext != null) {
                 ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
             }
-            ch.pipeline().addLast("connection", new ConnectionChannelHandler(channel, publisher) {
+            ch.pipeline().addLast("connection", new ConnectionHandler(channel, publisher) {
                 @Override
                 public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
                     removeChannel(channel);
@@ -192,7 +191,7 @@ public class NettyServerTransport extends AbstractServerTransport {
             });
 
             if (deduction != null) {
-                ch.pipeline().addLast(PROTOCOL_DEDUCTION_HANDLER, new ProtocolDeductionAdapter(deduction, channel));
+                ch.pipeline().addLast(PROTOCOL_DEDUCTION_HANDLER, new ProtocolDeductionHandler(deduction, channel));
             } else {
                 DeductionContext context = new ProtocolDeductionContext(channel, ch.pipeline());
                 context.bind(codec, chain);

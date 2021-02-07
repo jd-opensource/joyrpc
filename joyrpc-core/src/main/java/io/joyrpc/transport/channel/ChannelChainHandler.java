@@ -28,11 +28,11 @@ import java.util.function.Function;
 /**
  * 包装处理链的处理器
  */
-public class ChainChannelHandler implements ChannelHandler {
+public class ChannelChainHandler implements ChannelHandler {
     /**
      * 业务处理链
      */
-    protected ChannelHandlerChain chain;
+    protected ChannelChain chain;
     /**
      * 线程池
      */
@@ -42,11 +42,11 @@ public class ChainChannelHandler implements ChannelHandler {
      */
     protected Function<Runnable, Runnable> runFunc;
 
-    public ChainChannelHandler(ChannelHandlerChain chain) {
+    public ChannelChainHandler(ChannelChain chain) {
         this(chain, null);
     }
 
-    public ChainChannelHandler(ChannelHandlerChain chain, ThreadPoolExecutor executor) {
+    public ChannelChainHandler(ChannelChain chain, ThreadPoolExecutor executor) {
         this.chain = chain;
         this.executor = executor;
         if (executor != null) {

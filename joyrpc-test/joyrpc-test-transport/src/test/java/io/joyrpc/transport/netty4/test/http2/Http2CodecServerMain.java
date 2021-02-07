@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.test.http2;
 import io.joyrpc.Plugin;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 
 /**
  * @date: 2019/2/18
@@ -34,7 +34,7 @@ public class Http2CodecServerMain {
         Server server = Plugin.ENDPOINT_FACTORY.get().createServer(url);
         server.setCodec(new MockHttp2Codec());
         server.setChannelHandlerChain(
-                new ChannelHandlerChain()
+                new ChannelChain()
                         .addLast(new MockHttp2ChannelHandler())
         );
         server.open();

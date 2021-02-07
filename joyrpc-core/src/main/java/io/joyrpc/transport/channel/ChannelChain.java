@@ -27,17 +27,17 @@ import java.util.List;
 /**
  * 处理链
  */
-public class ChannelHandlerChain {
+public class ChannelChain {
 
     /**
      * 处理链
      */
     protected LinkedList<ChannelHandler> handlers = new LinkedList<>();
 
-    public ChannelHandlerChain() {
+    public ChannelChain() {
     }
 
-    public ChannelHandlerChain(ChannelHandler... handlers) {
+    public ChannelChain(ChannelHandler... handlers) {
         if (handlers != null) {
             for (ChannelHandler handler : handlers) {
                 this.handlers.addLast(handler);
@@ -51,7 +51,7 @@ public class ChannelHandlerChain {
      * @param handler 处理器
      * @return 处理链
      */
-    public ChannelHandlerChain addFirst(final ChannelHandler handler) {
+    public ChannelChain addFirst(final ChannelHandler handler) {
         if (handler != null) {
             handlers.addFirst(handler);
         }
@@ -64,7 +64,7 @@ public class ChannelHandlerChain {
      * @param handler 处理器
      * @return 处理链
      */
-    public ChannelHandlerChain addLast(final ChannelHandler handler) {
+    public ChannelChain addLast(final ChannelHandler handler) {
         if (handler != null) {
             handlers.addLast(handler);
         }
@@ -77,7 +77,7 @@ public class ChannelHandlerChain {
      * @param handler 处理器
      * @return 处理链
      */
-    public ChannelHandlerChain remove(final ChannelHandler handler) {
+    public ChannelChain remove(final ChannelHandler handler) {
         if (handler != null) {
             handlers.remove(handler);
         }

@@ -64,7 +64,7 @@ import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
 import static io.joyrpc.util.StringUtils.split;
 
 /**
- * @date: 2019/5/6
+ * grpc服务端处理器
  */
 public class GrpcServerHandler implements ChannelHandler {
 

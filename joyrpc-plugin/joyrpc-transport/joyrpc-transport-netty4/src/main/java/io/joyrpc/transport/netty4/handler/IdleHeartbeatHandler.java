@@ -29,7 +29,7 @@ import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 /**
- * @date: 2019/3/1
+ * 心跳处理器
  */
 public class IdleHeartbeatHandler extends ChannelDuplexHandler {
 
@@ -40,7 +40,7 @@ public class IdleHeartbeatHandler extends ChannelDuplexHandler {
     protected HeartbeatTrigger heartbeatTrigger;
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+    public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) throws Exception {
         if (evt instanceof IdleStateEvent) {
             if (heartbeatTrigger == null) {
                 Attribute<HeartbeatTrigger> attr = ctx.channel().attr(HEARTBEAT_TRIGGER);

@@ -31,7 +31,7 @@ import io.joyrpc.protocol.handler.RequestChannelHandler;
 import io.joyrpc.protocol.handler.ResponseChannelHandler;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
@@ -42,9 +42,9 @@ import static io.joyrpc.Plugin.MESSAGE_HANDLER_SELECTOR;
 import static io.joyrpc.protocol.Protocol.GRPC_ORDER;
 
 /**
- * @date: 2019/4/11
+ * grpc服务端协议
  */
-@Extension(value = "grpc", order = GRPC_ORDER)
+@Extension(value = GrpcServerProtocol.GRPC_NAME, order = GRPC_ORDER)
 @ConditionalOnClass("io.grpc.Codec")
 public class GrpcServerProtocol extends AbstractProtocol implements ServerProtocol {
 
@@ -56,9 +56,9 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
     public static final String GRPC_NAME = "grpc";
 
     @Override
-    public ChannelHandlerChain buildChain() {
+    public ChannelChain buildChain() {
         if (chain == null) {
-            chain = new ChannelHandlerChain()
+            chain = new ChannelChain()
                     .addLast(new GrpcServerHandler())
                     .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
                     .addLast(new ResponseChannelHandler());

@@ -22,7 +22,7 @@ package io.joyrpc.transport.codec;
 
 
 /**
- * @date: 2019/1/31
+ * 编码上下文
  */
 public interface EncodeContext extends CodecContext {
 

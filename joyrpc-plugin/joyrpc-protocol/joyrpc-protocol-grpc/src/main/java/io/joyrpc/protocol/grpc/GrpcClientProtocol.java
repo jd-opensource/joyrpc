@@ -35,7 +35,7 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelHandlerChain;
+import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.message.Message;
@@ -70,9 +70,9 @@ public class GrpcClientProtocol extends AbstractProtocol implements ClientProtoc
     }
 
     @Override
-    public ChannelHandlerChain buildChain() {
+    public ChannelChain buildChain() {
         //GrpcClientConvertHandler 会有消息缓存，为防止streamId冲突，这里多个channel不能共用一个chain，每次重新build
-        return new ChannelHandlerChain()
+        return new ChannelChain()
                 .addLast(new GrpcClientHandler())
                 .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
                 .addLast(new ResponseChannelHandler());

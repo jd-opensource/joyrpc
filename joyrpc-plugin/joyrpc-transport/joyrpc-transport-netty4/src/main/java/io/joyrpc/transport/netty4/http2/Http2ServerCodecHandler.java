@@ -39,68 +39,177 @@ import java.net.URLDecoder;
 
 /**
  * http2 server端 编解码器
- *
- * @date: 2019/4/10
  */
-public class Http2ServerCodecHandler extends Http2ConnectionHandler {
+public class Http2ServerCodecHandler extends Http2ConnectionHandler implements Http2FrameListener {
 
     private static final Logger logger = LoggerFactory.getLogger(NettyServerTransport.class);
-
+    protected final Http2ConnectionDecoder decoder;
+    protected final Http2ConnectionEncoder encoder;
+    /**
+     * 消息头键
+     */
     protected Http2Connection.PropertyKey headerKey;
-
+    /**
+     * 编解码
+     */
     protected Http2Codec codec;
-
+    /**
+     * 通道
+     */
     protected Channel channel;
 
-    public Http2ServerCodecHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
-                                   Http2Settings initialSettings, Channel channel, Http2Codec codec) {
+    protected boolean firstSettings = true;
+
+    public Http2ServerCodecHandler(Http2ConnectionDecoder decoder,
+                                   Http2ConnectionEncoder encoder,
+                                   Http2Settings initialSettings,
+                                   Channel channel,
+                                   Http2Codec codec) {
         super(decoder, encoder, initialSettings);
+        this.decoder = decoder;
+        this.encoder = encoder;
         this.channel = channel;
         this.codec = codec;
         this.headerKey = encoder().connection().newKey();
-        this.decoder().frameListener(new FrameListener());
+        decoder.frameListener(this);
+    }
+
+    @Override
+    public void onSettingsRead(final ChannelHandlerContext ctx, final Http2Settings settings) {
+        if (firstSettings) {
+            firstSettings = false;
+        }
+    }
+
+    @Override
+    public int onDataRead(final ChannelHandlerContext ctx, final int streamId, final ByteBuf data,
+                          final int padding, final boolean endOfStream) throws Http2Exception {
+        int processed = data.readableBytes() + padding;
+        if (endOfStream) {
+            Http2Stream http2Stream = connection().stream(streamId);
+            // read cached http2 header from stream
+            Http2Headers headers = http2Stream.getProperty(headerKey);
+            handleRequest(ctx, streamId, headers, data);
+        }
+        return processed;
+    }
+
+    @Override
+    public void onHeadersRead(final ChannelHandlerContext ctx, final int streamId, final Http2Headers headers,
+                              final int padding, final boolean endStream) throws Http2Exception {
+        if (streamId > 0) {
+            // 正常的请求（streamId==1 的是settings请求）
+            if (endStream) {
+                // 没有DATA帧的请求，可能是DATA
+                handleRequest(ctx, streamId, headers, null);
+            } else {
+                // 缓存起来
+                Http2Stream stream = connection().stream(streamId);
+                if (stream != null) {
+                    stream.setProperty(headerKey, headers);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onHeadersRead(final ChannelHandlerContext ctx, final int streamId, final Http2Headers headers,
+                              final int streamDependency, final short weight, final boolean exclusive,
+                              final int padding, final boolean endStream) throws Http2Exception {
+        onHeadersRead(ctx, streamId, headers, padding, endStream);
+    }
+
+    @Override
+    public void onRstStreamRead(final ChannelHandlerContext ctx, final int streamId, final long errorCode) {
+        logger.error("onRstStreamRead streamId:" + streamId + " errorCode:" + errorCode);
+    }
+
+    @Override
+    public void onPingRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
+        logger.warn("onPingRead data:" + data);
+    }
+
+    @Override
+    public void onPingAckRead(final ChannelHandlerContext ctx, final long data) throws Http2Exception {
+        logger.warn("onPingAckRead data:" + data);
+    }
+
+    @Override
+    public void onPriorityRead(final ChannelHandlerContext ctx, final int streamId, final int streamDependency,
+                               final short weight, final boolean exclusive) throws Http2Exception {
+
+    }
+
+    @Override
+    public void onSettingsAckRead(final ChannelHandlerContext ctx) throws Http2Exception {
+
+    }
+
+    @Override
+    public void onPushPromiseRead(final ChannelHandlerContext ctx, final int streamId, final int promisedStreamId,
+                                  final Http2Headers headers, final int padding) throws Http2Exception {
+
+    }
+
+    @Override
+    public void onGoAwayRead(final ChannelHandlerContext ctx, final int lastStreamId, final long errorCode,
+                             final ByteBuf debugData) throws Http2Exception {
+
+    }
+
+    @Override
+    public void onWindowUpdateRead(final ChannelHandlerContext ctx, final int streamId, final int windowSizeIncrement) throws Http2Exception {
+
+    }
+
+    @Override
+    public void onUnknownFrame(final ChannelHandlerContext ctx, final byte frameType, final int streamId,
+                               final Http2Flags flags, final ByteBuf payload) throws Http2Exception {
+
     }
 
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
-        if (msg == null || !(msg instanceof Http2ResponseMessage)) {
+        if (!(msg instanceof Http2ResponseMessage)) {
             super.write(ctx, msg, promise);
             return;
         }
         //response对象
         Http2ResponseMessage response = (Http2ResponseMessage) msg;
         //应答头
-        if (response.headers() != null && !response.headers().isEmpty()) {
+        io.joyrpc.transport.http2.Http2Headers headers = response.headers();
+        if (headers != null && !headers.isEmpty()) {
             //构建http2响应header
             Http2Headers http2Headers = new DefaultHttp2Headers();
-            response.headers().getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
+            headers.getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
             //write
-            encoder().writeHeaders(ctx, response.getStreamId(), http2Headers, 0, false, promise);
+            encoder.writeHeaders(ctx, response.getStreamId(), http2Headers, 0, false, promise);
         }
         //是否有结束头
-        boolean withEndHeaders = response.getEndHeaders() != null;
+        io.joyrpc.transport.http2.Http2Headers endHeaders = response.getEndHeaders();
         //写应答内容
         if (response.content() != null) {
             ByteBuf byteBuf = ctx.alloc().buffer();
             try {
-                codec.encode(new Http2EncodeContext(channel).attribute(Http2Codec.HEADER, response.headers()),
+                codec.encode(new Http2EncodeContext(channel).attribute(Http2Codec.HEADER, headers),
                         new NettyChannelBuffer(byteBuf), response.content());
             } catch (CodecException e) {
                 byteBuf.release();
                 throw e;
             }
-            encoder().writeData(ctx, response.getStreamId(), byteBuf, 0, !withEndHeaders, ctx.voidPromise());
+            encoder.writeData(ctx, response.getStreamId(), byteBuf, 0, endHeaders == null, ctx.voidPromise());
         }
         //write end header
-        if (withEndHeaders) {
-            Http2Headers endHeaders = new DefaultHttp2Headers();
-            response.getEndHeaders().getAll().forEach((k, v) -> endHeaders.add(k, v.toString()));
+        if (endHeaders != null) {
+            Http2Headers http2Headers = new DefaultHttp2Headers();
+            endHeaders.getAll().forEach((k, v) -> http2Headers.add(k, v.toString()));
             //write
-            encoder().writeHeaders(ctx, response.getStreamId(), endHeaders, 0, true, promise);
+            encoder.writeHeaders(ctx, response.getStreamId(), http2Headers, 0, true, promise);
         }
     }
 
-    protected void handleRequest(ChannelHandlerContext ctx, int streamId, Http2Headers http2Headers, ByteBuf body) throws Http2Exception {
+    protected void handleRequest(final ChannelHandlerContext ctx, final int streamId, final Http2Headers http2Headers,
+                                 final ByteBuf body) throws Http2Exception {
         try {
             //获取请求header
             io.joyrpc.transport.http2.Http2Headers reqHeaders = new io.joyrpc.transport.http2.DefaultHttp2Headers();
@@ -124,83 +233,4 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
 
     }
 
-    /**
-     * 监听器
-     */
-    protected class FrameListener extends Http2FrameAdapter {
-
-        protected boolean firstSettings = true;
-
-        @Override
-        public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
-            if (firstSettings) {
-                firstSettings = false;
-            }
-        }
-
-        @Override
-        public int onDataRead(ChannelHandlerContext ctx, int streamId, ByteBuf data, int padding, boolean endOfStream) throws Http2Exception {
-            int processed = data.readableBytes() + padding;
-            if (endOfStream) {
-                Http2Stream http2Stream = connection().stream(streamId);
-                // read cached http2 header from stream
-                Http2Headers headers = http2Stream.getProperty(headerKey);
-                handleRequest(ctx, streamId, headers, data);
-            }
-            return processed;
-        }
-
-        @Override
-        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding, boolean endStream) throws Http2Exception {
-            if (streamId > 0) {
-                // 正常的请求（streamId==1 的是settings请求）
-                if (endStream) {
-                    // 没有DATA帧的请求，可能是DATA
-                    handleRequest(ctx, streamId, headers, null);
-                } else {
-                    // 缓存起来
-                    Http2Stream stream = connection().stream(streamId);
-                    if (stream != null) {
-                        stream.setProperty(headerKey, headers);
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                  int streamDependency, short weight, boolean exclusive, int padding, boolean endStream)
-                throws Http2Exception {
-
-            if (streamId > 0) {
-                // 正常的请求（streamId==1 的是settings请求）
-                if (endStream) {
-                    // 没有DATA帧的请求，可能是DATA
-                    handleRequest(ctx, streamId, headers, null);
-                } else {
-                    // 缓存起来
-                    Http2Stream stream = connection().stream(streamId);
-                    if (stream != null) {
-                        stream.setProperty(headerKey, headers);
-                    }
-                }
-            }
-        }
-
-        @Override
-        public void onRstStreamRead(ChannelHandlerContext ctx, int streamId, long errorCode) {
-            logger.error("onRstStreamRead streamId:" + streamId + " errorCode:" + errorCode);
-        }
-
-        @Override
-        public void onPingRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
-            logger.warn("onPingRead data:" + data);
-        }
-
-        @Override
-        public void onPingAckRead(ChannelHandlerContext ctx, long data) throws Http2Exception {
-            logger.warn("onPingAckRead data:" + data);
-        }
-
-    }
 }

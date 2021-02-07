@@ -78,10 +78,8 @@ public class MessageDecoder extends ByteToMessageDecoder {
             return;
         }
         ByteBuf byteBuf;
-        boolean needRelease = false;
         if (fixedLength > 0) {
             byteBuf = in.readableBytes() < fixedLength ? null : in.readRetainedSlice(fixedLength);
-            needRelease = true;
         } else {
             byteBuf = in;
         }
@@ -93,8 +91,7 @@ public class MessageDecoder extends ByteToMessageDecoder {
                     out.add(message);
                 }
             } finally {
-                //TODO 为啥要needRelease
-                if (needRelease && !buf.isReleased()) {
+                if (!buf.isReleased()) {
                     buf.release();
                 }
             }

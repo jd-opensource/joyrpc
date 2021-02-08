@@ -61,6 +61,7 @@ public class LengthFieldMessageDecoder extends LengthFieldBasedFrameDecoder {
             try {
                 return codec.decode(new DefaultDecodeContext(channel), new NettyChannelBuffer(buf));
             } finally {
+                //super.decode调用了retain方法，需要release
                 buf.release();
             }
         } else {

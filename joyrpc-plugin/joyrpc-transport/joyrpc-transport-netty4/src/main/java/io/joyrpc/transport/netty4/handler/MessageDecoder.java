@@ -90,6 +90,7 @@ public class MessageDecoder extends ByteToMessageDecoder {
                 }
             } finally {
                 if (buf != in) {
+                    //readRetainedSlice调用了retain方法，需要release
                     buf.release();
                 }
             }

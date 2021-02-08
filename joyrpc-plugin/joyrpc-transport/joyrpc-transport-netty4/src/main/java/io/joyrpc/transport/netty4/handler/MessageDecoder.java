@@ -20,7 +20,6 @@ package io.joyrpc.transport.netty4.handler;
  * #L%
  */
 
-import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.DefaultDecodeContext;
@@ -77,25 +76,23 @@ public class MessageDecoder extends ByteToMessageDecoder {
             logger.warn("Bytebuf is not readable when decode!");
             return;
         }
-        ByteBuf byteBuf;
+        ByteBuf buf;
         if (fixedLength > 0) {
-            byteBuf = in.readableBytes() < fixedLength ? null : in.readRetainedSlice(fixedLength);
+            buf = in.readableBytes() < fixedLength ? null : in.readRetainedSlice(fixedLength);
         } else {
-            byteBuf = in;
+            buf = in;
         }
-        if (byteBuf != null) {
-            ChannelBuffer buf = new NettyChannelBuffer(byteBuf);
+        if (buf != null) {
             try {
-                Object message = codec.decode(new DefaultDecodeContext(channel), buf);
+                Object message = codec.decode(new DefaultDecodeContext(channel), new NettyChannelBuffer(buf));
                 if (message != null) {
                     out.add(message);
                 }
             } finally {
-                if (!buf.isReleased()) {
+                if (buf != in) {
                     buf.release();
                 }
             }
-
         }
     }
 

@@ -47,23 +47,17 @@ public class ChannelHandlerAdapter extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         //触发业务处理器的接收
-        try {
-            handler.received(new NettyChannelContext(channel), msg);
-        } catch (Exception e) {
-            exceptionCaught(ctx, e);
-        }
+        handler.received(new NettyChannelContext(channel), msg);
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
         //触发业务处理器的写
-        try {
-            Object resMsg = handler.wrote(new NettyChannelContext(channel), msg);
+        Object resMsg = handler.wrote(new NettyChannelContext(channel), msg);
+        if (resMsg != null) {
             ctx.writeAndFlush(resMsg, promise);
-        } catch (Exception e) {
-            exceptionCaught(ctx, e);
         }
     }
 

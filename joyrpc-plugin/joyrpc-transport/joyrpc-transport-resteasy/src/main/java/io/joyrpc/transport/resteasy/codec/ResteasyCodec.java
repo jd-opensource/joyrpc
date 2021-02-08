@@ -42,7 +42,7 @@ public class ResteasyCodec implements Codec {
     }
 
     @Override
-    public String binder() {
+    public String pipeline() {
         return "resteasy";
     }
 

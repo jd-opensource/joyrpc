@@ -62,5 +62,4 @@ public class MessageEncoder extends MessageToByteEncoder {
             ctx.fireExceptionCaught(throwable);
         }
     }
-
 }

@@ -21,7 +21,7 @@ package io.joyrpc.transport.codec;
  */
 
 /**
- * @date: 2019/3/28
+ * 基于长度字段的编解码
  */
 public interface LengthFieldFrameCodec extends Codec {
 
@@ -33,7 +33,7 @@ public interface LengthFieldFrameCodec extends Codec {
     LengthFieldFrame getLengthFieldFrame();
 
     @Override
-    default String binder() {
+    default String pipeline() {
         return "lengthFieldFrame";
     }
 

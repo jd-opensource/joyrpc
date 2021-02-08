@@ -20,7 +20,6 @@ package io.joyrpc.transport.netty4.handler;
  * #L%
  */
 
-import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.DefaultDecodeContext;
@@ -42,9 +41,13 @@ public class LengthFieldMessageDecoder extends LengthFieldBasedFrameDecoder {
      */
     protected Channel channel;
 
-    public LengthFieldMessageDecoder(int maxFrameLength, int lengthFieldOffset, int lengthFieldLength,
-                                     int lengthAdjustment, int initialBytesToStrip,
-                                     Codec codec, Channel channel) {
+    public LengthFieldMessageDecoder(int maxFrameLength,
+                                     int lengthFieldOffset,
+                                     int lengthFieldLength,
+                                     int lengthAdjustment,
+                                     int initialBytesToStrip,
+                                     Codec codec,
+                                     Channel channel) {
         super(maxFrameLength, lengthFieldOffset, lengthFieldLength, lengthAdjustment, initialBytesToStrip);
         this.codec = codec;
         this.channel = channel;
@@ -54,20 +57,15 @@ public class LengthFieldMessageDecoder extends LengthFieldBasedFrameDecoder {
     protected Object decode(final ChannelHandlerContext ctx, final ByteBuf in) throws Exception {
         Object obj = super.decode(ctx, in);
         if (obj instanceof ByteBuf) {
-            ChannelBuffer buf = new NettyChannelBuffer((ByteBuf) obj);
+            ByteBuf buf = (ByteBuf) obj;
             try {
-                return codec.decode(new DefaultDecodeContext(channel), buf);
+                return codec.decode(new DefaultDecodeContext(channel), new NettyChannelBuffer(buf));
             } finally {
-                if (!buf.isReleased()) {
-                    buf.release();
-                }
+                buf.release();
             }
         } else {
             return obj;
         }
     }
 
-    public void setCodec(Codec codec) {
-        this.codec = codec;
-    }
 }

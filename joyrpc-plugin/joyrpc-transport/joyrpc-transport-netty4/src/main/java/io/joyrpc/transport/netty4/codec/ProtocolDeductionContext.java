@@ -58,9 +58,9 @@ public class ProtocolDeductionContext implements DeductionContext {
         if (codec == null) {
             throw new NullPointerException("codec is not found.");
         }
-        PipelineFactory binder = PIPELINE_FACTORY.get(codec.binder());
+        PipelineFactory binder = PIPELINE_FACTORY.get(codec.pipeline());
         if (binder == null) {
-            throw new ProtocolException(String.format("handler binder %s is not found.", codec.binder()));
+            throw new ProtocolException(String.format("handler binder %s is not found.", codec.pipeline()));
         }
         binder.build(pipeline, codec, chain, channel);
     }

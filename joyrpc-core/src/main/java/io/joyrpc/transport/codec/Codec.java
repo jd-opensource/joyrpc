@@ -26,11 +26,11 @@ package io.joyrpc.transport.codec;
 public interface Codec extends Decoder, Encoder {
 
     /**
-     * 绑定器名称，用于绑定具体的编解码到网络框架
+     * 管道工程，用于绑定具体的编解码到网络框架
      *
      * @return 绑定器名称
      */
-    default String binder() {
+    default String pipeline() {
         return "default";
     }
 

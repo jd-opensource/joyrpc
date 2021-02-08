@@ -48,7 +48,7 @@ public class HttpCodec implements Codec {
     }
 
     @Override
-    public String binder() {
+    public String pipeline() {
         return "http";
     }
 }

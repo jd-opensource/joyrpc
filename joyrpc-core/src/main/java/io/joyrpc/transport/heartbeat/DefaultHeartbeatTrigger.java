@@ -65,23 +65,17 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
     /**
      * 构造函数
      *
-     * @param channel
-     * @param url
-     * @param strategy
-     * @param publisher
+     * @param channel   连接通道
+     * @param url       url
+     * @param strategy  心跳策略
+     * @param publisher 事件发布器
      */
     public DefaultHeartbeatTrigger(Channel channel, URL url, HeartbeatStrategy strategy, Publisher<TransportEvent> publisher) {
         this.channel = channel;
         this.url = url;
         this.strategy = strategy;
         this.publisher = publisher;
-        this.afterRun = (msg, err) -> {
-            if (err != null) {
-                publisher.offer(new HeartbeatEvent(channel, url, err));
-            } else {
-                publisher.offer(new HeartbeatEvent(msg, channel, url));
-            }
-        };
+        this.afterRun = (msg, err) -> publisher.offer(err != null ? new HeartbeatEvent(channel, url, err) : new HeartbeatEvent(msg, channel, url));
     }
 
     @Override
@@ -91,21 +85,21 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
 
     @Override
     public void run() {
-        Message hbMsg;
+        Message heartbeatMessage;
         Supplier<Message> supplier = strategy.getHeartbeat();
         //关机状态不发送心跳了
-        if (!Shutdown.isShutdown() && supplier != null && (hbMsg = supplier.get()) != null) {
+        if (!Shutdown.isShutdown() && supplier != null && (heartbeatMessage = supplier.get()) != null) {
             if (channel.isActive()) {
                 FutureManager<Long, Message> futureManager = channel.getFutureManager();
                 //设置id
-                hbMsg.setMsgId(futureManager.generateId());
+                heartbeatMessage.setMsgId(futureManager.generateId());
                 //创建future
-                futureManager.create(hbMsg.getMsgId(), strategy.getTimeout(), afterRun);
+                futureManager.create(heartbeatMessage.getMsgId(), strategy.getTimeout(), afterRun);
                 //发送消息
-                channel.send(hbMsg, r -> {
-                    //心跳有应答消息
+                channel.send(heartbeatMessage, r -> {
+                    //心跳有应答消息，异步应答后会自动从futureManager删除
                     if (!r.isSuccess()) {
-                        futureManager.completeExceptionally(hbMsg.getMsgId(), r.getThrowable());
+                        futureManager.completeExceptionally(heartbeatMessage.getMsgId(), r.getThrowable());
                         logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:",
                                 Channel.toString(channel.getRemoteAddress())), r.getThrowable());
                     }

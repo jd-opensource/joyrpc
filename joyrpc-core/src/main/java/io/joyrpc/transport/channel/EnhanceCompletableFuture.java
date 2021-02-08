@@ -21,7 +21,7 @@ package io.joyrpc.transport.channel;
  */
 
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.util.Timer;
+import io.joyrpc.util.Timer.Timeout;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,8 +29,6 @@ import java.util.function.BiConsumer;
 
 /**
  * 增强的CompletableFuture
- *
- * @date: 2019/5/9
  */
 public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
     /**
@@ -44,9 +42,9 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
     /**
      * 超时时间
      */
-    protected final Timer.Timeout timeout;
+    protected final Timeout timeout;
     /**
-     * Transport上的请求数
+     * 连接上的请求计数器
      */
     protected final AtomicInteger requests;
     /**
@@ -64,28 +62,14 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      * @param messageId 消息ID
      * @param session   会话
      * @param timeout   超时
-     * @param requests  请求数
-     */
-    public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout,
-                                    final AtomicInteger requests) {
-        this.messageId = messageId;
-        this.session = session;
-        this.requests = requests;
-        this.timeout = timeout;
-        this.consumer = null;
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param messageId 消息ID
-     * @param session   会话
-     * @param timeout   超时
-     * @param requests  请求数
+     * @param requests  请求计数器
      * @param consumer  消费者
      */
-    public EnhanceCompletableFuture(final I messageId, final Session session, final Timer.Timeout timeout,
-                                    final AtomicInteger requests, BiConsumer<M, Throwable> consumer) {
+    public EnhanceCompletableFuture(final I messageId,
+                                    final Session session,
+                                    final Timeout timeout,
+                                    final AtomicInteger requests,
+                                    final BiConsumer<M, Throwable> consumer) {
         this.messageId = messageId;
         this.session = session;
         this.requests = requests;
@@ -101,7 +85,7 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
         return session;
     }
 
-    public Timer.Timeout getTimeout() {
+    public Timeout getTimeout() {
         return timeout;
     }
 

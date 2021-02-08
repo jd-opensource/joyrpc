@@ -139,6 +139,7 @@ public class DefaultChannelTransport implements ChannelTransport {
             future = futureManager.create(message.getMsgId(), timeout, session, requests);
             try {
                 channel.send(message, r -> {
+                    //异步收到应答消息后会自动调用future的完成
                     if (!r.isSuccess()) {
                         Throwable throwable = r.getThrowable() == null
                                 ? new ChannelSendException("unknown exception.")
@@ -151,7 +152,7 @@ public class DefaultChannelTransport implements ChannelTransport {
                 });
             } catch (Throwable e) {
                 //捕获系统异常
-                futureManager.completeExceptionally(message.getMsgId(),e);
+                futureManager.completeExceptionally(message.getMsgId(), e);
             }
         }
         return future;

@@ -24,6 +24,7 @@ import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer.TimeTask;
+import io.joyrpc.util.Timer.Timeout;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,7 +56,7 @@ public class FutureManager<I, M> {
     /**
      * 消费者
      */
-    protected Consumer<I> consumer;
+    protected Consumer<I> timeout;
     /**
      * Future管理，有些连接并发很少不需要初始化
      */
@@ -70,26 +71,7 @@ public class FutureManager<I, M> {
     public FutureManager(final Channel channel, final Supplier<I> idGenerator) {
         this.channel = channel;
         this.idGenerator = idGenerator;
-        this.consumer = id -> {
-            //TODO 这个是timer的线程触发，需要确保future的链式处理很快。如果长时间占用线程，会影响其它的定时逻辑
-            EnhanceCompletableFuture<I, M> future = futures.remove(id);
-            if (future != null) {
-                counter.decrementAndGet();
-                //超时
-                future.completeExceptionally(new TimeoutException("future is timeout."));
-            }
-        };
-    }
-
-    /**
-     * 创建一个future
-     *
-     * @param messageId     消息ID
-     * @param timeoutMillis 超时时间（毫秒）
-     * @return 完成状态
-     */
-    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis) {
-        return create(messageId, timeoutMillis, null, null, null);
+        this.timeout = id -> complete(id, null, new TimeoutException("future is timeout."));
     }
 
     /**
@@ -100,7 +82,8 @@ public class FutureManager<I, M> {
      * @param afterRun      结束后执行
      * @return 完成状态
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis,
+    public EnhanceCompletableFuture<I, M> create(final I messageId,
+                                                 final long timeoutMillis,
                                                  final BiConsumer<M, Throwable> afterRun) {
         return create(messageId, timeoutMillis, null, null, afterRun);
     }
@@ -114,8 +97,10 @@ public class FutureManager<I, M> {
      * @param requests      正在处理的请求数
      * @return 完成状态
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis,
-                                                 final Session session, final AtomicInteger requests) {
+    public EnhanceCompletableFuture<I, M> create(final I messageId,
+                                                 final long timeoutMillis,
+                                                 final Session session,
+                                                 final AtomicInteger requests) {
         return create(messageId, timeoutMillis, session, requests, null);
     }
 
@@ -129,14 +114,17 @@ public class FutureManager<I, M> {
      * @param afterRun      结束后执行
      * @return 完成状态
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId, final long timeoutMillis,
-                                                 final Session session, final AtomicInteger requests,
-                                                 final BiConsumer<M, Throwable> afterRun) {
+    protected EnhanceCompletableFuture<I, M> create(final I messageId,
+                                                    final long timeoutMillis,
+                                                    final Session session,
+                                                    final AtomicInteger requests,
+                                                    final BiConsumer<M, Throwable> afterRun) {
         return futures.computeIfAbsent(messageId, o -> {
             //增加计数器
             counter.incrementAndGet();
-            TimeTask task = new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, consumer);
-            return new EnhanceCompletableFuture<>(o, session, timer().add(task), requests, afterRun);
+            TimeTask task = new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, timeout);
+            Timeout timeout = timer().add(task);
+            return new EnhanceCompletableFuture<>(o, session, timeout, requests, afterRun);
         });
     }
 
@@ -158,13 +146,7 @@ public class FutureManager<I, M> {
      * @return 成功标识
      */
     public boolean complete(final I messageId, final M message) {
-        EnhanceCompletableFuture<I, M> result = futures.remove(messageId);
-        if (result != null) {
-            //减少计数器
-            counter.decrementAndGet();
-            return result.complete(message);
-        }
-        return false;
+        return complete(messageId, message, null);
     }
 
     /**
@@ -175,11 +157,23 @@ public class FutureManager<I, M> {
      * @return 成功标识
      */
     public boolean completeExceptionally(final I messageId, final Throwable throwable) {
+        return complete(messageId, null, throwable);
+    }
+
+    /**
+     * 结束
+     *
+     * @param messageId 消息ID
+     * @param message   消息
+     * @param throwable 异常
+     * @return 成功标识
+     */
+    protected boolean complete(final I messageId, final M message, final Throwable throwable) {
         EnhanceCompletableFuture<I, M> result = futures.remove(messageId);
         if (result != null) {
             //减少计数器
             counter.decrementAndGet();
-            return result.completeExceptionally(throwable);
+            return throwable != null ? result.completeExceptionally(throwable) : result.complete(message);
         }
         return false;
     }
@@ -247,19 +241,19 @@ public class FutureManager<I, M> {
         /**
          * 执行回调的消费者
          */
-        protected Consumer<I> consumer;
+        protected Consumer<I> timeout;
 
         /**
          * 构造函数
          *
          * @param messageId 消息ID
          * @param time      执行时间
-         * @param consumer  消费者
+         * @param timeout   消费者
          */
-        public FutureTimeoutTask(I messageId, long time, Consumer<I> consumer) {
+        public FutureTimeoutTask(I messageId, long time, Consumer<I> timeout) {
             this.messageId = messageId;
             this.time = time;
-            this.consumer = consumer;
+            this.timeout = timeout;
         }
 
         @Override
@@ -274,7 +268,7 @@ public class FutureManager<I, M> {
 
         @Override
         public void run() {
-            consumer.accept(messageId);
+            timeout.accept(messageId);
         }
     }
 

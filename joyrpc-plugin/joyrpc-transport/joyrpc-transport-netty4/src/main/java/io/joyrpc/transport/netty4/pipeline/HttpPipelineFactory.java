@@ -39,14 +39,14 @@ import io.netty.util.concurrent.EventExecutorGroup;
 public class HttpPipelineFactory extends AbstractPipelineFactory {
 
     @Override
-    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+    protected void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
         pipeline.addLast(DECODER, new HttpRequestDecoder());
         pipeline.addLast(HTTP_AGGREGATOR, new HttpObjectAggregator(65535));
         pipeline.addLast(ENCODER, new HttpResponseEncoder());
     }
 
     @Override
-    public void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
+    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
         //在业务线程池里面进展转换
         pipeline.addLast(group, HTTP_REQUEST_NORMALIZER, new HttpRequestNormalizer());
         super.build(pipeline, chain, channel, group);

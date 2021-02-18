@@ -9,9 +9,9 @@ package io.joyrpc.transport.channel;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * @date: 2019/2/21
+ * 共享连接通道管理器工厂
  */
 @Extension(value = "shared", singleton = true)
 public class SharedChannelManagerFactory implements ChannelManagerFactory {
@@ -35,10 +35,7 @@ public class SharedChannelManagerFactory implements ChannelManagerFactory {
     private Map<String, SharedChannelManager> managers = new ConcurrentHashMap<>();
 
     @Override
-    public ChannelManager getChannelManager(URL url) {
-        return managers.computeIfAbsent(
-                url.toString(false, false),
-                o -> new SharedChannelManager(url)
-        );
+    public ChannelManager getChannelManager(final URL url) {
+        return managers.computeIfAbsent(url.toString(false, false), o -> new SharedChannelManager(url));
     }
 }

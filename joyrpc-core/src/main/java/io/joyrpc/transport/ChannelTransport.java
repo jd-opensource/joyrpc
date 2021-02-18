@@ -35,7 +35,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
 /**
- * 连接传输通道
+ * 连接传输通道，用于定义发送消息和获取会话信息等接口
  */
 public interface ChannelTransport extends Transport {
 

@@ -46,7 +46,7 @@ public abstract class AbstractPipelineFactory implements PipelineFactory {
      * @param channel  连接通道
      * @param group    线程池
      */
-    public abstract void build(ChannelPipeline pipeline, Codec codec, Channel channel, EventExecutorGroup group);
+    protected abstract void build(ChannelPipeline pipeline, Codec codec, Channel channel, EventExecutorGroup group);
 
     /**
      * 构建管道
@@ -56,7 +56,7 @@ public abstract class AbstractPipelineFactory implements PipelineFactory {
      * @param channel  连接通道
      * @param group    线程池
      */
-    public void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
+    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
         //处理链
         if (chain != null) {
             chain.getHandlers().forEach((handler -> {

@@ -89,22 +89,38 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
             () -> new StateController<Channel>() {
                 @Override
                 public CompletableFuture<Channel> open() {
-                    return channelManager.getChannel(AbstractClient.this, getConnector()).whenComplete((ch, error) -> channel = ch);
+                    CompletableFuture<Channel> future = new CompletableFuture<>();
+                    channelManager.connect(AbstractClient.this, getConnector()).whenComplete((ch, error) -> {
+                        channel = ch;
+                        if (error == null) {
+                            future.complete(ch);
+                        } else {
+                            future.completeExceptionally(error);
+                        }
+                    });
+                    return future;
                 }
 
                 @Override
                 public CompletableFuture<Channel> close(boolean gracefully) {
+                    CompletableFuture<Channel> future = new CompletableFuture<>();
                     int id = transportId;
                     Channel ch = channel;
                     if (ch == null) {
-                        return CompletableFuture.completedFuture(null);
+                        future.complete(null);
                     } else {
-                        return ch.close().whenComplete((c, error) -> {
+                        ch.close().whenComplete((c, error) -> {
                             //channel不设置为null，防止正在处理的请求报空指针错误
                             //channel = null;
                             ch.removeSession(id);
+                            if (error == null) {
+                                future.complete(ch);
+                            } else {
+                                future.completeExceptionally(error);
+                            }
                         });
                     }
+                    return future;
                 }
             }, THROWABLE_FUNCTION);
 

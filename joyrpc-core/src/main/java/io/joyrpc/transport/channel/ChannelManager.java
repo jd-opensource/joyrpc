@@ -26,18 +26,18 @@ import io.joyrpc.transport.TransportClient;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 连接通道管理器
+ * 客户端连接通道管理器
  */
 public interface ChannelManager {
 
     /**
-     * 获取channel
+     * 获取连接通道并进行连接
      *
-     * @param transport 客户端通道
+     * @param client    客户端
      * @param connector 连接器
      * @return CompletableFuture
      */
-    CompletableFuture<Channel> getChannel(TransportClient transport, Connector connector);
+    CompletableFuture<Channel> connect(TransportClient client, Connector connector);
 
     /**
      * 获取存储channel的key

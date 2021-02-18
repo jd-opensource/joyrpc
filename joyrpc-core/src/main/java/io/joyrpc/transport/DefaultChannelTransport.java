@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,7 +48,7 @@ public class DefaultChannelTransport implements ChannelTransport {
      */
     protected URL url;
     /**
-     * 物理Channel
+     * 连接通道
      */
     protected Channel channel;
     /**
@@ -68,18 +69,14 @@ public class DefaultChannelTransport implements ChannelTransport {
     protected AtomicInteger requests = new AtomicInteger();
 
     protected DefaultChannelTransport(URL url) {
-        this.url = url;
+        this.url = Objects.requireNonNull(url);
         this.transportId = ID_GENERATOR.get();
     }
 
     public DefaultChannelTransport(Channel channel, URL url) {
-        this.url = url;
-        this.channel = channel;
-        if (channel.isServer()) {
-            this.transportId = 0;
-        } else {
-            this.transportId = ID_GENERATOR.get();
-        }
+        this.url = Objects.requireNonNull(url);
+        this.channel = Objects.requireNonNull(channel);
+        this.transportId = channel.isServer() ? 0 : ID_GENERATOR.get();
     }
 
     @Override
@@ -166,11 +163,6 @@ public class DefaultChannelTransport implements ChannelTransport {
     @Override
     public InetSocketAddress getLocalAddress() {
         return channel.getLocalAddress();
-    }
-
-    @Override
-    public URL getUrl() {
-        return url;
     }
 
     @Override

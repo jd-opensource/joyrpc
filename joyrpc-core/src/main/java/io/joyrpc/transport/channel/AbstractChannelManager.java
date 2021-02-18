@@ -25,11 +25,11 @@ import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.transport.TransportClient;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.DefaultHeartbeatTrigger;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
-import io.joyrpc.transport.TransportClient;
 import io.joyrpc.util.*;
 import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
@@ -71,14 +71,15 @@ public abstract class AbstractChannelManager implements ChannelManager {
     }
 
     @Override
-    public CompletableFuture<Channel> getChannel(final TransportClient transport, final Connector connector) {
-        if (connector == null) {
-            return Futures.completeExceptionally(new ConnectionException("opener can not be null."));
+    public CompletableFuture<Channel> connect(final TransportClient client, final Connector connector) {
+        if (client == null) {
+            return Futures.completeExceptionally(new ConnectionException("client can not be null."));
+        } else if (connector == null) {
+            return Futures.completeExceptionally(new ConnectionException("connector can not be null."));
         } else {
             //创建缓存通道
-            PoolChannel poolChannel = channels.computeIfAbsent(transport.getName(),
-                    o -> new PoolChannel(transport, connector, beforeClose));
-            return poolChannel.connect();
+            PoolChannel channel = channels.computeIfAbsent(client.getName(), o -> new PoolChannel(client, connector, beforeClose));
+            return channel.open();
         }
     }
 
@@ -88,7 +89,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
     /**
      * 池化的通道
      */
-    protected static class PoolChannel extends DecoratorChannel implements Connector {
+    protected static class PoolChannel extends DecoratorChannel {
         protected static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new ConnectionException(error);
         /**
          * 消息发布
@@ -130,27 +131,31 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 构造函数
          *
-         * @param transport   通道
+         * @param client      客户端
          * @param connector   连接器
          * @param beforeClose 关闭前事件
          */
-        protected PoolChannel(final TransportClient transport,
+        protected PoolChannel(final TransportClient client,
                               final Connector connector,
                               final Consumer<PoolChannel> beforeClose) {
             super(null);
-            this.publisher = transport.getPublisher();
-            this.name = transport.getName();
+            this.publisher = client.getPublisher();
+            this.name = client.getName();
             this.connector = connector;
             this.beforeClose = beforeClose;
-            this.strategy = transport.getHeartbeatStrategy();
+            this.strategy = client.getHeartbeatStrategy();
         }
 
         public State getState() {
             return stateMachine.getState();
         }
 
-        @Override
-        public CompletableFuture<Channel> connect() {
+        /**
+         * 连接
+         *
+         * @return CompletableFuture
+         */
+        protected CompletableFuture<Channel> open() {
             CompletableFuture<Channel> future = new CompletableFuture<>();
             stateMachine.open().whenComplete((ch, error) -> {
                 if (error == null) {

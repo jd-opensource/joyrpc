@@ -172,7 +172,7 @@ public abstract class AbstractServer implements TransportServer {
     }
 
     @Override
-    public void setChannelChain(final ChannelChain chain) {
+    public void setChain(final ChannelChain chain) {
         this.chain = chain;
     }
 

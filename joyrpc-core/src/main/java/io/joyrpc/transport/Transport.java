@@ -23,10 +23,14 @@ package io.joyrpc.transport;
 
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
+import io.joyrpc.transport.channel.ChannelChain;
+import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.util.IdGenerator;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.Supplier;
 
 /**
@@ -47,6 +51,50 @@ public interface Transport {
      * @return
      */
     URL getUrl();
+
+    /**
+     * 绑定处理链
+     *
+     * @param chain 链表
+     */
+    void setChain(ChannelChain chain);
+
+    /**
+     * 绑定编解码
+     *
+     * @param codec 编解码
+     */
+    void setCodec(Codec codec);
+
+    /**
+     * 设置业务线程池
+     *
+     * @param bizThreadPool 线程池
+     */
+    void setBizThreadPool(ThreadPoolExecutor bizThreadPool);
+
+    /**
+     * 获取当前配置的线程池
+     *
+     * @return 线程池
+     */
+    ThreadPoolExecutor getBizThreadPool();
+
+    /**
+     * 线程池异步执行
+     *
+     * @param runnable 执行块
+     */
+    default void runAsync(final Runnable runnable) {
+        if (runnable != null) {
+            ThreadPoolExecutor executor = getBizThreadPool();
+            if (executor != null) {
+                executor.execute(runnable);
+            } else {
+                CompletableFuture.runAsync(runnable);
+            }
+        }
+    }
 
     /**
      * 添加一个事件处理器

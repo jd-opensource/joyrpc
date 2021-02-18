@@ -132,8 +132,8 @@ public class DecoratorClient<T extends TransportClient> implements Client {
     }
 
     @Override
-    public void setChannelChain(final ChannelChain chain) {
-        transport.setChannelChain(chain);
+    public void setChain(final ChannelChain chain) {
+        transport.setChain(chain);
     }
 
     @Override

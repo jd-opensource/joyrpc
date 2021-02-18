@@ -173,7 +173,7 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
     }
 
     @Override
-    public void setChannelChain(final ChannelChain chain) {
+    public void setChain(final ChannelChain chain) {
         this.chain = chain;
     }
 

@@ -22,7 +22,6 @@ package io.joyrpc.transport.netty4.channel;
 
 import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ServerChannel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
 
@@ -30,17 +29,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 
 /**
  * Netty服务端连接通道
  */
-public class NettyServerChannel extends NettyChannel implements ServerChannel {
-
-    /**
-     * 服务端上下文
-     */
-    protected Supplier<List<Channel>> supplier;
+public class NettyServerChannel extends NettyChannel {
     /**
      * boss线程池
      */
@@ -56,21 +49,13 @@ public class NettyServerChannel extends NettyChannel implements ServerChannel {
      * @param channel     Netty连接通道
      * @param bossGroup   主线程池
      * @param workerGroup 工作线程池
-     * @param supplier    连接通道集合提供者
      */
     public NettyServerChannel(final io.netty.channel.Channel channel,
                               final EventLoopGroup bossGroup,
-                              final EventLoopGroup workerGroup,
-                              final Supplier<List<Channel>> supplier) {
+                              final EventLoopGroup workerGroup) {
         super(channel, true);
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
-        this.supplier = supplier;
-    }
-
-    @Override
-    public List<Channel> getChannels() {
-        return supplier.get();
     }
 
     @Override

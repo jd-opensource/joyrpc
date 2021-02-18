@@ -22,7 +22,7 @@ package io.joyrpc.transport.channel;
 
 
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.transport.TransportClient;
 
 /**
  * @date: 2019/2/21
@@ -36,7 +36,7 @@ public class UnsharedChannelManager extends AbstractChannelManager implements Ch
     }
 
     @Override
-    public String getChannelKey(final ClientTransport transport) {
+    public String getChannelKey(final TransportClient transport) {
         return transport == null ? null : transport.getUrl().add(TRANSPORT_ID, transport.getTransportId()).toString(false, false, TRANSPORT_ID);
     }
 

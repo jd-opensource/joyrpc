@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -21,24 +21,30 @@ package io.joyrpc.transport.transport;
  */
 
 
-import io.joyrpc.transport.Endpoint;
-import io.joyrpc.transport.channel.ServerChannel;
+import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.ProtocolDeduction;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 服务通道
+ * 服务端传输通道
  */
-public interface ServerTransport extends Transport, Endpoint {
+public interface TransportServer extends Transport, Endpoint<Void> {
 
     /**
-     * 获取连接此ServerTransport的所有ChannelTransport
+     * 获取所有的传输通道
      *
-     * @return
+     * @return 传输通道集合
      */
-    List<ChannelTransport> getChannelTransports();
+    List<ChannelTransport> getTransports();
+
+    /**
+     * 返回所有的连接通道
+     *
+     * @return 连接通道集合
+     */
+    List<Channel> getChannels();
 
     /**
      * 遍历Transport
@@ -47,19 +53,12 @@ public interface ServerTransport extends Transport, Endpoint {
      */
     default void forEach(final Consumer<ChannelTransport> consumer) {
         if (consumer != null) {
-            List<ChannelTransport> transports = getChannelTransports();
+            List<ChannelTransport> transports = getTransports();
             if (transports != null) {
                 transports.forEach(consumer);
             }
         }
     }
-
-    /**
-     * 获取服务通道
-     *
-     * @return 服务端连接通道
-     */
-    ServerChannel getServerChannel();
 
     /**
      * 设置协议推断

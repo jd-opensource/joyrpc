@@ -22,7 +22,7 @@ package io.joyrpc.invoker;
 
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.ChannelTransport;
 
 import java.io.Closeable;
 import java.util.List;

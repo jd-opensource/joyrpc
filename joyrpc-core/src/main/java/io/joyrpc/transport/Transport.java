@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -9,9 +9,9 @@ package io.joyrpc.transport.transport;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,9 +24,9 @@ package io.joyrpc.transport.transport;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.event.TransportEvent;
+import io.joyrpc.util.IdGenerator;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 /**
@@ -37,7 +37,7 @@ public interface Transport {
     /**
      * 获取本地地址
      *
-     * @return
+     * @return 本地地址
      */
     InetSocketAddress getLocalAddress();
 
@@ -49,18 +49,18 @@ public interface Transport {
     URL getUrl();
 
     /**
-     * 添加一个eventHandler
+     * 添加一个事件处理器
      *
-     * @param handler
+     * @param handler 事件处理器
      */
     default void addEventHandler(EventHandler<? extends TransportEvent> handler) {
 
     }
 
     /**
-     * 添加一组eventHandler
+     * 添加一组事件处理器
      *
-     * @param handlers
+     * @param handlers 事件处理器数组
      */
     default void addEventHandler(EventHandler<? extends TransportEvent>... handlers) {
         if (handlers != null) {
@@ -71,26 +71,26 @@ public interface Transport {
     }
 
     /**
-     * 移除一个eventHandler
+     * 移除一个事件处理器
      *
-     * @param handler
+     * @param handler 事件处理器
      */
     default void removeEventHandler(EventHandler<? extends TransportEvent> handler) {
 
     }
 
+    /**
+     * 获取通道序号
+     *
+     * @return 通道序号
+     */
     default int getTransportId() {
         return 0;
     }
 
-    Supplier<Integer> ID_GENERATOR = new Supplier<Integer>() {
-
-        protected AtomicInteger atomicInteger = new AtomicInteger(0);
-
-        @Override
-        public Integer get() {
-            return atomicInteger.incrementAndGet();
-        }
-    };
+    /**
+     * 传输通道序号生成器
+     */
+    Supplier<Integer> ID_GENERATOR = new IdGenerator.IntIdGenerator();
 
 }

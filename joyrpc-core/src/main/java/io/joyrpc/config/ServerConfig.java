@@ -25,7 +25,7 @@ import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.EndpointFactory;
-import io.joyrpc.transport.transport.TransportFactory;
+import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.util.network.Ipv4;
 
 import javax.validation.constraints.Max;

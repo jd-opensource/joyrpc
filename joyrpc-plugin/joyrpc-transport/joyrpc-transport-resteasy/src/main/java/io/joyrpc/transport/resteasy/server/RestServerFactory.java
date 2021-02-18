@@ -26,8 +26,8 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.transport.ClientTransport;
-import io.joyrpc.transport.transport.TransportFactory;
+import io.joyrpc.transport.TransportClient;
+import io.joyrpc.transport.TransportFactory;
 
 import java.util.function.Function;
 
@@ -46,7 +46,7 @@ public class RestServerFactory implements EndpointFactory {
     }
 
     @Override
-    public Client createClient(URL url, Function<ClientTransport, Client> function) {
+    public Client createClient(URL url, Function<TransportClient, Client> function) {
         throw new UnsupportedOperationException();
     }
 

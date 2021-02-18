@@ -22,7 +22,7 @@ package io.joyrpc.transport.channel;
 
 
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.transport.TransportClient;
 
 /**
  * 共享连接通道管理器
@@ -34,7 +34,7 @@ public class SharedChannelManager extends AbstractChannelManager implements Chan
     }
 
     @Override
-    public String getChannelKey(final ClientTransport transport) {
+    public String getChannelKey(final TransportClient transport) {
         if (transport == null) {
             return null;
         }

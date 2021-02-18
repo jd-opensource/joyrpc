@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -37,7 +37,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * 默认ChannelTransport实现
+ * 默认连接传输通道
  */
 public class DefaultChannelTransport implements ChannelTransport {
 

@@ -53,7 +53,7 @@ import io.joyrpc.transport.ShareServer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.message.Message;
-import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;

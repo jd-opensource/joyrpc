@@ -21,7 +21,7 @@ package io.joyrpc.invoker;
  */
 
 import io.joyrpc.Invoker;
-import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.ChannelTransport;
 
 /**
  * 回调处理器

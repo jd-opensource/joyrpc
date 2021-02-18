@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -45,9 +45,9 @@ import static io.joyrpc.Plugin.EVENT_BUS;
 import static io.joyrpc.constants.Constants.*;
 
 /**
- * 抽象的客户端通道，不支持并发打开关闭
+ * 抽象的客户端通道
  */
-public abstract class AbstractClientTransport extends DefaultChannelTransport implements ClientTransport {
+public abstract class AbstractClient extends DefaultChannelTransport implements TransportClient {
 
     protected static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new ConnectionException(error);
     /**
@@ -73,7 +73,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     /**
      * 名称
      */
-    protected String channelName;
+    protected String name;
     /**
      * 事件发布器
      */
@@ -89,7 +89,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
             () -> new StateController<Channel>() {
                 @Override
                 public CompletableFuture<Channel> open() {
-                    return channelManager.getChannel(AbstractClientTransport.this, getConnector()).whenComplete((ch, error) -> channel = ch);
+                    return channelManager.getChannel(AbstractClient.this, getConnector()).whenComplete((ch, error) -> channel = ch);
                 }
 
                 @Override
@@ -113,11 +113,11 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
      *
      * @param url
      */
-    public AbstractClientTransport(URL url) {
+    public AbstractClient(URL url) {
         super(url);
         this.channelManager = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION)).getChannelManager(url);
-        this.channelName = channelManager.getChannelKey(this);
-        this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLIENT_NAME, channelName, EVENT_PUBLISHER_TRANSPORT_CONF);
+        this.name = channelManager.getChannelKey(this);
+        this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLIENT_NAME, name, EVENT_PUBLISHER_TRANSPORT_CONF);
     }
 
     @Override
@@ -133,7 +133,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     /**
      * 获取连接器
      *
-     * @return
+     * @return 连接器
      */
     protected abstract Connector getConnector();
 
@@ -153,8 +153,8 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     }
 
     @Override
-    public String getChannelName() {
-        return channelName;
+    public String getName() {
+        return name;
     }
 
     @Override

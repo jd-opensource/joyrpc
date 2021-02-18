@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -35,7 +35,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
 /**
- * ChannelTransport
+ * 连接传输通道
  */
 public interface ChannelTransport extends Transport {
 

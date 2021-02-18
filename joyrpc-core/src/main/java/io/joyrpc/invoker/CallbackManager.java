@@ -39,8 +39,8 @@ import io.joyrpc.protocol.message.*;
 import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.transport.ChannelTransport;
-import io.joyrpc.transport.transport.Transport;
+import io.joyrpc.transport.ChannelTransport;
+import io.joyrpc.transport.Transport;
 import io.joyrpc.util.GrpcMethod;
 import io.joyrpc.util.network.Ipv4;
 

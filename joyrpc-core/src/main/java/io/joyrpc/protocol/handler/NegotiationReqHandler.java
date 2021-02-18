@@ -37,7 +37,7 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.ChannelTransport;
 
 import java.net.InetSocketAddress;
 import java.util.Map;

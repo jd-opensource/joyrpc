@@ -25,7 +25,6 @@ package io.joyrpc.protocol.telnet.handler;
 
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.telnet.TelnetResponse;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
@@ -76,7 +75,7 @@ public class PortTelnetHandler extends AbstractTelnetHandler {
             StringBuilder builder = new StringBuilder(1024);
             int size = 0;
             for (Server server : getServers()) {
-                size += showConnection(server.getServerChannel(), detail, builder);
+                size += showConnection(server, detail, builder);
             }
             builder.append("count:").append(size).append(LINE);
             return new TelnetResponse(builder.toString());
@@ -88,7 +87,7 @@ public class PortTelnetHandler extends AbstractTelnetHandler {
                 if (server == null) {
                     return new TelnetResponse("Invalid port " + portArg);
                 }
-                return new TelnetResponse(showConnection(server.getServerChannel(), detail));
+                return new TelnetResponse(showConnection(server, detail));
             } catch (NumberFormatException e) {
                 return new TelnetResponse("Invalid port " + portArg);
             }
@@ -98,26 +97,26 @@ public class PortTelnetHandler extends AbstractTelnetHandler {
 
     /**
      * 显示连接信息
-     * @param serverChannel 服务
+     * @param server 服务
      * @param detail 是否显示明细
      * @return 连接信息
      */
-    protected String showConnection(final ServerChannel serverChannel, final boolean detail) {
+    protected String showConnection(final Server server, final boolean detail) {
         StringBuilder builder = new StringBuilder(detail ? 1024 : 100);
-        int size = showConnection(serverChannel, detail, builder);
+        int size = showConnection(server, detail, builder);
         builder.append("count:").append(size).append(LINE);
         return builder.toString();
     }
 
     /**
      * 显示连接信息
-     * @param serverChannel 服务
+     * @param server 服务
      * @param detail 是否显示明细
      * @param builder 缓冲区
      * @return 连接信息
      */
-    protected int showConnection(final ServerChannel serverChannel, final boolean detail, final StringBuilder builder) {
-        List<Channel> channels = serverChannel.getChannels();
+    protected int showConnection(final Server server, final boolean detail, final StringBuilder builder) {
+        List<Channel> channels = server.getChannels();
         if (detail) {
             for (Channel cn : channels) {
                 builder.append(Channel.toString(cn)).append(LINE);

@@ -27,7 +27,7 @@ import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
 import io.joyrpc.transport.http2.Http2RequestMessage;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
-import io.joyrpc.transport.netty4.transport.NettyServerTransport;
+import io.joyrpc.transport.netty4.transport.NettyServer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
@@ -45,7 +45,7 @@ import static io.netty.util.CharsetUtil.UTF_8;
  */
 public class Http2ClientCodecHandler extends Http2ConnectionHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(NettyServerTransport.class);
+    private static final Logger logger = LoggerFactory.getLogger(NettyServer.class);
 
     /**
      * 流Key

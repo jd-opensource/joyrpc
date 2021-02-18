@@ -22,8 +22,6 @@ package io.joyrpc.transport;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.transport.ClientTransport;
-import io.joyrpc.transport.transport.TransportFactory;
 
 import java.util.function.Function;
 
@@ -31,46 +29,43 @@ import static io.joyrpc.Plugin.TRANSPORT_FACTORY;
 import static io.joyrpc.constants.Constants.TRANSPORT_FACTORY_OPTION;
 
 /**
- * @date: 2019/3/26
+ * 默认端点工厂类
  */
 @Extension(value = "default", order = 1)
 public class DefaultEndpointFactory implements EndpointFactory {
 
     @Override
     public Client createClient(final URL url) {
-        if (url == null) {
-            return null;
-        }
-        TransportFactory factory = getTransportFactory(url);
-        return factory == null ? null : new DecoratorClient(url, factory.createClientTransport(url));
+        return create(url, factory -> new DecoratorClient(url, factory.createClient(url)));
     }
 
     @Override
-    public Client createClient(URL url, Function<ClientTransport, Client> function) {
-        if (url == null) {
-            return null;
-        }
-        TransportFactory factory = getTransportFactory(url);
-        return factory == null ? null : (function == null ? new DecoratorClient(url, factory.createClientTransport(url))
-                : function.apply(factory.createClientTransport(url)));
+    public Client createClient(URL url, Function<TransportClient, Client> function) {
+        return create(url, factory -> function == null ? new DecoratorClient(url, factory.createClient(url)) :
+                function.apply(factory.createClient(url)));
     }
 
     @Override
     public Server createServer(final URL url) {
-        if (url == null) {
-            return null;
-        }
-        TransportFactory factory = getTransportFactory(url);
-        return factory == null ? null : new DecoratorServer(url, factory.createServerTransport(url));
+        return create(url, factory -> new DecoratorServer(url, factory.createServer(url)));
     }
 
     /**
-     * 获取通道工厂类
+     * 构建
      *
-     * @param url
+     * @param url      url
+     * @param function 函数
+     * @param <M>
      * @return
      */
-    protected TransportFactory getTransportFactory(final URL url) {
-        return TRANSPORT_FACTORY.getOrDefault(url.getString(TRANSPORT_FACTORY_OPTION));
+    protected <M> M create(final URL url, final Function<TransportFactory, M> function) {
+        if (url != null) {
+            TransportFactory factory = TRANSPORT_FACTORY.getOrDefault(url.getString(TRANSPORT_FACTORY_OPTION));
+            if (factory != null) {
+                return function.apply(factory);
+            }
+        }
+        return null;
+
     }
 }

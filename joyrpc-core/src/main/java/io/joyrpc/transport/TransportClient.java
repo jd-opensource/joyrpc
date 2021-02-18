@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -23,61 +23,61 @@ package io.joyrpc.transport.transport;
 
 import io.joyrpc.event.Publisher;
 import io.joyrpc.protocol.ClientProtocol;
-import io.joyrpc.transport.Endpoint;
+import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 
 /**
- * 客户端通道
+ * 传输通道客户端
  */
-public interface ClientTransport extends ChannelTransport, Endpoint {
+public interface TransportClient extends ChannelTransport, Endpoint<Channel> {
 
     /**
      * 设置心跳策略
      *
-     * @param heartbeatStrategy
+     * @param heartbeatStrategy 心跳策略
      */
     void setHeartbeatStrategy(HeartbeatStrategy heartbeatStrategy);
 
     /**
      * 获取心跳策略
      *
-     * @return
+     * @return 心跳策略
      */
     HeartbeatStrategy getHeartbeatStrategy();
 
     /**
      * 获取名称
      *
-     * @return
+     * @return 名称
      */
-    String getChannelName();
+    String getName();
 
     /**
      * 获取通道事件发布器
      *
-     * @return
+     * @return 事件发布器
      */
     Publisher<TransportEvent> getPublisher();
 
     /**
-     * 设置 clientTransport 的协议
+     * 设置客户端协议
      *
-     * @param protocol
+     * @param protocol 客户端协议
      */
     void setProtocol(ClientProtocol protocol);
 
     /**
-     * 获取 clientTransport 的协议
+     * 获取客户端的协议
      *
-     * @return
+     * @return 客户端协议
      */
     ClientProtocol getProtocol();
 
     /**
      * 获取正在处理的请求数，包括正在发送和等待应答的请求
      *
-     * @return
+     * @return 正在处理的请求数
      */
     int getRequests();
 

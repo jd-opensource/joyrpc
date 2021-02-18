@@ -29,7 +29,7 @@ import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.DefaultHeartbeatTrigger;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
-import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.transport.TransportClient;
 import io.joyrpc.util.*;
 import io.joyrpc.util.StateMachine.IntStateMachine;
 import org.slf4j.Logger;
@@ -71,19 +71,19 @@ public abstract class AbstractChannelManager implements ChannelManager {
     }
 
     @Override
-    public CompletableFuture<Channel> getChannel(final ClientTransport transport, final Connector connector) {
+    public CompletableFuture<Channel> getChannel(final TransportClient transport, final Connector connector) {
         if (connector == null) {
             return Futures.completeExceptionally(new ConnectionException("opener can not be null."));
         } else {
             //创建缓存通道
-            PoolChannel poolChannel = channels.computeIfAbsent(transport.getChannelName(),
+            PoolChannel poolChannel = channels.computeIfAbsent(transport.getName(),
                     o -> new PoolChannel(transport, connector, beforeClose));
             return poolChannel.connect();
         }
     }
 
     @Override
-    public abstract String getChannelKey(ClientTransport transport);
+    public abstract String getChannelKey(TransportClient transport);
 
     /**
      * 池化的通道
@@ -134,12 +134,12 @@ public abstract class AbstractChannelManager implements ChannelManager {
          * @param connector   连接器
          * @param beforeClose 关闭前事件
          */
-        protected PoolChannel(final ClientTransport transport,
+        protected PoolChannel(final TransportClient transport,
                               final Connector connector,
                               final Consumer<PoolChannel> beforeClose) {
             super(null);
             this.publisher = transport.getPublisher();
-            this.name = transport.getChannelName();
+            this.name = transport.getName();
             this.connector = connector;
             this.beforeClose = beforeClose;
             this.strategy = transport.getHeartbeatStrategy();

@@ -26,7 +26,7 @@ import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
 import io.joyrpc.transport.http2.Http2ResponseMessage;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
-import io.joyrpc.transport.netty4.transport.NettyServerTransport;
+import io.joyrpc.transport.netty4.transport.NettyServer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -43,7 +43,7 @@ import java.net.URLDecoder;
  */
 public class Http2ServerCodecHandler extends Http2ConnectionHandler implements Http2FrameListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(NettyServerTransport.class);
+    private static final Logger logger = LoggerFactory.getLogger(NettyServer.class);
     protected final Http2ConnectionDecoder decoder;
     protected final Http2ConnectionEncoder encoder;
     /**

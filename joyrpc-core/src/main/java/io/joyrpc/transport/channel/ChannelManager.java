@@ -21,7 +21,7 @@ package io.joyrpc.transport.channel;
  */
 
 
-import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.transport.TransportClient;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -37,7 +37,7 @@ public interface ChannelManager {
      * @param connector 连接器
      * @return CompletableFuture
      */
-    CompletableFuture<Channel> getChannel(ClientTransport transport, Connector connector);
+    CompletableFuture<Channel> getChannel(TransportClient transport, Connector connector);
 
     /**
      * 获取存储channel的key
@@ -45,7 +45,7 @@ public interface ChannelManager {
      * @param transport 通道
      * @return key
      */
-    String getChannelKey(ClientTransport transport);
+    String getChannelKey(TransportClient transport);
 
     /**
      * 连接器

@@ -22,12 +22,11 @@ package io.joyrpc.transport;
 
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.transport.ClientTransport;
 
 import java.util.function.Function;
 
 /**
- * Endpoint工厂类
+ * 端点工厂类
  */
 @Extensible("endpointFactory")
 public interface EndpointFactory {
@@ -47,13 +46,13 @@ public interface EndpointFactory {
      * @param function 自定义客户端函数
      * @return 客户端
      */
-    Client createClient(URL url, Function<ClientTransport, Client> function);
+    Client createClient(URL url, Function<TransportClient, Client> function);
 
     /**
      * 创建服务端
      *
-     * @param url
-     * @return
+     * @param url url
+     * @return 服务端
      */
     Server createServer(URL url);
 }

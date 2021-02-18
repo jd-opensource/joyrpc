@@ -24,11 +24,8 @@ import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
-import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
-import io.joyrpc.transport.transport.ChannelTransport;
-import io.joyrpc.transport.transport.ServerTransport;
 import io.joyrpc.util.State;
 
 import java.net.InetSocketAddress;
@@ -39,7 +36,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 /**
  * 装饰服务
  */
-public class DecoratorServer<T extends ServerTransport> implements Server {
+public class DecoratorServer<T extends TransportServer> implements Server {
 
     protected URL url;
     protected T transport;
@@ -54,23 +51,23 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
     }
 
     @Override
-    public CompletableFuture<Channel> open() {
+    public CompletableFuture<Void> open() {
         return transport.open();
     }
 
     @Override
-    public CompletableFuture<Channel> close() {
+    public CompletableFuture<Void> close() {
         return transport.close();
     }
 
     @Override
-    public List<ChannelTransport> getChannelTransports() {
-        return transport.getChannelTransports();
+    public List<ChannelTransport> getTransports() {
+        return transport.getTransports();
     }
 
     @Override
-    public ServerChannel getServerChannel() {
-        return transport.getServerChannel();
+    public List<Channel> getChannels() {
+        return transport.getChannels();
     }
 
     @Override

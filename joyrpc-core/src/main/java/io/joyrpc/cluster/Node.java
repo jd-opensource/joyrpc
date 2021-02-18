@@ -54,7 +54,7 @@ import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.transport.ClientTransport;
+import io.joyrpc.transport.TransportClient;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.*;
 import org.slf4j.Logger;
@@ -843,7 +843,7 @@ public class Node implements Shard {
     /**
      * 节点客户端
      */
-    protected static class NodeClient extends DecoratorClient<ClientTransport> {
+    protected static class NodeClient extends DecoratorClient<TransportClient> {
         /**
          * 处理器
          */
@@ -856,7 +856,7 @@ public class Node implements Shard {
          * @param transport 通道
          * @param handler   处理器
          */
-        public NodeClient(final URL url, final ClientTransport transport,
+        public NodeClient(final URL url, final TransportClient transport,
                           final EventHandler<? extends TransportEvent> handler) {
             super(url, transport);
             this.addEventHandler(handler);
@@ -901,7 +901,7 @@ public class Node implements Shard {
          * @param handler   处理器
          * @param node      节点
          */
-        public MetricClient(final URL url, final ClientTransport transport,
+        public MetricClient(final URL url, final TransportClient transport,
                             final EventHandler<? extends TransportEvent> handler,
                             final Node node) {
             super(url, transport, handler);

@@ -20,11 +20,9 @@ package io.joyrpc.transport;
  * #L%
  */
 
-import io.joyrpc.transport.transport.ServerTransport;
-
 /**
  * 服务接口
  */
-public interface Server extends ServerTransport, Endpoint {
+public interface Server extends TransportServer {
 
 }

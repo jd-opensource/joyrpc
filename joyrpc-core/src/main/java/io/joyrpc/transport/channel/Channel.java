@@ -34,7 +34,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * @date: 2019/1/7
+ * 连接通道
  */
 public interface Channel {
 
@@ -43,8 +43,6 @@ public interface Channel {
     String IDLE_HEARTBEAT_TRIGGER = "idleHeartbeatTrigger";
 
     String CHANNEL_TRANSPORT = "CHANNEL_TRANSPORT";
-
-    String SERVER_CHANNEL = "SERVER_CHANNEL";
 
     String CHANNEL_KEY = "CHANNEL_KEY";
 
@@ -55,7 +53,7 @@ public interface Channel {
     String EVENT_PUBLISHER = "EVENT_PUBLISHER";
 
     /**
-     * 连接转字符串
+     * 连接通道转字符串
      *
      * @param channel 通道
      * @return 字符串

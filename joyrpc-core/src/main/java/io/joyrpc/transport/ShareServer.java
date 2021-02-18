@@ -21,7 +21,6 @@ package io.joyrpc.transport;
  */
 
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.channel.Channel;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
@@ -51,13 +50,13 @@ public class ShareServer extends DecoratorServer<Server> {
     }
 
     @Override
-    public CompletableFuture<Channel> open() {
+    public CompletableFuture<Void> open() {
         counter.incrementAndGet();
         return super.open();
     }
 
     @Override
-    public CompletableFuture<Channel> close() {
+    public CompletableFuture<Void> close() {
         long ref = counter.decrementAndGet();
         if (ref == 0) {
             if (closing != null) {
@@ -65,7 +64,7 @@ public class ShareServer extends DecoratorServer<Server> {
             }
             return super.close();
         } else {
-            return CompletableFuture.completedFuture(getServerChannel());
+            return CompletableFuture.completedFuture(null);
         }
     }
 }

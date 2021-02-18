@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -22,7 +22,6 @@ package io.joyrpc.transport.transport;
 
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
-import io.joyrpc.transport.channel.Channel;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -34,39 +33,31 @@ import java.util.function.Function;
 public interface TransportFactory {
 
     /**
-     * 构造客户端Transport对象
+     * 构造传输通道客户端
      *
      * @param url URL
-     * @return
+     * @return 客户端传输通道
      */
-    ClientTransport createClientTransport(URL url);
+    TransportClient createClient(URL url);
 
     /**
-     * 构造服务端Transport对象
+     * 构造传输通道服务端
      *
      * @param url URL
-     * @return
+     * @return 服务端传输通道
      */
-    ServerTransport createServerTransport(URL url);
+    TransportServer createServer(URL url);
 
     /**
-     * 构造服务端Transport对象
+     * 构造传输通道服务端
      *
      * @param url        URL
-     * @param beforeOpen
-     * @param afterClose
-     * @return
+     * @param beforeOpen 打开前
+     * @param afterClose 打开后
+     * @return 服务端传输通道
      */
-    ServerTransport createServerTransport(URL url,
-                                          Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
-                                          Function<ServerTransport, CompletableFuture<Void>> afterClose);
+    TransportServer createServer(URL url,
+                                 Function<TransportServer, CompletableFuture<Void>> beforeOpen,
+                                 Function<TransportServer, CompletableFuture<Void>> afterClose);
 
-    /**
-     * 构造Channel的Transport对象
-     *
-     * @param channel
-     * @param url
-     * @return
-     */
-    ChannelTransport createChannelTransport(Channel channel, URL url);
 }

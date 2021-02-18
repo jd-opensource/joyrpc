@@ -46,7 +46,7 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.Server;
-import io.joyrpc.transport.transport.ServerTransport;
+import io.joyrpc.transport.TransportServer;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
 import org.slf4j.Logger;
@@ -251,7 +251,7 @@ public class Exporter extends AbstractService {
         if (server instanceof ConfigAware) {
             return ((ConfigAware) server).setup(config);
         } else if (server instanceof DecoratorServer) {
-            ServerTransport transport = ((DecoratorServer) server).getTransport();
+            TransportServer transport = ((DecoratorServer) server).getTransport();
             while (transport != null) {
                 if (transport instanceof ConfigAware) {
                     return ((ConfigAware) transport).setup(config);

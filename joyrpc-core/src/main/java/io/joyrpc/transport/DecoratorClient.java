@@ -32,7 +32,6 @@ import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.transport.ClientTransport;
 import io.joyrpc.util.State;
 
 import java.net.InetSocketAddress;
@@ -43,9 +42,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
 /**
- * @date: 2019/2/21
+ * 装饰客户端
  */
-public class DecoratorClient<T extends ClientTransport> implements Client {
+public class DecoratorClient<T extends TransportClient> implements Client {
     /**
      * URL
      */
@@ -184,8 +183,8 @@ public class DecoratorClient<T extends ClientTransport> implements Client {
     }
 
     @Override
-    public String getChannelName() {
-        return transport.getChannelName();
+    public String getName() {
+        return transport.getName();
     }
 
     @Override

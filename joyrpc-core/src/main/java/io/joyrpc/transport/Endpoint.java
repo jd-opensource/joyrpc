@@ -21,7 +21,6 @@ package io.joyrpc.transport;
  */
 
 
-import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.util.State;
@@ -31,23 +30,23 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
- * Endpoint
+ * 端点
  */
-public interface Endpoint {
+public interface Endpoint<M> {
 
     /**
      * 打开
      *
      * @return CompletableFuture
      */
-    CompletableFuture<Channel> open();
+    CompletableFuture<M> open();
 
     /**
      * 关闭
      *
      * @return CompletableFuture
      */
-    CompletableFuture<Channel> close();
+    CompletableFuture<M> close();
 
     /**
      * 获取本地地址
@@ -96,12 +95,14 @@ public interface Endpoint {
      *
      * @param runnable 执行块
      */
-    default void runAsync(Runnable runnable) {
-        ThreadPoolExecutor executor = getBizThreadPool();
-        if (executor != null) {
-            executor.execute(runnable);
-        } else {
-            CompletableFuture.runAsync(runnable);
+    default void runAsync(final Runnable runnable) {
+        if (runnable != null) {
+            ThreadPoolExecutor executor = getBizThreadPool();
+            if (executor != null) {
+                executor.execute(runnable);
+            } else {
+                CompletableFuture.runAsync(runnable);
+            }
         }
     }
 

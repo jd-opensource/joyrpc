@@ -32,7 +32,7 @@ import io.joyrpc.transport.netty4.channel.NettyClientChannel;
 import io.joyrpc.transport.netty4.handler.ConnectionHandler;
 import io.joyrpc.transport.netty4.handler.IdleHeartbeatHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
-import io.joyrpc.transport.transport.AbstractClientTransport;
+import io.joyrpc.transport.AbstractClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -52,13 +52,13 @@ import static io.joyrpc.transport.netty4.Plugin.PIPELINE_FACTORY;
 /**
  * Netty客户端连接
  */
-public class NettyClientTransport extends AbstractClientTransport {
+public class NettyClient extends AbstractClient {
     /**
      * 构造函数
      *
      * @param url
      */
-    public NettyClientTransport(URL url) {
+    public NettyClient(URL url) {
         super(url);
     }
 

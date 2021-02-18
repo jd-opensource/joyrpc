@@ -33,8 +33,8 @@ import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
 import io.joyrpc.transport.resteasy.mapper.ApplicationExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.ClientErrorExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.IllegalArgumentExceptionMapper;
-import io.joyrpc.transport.transport.ServerTransport;
-import io.joyrpc.transport.transport.TransportFactory;
+import io.joyrpc.transport.TransportServer;
+import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.util.Futures;
 import org.jboss.resteasy.core.SynchronousDispatcher;
 import org.jboss.resteasy.plugins.server.netty.RequestDispatcher;
@@ -54,7 +54,7 @@ import static io.joyrpc.constants.Constants.REST_ROOT;
 /**
  * Rest服务
  */
-public class RestServer extends DecoratorServer<ServerTransport> implements ConfigAware {
+public class RestServer extends DecoratorServer<TransportServer> implements ConfigAware {
 
     /**
      * 部署
@@ -69,7 +69,7 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
      */
     public RestServer(final URL url, final TransportFactory factory) {
         super(url, null);
-        this.transport = factory.createServerTransport(url, this::beforeOpen, this::afterClose);
+        this.transport = factory.createServer(url, this::beforeOpen, this::afterClose);
         this.deployment = new ResteasyDeployment();
     }
 
@@ -79,7 +79,7 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
      * @param transport
      * @return
      */
-    protected CompletableFuture<Void> beforeOpen(final ServerTransport transport) {
+    protected CompletableFuture<Void> beforeOpen(final TransportServer transport) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         try {
             deployment.start();
@@ -105,7 +105,7 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
      * @param transport
      * @return
      */
-    protected CompletableFuture<Void> afterClose(final ServerTransport transport) {
+    protected CompletableFuture<Void> afterClose(final TransportServer transport) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         try {
             deployment.stop();

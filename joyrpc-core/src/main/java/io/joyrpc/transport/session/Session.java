@@ -25,7 +25,7 @@ import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.protocol.ServerProtocol;
-import io.joyrpc.transport.transport.ChannelTransport;
+import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.util.SystemClock;
 
 import java.net.InetSocketAddress;

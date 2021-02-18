@@ -1,4 +1,4 @@
-package io.joyrpc.transport.transport;
+package io.joyrpc.transport;
 
 /*-
  * #%L
@@ -28,7 +28,6 @@ import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
-import io.joyrpc.transport.channel.ServerChannel;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.event.TransportEvent;
@@ -53,10 +52,10 @@ import static io.joyrpc.constants.Constants.EVENT_PUBLISHER_TRANSPORT_CONF;
 import static io.joyrpc.util.Timer.timer;
 
 /**
- * 抽象的服务传输通道
+ * 抽象的服务
  */
-public abstract class AbstractServerTransport implements ServerTransport {
-    private static final Logger logger = LoggerFactory.getLogger(AbstractServerTransport.class);
+public abstract class AbstractServer implements TransportServer {
+    private static final Logger logger = LoggerFactory.getLogger(AbstractServer.class);
     public static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new ConnectionException(error);
     /**
      * 计数器
@@ -85,7 +84,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 服务通道
      */
-    protected ServerChannel serverChannel;
+    protected Channel channel;
     /**
      * 上下文
      */
@@ -101,11 +100,11 @@ public abstract class AbstractServerTransport implements ServerTransport {
     /**
      * 打开
      */
-    protected Function<ServerTransport, CompletableFuture<Void>> beforeOpen;
+    protected Function<TransportServer, CompletableFuture<Void>> beforeOpen;
     /**
      * 关闭
      */
-    protected Function<ServerTransport, CompletableFuture<Void>> afterClose;
+    protected Function<TransportServer, CompletableFuture<Void>> afterClose;
     /**
      * ID
      */
@@ -116,16 +115,16 @@ public abstract class AbstractServerTransport implements ServerTransport {
     protected IntStateMachine<Channel, StateController<Channel>> stateMachine = new IntStateMachine<>(
             () -> new TransportController(this), THROWABLE_FUNCTION,
             new StateFuture<>(
-                    () -> beforeOpen == null ? null : beforeOpen.apply(AbstractServerTransport.this),
-                    () -> afterClose == null ? null : afterClose.apply(AbstractServerTransport.this)));
+                    () -> beforeOpen == null ? null : beforeOpen.apply(AbstractServer.this),
+                    () -> afterClose == null ? null : afterClose.apply(AbstractServer.this)));
 
-    public AbstractServerTransport(URL url) {
+    public AbstractServer(URL url) {
         this(url, null, null);
     }
 
-    public AbstractServerTransport(final URL url,
-                                   final Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
-                                   final Function<ServerTransport, CompletableFuture<Void>> afterClose) {
+    public AbstractServer(final URL url,
+                          final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
+                          final Function<TransportServer, CompletableFuture<Void>> afterClose) {
         this.url = url;
         this.host = url.getString(Constants.BIND_IP_KEY, url.getHost());
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_SERVER_NAME,
@@ -135,13 +134,13 @@ public abstract class AbstractServerTransport implements ServerTransport {
     }
 
     @Override
-    public CompletableFuture<Channel> open() {
-        return stateMachine.open();
+    public CompletableFuture<Void> open() {
+        return stateMachine.open().thenApply(ch -> null);
     }
 
     @Override
-    public CompletableFuture<Channel> close() {
-        return stateMachine.close(false);
+    public CompletableFuture<Void> close() {
+        return stateMachine.close(false).thenApply(ch -> null);
     }
 
     /**
@@ -157,28 +156,14 @@ public abstract class AbstractServerTransport implements ServerTransport {
         return stateMachine.getState();
     }
 
-    /**
-     * 返回所有的Channel
-     *
-     * @return
-     */
+    @Override
     public List<Channel> getChannels() {
         return new ArrayList<>(transports.keySet());
     }
 
     @Override
-    public List<ChannelTransport> getChannelTransports() {
+    public List<ChannelTransport> getTransports() {
         return new ArrayList<>(transports.values());
-    }
-
-    @Override
-    public ServerChannel getServerChannel() {
-        return serverChannel;
-    }
-
-    @Override
-    public InetSocketAddress getLocalAddress() {
-        return serverChannel.getLocalAddress();
     }
 
     @Override
@@ -224,6 +209,11 @@ public abstract class AbstractServerTransport implements ServerTransport {
     @Override
     public int getTransportId() {
         return transportId;
+    }
+
+    @Override
+    public InetSocketAddress getLocalAddress() {
+        return channel == null ? null : channel.getLocalAddress();
     }
 
     /**
@@ -309,43 +299,43 @@ public abstract class AbstractServerTransport implements ServerTransport {
         /**
          * 通道
          */
-        protected AbstractServerTransport transport;
+        protected AbstractServer server;
 
-        public TransportController(AbstractServerTransport transport) {
-            this.transport = transport;
+        public TransportController(AbstractServer server) {
+            this.server = server;
         }
 
         @Override
         public void handle(final StateEvent event) {
             switch (event.getType()) {
                 case StateEvent.SUCCESS_OPEN:
-                    logger.info(String.format("Success binding server to %s:%d", transport.host, transport.url.getPort()));
+                    logger.info(String.format("Success binding server to %s:%d", server.host, server.url.getPort()));
                     break;
                 case StateEvent.FAIL_OPEN:
-                    logger.error(String.format("Failed binding server to %s:%d", transport.host, transport.url.getPort()));
+                    logger.error(String.format("Failed binding server to %s:%d", server.host, server.url.getPort()));
                     break;
                 case StateEvent.SUCCESS_CLOSE:
-                    logger.info(String.format("Success destroying server at %s:%d", transport.host, transport.url.getPort()));
+                    logger.info(String.format("Success destroying server at %s:%d", server.host, server.url.getPort()));
                     break;
             }
         }
 
         @Override
         public CompletableFuture<Channel> open() {
-            return transport.bind(transport.host, transport.url.getPort()).whenComplete((ch, e) -> {
+            return server.bind(server.host, server.url.getPort()).whenComplete((ch, e) -> {
                 if (e == null) {
-                    transport.serverChannel = (ServerChannel) ch;
-                    transport.publisher.start();
+                    server.channel = ch;
+                    server.publisher.start();
                 }
             });
         }
 
         @Override
         public CompletableFuture<Channel> close(boolean gracefully) {
-            ServerChannel ch = transport.serverChannel;
+            Channel ch = server.channel;
             CompletableFuture<Channel> future = (ch == null ? CompletableFuture.completedFuture(null) : ch.close());
             return future.whenComplete((c, error) -> {
-                transport.publisher.close();
+                server.publisher.close();
                 //channel不设置为null，防止正在处理的请求报空指针错误
                 //serverChannel = null;
             });

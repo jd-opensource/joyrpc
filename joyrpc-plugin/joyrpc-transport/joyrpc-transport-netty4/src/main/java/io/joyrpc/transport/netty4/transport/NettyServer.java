@@ -32,9 +32,9 @@ import io.joyrpc.transport.netty4.codec.NettyDeductionContext;
 import io.joyrpc.transport.netty4.handler.ConnectionHandler;
 import io.joyrpc.transport.netty4.handler.ProtocolDeductionHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
-import io.joyrpc.transport.transport.AbstractServerTransport;
-import io.joyrpc.transport.transport.ChannelTransport;
-import io.joyrpc.transport.transport.ServerTransport;
+import io.joyrpc.transport.AbstractServer;
+import io.joyrpc.transport.ChannelTransport;
+import io.joyrpc.transport.TransportServer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -43,28 +43,22 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
 
 import java.net.InetSocketAddress;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static io.joyrpc.transport.codec.ProtocolDeduction.PROTOCOL_DEDUCTION_HANDLER;
 
 /**
- * Netty服务端
+ * Netty服务传输通道
  */
-public class NettyServerTransport extends AbstractServerTransport {
+public class NettyServer extends AbstractServer {
 
     /**
      * transport函数
      */
     protected final BiFunction<Channel, URL, ChannelTransport> function;
-    /**
-     * 连接通道列表提供者
-     */
-    protected final Supplier<List<Channel>> supplier = this::getChannels;
     /**
      * 断开连接处理器
      */
@@ -76,8 +70,8 @@ public class NettyServerTransport extends AbstractServerTransport {
      * @param url      url
      * @param function transport函数
      */
-    public NettyServerTransport(final URL url,
-                                final BiFunction<Channel, URL, ChannelTransport> function) {
+    public NettyServer(final URL url,
+                       final BiFunction<Channel, URL, ChannelTransport> function) {
         super(url);
         this.function = function;
     }
@@ -90,10 +84,10 @@ public class NettyServerTransport extends AbstractServerTransport {
      * @param afterClose 打开后
      * @param function   transport函数
      */
-    public NettyServerTransport(final URL url,
-                                final Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
-                                final Function<ServerTransport, CompletableFuture<Void>> afterClose,
-                                final BiFunction<Channel, URL, ChannelTransport> function) {
+    public NettyServer(final URL url,
+                       final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
+                       final Function<TransportServer, CompletableFuture<Void>> afterClose,
+                       final BiFunction<Channel, URL, ChannelTransport> function) {
         super(url, beforeOpen, afterClose);
         this.function = function;
     }
@@ -113,7 +107,7 @@ public class NettyServerTransport extends AbstractServerTransport {
                 EventLoopGroup workerGroup = EventLoopGroupFactory.getWorkerGroup(url);
                 ServerBootstrap bootstrap = configure(new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
                 bootstrap.bind(new InetSocketAddress(host, port)).addListener((ChannelFutureListener) f -> {
-                    NettyServerChannel channel = new NettyServerChannel(f.channel(), bossGroup, workerGroup, supplier);
+                    NettyServerChannel channel = new NettyServerChannel(f.channel(), bossGroup, workerGroup);
                     if (f.isSuccess()) {
                         future.complete(channel);
                     } else {
@@ -177,8 +171,7 @@ public class NettyServerTransport extends AbstractServerTransport {
         //设置payload,添加业务线程池到channel
         channel.setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
                 setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null).
-                setAttribute(Channel.CHANNEL_TRANSPORT, transport).
-                setAttribute(Channel.SERVER_CHANNEL, getServerChannel());
+                setAttribute(Channel.CHANNEL_TRANSPORT, transport);
         if (sslContext != null) {
             ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
         }

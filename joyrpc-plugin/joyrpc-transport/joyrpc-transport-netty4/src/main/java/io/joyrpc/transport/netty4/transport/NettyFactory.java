@@ -23,39 +23,39 @@ package io.joyrpc.transport.netty4.transport;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.transport.*;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.transport.*;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 /**
- * @date: 2019/2/21
+ * Netty传输通道工厂
  */
 @Extension("netty4")
 @ConditionalOnClass("io.netty.channel.Channel")
-public class NettyTransportFactory implements TransportFactory {
+public class NettyFactory implements TransportFactory {
+
+    /**
+     * 连接通道到传输通道的转换函数
+     */
+    protected static final BiFunction<Channel, URL, ChannelTransport> CHANNEL_TRANSPORT_FUNCTION = (channel, url) -> new DefaultChannelTransport(channel, url);
 
     @Override
-    public ClientTransport createClientTransport(final URL url) {
-        return new NettyClientTransport(url);
+    public TransportClient createClient(final URL url) {
+        return new NettyClient(url);
     }
 
     @Override
-    public ServerTransport createServerTransport(final URL url) {
-        return new NettyServerTransport(url, this::createChannelTransport);
+    public TransportServer createServer(final URL url) {
+        return new NettyServer(url, CHANNEL_TRANSPORT_FUNCTION);
     }
 
     @Override
-    public ServerTransport createServerTransport(final URL url,
-                                                 final Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
-                                                 final Function<ServerTransport, CompletableFuture<Void>> afterClose) {
-        return new NettyServerTransport(url, beforeOpen, afterClose, this::createChannelTransport);
+    public TransportServer createServer(final URL url,
+                                        final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
+                                        final Function<TransportServer, CompletableFuture<Void>> afterClose) {
+        return new NettyServer(url, beforeOpen, afterClose, CHANNEL_TRANSPORT_FUNCTION);
     }
-
-    @Override
-    public ChannelTransport createChannelTransport(final Channel channel, final URL url) {
-        return new DefaultChannelTransport(channel, url);
-    }
-
 }

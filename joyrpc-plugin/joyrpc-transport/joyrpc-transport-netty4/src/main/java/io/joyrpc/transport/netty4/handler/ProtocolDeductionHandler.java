@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.handler;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.ProtocolDeduction;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
-import io.joyrpc.transport.netty4.codec.ProtocolDeductionContext;
+import io.joyrpc.transport.netty4.codec.NettyDeductionContext;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -65,7 +65,7 @@ public class ProtocolDeductionHandler extends ChannelInboundHandlerAdapter {
             //第一条数据，进行协议判断，后续删除协议推断处理器
             ctx.pipeline().remove(PROTOCOL_DEDUCTION_HANDLER);
             //协议判断
-            deduction.deduce(new ProtocolDeductionContext(channel, ctx.pipeline()), new NettyChannelBuffer(in));
+            deduction.deduce(new NettyDeductionContext(channel, ctx.pipeline()), new NettyChannelBuffer(in));
             //如果第一个handler是sshHandler，此sshHandler本次不read
             ChannelHandlerContext firstContext = ctx.pipeline().firstContext();
             if (firstContext.handler() instanceof SslHandler) {

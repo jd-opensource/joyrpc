@@ -86,7 +86,6 @@ public abstract class AbstractServerTransport implements ServerTransport {
      * 服务通道
      */
     protected ServerChannel serverChannel;
-    //TODO 海量连接，数据流很大
     /**
      * 上下文
      */
@@ -188,7 +187,7 @@ public abstract class AbstractServerTransport implements ServerTransport {
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelChain chain) {
+    public void setChannelChain(final ChannelChain chain) {
         this.chain = chain;
     }
 

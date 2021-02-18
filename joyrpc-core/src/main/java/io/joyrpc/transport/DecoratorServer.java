@@ -74,8 +74,8 @@ public class DecoratorServer<T extends ServerTransport> implements Server {
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelChain chain) {
-        transport.setChannelHandlerChain(chain);
+    public void setChannelChain(final ChannelChain chain) {
+        transport.setChannelChain(chain);
     }
 
     @Override

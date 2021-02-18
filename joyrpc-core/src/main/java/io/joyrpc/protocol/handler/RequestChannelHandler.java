@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,12 +22,11 @@ package io.joyrpc.protocol.handler;
 
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.extension.ExtensionPoint;
 import io.joyrpc.extension.ExtensionSelector;
 import io.joyrpc.transport.MessageHandler;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.channel.ChannelReader;
 import io.joyrpc.transport.message.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,10 +36,8 @@ import java.util.function.BiConsumer;
 
 /**
  * 请求消息处理器
- *
- * @date: 2019/1/14
  */
-public class RequestChannelHandler<T extends MessageHandler> implements ChannelHandler {
+public class RequestChannelHandler<T extends MessageHandler> implements ChannelReader {
 
     protected final static Logger logger = LoggerFactory.getLogger(RequestChannelHandler.class);
 
@@ -56,20 +53,8 @@ public class RequestChannelHandler<T extends MessageHandler> implements ChannelH
     /**
      * 构造函数
      *
-     * @param handlers
-     * @param throwableConsumer
-     */
-    public RequestChannelHandler(final ExtensionPoint<T, Integer> handlers,
-                                 final BiConsumer<ChannelContext, Throwable> throwableConsumer) {
-        this.selector = new ExtensionSelector<>(handlers, (extensions, condition) -> extensions.get(condition));
-        this.throwableConsumer = throwableConsumer;
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param selector
-     * @param throwableConsumer
+     * @param selector          插件选择器
+     * @param throwableConsumer 异常提供者
      */
     public RequestChannelHandler(final ExtensionSelector<T, Integer, Integer, T> selector,
                                  final BiConsumer<ChannelContext, Throwable> throwableConsumer) {
@@ -79,40 +64,45 @@ public class RequestChannelHandler<T extends MessageHandler> implements ChannelH
     }
 
     @Override
-    public Object received(final ChannelContext context, final Object message) {
-        if (message != null && message instanceof Message) {
+    public void received(final ChannelContext context, final Object message) throws Exception {
+        if (isRequest(message)) {
             Message msg = (Message) message;
-            if (msg.isRequest()) {
-                //请求消息，调用对应处理器
-                T handler = selector.select(msg.getMsgType());
-                if (handler != null) {
-                    try {
-                        handler.handle(context, msg);
-                        return null;
-                    } catch (LafException e) {
-                        caught(context, e);
-                        return null;
-                    } catch (Throwable e) {
-                        caught(context, new RpcException(msg.getHeader(), e));
-                        return null;
-                    }
-                } else {
-                    caught(context, new RpcException(
-                            String.format("there is not any handler for %d from %s.", msg.getMsgType(),
-                                    Channel.toString(context.getChannel()))));
-                    return null;
+            //请求消息，调用对应处理器
+            T handler = selector.select(msg.getMsgType());
+            if (handler != null) {
+                try {
+                    handler.handle(context, msg);
+                } catch (LafException e) {
+                    caught(context, e);
+                } catch (Throwable e) {
+                    caught(context, new RpcException(msg.getHeader(), e));
                 }
+            } else {
+                caught(context, new RpcException(
+                        String.format("there is not any handler for %d from %s.", msg.getMsgType(),
+                                Channel.toString(context.getChannel()))));
             }
+        } else {
+            context.fireChannelRead(message);
         }
-        return message;
+    }
+
+    /**
+     * 判断是否是请求消息
+     *
+     * @param message 消息
+     * @return 请求消息标识
+     */
+    protected boolean isRequest(final Object message) {
+        return message instanceof Message && ((Message) message).isRequest();
     }
 
     @Override
-    public void caught(final ChannelContext context, final Throwable cause) {
+    public void caught(final ChannelContext context, final Throwable cause) throws Exception {
         if (throwableConsumer != null) {
             throwableConsumer.accept(context, cause);
         } else {
-            logger.error(String.format("Catch %s at %s : %s", cause.getClass().getName(),
+            logger.error(String.format("Caught %s at %s : %s", cause.getClass().getName(),
                     Channel.toString(context.getChannel()), cause.getMessage()));
         }
     }

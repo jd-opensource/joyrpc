@@ -57,7 +57,7 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     /**
      * 处理链
      */
-    protected ChannelChain handlerChain;
+    protected ChannelChain chain;
     /**
      * Channel管理器
      */
@@ -173,8 +173,8 @@ public abstract class AbstractClientTransport extends DefaultChannelTransport im
     }
 
     @Override
-    public void setChannelHandlerChain(final ChannelChain chain) {
-        this.handlerChain = chain;
+    public void setChannelChain(final ChannelChain chain) {
+        this.chain = chain;
     }
 
     @Override

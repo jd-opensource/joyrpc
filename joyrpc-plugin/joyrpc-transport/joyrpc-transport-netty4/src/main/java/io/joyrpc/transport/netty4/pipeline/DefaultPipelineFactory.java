@@ -21,41 +21,23 @@ package io.joyrpc.transport.netty4.pipeline;
  */
 
 import io.joyrpc.extension.Extension;
-import io.joyrpc.transport.channel.ChannelChainHandler;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.netty4.handler.ChannelHandlerAdapter;
 import io.joyrpc.transport.netty4.handler.MessageDecoder;
 import io.joyrpc.transport.netty4.handler.MessageEncoder;
-import io.netty.channel.ChannelHandler;
-
-import java.util.function.BiFunction;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * 默认管道工厂
  */
 @Extension("default")
-public class DefaultPipelineFactory implements PipelineFactory {
-
-    /**
-     * 函数
-     */
-    public static final BiFunction<ChannelChain, Channel, ChannelHandler> FUNCTION = (chain, channel) ->
-            new ChannelHandlerAdapter(new ChannelChainHandler(chain, channel.getAttribute(Channel.BIZ_THREAD_POOL)), channel);
+public class DefaultPipelineFactory extends AbstractPipelineFactory {
 
     @Override
-    public HandlerDefinition<ChannelChain>[] handlers() {
-        return new ChainDefinition[]{new ChainDefinition(HANDLER, FUNCTION)};
+    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+        pipeline.addLast(DECODER, new MessageDecoder(codec, channel));
+        pipeline.addLast(ENCODER, new MessageEncoder(codec, channel));
     }
 
-    @Override
-    public HandlerDefinition<Codec>[] decoders() {
-        return new CodecDefinition[]{new CodecDefinition(DECODER, MessageDecoder.FUNCTION)};
-    }
-
-    @Override
-    public HandlerDefinition<Codec>[] encoders() {
-        return new CodecDefinition[]{new CodecDefinition(ENCODER, MessageEncoder.FUNCTION)};
-    }
 }

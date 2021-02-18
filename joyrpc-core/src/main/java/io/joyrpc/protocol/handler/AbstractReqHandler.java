@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
 import java.util.function.Consumer;
 
 /**
- * 认证处理器
+ * 抽象的请求处理器
  */
 public abstract class AbstractReqHandler implements MessageHandler {
 

@@ -23,7 +23,7 @@ package io.joyrpc.protocol.telnet;
 import io.joyrpc.exception.ParserException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.channel.ChannelOperator;
 import io.joyrpc.transport.telnet.TelnetHandler;
 import io.joyrpc.transport.telnet.TelnetRequest;
 import io.joyrpc.transport.telnet.TelnetResponse;
@@ -36,9 +36,9 @@ import static io.joyrpc.transport.telnet.TelnetHandler.LINE;
 
 
 /**
- * @date: 2019/1/22
+ * Telnet处理器
  */
-public class TelnetChannelHandler implements ChannelHandler {
+public class TelnetChannelHandler implements ChannelOperator {
 
     /**
      * slf4j Logger for this class
@@ -47,13 +47,13 @@ public class TelnetChannelHandler implements ChannelHandler {
 
 
     @Override
-    public void inactive(final ChannelContext context) {
-        Channel channel = context.getChannel();
-        logger.info("Disconnected telnet from " + Channel.toString(channel));
+    public void inactive(final ChannelContext context) throws Exception {
+        logger.info("Disconnected telnet from " + Channel.toString(context.getChannel()));
+        context.fireChannelInactive();
     }
 
     @Override
-    public Object received(final ChannelContext context, final Object obj) {
+    public void received(final ChannelContext context, final Object obj) throws Exception {
         TelnetResponse response;
         Channel channel = context.getChannel();
         if (obj instanceof TelnetResponse) {
@@ -92,22 +92,17 @@ public class TelnetChannelHandler implements ChannelHandler {
                 response.getBuilder().append(LINE).append(request.getPrompt());
                 channel.send(response.getResponse(), response.getConsumer());
             }
-
         }
-
-        return null;
     }
 
     @Override
-    public void caught(final ChannelContext context, final Throwable throwable) {
-        Channel channel = context.getChannel();
+    public void caught(final ChannelContext context, final Throwable throwable) throws Exception {
         logger.error("Error occurs while handling telnet command.", throwable);
-        channel.send(throwable.getMessage(), r -> {
+        context.getChannel().send(throwable.getMessage(), r -> {
             if (!r.isSuccess()) {
                 logger.error(String.format("Error occurs while sending telnet command throwable message -- %s", throwable.getMessage()));
             }
         });
-        context.end();
     }
 
 

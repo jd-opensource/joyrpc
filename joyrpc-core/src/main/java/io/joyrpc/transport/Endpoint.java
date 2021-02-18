@@ -52,7 +52,7 @@ public interface Endpoint {
     /**
      * 获取本地地址
      *
-     * @return
+     * @return 本地地址
      */
     InetSocketAddress getLocalAddress();
 
@@ -66,14 +66,14 @@ public interface Endpoint {
     /**
      * 绑定初始 ChannelHandlerChain
      *
-     * @param chain
+     * @param chain 链表
      */
-    void setChannelHandlerChain(ChannelChain chain);
+    void setChannelChain(ChannelChain chain);
 
     /**
      * 绑定初始 codec
      *
-     * @param codec
+     * @param codec 编解码
      */
     void setCodec(Codec codec);
 

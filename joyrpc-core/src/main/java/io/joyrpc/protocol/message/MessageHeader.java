@@ -218,6 +218,11 @@ public class MessageHeader implements Header {
         this.timeout = timeout;
     }
 
+    public MessageHeader msgType(int msgType) {
+        this.msgType = (byte) msgType;
+        return this;
+    }
+
     /**
      * 获取扩展属性
      *

@@ -141,7 +141,7 @@ public class NettyClientTransport extends AbstractClientTransport {
                         ch.pipeline().addLast("connection", new ConnectionHandler(channels[0], publisher));
                         //添加编解码和处理链
                         PipelineFactory factory = PIPELINE_FACTORY.get(codec.pipeline());
-                        factory.build(ch.pipeline(), codec, handlerChain, channels[0]);
+                        factory.build(ch.pipeline(), codec, chain, channels[0]);
                         //若配置idle心跳策略，配置心跳handler
                         if (heartbeatStrategy != null && heartbeatStrategy.getHeartbeatMode() == HeartbeatMode.IDLE) {
                             ch.pipeline().

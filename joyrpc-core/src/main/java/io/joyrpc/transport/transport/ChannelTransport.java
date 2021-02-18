@@ -28,7 +28,10 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 
 import java.net.InetSocketAddress;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 
 /**
@@ -37,25 +40,26 @@ import java.util.function.BiConsumer;
 public interface ChannelTransport extends Transport {
 
     /**
-     * 获取channel
+     * 获取连接通道
      *
-     * @return
+     * @return 连接通道
      */
     Channel getChannel();
 
     /**
      * 发送一个消息（不关心响应）
      *
-     * @param message
+     * @param message 消息
+     * @return CompletableFuture
      */
     CompletableFuture<Void> oneway(Message message);
 
     /**
      * 同步发送一个请求
      *
-     * @param message
-     * @param timeoutMillis
-     * @return
+     * @param message       消息
+     * @param timeoutMillis 超时毫秒数
+     * @return 应答消息
      */
     default Message sync(final Message message, final int timeoutMillis) throws RpcException, TimeoutException {
         try {
@@ -73,19 +77,18 @@ public interface ChannelTransport extends Transport {
     /**
      * 异步发送一个请求
      *
-     * @param message
-     * @param timeoutMillis
-     * @return
+     * @param message       消息
+     * @param timeoutMillis 超时毫秒数
+     * @return CompletableFuture
      */
     CompletableFuture<Message> async(Message message, int timeoutMillis);
 
     /**
      * 异步发送一个请求
      *
-     * @param message
-     * @param action
-     * @param timeoutMillis
-     * @return
+     * @param message       消息
+     * @param action        消费者
+     * @param timeoutMillis 超时毫秒数
      */
     default void async(final Message message, final BiConsumer<Message, Throwable> action, final int timeoutMillis) {
         CompletableFuture<Message> future = async(message, timeoutMillis);
@@ -97,29 +100,29 @@ public interface ChannelTransport extends Transport {
     /**
      * 获取远程地址
      *
-     * @return
+     * @return 远程地址
      */
     InetSocketAddress getRemoteAddress();
 
     /**
      * 获取最后发送请求成功的时间
      *
-     * @return
+     * @return 最后发送请求成功的时间
      */
     long getLastRequestTime();
 
     /**
      * 返回会话
      *
-     * @return
+     * @return 会话
      */
     Session session();
 
     /**
      * 绑定会话
      *
-     * @param session
-     * @return
+     * @param session 会话
+     * @return 会话
      */
     Session session(Session session);
 

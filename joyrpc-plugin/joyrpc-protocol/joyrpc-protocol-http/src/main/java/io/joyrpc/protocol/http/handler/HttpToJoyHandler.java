@@ -28,7 +28,7 @@ import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.channel.ChannelReader;
 import io.joyrpc.transport.http.HttpHeaders;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http.HttpRequestMessage;
@@ -45,7 +45,7 @@ import static io.joyrpc.protocol.http.Plugin.HTTP_CONTROLLER;
 /**
  * HTTP转换成joy
  */
-public class HttpToJoyHandler implements ChannelHandler {
+public class HttpToJoyHandler implements ChannelReader {
 
     private final static Logger logger = LoggerFactory.getLogger(HttpToJoyHandler.class);
 
@@ -59,22 +59,19 @@ public class HttpToJoyHandler implements ChannelHandler {
     }
 
     @Override
-    public Object received(final ChannelContext ctx, final Object msg) {
-        if (!(msg instanceof HttpRequestMessage)) {
-            return msg;
-        }
-        HttpRequestMessage message = (HttpRequestMessage) msg;
-        HttpMethod method = message.getHttpMethod();
-        String uri = message.getUri();
-        try {
+    public void received(final ChannelContext ctx, final Object msg) throws Exception {
+        if (msg instanceof HttpRequestMessage) {
+            HttpRequestMessage message = (HttpRequestMessage) msg;
+            HttpMethod method = message.getHttpMethod();
+            String uri = message.getUri();
             switch (method) {
                 case GET:
                 case POST:
                 case PUT:
                     break;
                 default:
-                    writeError(ctx.getChannel(), "Only allow GET POST and PUT", message.headers().isKeepAlive());
-                    return null;
+                    ctx.writeAndFlush(error("Only allow GET POST and PUT", message.headers().isKeepAlive()));
+                    return;
             }
             // 相对路径，确保以"/"开头
             if (!uri.startsWith("/")) {
@@ -86,42 +83,46 @@ public class HttpToJoyHandler implements ChannelHandler {
             URL url = URL.valueOf(host + uri, "http", params);
             // 根据协议调用插件
             String contentType = (String) message.headers().get(HttpHeaders.Names.CONTENT_TYPE);
-            HttpController controller = contentType == null || contentType.isEmpty() ? null : CONTENT_TYPE_HANDLER.get(contentType);
-            if (controller != null) {
-                return controller.execute(ctx, message, url, params);
+            try {
+                HttpController controller = contentType == null || contentType.isEmpty() ? null : CONTENT_TYPE_HANDLER.get(contentType);
+                if (controller != null) {
+                    ctx.writeAndFlush(controller.execute(ctx, message, url, params));
+                } else {
+                    // 根据路径调用插件
+                    String path = url.getAbsolutePath();
+                    int pos = path.indexOf('/', 1);
+                    //获取插件
+                    controller = HTTP_CONTROLLER.get(pos > 0 ? path.substring(0, pos) : path);
+                    if (controller != null) {
+                        ctx.writeAndFlush(controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params));
+                    } else {
+                        ctx.writeAndFlush(defController.execute(ctx, message, url, params));
+                    }
+                }
+            } catch (Throwable e) {
+                // 解析请求body
+                logger.error(String.format("Error occurs while parsing http request for uri %s from %s", uri, Channel.toString(ctx.getChannel().getRemoteAddress())), e);
+                //write error msg back
+                ctx.writeAndFlush(error(e.getMessage(), message.headers().isKeepAlive()));
             }
-            // 根据路径调用插件
-            String path = url.getAbsolutePath();
-            int pos = path.indexOf('/', 1);
-            //获取插件
-            controller = HTTP_CONTROLLER.get(pos > 0 ? path.substring(0, pos) : path);
-            if (controller != null) {
-                return controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params);
-            }
-            return defController.execute(ctx, message, url, params);
-        } catch (Throwable e) {
-            // 解析请求body
-            logger.error(String.format("Error occurs while parsing http request for uri %s from %s", uri, Channel.toString(ctx.getChannel().getRemoteAddress())), e);
-            //write error msg back
-            writeError(ctx.getChannel(), e.getMessage(), message.headers().isKeepAlive());
-            return null;
+        } else {
+            ctx.fireChannelRead(msg);
         }
     }
 
     /**
      * 回写数据
      *
-     * @param channel     通道
      * @param error       异常消息
      * @param isKeepAlive 保持连接
      */
-    protected void writeError(final Channel channel, final String error, final boolean isKeepAlive) {
+    protected Object error(final String error, final boolean isKeepAlive) {
         ResponseMessage<ResponsePayload> response = new ResponseMessage<>();
         response.getHeader()
                 .addAttribute(HeaderMapping.CONTENT_TYPE.getNum(), "text/json; charset=UTF-8")
                 .addAttribute(KEEP_ALIVE.getNum(), isKeepAlive);
         response.setPayLoad(new ResponsePayload(new Exception(error)));
-        channel.send(response);
+        return response;
     }
 
 }

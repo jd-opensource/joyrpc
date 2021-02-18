@@ -38,7 +38,7 @@ import java.util.List;
 import static io.joyrpc.Plugin.*;
 
 /**
- * @date: 2019/3/18
+ * 抽象的协商处理器
  */
 public abstract class AbstractNegotiationHandler<T extends Message> implements MessageHandler<T> {
 
@@ -79,16 +79,14 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
                     logger.error("Negotiation response error, messge : {}", message.toString());
                 }
             });
-            //结束调用链
-            context.end();
         }
     }
 
     /**
      * 构建应答消息
      *
-     * @param request
-     * @param negotiation
+     * @param request 请求
+     * @param negotiation 协商应答
      * @return
      */
     protected abstract T createResponseMessage(final T request, final NegotiationResponse negotiation);
@@ -96,8 +94,8 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 进行协商
      *
-     * @param negotiation
-     * @return
+     * @param negotiation 协商
+     * @return 协议应答
      */
     protected NegotiationResponse negotiate(final AbstractNegotiation negotiation) {
         Result serialization = negotiate(SERIALIZATION, negotiation.getSerialization(), negotiation.getSerializations(), false);
@@ -113,8 +111,8 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 推荐请求的默认协议
      *
-     * @param negotiation
-     * @return
+     * @param negotiation 协商
+     * @return 协商
      */
     protected AbstractNegotiation recommendRequest(final AbstractNegotiation negotiation) {
         return negotiation;
@@ -123,8 +121,8 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 推荐应答的协议
      *
-     * @param negotiation
-     * @return
+     * @param negotiation  协商
+     * @return 协商
      */
     protected AbstractNegotiation recommendResponse(final AbstractNegotiation negotiation) {
         return negotiation;
@@ -133,9 +131,9 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 构造并保存session
      *
-     * @param context
-     * @param sessionId
-     * @param negotiation
+     * @param context 上下文
+     * @param sessionId 会话ID
+     * @param negotiation 协商
      */
     protected void session(final ChannelContext context, final int sessionId, final AbstractNegotiation negotiation) {
     }
@@ -177,9 +175,9 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 是否包含该插件
      *
-     * @param extension
-     * @param name
-     * @return
+     * @param extension 扩展点
+     * @param name 名称
+     * @return 包含标识
      */
     protected boolean include(final ExtensionPoint<? extends CodecType, String> extension, final String name) {
         return name == null || name.isEmpty() ? false : extension.get(name) != null;

@@ -26,9 +26,9 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.LengthFieldFrameCodec;
 import io.joyrpc.transport.codec.LengthFieldFrameCodec.LengthFieldFrame;
 import io.joyrpc.transport.netty4.handler.LengthFieldMessageDecoder;
-import io.netty.channel.ChannelHandler;
-
-import java.util.function.BiFunction;
+import io.joyrpc.transport.netty4.handler.MessageEncoder;
+import io.netty.channel.ChannelPipeline;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * 基于长度字段的管道工厂
@@ -36,26 +36,18 @@ import java.util.function.BiFunction;
 @Extension("lengthFieldFrame")
 public class LengthFieldFramePipelineFactory extends DefaultPipelineFactory {
 
-    /**
-     * 函数
-     */
-    public static final BiFunction<Codec, Channel, ChannelHandler> FUNCTION = (c, l) -> {
-        LengthFieldFrameCodec frameCodec = (LengthFieldFrameCodec) c;
+    @Override
+    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+        LengthFieldFrameCodec frameCodec = (LengthFieldFrameCodec) codec;
         LengthFieldFrame frame = frameCodec.getLengthFieldFrame();
         if (frame.getMaxFrameLength() <= 0) {
-            frame.setMaxFrameLength(l.getAttribute(Channel.PAYLOAD));
+            frame.setMaxFrameLength(channel.getAttribute(Channel.PAYLOAD));
         }
-        return new LengthFieldMessageDecoder(
-                frame.getMaxFrameLength(),
-                frame.getLengthFieldOffset(),
-                frame.getLengthFieldLength(),
-                frame.getLengthAdjustment(),
-                frame.getInitialBytesToStrip(),
-                frameCodec, l);
-    };
-
-    @Override
-    public HandlerDefinition<Codec>[] decoders() {
-        return new CodecDefinition[]{new CodecDefinition(DECODER, FUNCTION)};
+        pipeline.addLast(DECODER, new LengthFieldMessageDecoder(
+                frame.getMaxFrameLength(), frame.getLengthFieldOffset(),
+                frame.getLengthFieldLength(), frame.getLengthAdjustment(),
+                frame.getInitialBytesToStrip(), frameCodec, channel));
+        pipeline.addLast(ENCODER, new MessageEncoder(codec, channel));
     }
+
 }

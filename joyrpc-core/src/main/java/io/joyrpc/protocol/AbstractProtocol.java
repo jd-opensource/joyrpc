@@ -9,9 +9,9 @@ package io.joyrpc.protocol;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,8 +28,8 @@ import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.channel.ChannelChain;
+import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.message.Header;
 import org.slf4j.Logger;
@@ -41,8 +41,6 @@ import static io.joyrpc.protocol.MsgType.CallbackResp;
 
 /**
  * 抽象的协议
- *
- * @date: 2019/3/27
  */
 public abstract class AbstractProtocol implements Protocol {
 
@@ -60,7 +58,6 @@ public abstract class AbstractProtocol implements Protocol {
      * 出队消息转换器
      */
     protected MessageConverter outConverter;
-
     /**
      * 处理链
      */
@@ -99,18 +96,13 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 异常处理
      *
-     * @param context
-     * @param cause
+     * @param context   上下文
+     * @param throwable 异常
      */
-    protected void onException(final ChannelContext context, final Throwable cause) {
+    protected void onException(final ChannelContext context, final Throwable throwable) {
         Channel channel = context.getChannel();
-        if (!(cause instanceof LafException)
-                && cause.getCause() != null
-                && cause.getCause() instanceof LafException) {
-            //非rpc异常，可能为transport框架统一捕获后包装的异常，getCause()后，重新处理
-            onException(context, cause.getCause());
-            return;
-        }
+        //非rpc异常，可能为transport框架统一捕获后包装的异常，getCause()后，重新处理
+        Throwable cause = !(throwable instanceof LafException) && throwable.getCause() instanceof LafException ? throwable.getCause() : throwable;
         Header header = cause instanceof RpcException ? ((RpcException) cause).getHeader() : null;
         if (header instanceof MessageHeader) {
             onException(channel, (MessageHeader) header, (RpcException) cause);
@@ -122,9 +114,9 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 异常处理
      *
-     * @param channel
-     * @param header
-     * @param cause
+     * @param channel 连接通道
+     * @param header  消息头
+     * @param cause   异常
      */
     protected void onException(final Channel channel, final MessageHeader header, final RpcException cause) {
         MsgType msgType = MsgType.valueOf(header.getMsgType());
@@ -133,22 +125,20 @@ public abstract class AbstractProtocol implements Protocol {
                 //服务端
                 switch (msgType) {
                     case BizReq:
-                        header.setMsgType(BizResp.getType());
-                        sendException(channel, header, cause);
+                        ackException(channel, header.msgType(BizResp.getType()), cause);
                         break;
                     case BizResp:
-                        sendException(channel, header, cause);
+                        ackException(channel, header, cause);
                         break;
                 }
             } else {
                 //客户端
                 switch (msgType) {
                     case CallbackReq:
-                        header.setMsgType(CallbackResp.getType());
-                        sendException(channel, header, cause);
+                        ackException(channel, header.msgType(CallbackResp.getType()), cause);
                         break;
                     case CallbackResp:
-                        sendException(channel, header, cause);
+                        ackException(channel, header, cause);
                         break;
                 }
             }
@@ -160,18 +150,17 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 响应异常
      *
-     * @param channel
-     * @param header
-     * @param cause
+     * @param channel 连接通道
+     * @param header  消息头
+     * @param cause   异常
      */
-    protected void sendException(final Channel channel, final MessageHeader header, final RpcException cause) {
-        ResponseMessage<ResponsePayload> response = new ResponseMessage<>(header, new ResponsePayload(cause));
-        channel.send(response, (event -> {
-            if (!event.isSuccess()) {
+    protected void ackException(final Channel channel, final MessageHeader header, final RpcException cause) {
+        channel.send(new ResponseMessage<>(header, new ResponsePayload(cause)), result -> {
+            if (!result.isSuccess()) {
                 String address = Channel.toString(channel.getRemoteAddress()) + "->" + Channel.toString(channel.getLocalAddress());
                 logger.error("Error occurs while sending " + MsgType.valueOf(header.getMsgType()) + " message to " + address, cause.getMessage());
             }
-        }));
+        });
     }
 
     @Override
@@ -197,7 +186,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 构建入队消息转换器
      *
-     * @return
+     * @return 消息转换器
      */
     protected MessageConverter createInConverter() {
         return null;
@@ -206,7 +195,7 @@ public abstract class AbstractProtocol implements Protocol {
     /**
      * 构建出队消息转换器
      *
-     * @return
+     * @return 消息转换器
      */
     protected MessageConverter createOutConverter() {
         return null;

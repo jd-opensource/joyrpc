@@ -42,7 +42,7 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.channel.ChannelOperator;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
 import io.joyrpc.transport.http2.Http2Headers;
 import io.joyrpc.transport.http2.Http2RequestMessage;
@@ -66,7 +66,7 @@ import static io.joyrpc.util.StringUtils.split;
 /**
  * grpc服务端处理器
  */
-public class GrpcServerHandler implements ChannelHandler {
+public class GrpcServerHandler implements ChannelOperator {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcServerHandler.class);
     protected static final Supplier<LafException> EXCEPTION_SUPPLIER = () -> new CodecException(":path interfaceClazz/methodName with alias header or interfaceClazz/alias/methodName");
@@ -76,7 +76,7 @@ public class GrpcServerHandler implements ChannelHandler {
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 
     @Override
-    public Object received(final ChannelContext ctx, final Object message) {
+    public Object received(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof Http2RequestMessage) {
             Http2RequestMessage request = (Http2RequestMessage) message;
             try {
@@ -95,7 +95,7 @@ public class GrpcServerHandler implements ChannelHandler {
     }
 
     @Override
-    public Object wrote(final ChannelContext ctx, final Object message) {
+    public Object wrote(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof GrpcResponseMessage) {
             GrpcResponseMessage<?> response = (GrpcResponseMessage<?>) message;
             try {

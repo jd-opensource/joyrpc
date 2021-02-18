@@ -9,9 +9,9 @@ package io.joyrpc.protocol.handler;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,6 @@ package io.joyrpc.protocol.handler;
 
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.health.HealthProbe;
-import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
 import io.joyrpc.protocol.message.ResponseMessage;
@@ -32,9 +31,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @date: 2019/3/14
+ * 心跳请求处理器
  */
-public class HeartbeatReqHandler extends AbstractReqHandler implements MessageHandler {
+public class HeartbeatReqHandler extends AbstractReqHandler {
 
     private final static Logger logger = LoggerFactory.getLogger(HeartbeatReqHandler.class);
 
@@ -49,7 +48,6 @@ public class HeartbeatReqHandler extends AbstractReqHandler implements MessageHa
         ResponseMessage response = ResponseMessage.build(message, MsgType.HbResp.getType(),
                 new DefaultHeartbeatResponse(HealthProbe.getInstance().getState()));
         context.getChannel().send(response, sendFailed);
-        context.end();
     }
 
     @Override

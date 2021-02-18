@@ -1,4 +1,4 @@
-package io.joyrpc.transport.netty4.handler;
+package io.joyrpc.transport.channel;
 
 /*-
  * #%L
@@ -20,38 +20,38 @@ package io.joyrpc.transport.netty4.handler;
  * #L%
  */
 
-import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelContext;
-
 /**
- * Netty连接通道上下文
+ * 连接通道读取器
  */
-public class NettyChannelContext implements ChannelContext {
+public interface ChannelReader extends ChannelHandler {
+
     /**
-     * 连接通道
+     * 连接
+     *
+     * @param context 上下文
+     * @throws Exception
      */
-    protected final Channel channel;
+    default void active(final ChannelContext context) throws Exception {
+    }
+
     /**
-     * 结束标识
+     * 断链
+     *
+     * @param context 上下文
+     * @throws Exception
      */
-    protected boolean end;
-
-    public NettyChannelContext(final Channel channel) {
-        this.channel = channel;
+    default void inactive(final ChannelContext context) throws Exception {
     }
 
-    @Override
-    public Channel getChannel() {
-        return channel;
+    /**
+     * 接收消息
+     *
+     * @param context 上下文
+     * @param message 消息
+     * @throws Exception
+     */
+    default void received(final ChannelContext context, final Object message) throws Exception {
+
     }
 
-    @Override
-    public void end() {
-        end = true;
-    }
-
-    @Override
-    public boolean isEnd() {
-        return end;
-    }
 }

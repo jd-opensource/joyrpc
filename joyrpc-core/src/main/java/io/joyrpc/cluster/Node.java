@@ -436,7 +436,7 @@ public class Node implements Shard {
                 client.setHeartbeatStrategy(new MyHeartbeatStrategy(client, clusterUrl));
             }
             client.setCodec(clientProtocol.getCodec());
-            client.setChannelHandlerChain(clientProtocol.buildChain());
+            client.setChannelChain(clientProtocol.buildChain());
         }
         return client;
     }

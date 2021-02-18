@@ -23,7 +23,7 @@ package io.joyrpc.protocol.handler;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.channel.ChannelReader;
 import io.joyrpc.transport.channel.FutureManager;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
@@ -33,74 +33,51 @@ import org.slf4j.LoggerFactory;
 /**
  * 应答处理器
  */
-public class ResponseChannelHandler implements ChannelHandler {
+public class ResponseChannelHandler implements ChannelReader {
 
     protected static final Logger logger = LoggerFactory.getLogger(ResponseChannelHandler.class);
 
     @Override
-    public Object received(final ChannelContext context, final Object message) {
-        if (message instanceof Message && isResponseMsg((Message<?, ?>) message)) {
-            complete(context, (Message<?, ?>) message);
+    public void received(final ChannelContext context, final Object message) throws Exception {
+        if (isResponse(message)) {
+            Message<?, ?> msg = (Message<?, ?>) message;
+            FutureManager<Long, Message> futureManager = context.getChannel().getFutureManager();
+            if (futureManager != null && !futureManager.complete(msg.getMsgId(), msg)) {
+                logger.warn(String.format("request is timeout. id=%d, type=%d, remote=%s",
+                        msg.getMsgId(),
+                        msg.getMsgType(),
+                        Channel.toString(context.getChannel().getRemoteAddress())));
+            }
+        } else {
+            context.fireChannelRead(message);
         }
-        return message;
     }
 
     @Override
     public void caught(final ChannelContext context, final Throwable throwable) {
-        completeExceptionally(context, throwable);
+        if (throwable instanceof RpcException) {
+            Header header = ((RpcException) throwable).getHeader();
+            if (header != null) {
+                FutureManager<Long, Message> futureManager = context.getChannel().getFutureManager();
+                if (futureManager != null && !futureManager.completeExceptionally(header.getMsgId(), throwable)) {
+                    logger.warn(String.format("request is timeout. id=%d, type=%d, remote=%s",
+                            header.getMsgId(),
+                            header.getMsgType(),
+                            Channel.toString(context.getChannel().getRemoteAddress())));
+                }
+            }
+        }
+
     }
 
     /**
      * 判定是否为响应类型消息
      *
-     * @param message message 消息
+     * @param message 消息
      * @return 应答消息标识
      */
-    protected boolean isResponseMsg(final Message<?, ?> message) {
-        return !message.isRequest();
-    }
-
-    /**
-     * 完成
-     *
-     * @param context 上下文
-     * @param message 消息
-     */
-    protected void complete(final ChannelContext context, final Message<?, ?> message) {
-        FutureManager<Long, Message> futureManager = context.getChannel().getFutureManager();
-        if (futureManager != null) {
-            if (!futureManager.complete(message.getMsgId(), message)) {
-                logger.warn(String.format("request is timeout. id=%d, type=%d, remote=%s",
-                        message.getMsgId(),
-                        message.getMsgType(),
-                        Channel.toString(context.getChannel().getRemoteAddress())));
-            }
-        }
-        context.end();
-    }
-
-    /**
-     * 完成
-     *
-     * @param context   上下文
-     * @param throwable 异常
-     */
-    protected void completeExceptionally(final ChannelContext context, final Throwable throwable) {
-        if (throwable instanceof RpcException) {
-            Header header = ((RpcException) throwable).getHeader();
-            if (header != null) {
-                FutureManager<Long, Message> futureManager = context.getChannel().getFutureManager();
-                if (futureManager != null) {
-                    if (!futureManager.completeExceptionally(header.getMsgId(), throwable)) {
-                        logger.warn(String.format("request is timeout. id=%d, type=%d, remote=%s",
-                                header.getMsgId(),
-                                header.getMsgType(),
-                                Channel.toString(context.getChannel().getRemoteAddress())));
-                    }
-                }
-            }
-        }
-        context.end();
+    protected boolean isResponse(final Object message) {
+        return message instanceof Message && !((Message) message).isRequest();
     }
 
 }

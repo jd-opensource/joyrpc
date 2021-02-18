@@ -29,7 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @date: 2019/3/29
+ * 会话心跳请求处理器
  */
 public class SessionbeatReqHandler implements MessageHandler {
 
@@ -43,7 +43,6 @@ public class SessionbeatReqHandler implements MessageHandler {
         if (!res) {
             logger.warn(String.format("The session %s has expired when receiving sessionbeat message.", message.getSessionId()));
         }
-        context.end();
     }
 
     @Override

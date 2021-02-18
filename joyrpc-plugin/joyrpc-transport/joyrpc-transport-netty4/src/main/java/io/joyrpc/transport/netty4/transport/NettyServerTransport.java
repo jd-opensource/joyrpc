@@ -21,13 +21,14 @@ package io.joyrpc.transport.netty4.transport;
  */
 
 import io.joyrpc.constants.Constants;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.codec.DeductionContext;
+import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.netty4.channel.NettyChannel;
 import io.joyrpc.transport.netty4.channel.NettyServerChannel;
-import io.joyrpc.transport.netty4.codec.ProtocolDeductionContext;
+import io.joyrpc.transport.netty4.codec.NettyDeductionContext;
 import io.joyrpc.transport.netty4.handler.ConnectionHandler;
 import io.joyrpc.transport.netty4.handler.ProtocolDeductionHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
@@ -45,27 +46,35 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static io.joyrpc.transport.codec.ProtocolDeduction.PROTOCOL_DEDUCTION_HANDLER;
 
 /**
- * 服务端
- *
- * @date: 2019/2/21
+ * Netty服务端
  */
 public class NettyServerTransport extends AbstractServerTransport {
 
+    /**
+     * transport函数
+     */
     protected final BiFunction<Channel, URL, ChannelTransport> function;
-
+    /**
+     * 连接通道列表提供者
+     */
     protected final Supplier<List<Channel>> supplier = this::getChannels;
+    /**
+     * 断开连接处理器
+     */
+    protected final Consumer<Channel> inactive = this::removeChannel;
 
     /**
      * 构造函数
      *
-     * @param url
-     * @param function
+     * @param url      url
+     * @param function transport函数
      */
     public NettyServerTransport(final URL url,
                                 final BiFunction<Channel, URL, ChannelTransport> function) {
@@ -76,10 +85,10 @@ public class NettyServerTransport extends AbstractServerTransport {
     /**
      * 构造函数
      *
-     * @param url
-     * @param beforeOpen
-     * @param afterClose
-     * @param function
+     * @param url        url
+     * @param beforeOpen 打开前
+     * @param afterClose 打开后
+     * @param function   transport函数
      */
     public NettyServerTransport(final URL url,
                                 final Function<ServerTransport, CompletableFuture<Void>> beforeOpen,
@@ -131,13 +140,20 @@ public class NettyServerTransport extends AbstractServerTransport {
     protected ServerBootstrap configure(final ServerBootstrap bootstrap, final SslContext sslContext) {
         //io.netty.bootstrap.Bootstrap - Unknown channel option 'SO_BACKLOG' for channel
         bootstrap.channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
-                .childHandler(new MyChannelInitializer(url, sslContext))
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(SocketChannel ch) throws Exception {
+                        configure(ch, sslContext);
+                    }
+                })
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
                 .option(ChannelOption.SO_REUSEADDR, url.getBoolean(Constants.SO_REUSE_PORT_OPTION))
                 .option(ChannelOption.SO_BACKLOG, url.getPositiveInt(Constants.SO_BACKLOG_OPTION))
                 .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
-                .option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(url.getPositiveInt(Constants.WRITE_BUFFER_LOW_WATERMARK_OPTION),
-                        url.getPositiveInt(Constants.WRITE_BUFFER_HIGH_WATERMARK_OPTION)))
+                .option(ChannelOption.WRITE_BUFFER_WATER_MARK,
+                        new WriteBufferWaterMark(
+                                url.getPositiveInt(Constants.WRITE_BUFFER_LOW_WATERMARK_OPTION),
+                                url.getPositiveInt(Constants.WRITE_BUFFER_HIGH_WATERMARK_OPTION)))
                 .childOption(ChannelOption.SO_RCVBUF, url.getPositiveInt(Constants.SO_RECEIVE_BUF_OPTION))
                 .childOption(ChannelOption.SO_SNDBUF, url.getPositiveInt(Constants.SO_SEND_BUF_OPTION))
                 .childOption(ChannelOption.SO_KEEPALIVE, url.getBoolean(Constants.SO_KEEPALIVE_OPTION))
@@ -148,59 +164,56 @@ public class NettyServerTransport extends AbstractServerTransport {
     }
 
     /**
-     * 通道初始化
+     * 配置Socket连接通道
+     *
+     * @param ch         Socket连接通道
+     * @param sslContext ssl上下文
+     * @throws Exception
      */
-    protected class MyChannelInitializer extends ChannelInitializer<SocketChannel> {
-        /**
-         * URL
-         */
-        protected URL url;
-        /**
-         * SSL上下文
-         */
-        protected SslContext sslContext;
+    protected void configure(final SocketChannel ch, final SslContext sslContext) throws Exception {
+        //及时发送 与 缓存发送
+        Channel channel = new NettyChannel(ch, true);
+        ChannelTransport transport = function.apply(channel, url);
+        //设置payload,添加业务线程池到channel
+        channel.setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
+                setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null).
+                setAttribute(Channel.CHANNEL_TRANSPORT, transport).
+                setAttribute(Channel.SERVER_CHANNEL, getServerChannel());
+        if (sslContext != null) {
+            ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
+        }
+        ch.pipeline().addLast("connection", new ServerConnectionHandler(channel, publisher, inactive));
+        if (deduction != null) {
+            ch.pipeline().addLast(PROTOCOL_DEDUCTION_HANDLER, new ProtocolDeductionHandler(deduction, channel));
+        } else {
+            NettyDeductionContext.create(channel, ch.pipeline()).bind(codec, chain);
+        }
+        addChannel(channel, transport);
+    }
 
+    /**
+     * 服务端连接处理器
+     */
+    protected static class ServerConnectionHandler extends ConnectionHandler {
         /**
-         * 构造函数
-         *
-         * @param url
-         * @param sslContext
+         * 断开连接的消费者
          */
-        public MyChannelInitializer(URL url, SslContext sslContext) {
-            this.url = url;
-            this.sslContext = sslContext;
+        protected final Consumer<Channel> inactive;
+
+        public ServerConnectionHandler(final Channel channel,
+                                       final Publisher<TransportEvent> publisher,
+                                       final Consumer<Channel> inactive) {
+            super(channel, publisher);
+            this.inactive = inactive;
         }
 
         @Override
-        protected void initChannel(final SocketChannel ch) {
-            //及时发送 与 缓存发送
-            Channel channel = new NettyChannel(ch, true);
-            //设置payload,添加业务线程池到channel
-            channel.setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
-                    setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
-            if (sslContext != null) {
-                ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
+        public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
+            if (inactive != null) {
+                inactive.accept(channel);
             }
-            ch.pipeline().addLast("connection", new ConnectionHandler(channel, publisher) {
-                @Override
-                public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-                    removeChannel(channel);
-                    super.channelInactive(ctx);
-                    logger.info(String.format("disconnect %s", ctx.channel().remoteAddress()));
-                }
-            });
-
-            if (deduction != null) {
-                ch.pipeline().addLast(PROTOCOL_DEDUCTION_HANDLER, new ProtocolDeductionHandler(deduction, channel));
-            } else {
-                DeductionContext context = new ProtocolDeductionContext(channel, ch.pipeline());
-                context.bind(codec, chain);
-            }
-
-            ChannelTransport transport = function.apply(channel, url);
-            channel.setAttribute(Channel.CHANNEL_TRANSPORT, transport);
-            channel.setAttribute(Channel.SERVER_CHANNEL, getServerChannel());
-            addChannel(channel, transport);
+            super.channelInactive(ctx);
+            logger.info(String.format("disconnect %s", ctx.channel().remoteAddress()));
         }
     }
 

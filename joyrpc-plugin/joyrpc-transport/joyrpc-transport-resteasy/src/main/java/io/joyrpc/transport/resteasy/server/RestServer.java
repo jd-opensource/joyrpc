@@ -117,7 +117,7 @@ public class RestServer extends DecoratorServer<ServerTransport> implements Conf
     }
 
     @Override
-    public void setChannelHandlerChain(ChannelChain chain) {
+    public void setChannelChain(ChannelChain chain) {
     }
 
     @Override

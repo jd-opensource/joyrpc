@@ -33,9 +33,11 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.*;
+import io.netty.handler.logging.LogLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static io.netty.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
 import static io.netty.util.CharsetUtil.UTF_8;
 
 /**
@@ -147,6 +149,39 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
     }
 
     /**
+     * 构建HTTP2客户端编解码处理器
+     *
+     * @param channel    连接通道
+     * @param http2Codec 编解码
+     * @return HTTP2客户端编解码处理器
+     */
+    public static Http2ClientCodecHandler create(final Channel channel, final Http2Codec http2Codec) {
+
+        Http2Connection connection = new DefaultHttp2Connection(false);
+        WeightedFairQueueByteDistributor dist = new WeightedFairQueueByteDistributor(connection);
+        dist.allocationQuantum(16 * 1024); // Make benchmarks fast again.
+        connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection, dist));
+        connection.local().flowController(new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));
+
+        Http2HeadersDecoder headersDecoder = new DefaultHttp2HeadersDecoder(true);
+        Http2FrameLogger frameLogger = new Http2FrameLogger(LogLevel.DEBUG, DefaultHttp2ConnectionDecoder.class);
+        Http2FrameReader frameReader = new DefaultHttp2FrameReader(headersDecoder);
+        Http2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
+        frameReader = new Http2InboundFrameLogger(frameReader, frameLogger);
+        frameWriter = new Http2OutboundFrameLogger(frameWriter, frameLogger);
+
+        StreamBufferingEncoder encoder = new StreamBufferingEncoder(new DefaultHttp2ConnectionEncoder(connection, frameWriter));
+        Http2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(connection, encoder, frameReader);
+
+        Http2Settings settings = new Http2Settings();
+        settings.pushEnabled(false);
+        settings.initialWindowSize(1048576);
+        settings.maxConcurrentStreams(0);
+        settings.maxHeaderListSize(8192);
+        return new Http2ClientCodecHandler(decoder, encoder, settings, channel, http2Codec);
+    }
+
+    /**
      * 处理请求
      *
      * @param ctx
@@ -199,7 +234,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             long bizMsgId = 0;
             try {
                 bizMsgId = http2Stream.getProperty(streamKey);
-            }catch (Throwable e){
+            } catch (Throwable e) {
             }
             Http2Headers headers = http2Stream.getProperty(headerKey);
             handleRequest(ctx, streamId, bizMsgId, headers, data);

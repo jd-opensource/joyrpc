@@ -30,7 +30,7 @@ import java.util.List;
 public class ChannelChain {
 
     /**
-     * 处理链
+     * 处理器
      */
     protected LinkedList<ChannelHandler> handlers = new LinkedList<>();
 
@@ -40,7 +40,7 @@ public class ChannelChain {
     public ChannelChain(ChannelHandler... handlers) {
         if (handlers != null) {
             for (ChannelHandler handler : handlers) {
-                this.handlers.addLast(handler);
+                addLast(handler);
             }
         }
     }
@@ -84,11 +84,6 @@ public class ChannelChain {
         return this;
     }
 
-    /**
-     * 获取处理链
-     *
-     * @return 处理器列表
-     */
     public List<ChannelHandler> getHandlers() {
         return handlers;
     }

@@ -35,10 +35,7 @@ import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
 import io.joyrpc.protocol.grpc.exception.GrpcBizException;
 import io.joyrpc.protocol.message.*;
-import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
-import io.joyrpc.transport.channel.EnhanceCompletableFuture;
+import io.joyrpc.transport.channel.*;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http2.DefaultHttp2Headers;
 import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
@@ -66,7 +63,7 @@ import static io.joyrpc.util.StringUtils.split;
 /**
  * grpc client端消息转换handler
  */
-public class GrpcClientHandler implements ChannelHandler {
+public class GrpcClientHandler implements ChannelOperator {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcClientHandler.class);
 
@@ -75,7 +72,7 @@ public class GrpcClientHandler implements ChannelHandler {
     protected Map<Integer, Http2ResponseMessage> http2ResponseNoEnds = new ConcurrentHashMap<>();
 
     @Override
-    public Object received(final ChannelContext ctx, final Object message) {
+    public Object received(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof Http2ResponseMessage) {
             Http2ResponseMessage response = (Http2ResponseMessage) message;
             try {
@@ -93,7 +90,7 @@ public class GrpcClientHandler implements ChannelHandler {
     }
 
     @Override
-    public Object wrote(final ChannelContext ctx, final Object message) {
+    public Object wrote(final ChannelContext ctx, final Object message)  throws Exception{
         if (message instanceof RequestMessage) {
             RequestMessage<?> request = (RequestMessage<?>) message;
             try {

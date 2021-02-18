@@ -26,50 +26,22 @@ package io.joyrpc.transport.channel;
 public interface ChannelHandler {
 
     /**
-     * 连接
-     *
-     * @param context 上下文
-     */
-    default void active(final ChannelContext context) {
-    }
-
-    /**
-     * 断链
-     *
-     * @param context 上下文
-     */
-    default void inactive(final ChannelContext context) {
-    }
-
-    /**
-     * 接收消息
-     *
-     * @param context 上下文
-     * @param message 消息
-     * @return 转换的消息
-     */
-    default Object received(final ChannelContext context, final Object message) {
-        return message;
-    }
-
-    /**
-     * 写消息
-     *
-     * @param context 上下文
-     * @param message 消息
-     * @return 转换的消息
-     */
-    default Object wrote(final ChannelContext context, final Object message) {
-        return message;
-    }
-
-    /**
      * 异常
      *
      * @param context   上下文
      * @param throwable 异常
+     * @throws Exception
      */
-    default void caught(final ChannelContext context, final Throwable throwable) {
+    default void caught(final ChannelContext context, final Throwable throwable) throws Exception {
 
+    }
+
+    /**
+     * 名称
+     *
+     * @return 名臣
+     */
+    default String name() {
+        return this.getClass().getSimpleName();
     }
 }

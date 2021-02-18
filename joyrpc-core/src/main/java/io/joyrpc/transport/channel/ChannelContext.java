@@ -21,6 +21,8 @@ package io.joyrpc.transport.channel;
  */
 
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * 连接通道上下文
  */
@@ -34,14 +36,49 @@ public interface ChannelContext {
     Channel getChannel();
 
     /**
-     * 终止处理链执行
+     * 传递连接事件
      */
-    void end();
+    void fireChannelActive();
 
     /**
-     * 判断是否已终止
-     *
-     * @return 已终止标识
+     * 传递连接断开事件
      */
-    boolean isEnd();
+    void fireChannelInactive();
+
+    /**
+     * 传递异常事件
+     */
+    void fireExceptionCaught(Throwable cause);
+
+    /**
+     * 传递数据读取事件
+     */
+    void fireChannelRead(Object msg);
+
+    /**
+     * 传递数据读取完毕事件
+     */
+    void fireChannelReadComplete();
+
+    /**
+     * 写数据
+     *
+     * @param msg 数据
+     * @return CompletableFuture
+     */
+    CompletableFuture<Void> write(Object msg);
+
+    /**
+     * 写并且提交数据
+     *
+     * @param msg 数据
+     * @return CompletableFuture
+     */
+    CompletableFuture<Void> writeAndFlush(Object msg);
+
+    /**
+     * 提交数据
+     */
+    void flush();
+
 }

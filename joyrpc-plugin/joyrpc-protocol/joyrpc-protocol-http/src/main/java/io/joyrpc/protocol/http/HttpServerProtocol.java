@@ -32,6 +32,7 @@ import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.HttpCodec;
 
+import static io.joyrpc.Plugin.MESSAGE_HANDLER_SELECTOR;
 import static io.joyrpc.protocol.Protocol.HTTP_ORDER;
 
 /**
@@ -63,7 +64,7 @@ public class HttpServerProtocol extends AbstractProtocol implements ServerProtoc
         if (chain == null) {
             chain = new ChannelChain()
                     .addLast(new HttpToJoyHandler())
-                    .addLast(new RequestChannelHandler<>(io.joyrpc.Plugin.MESSAGE_HANDLER_SELECTOR, this::onException))
+                    .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
                     .addLast(new JoyToHttpHandler())
                     .addLast(new ResponseChannelHandler());
         }

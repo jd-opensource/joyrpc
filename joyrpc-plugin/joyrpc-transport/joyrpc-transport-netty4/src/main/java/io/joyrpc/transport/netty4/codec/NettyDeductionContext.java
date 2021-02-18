@@ -33,17 +33,17 @@ import static io.joyrpc.transport.netty4.Plugin.PIPELINE_FACTORY;
 /**
  * 协议推断上下文
  */
-public class ProtocolDeductionContext implements DeductionContext {
+public class NettyDeductionContext implements DeductionContext {
     /**
      * 管道
      */
-    protected ChannelPipeline pipeline;
+    protected final ChannelPipeline pipeline;
     /**
      * 连接通道
      */
-    protected Channel channel;
+    protected final Channel channel;
 
-    public ProtocolDeductionContext(Channel channel, ChannelPipeline pipeline) {
+    public NettyDeductionContext(Channel channel, ChannelPipeline pipeline) {
         this.channel = channel;
         this.pipeline = pipeline;
     }
@@ -58,10 +58,21 @@ public class ProtocolDeductionContext implements DeductionContext {
         if (codec == null) {
             throw new NullPointerException("codec is not found.");
         }
-        PipelineFactory binder = PIPELINE_FACTORY.get(codec.pipeline());
-        if (binder == null) {
+        PipelineFactory factory = PIPELINE_FACTORY.get(codec.pipeline());
+        if (factory == null) {
             throw new ProtocolException(String.format("handler binder %s is not found.", codec.pipeline()));
         }
-        binder.build(pipeline, codec, chain, channel);
+        factory.build(pipeline, codec, chain, channel);
+    }
+
+    /**
+     * 构建方法
+     *
+     * @param channel  连接通道
+     * @param pipeline 管道
+     * @return 推断上下文
+     */
+    public static DeductionContext create(final Channel channel, final ChannelPipeline pipeline) {
+        return new NettyDeductionContext(channel, pipeline);
     }
 }

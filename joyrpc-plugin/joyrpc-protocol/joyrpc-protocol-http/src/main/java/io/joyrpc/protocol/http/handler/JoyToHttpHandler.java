@@ -25,24 +25,25 @@ import io.joyrpc.protocol.http.message.JsonResponseMessage;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelHandler;
+import io.joyrpc.transport.channel.ChannelWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * 结果转换成HTTP应答
  */
-public class JoyToHttpHandler implements ChannelHandler {
+public class JoyToHttpHandler implements ChannelWriter {
 
     protected static final Logger logger = LoggerFactory.getLogger(JoyToHttpHandler.class);
 
     @Override
-    public Object wrote(final ChannelContext context, final Object message) {
+    public void wrote(final ChannelContext context, final Object message) throws Exception {
         if (message instanceof ResponseMessage) {
             HttpResponse httpResponse = message instanceof HttpResponse ? (HttpResponse) message
                     : new JsonResponseMessage((ResponseMessage<ResponsePayload>) message);
-            return httpResponse.apply();
+            context.write(httpResponse.apply());
+        } else {
+            context.write(message);
         }
-        return message;
     }
 }

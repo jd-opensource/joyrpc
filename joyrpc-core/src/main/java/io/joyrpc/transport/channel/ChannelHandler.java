@@ -30,9 +30,8 @@ public interface ChannelHandler {
      *
      * @param context   上下文
      * @param throwable 异常
-     * @throws Exception
      */
-    default void caught(final ChannelContext context, final Throwable throwable) throws Exception {
+    default void caught(final ChannelContext context, final Throwable throwable) {
 
     }
 

@@ -35,7 +35,10 @@ import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
 import io.joyrpc.protocol.grpc.exception.GrpcBizException;
 import io.joyrpc.protocol.message.*;
-import io.joyrpc.transport.channel.*;
+import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.channel.ChannelContext;
+import io.joyrpc.transport.channel.ChannelOperator;
+import io.joyrpc.transport.channel.EnhanceCompletableFuture;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http2.DefaultHttp2Headers;
 import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
@@ -72,11 +75,11 @@ public class GrpcClientHandler implements ChannelOperator {
     protected Map<Integer, Http2ResponseMessage> http2ResponseNoEnds = new ConcurrentHashMap<>();
 
     @Override
-    public Object received(final ChannelContext ctx, final Object message) throws Exception {
+    public void received(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof Http2ResponseMessage) {
             Http2ResponseMessage response = (Http2ResponseMessage) message;
             try {
-                return input(ctx.getChannel(), response);
+                ctx.fireChannelRead(input(ctx.getChannel(), response));
             } catch (Throwable e) {
                 logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 MessageHeader header = new MessageHeader((byte) Serialization.PROTOBUF_ID, MsgType.BizReq.getType(), (byte) Protocol.GRPC);
@@ -85,22 +88,22 @@ public class GrpcClientHandler implements ChannelOperator {
                 throw new RpcException(header, e);
             }
         } else {
-            return message;
+            ctx.fireChannelRead(message);
         }
     }
 
     @Override
-    public Object wrote(final ChannelContext ctx, final Object message)  throws Exception{
+    public void wrote(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof RequestMessage) {
             RequestMessage<?> request = (RequestMessage<?>) message;
             try {
-                return output(ctx.getChannel(), request);
+                ctx.write(output(ctx.getChannel(), request));
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while write grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 throw new RpcException(request.getHeader(), e);
             }
         } else {
-            return message;
+            ctx.write(message);
         }
     }
 

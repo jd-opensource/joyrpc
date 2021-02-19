@@ -96,7 +96,7 @@ public class NettyContext implements ChannelContext {
     }
 
     @Override
-    public CompletableFuture<Void> writeAndFlush(Object msg) {
+    public CompletableFuture<Void> wrote(Object msg) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         if (msg == null) {
             result.complete(null);

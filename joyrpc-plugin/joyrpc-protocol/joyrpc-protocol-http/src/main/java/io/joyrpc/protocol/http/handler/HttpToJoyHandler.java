@@ -70,7 +70,7 @@ public class HttpToJoyHandler implements ChannelReader {
                 case PUT:
                     break;
                 default:
-                    ctx.writeAndFlush(error("Only allow GET POST and PUT", message.headers().isKeepAlive()));
+                    ctx.wrote(error("Only allow GET POST and PUT", message.headers().isKeepAlive()));
                     return;
             }
             // 相对路径，确保以"/"开头
@@ -86,7 +86,7 @@ public class HttpToJoyHandler implements ChannelReader {
             try {
                 HttpController controller = contentType == null || contentType.isEmpty() ? null : CONTENT_TYPE_HANDLER.get(contentType);
                 if (controller != null) {
-                    ctx.writeAndFlush(controller.execute(ctx, message, url, params));
+                    ctx.wrote(controller.execute(ctx, message, url, params));
                 } else {
                     // 根据路径调用插件
                     String path = url.getAbsolutePath();
@@ -94,16 +94,16 @@ public class HttpToJoyHandler implements ChannelReader {
                     //获取插件
                     controller = HTTP_CONTROLLER.get(pos > 0 ? path.substring(0, pos) : path);
                     if (controller != null) {
-                        ctx.writeAndFlush(controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params));
+                        ctx.wrote(controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params));
                     } else {
-                        ctx.writeAndFlush(defController.execute(ctx, message, url, params));
+                        ctx.wrote(defController.execute(ctx, message, url, params));
                     }
                 }
             } catch (Throwable e) {
                 // 解析请求body
                 logger.error(String.format("Error occurs while parsing http request for uri %s from %s", uri, Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 //write error msg back
-                ctx.writeAndFlush(error(e.getMessage(), message.headers().isKeepAlive()));
+                ctx.wrote(error(e.getMessage(), message.headers().isKeepAlive()));
             }
         } else {
             ctx.fireChannelRead(msg);

@@ -98,7 +98,7 @@ public class RequestChannelHandler<T extends MessageHandler> implements ChannelR
     }
 
     @Override
-    public void caught(final ChannelContext context, final Throwable cause) throws Exception {
+    public void caught(final ChannelContext context, final Throwable cause) {
         if (throwableConsumer != null) {
             throwableConsumer.accept(context, cause);
         } else {

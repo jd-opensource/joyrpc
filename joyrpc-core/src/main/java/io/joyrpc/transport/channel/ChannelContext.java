@@ -56,29 +56,11 @@ public interface ChannelContext {
     void fireChannelRead(Object msg);
 
     /**
-     * 传递数据读取完毕事件
-     */
-    void fireChannelReadComplete();
-
-    /**
-     * 写数据
-     *
-     * @param msg 数据
-     * @return CompletableFuture
-     */
-    CompletableFuture<Void> write(Object msg);
-
-    /**
      * 写并且提交数据
      *
      * @param msg 数据
      * @return CompletableFuture
      */
-    CompletableFuture<Void> writeAndFlush(Object msg);
-
-    /**
-     * 提交数据
-     */
-    void flush();
+    CompletableFuture<Void> wrote(Object msg);
 
 }

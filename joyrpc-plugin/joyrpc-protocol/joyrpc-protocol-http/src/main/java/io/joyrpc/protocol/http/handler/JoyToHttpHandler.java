@@ -41,9 +41,9 @@ public class JoyToHttpHandler implements ChannelWriter {
         if (message instanceof ResponseMessage) {
             HttpResponse httpResponse = message instanceof HttpResponse ? (HttpResponse) message
                     : new JsonResponseMessage((ResponseMessage<ResponsePayload>) message);
-            context.write(httpResponse.apply());
+            context.wrote(httpResponse.apply());
         } else {
-            context.write(message);
+            context.wrote(message);
         }
     }
 }

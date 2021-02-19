@@ -34,7 +34,7 @@ public interface ChannelWriter extends ChannelHandler {
      * @throws Exception
      */
     default void wrote(final ChannelContext context, final Object message) throws Exception {
-        context.write(message);
+        context.wrote(message);
     }
 
 }

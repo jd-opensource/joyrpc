@@ -40,7 +40,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * @date: 2019/1/15
+ * Netty连接通道
  */
 public class NettyChannel implements Channel {
     protected static final String SEND_REQUEST_TOO_FAST = "Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s";

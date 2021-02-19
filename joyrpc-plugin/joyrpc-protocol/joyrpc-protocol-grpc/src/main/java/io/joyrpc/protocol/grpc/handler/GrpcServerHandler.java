@@ -76,11 +76,11 @@ public class GrpcServerHandler implements ChannelOperator {
     protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 
     @Override
-    public Object received(final ChannelContext ctx, final Object message) throws Exception {
+    public void received(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof Http2RequestMessage) {
             Http2RequestMessage request = (Http2RequestMessage) message;
             try {
-                return input(request, ctx.getChannel(), SystemClock.now());
+                ctx.fireChannelRead(input(request, ctx.getChannel(), SystemClock.now()));
             } catch (Throwable e) {
                 logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 MessageHeader header = new MessageHeader();
@@ -90,22 +90,22 @@ public class GrpcServerHandler implements ChannelOperator {
                 throw new RpcException(header, e);
             }
         } else {
-            return message;
+            ctx.fireChannelRead(message);
         }
     }
 
     @Override
-    public Object wrote(final ChannelContext ctx, final Object message) throws Exception {
+    public void wrote(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof GrpcResponseMessage) {
             GrpcResponseMessage<?> response = (GrpcResponseMessage<?>) message;
             try {
-                return output(response);
+                ctx.wrote(output(response));
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while wrote grpc response from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 throw new RpcException(response.getHeader(), e);
             }
         } else {
-            return message;
+            ctx.wrote(message);
         }
     }
 

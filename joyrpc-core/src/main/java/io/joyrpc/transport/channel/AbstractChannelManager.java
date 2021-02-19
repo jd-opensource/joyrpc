@@ -30,8 +30,11 @@ import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.DefaultHeartbeatTrigger;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
-import io.joyrpc.util.*;
+import io.joyrpc.util.Futures;
+import io.joyrpc.util.StateController;
 import io.joyrpc.util.StateMachine.IntStateMachine;
+import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,7 +129,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 状态机
          */
-        protected IntStateMachine<Channel, PoolChannelController> stateMachine = new IntStateMachine<>(() -> new PoolChannelController(), THROWABLE_FUNCTION);
+        protected IntStateMachine<Channel, StateController<Channel>> stateMachine = new IntStateMachine<>(() -> new PoolChannelController(this), THROWABLE_FUNCTION);
 
         /**
          * 构造函数
@@ -146,10 +149,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
             this.strategy = client.getHeartbeatStrategy();
         }
 
-        public State getState() {
-            return stateMachine.getState();
-        }
-
         /**
          * 连接
          *
@@ -159,20 +158,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
             CompletableFuture<Channel> future = new CompletableFuture<>();
             stateMachine.open().whenComplete((ch, error) -> {
                 if (error == null) {
-                    //后面添加心跳，防止心跳检查状态退出
-                    trigger = strategy == null || strategy.getHeartbeat() == null ? null :
-                            new DefaultHeartbeatTrigger(this, url, strategy, publisher);
-                    if (trigger != null) {
-                        switch (strategy.getHeartbeatMode()) {
-                            case IDLE:
-                                //利用Channel的Idle事件进行心跳检测
-                                ch.setAttribute(Channel.IDLE_HEARTBEAT_TRIGGER, trigger);
-                                break;
-                            case TIMING:
-                                //定时心跳
-                                timer().add(new HeartbeatTask(this));
-                        }
-                    }
                     counter.incrementAndGet();
                     future.complete(this);
                 } else {
@@ -185,9 +170,10 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 建连
          *
+         * @param controller 控制器
          * @return CompletableFuture
          */
-        protected CompletableFuture<Channel> doConnect() {
+        protected CompletableFuture<Channel> doConnect(final PoolChannelController controller) {
             CompletableFuture<Channel> future = new CompletableFuture<>();
             connector.connect().whenComplete((ch, error) -> {
                 if (error == null) {
@@ -196,6 +182,19 @@ public abstract class AbstractChannelManager implements ChannelManager {
                     ch.setAttribute(EVENT_PUBLISHER, publisher);
                     ch.getFutureManager().open();
                     publisher.start();
+                    trigger = strategy == null || strategy.getHeartbeat() == null ? null :
+                            new DefaultHeartbeatTrigger(this, url, strategy, publisher);
+                    if (trigger != null) {
+                        switch (strategy.getHeartbeatMode()) {
+                            case IDLE:
+                                //利用Channel的Idle事件进行心跳检测
+                                ch.setAttribute(Channel.IDLE_HEARTBEAT_TRIGGER, trigger);
+                                break;
+                            case TIMING:
+                                //定时心跳
+                                timer().add(new HeartbeatTask(this, controller));
+                        }
+                    }
                     future.complete(ch);
                 } else {
                     future.completeExceptionally(error);
@@ -255,28 +254,38 @@ public abstract class AbstractChannelManager implements ChannelManager {
                 future.complete(ch);
             });
         }
+    }
+
+    /**
+     * 控制器
+     */
+    protected static class PoolChannelController implements StateController<Channel> {
 
         /**
-         * 控制器
+         * 连接通道
          */
-        protected class PoolChannelController implements StateController<Channel> {
-            @Override
-            public CompletableFuture<Channel> open() {
-                return doConnect();
-            }
+        protected final PoolChannel channel;
 
-            @Override
-            public CompletableFuture<Channel> close(boolean gracefully) {
-                CompletableFuture future = new CompletableFuture();
-                if (channel.getFutureManager().isEmpty() || !channel.isActive()) {
-                    //没有请求，或者channel已经不可以，立即关闭
-                    doClose(future);
-                } else {
-                    //异步关闭
-                    timer().add(new CloseChannelTask(PoolChannel.this, future));
-                }
-                return future;
+        public PoolChannelController(PoolChannel channel) {
+            this.channel = channel;
+        }
+
+        @Override
+        public CompletableFuture<Channel> open() {
+            return channel.doConnect(this);
+        }
+
+        @Override
+        public CompletableFuture<Channel> close(boolean gracefully) {
+            CompletableFuture future = new CompletableFuture();
+            if (channel.isEmpty()) {
+                //没有请求，或者channel已经不可以，立即关闭
+                channel.doClose(future);
+            } else {
+                //异步关闭
+                timer().add(new CloseChannelTask(channel, future));
             }
+            return future;
         }
     }
 
@@ -307,7 +316,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public String getName() {
-            return "CloseChannelTask-" + channel.name;
+            return this.getClass().getSimpleName() + "-" + channel.name;
         }
 
         @Override
@@ -337,6 +346,10 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected final PoolChannel channel;
         /**
+         * 控制器
+         */
+        protected final StateController<Channel> controller;
+        /**
          * 策略
          */
         protected final HeartbeatStrategy strategy;
@@ -360,10 +373,12 @@ public abstract class AbstractChannelManager implements ChannelManager {
         /**
          * 构造函数
          *
-         * @param channel
+         * @param channel    连接通道
+         * @param controller 控制器
          */
-        public HeartbeatTask(final PoolChannel channel) {
+        public HeartbeatTask(final PoolChannel channel, final StateController<Channel> controller) {
             this.channel = channel;
+            this.controller = controller;
             this.trigger = channel.trigger;
             this.strategy = trigger.strategy();
             this.interval = strategy.getInterval() <= 0 ? HeartbeatStrategy.DEFAULT_INTERVAL : strategy.getInterval();
@@ -383,20 +398,19 @@ public abstract class AbstractChannelManager implements ChannelManager {
 
         @Override
         public void run() {
-            if (channel.getState().isOpened()) {
-                //只有在该状态下执行，手工关闭状态不要触发
-                try {
-                    trigger.run();
-                } catch (Exception e) {
-                    logger.error(String.format("Error occurs while trigger heartbeat to %s, caused by: %s",
-                            Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+            //添加任务是在opening状态
+            if (channel.stateMachine.isOpen(controller)) {
+                if (channel.stateMachine.isOpened(controller)) {
+                    //打开状态才执行心跳
+                    try {
+                        trigger.run();
+                    } catch (Exception e) {
+                        logger.error(String.format("Error occurs while trigger heartbeat to %s, caused by: %s",
+                                Channel.toString(channel.getRemoteAddress()), e.getMessage()), e);
+                    }
                 }
                 time = SystemClock.now() + interval;
                 timer().add(this);
-                if (logger.isDebugEnabled()) {
-                    logger.debug(String.format("Heartbeat task was run, channel %s status is %s, next time is %d.",
-                            Channel.toString(channel.getRemoteAddress()), channel.getState().name(), time));
-                }
             }
         }
     }

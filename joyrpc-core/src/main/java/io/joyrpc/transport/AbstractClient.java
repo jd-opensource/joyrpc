@@ -29,9 +29,11 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.channel.ChannelManager;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
+import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
+import io.joyrpc.util.Futures;
 import io.joyrpc.util.State;
 import io.joyrpc.util.StateController;
 import io.joyrpc.util.StateMachine.IntStateMachine;
@@ -89,38 +91,22 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
             () -> new StateController<Channel>() {
                 @Override
                 public CompletableFuture<Channel> open() {
-                    CompletableFuture<Channel> future = new CompletableFuture<>();
-                    channelManager.connect(AbstractClient.this, getConnector()).whenComplete((ch, error) -> {
-                        channel = ch;
-                        if (error == null) {
-                            future.complete(ch);
-                        } else {
-                            future.completeExceptionally(error);
-                        }
-                    });
-                    return future;
+                    return channelManager.connect(AbstractClient.this, getConnector()).whenComplete((ch, error) -> channel = ch);
                 }
 
                 @Override
                 public CompletableFuture<Channel> close(boolean gracefully) {
-                    CompletableFuture<Channel> future = new CompletableFuture<>();
                     int id = transportId;
                     Channel ch = channel;
                     if (ch == null) {
-                        future.complete(null);
+                        return CompletableFuture.completedFuture(null);
                     } else {
-                        ch.close().whenComplete((c, error) -> {
+                        return ch.close().whenComplete((c, error) -> {
                             //channel不设置为null，防止正在处理的请求报空指针错误
                             //channel = null;
                             ch.removeSession(id);
-                            if (error == null) {
-                                future.complete(ch);
-                            } else {
-                                future.completeExceptionally(error);
-                            }
                         });
                     }
-                    return future;
                 }
             }, THROWABLE_FUNCTION);
 
@@ -131,7 +117,8 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
      */
     public AbstractClient(URL url) {
         super(url);
-        this.channelManager = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION)).getChannelManager(url);
+        ChannelManagerFactory factory = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION));
+        this.channelManager = factory.getChannelManager(url);
         this.name = channelManager.getChannelKey(this);
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLIENT_NAME, name, EVENT_PUBLISHER_TRANSPORT_CONF);
     }

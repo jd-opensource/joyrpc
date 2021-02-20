@@ -47,22 +47,6 @@ public class ResteasyPipelineFactory implements PipelineFactory {
 
     private static final String RESTEASY_HTTP_DISPATCHER = "resteasy-http-dispatcher";
 
-
-    @Override
-    public HandlerDefinition<Codec>[] decoders() {
-        return null;
-    }
-
-    @Override
-    public HandlerDefinition<Codec>[] encoders() {
-        return null;
-    }
-
-    @Override
-    public HandlerDefinition<ChannelChain>[] handlers() {
-        return null;
-    }
-
     @Override
     public void build(ChannelPipeline pipeline, Codec codec, ChannelChain chain, Channel channel) {
         ResteasyCodec resteasyCodec = (ResteasyCodec) codec;

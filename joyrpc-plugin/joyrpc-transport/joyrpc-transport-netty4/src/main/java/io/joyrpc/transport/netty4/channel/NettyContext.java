@@ -70,32 +70,6 @@ public class NettyContext implements ChannelContext {
     }
 
     @Override
-    public void fireChannelReadComplete() {
-        ctx.fireChannelReadComplete();
-    }
-
-    @Override
-    public CompletableFuture<Void> write(final Object msg) {
-        CompletableFuture<Void> result = new CompletableFuture<>();
-        if (msg == null) {
-            result.complete(null);
-        } else {
-            try {
-                ctx.write(msg).addListener(future -> {
-                    if (future.isSuccess()) {
-                        result.complete(null);
-                    } else {
-                        result.completeExceptionally(future.cause());
-                    }
-                });
-            } catch (Exception e) {
-                result.completeExceptionally(e);
-            }
-        }
-        return result;
-    }
-
-    @Override
     public CompletableFuture<Void> wrote(Object msg) {
         CompletableFuture<Void> result = new CompletableFuture<>();
         if (msg == null) {
@@ -114,11 +88,6 @@ public class NettyContext implements ChannelContext {
             }
         }
         return result;
-    }
-
-    @Override
-    public void flush() {
-        ctx.flush();
     }
 
     public static NettyContext create(final Channel channel, final ChannelHandlerContext ctx) {

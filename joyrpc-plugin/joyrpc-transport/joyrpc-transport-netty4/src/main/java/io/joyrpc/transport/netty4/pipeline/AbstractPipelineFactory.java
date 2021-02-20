@@ -20,17 +20,14 @@ package io.joyrpc.transport.netty4.pipeline;
  * #L%
  */
 
-import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelChain;
-import io.joyrpc.transport.channel.ChannelReader;
-import io.joyrpc.transport.channel.ChannelWriter;
+import io.joyrpc.transport.channel.*;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.netty4.handler.ChannelOperatorAdapter;
 import io.joyrpc.transport.netty4.handler.ChannelReaderAdapter;
-import io.joyrpc.transport.netty4.handler.ChannelWriterAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.util.concurrent.EventExecutorGroup;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -59,17 +56,24 @@ public abstract class AbstractPipelineFactory implements PipelineFactory {
     protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
         //处理链
         if (chain != null) {
-            chain.getHandlers().forEach((handler -> {
+            List<ChannelReader> readers = new LinkedList();
+            List<ChannelWriter> writers = new LinkedList();
+            for (ChannelHandler handler : chain.getHandlers()) {
                 if (handler instanceof ChannelReader) {
-                    if (handler instanceof ChannelWriter) {
-                        pipeline.addLast(group, handler.name(), new ChannelOperatorAdapter((ChannelReader) handler, (ChannelWriter) handler, channel));
-                    } else {
-                        pipeline.addLast(group, handler.name(), new ChannelReaderAdapter((ChannelReader) handler, channel));
-                    }
-                } else if (handler instanceof ChannelWriter) {
-                    pipeline.addLast(group, handler.name(), new ChannelWriterAdapter((ChannelWriter) handler, channel));
+                    readers.add((ChannelReader) handler);
                 }
-            }));
+                if (handler instanceof ChannelWriter) {
+                    writers.add((ChannelWriter) handler);
+                }
+            }
+            if (!readers.isEmpty()) {
+                //TODO 构造
+                pipeline.addLast("channelChainReader", new ChannelReaderAdapter(null, channel));
+            }
+            if (!writers.isEmpty()) {
+                //TODO 构造
+                pipeline.addLast("channelChainReader", new ChannelReaderAdapter(null, channel));
+            }
         }
     }
 

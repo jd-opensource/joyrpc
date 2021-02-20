@@ -20,7 +20,6 @@ package io.joyrpc.transport.netty4.codec;
  * #L%
  */
 
-import io.joyrpc.exception.ProtocolException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
@@ -55,13 +54,7 @@ public class NettyDeductionContext implements DeductionContext {
 
     @Override
     public void bind(final Codec codec, final ChannelChain chain) {
-        if (codec == null) {
-            throw new NullPointerException("codec is not found.");
-        }
         PipelineFactory factory = PIPELINE_FACTORY.get(codec.pipeline());
-        if (factory == null) {
-            throw new ProtocolException(String.format("handler binder %s is not found.", codec.pipeline()));
-        }
         factory.build(pipeline, codec, chain, channel);
     }
 

@@ -22,7 +22,6 @@ package io.joyrpc.transport.netty4.pipeline;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.netty4.http.HttpRequestNormalizer;
 import io.joyrpc.transport.netty4.http.HttpResponseNormalizer;
@@ -30,7 +29,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * http管道工厂
@@ -39,17 +37,11 @@ import io.netty.util.concurrent.EventExecutorGroup;
 public class HttpPipelineFactory extends AbstractPipelineFactory {
 
     @Override
-    protected void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+    protected void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel) {
         pipeline.addLast(DECODER, new HttpRequestDecoder());
         pipeline.addLast(HTTP_AGGREGATOR, new HttpObjectAggregator(65535));
         pipeline.addLast(ENCODER, new HttpResponseEncoder());
-    }
-
-    @Override
-    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
-        //在业务线程池里面进展转换
-        pipeline.addLast(group, HTTP_REQUEST_NORMALIZER, new HttpRequestNormalizer());
-        super.build(pipeline, chain, channel, group);
-        pipeline.addLast(group, HTTP_RESPONSE_NORMALIZER, new HttpResponseNormalizer());
+        pipeline.addLast(HTTP_REQUEST_NORMALIZER, new HttpRequestNormalizer());
+        pipeline.addLast(HTTP_RESPONSE_NORMALIZER, new HttpResponseNormalizer());
     }
 }

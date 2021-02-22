@@ -21,41 +21,52 @@ package io.joyrpc.transport.netty4.handler;
  */
 
 import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.channel.ChannelChainWriterContext;
 import io.joyrpc.transport.channel.ChannelWriter;
-import io.joyrpc.transport.netty4.channel.NettyContext;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static io.joyrpc.transport.netty4.channel.NettyContext.create;
+
 /**
  * 连接通道写适配器
  */
-public class ChannelWriterAdapter extends ChannelOutboundHandlerAdapter {
+public class ChannelChainWriterAdapter extends ChannelOutboundHandlerAdapter {
 
-    protected final static Logger logger = LoggerFactory.getLogger(ChannelWriterAdapter.class);
+    protected final static Logger logger = LoggerFactory.getLogger(ChannelChainWriterAdapter.class);
     /**
      * 处理器
      */
-    protected ChannelWriter writer;
+    protected final ChannelWriter[] writers;
     /**
      * 同道
      */
-    protected Channel channel;
+    protected final Channel channel;
+    /**
+     * 线程池
+     */
+    protected final ThreadPoolExecutor executor;
 
-    public ChannelWriterAdapter(ChannelWriter writer, Channel channel) {
-        this.writer = writer;
+    public ChannelChainWriterAdapter(final ChannelWriter[] writers, final Channel channel, final ThreadPoolExecutor executor) {
+        this.writers = writers;
         this.channel = channel;
+        this.executor = executor;
     }
 
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
-        writer.wrote(NettyContext.create(channel, ctx), msg);
+        ChannelChainWriterContext context = new ChannelChainWriterContext(channel, writers, create(channel, ctx));
+        context.wrote(msg);
     }
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
-        writer.caught(NettyContext.create(channel, ctx), cause);
+        ChannelChainWriterContext context = new ChannelChainWriterContext(channel, writers, create(channel, ctx));
+        context.fireExceptionCaught(cause);
     }
 }

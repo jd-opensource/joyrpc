@@ -27,7 +27,6 @@ import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.netty4.http2.Http2ClientCodecHandler;
 import io.joyrpc.transport.netty4.http2.Http2ServerCodecHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * http2管道工厂
@@ -36,7 +35,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 public class Http2PipelineFactory extends AbstractPipelineFactory {
 
     @Override
-    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel) {
         pipeline.addLast(CODEC, channel.isServer() ?
                 Http2ServerCodecHandler.create(channel, (Http2Codec) codec) :
                 Http2ClientCodecHandler.create(channel, (Http2Codec) codec));

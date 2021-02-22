@@ -32,7 +32,7 @@ public interface ChannelHandler {
      * @param throwable 异常
      */
     default void caught(final ChannelContext context, final Throwable throwable) {
-
+        context.fireExceptionCaught(throwable);
     }
 
     /**

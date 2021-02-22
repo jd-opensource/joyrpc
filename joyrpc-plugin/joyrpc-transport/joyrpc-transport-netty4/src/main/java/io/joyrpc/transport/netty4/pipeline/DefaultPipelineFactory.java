@@ -35,7 +35,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 public class DefaultPipelineFactory extends AbstractPipelineFactory {
 
     @Override
-    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel) {
         pipeline.addLast(DECODER, new MessageDecoder(codec, channel));
         pipeline.addLast(ENCODER, new MessageEncoder(codec, channel));
     }

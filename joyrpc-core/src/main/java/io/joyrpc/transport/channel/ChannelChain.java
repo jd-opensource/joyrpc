@@ -34,6 +34,10 @@ public class ChannelChain {
      */
     protected LinkedList<ChannelHandler> handlers = new LinkedList<>();
 
+    protected ChannelReader[] readers;
+
+    protected ChannelWriter[] writers;
+
     public ChannelChain() {
     }
 
@@ -86,5 +90,31 @@ public class ChannelChain {
 
     public List<ChannelHandler> getHandlers() {
         return handlers;
+    }
+
+    public ChannelReader[] getReaders() {
+        if (readers == null) {
+            LinkedList<ChannelReader> list = new LinkedList<>();
+            for (ChannelHandler handler : handlers) {
+                if (handler instanceof ChannelReader) {
+                    list.add((ChannelReader) handler);
+                }
+            }
+            readers = list.toArray(new ChannelReader[0]);
+        }
+        return readers;
+    }
+
+    public ChannelWriter[] getWriters() {
+        if (writers == null) {
+            LinkedList<ChannelWriter> list = new LinkedList<>();
+            for (ChannelHandler handler : handlers) {
+                if (handler instanceof ChannelWriter) {
+                    list.add((ChannelWriter) handler);
+                }
+            }
+            writers = list.toArray(new ChannelWriter[0]);
+        }
+        return writers;
     }
 }

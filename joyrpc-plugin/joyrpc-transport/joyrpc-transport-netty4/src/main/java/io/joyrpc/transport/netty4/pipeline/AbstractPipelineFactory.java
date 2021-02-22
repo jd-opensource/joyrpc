@@ -20,14 +20,15 @@ package io.joyrpc.transport.netty4.pipeline;
  * #L%
  */
 
-import io.joyrpc.transport.channel.*;
+import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.channel.ChannelChain;
+import io.joyrpc.transport.channel.ChannelReader;
+import io.joyrpc.transport.channel.ChannelWriter;
 import io.joyrpc.transport.codec.Codec;
-import io.joyrpc.transport.netty4.handler.ChannelReaderAdapter;
+import io.joyrpc.transport.netty4.handler.ChannelChainReaderAdapter;
+import io.joyrpc.transport.netty4.handler.ChannelChainWriterAdapter;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.EventExecutorGroup;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -35,15 +36,17 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public abstract class AbstractPipelineFactory implements PipelineFactory {
 
+    public static final String CHANNEL_CHAIN_READER = "channelChainReader";
+    public static final String CHANNEL_CHAIN_WRITER = "channelChainWriter";
+
     /**
      * 构建管道
      *
      * @param pipeline 管道
      * @param codec    编解码
      * @param channel  连接通道
-     * @param group    线程池
      */
-    protected abstract void build(ChannelPipeline pipeline, Codec codec, Channel channel, EventExecutorGroup group);
+    protected abstract void build(ChannelPipeline pipeline, Codec codec, Channel channel);
 
     /**
      * 构建管道
@@ -51,41 +54,29 @@ public abstract class AbstractPipelineFactory implements PipelineFactory {
      * @param pipeline 管道
      * @param chain    处理链
      * @param channel  连接通道
-     * @param group    线程池
+     * @param executor 线程池
      */
-    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final EventExecutorGroup group) {
+    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final ThreadPoolExecutor executor) {
         //处理链
         if (chain != null) {
-            List<ChannelReader> readers = new LinkedList();
-            List<ChannelWriter> writers = new LinkedList();
-            for (ChannelHandler handler : chain.getHandlers()) {
-                if (handler instanceof ChannelReader) {
-                    readers.add((ChannelReader) handler);
-                }
-                if (handler instanceof ChannelWriter) {
-                    writers.add((ChannelWriter) handler);
-                }
+            ChannelReader[] readers = chain.getReaders();
+            ChannelWriter[] writers = chain.getWriters();
+            if (readers != null && readers.length > 0) {
+                pipeline.addLast(CHANNEL_CHAIN_READER, new ChannelChainReaderAdapter(readers, channel, executor));
             }
-            if (!readers.isEmpty()) {
-                //TODO 构造
-                pipeline.addLast("channelChainReader", new ChannelReaderAdapter(null, channel));
-            }
-            if (!writers.isEmpty()) {
-                //TODO 构造
-                pipeline.addLast("channelChainReader", new ChannelReaderAdapter(null, channel));
+            if (writers != null && writers.length > 0) {
+                pipeline.addLast(CHANNEL_CHAIN_WRITER, new ChannelChainWriterAdapter(writers, channel, executor));
             }
         }
     }
 
     @Override
     public void build(final ChannelPipeline pipeline, final Codec codec, final ChannelChain chain, final Channel channel) {
-        //TODO 业务线程池
         ThreadPoolExecutor executor = channel.getAttribute(Channel.BIZ_THREAD_POOL);
-        EventExecutorGroup group = executor == null ? null : null;
         if (codec != null) {
             //解码器
-            build(pipeline, codec, channel, group);
+            build(pipeline, codec, channel);
         }
-        build(pipeline, chain, channel, group);
+        build(pipeline, chain, channel, executor);
     }
 }

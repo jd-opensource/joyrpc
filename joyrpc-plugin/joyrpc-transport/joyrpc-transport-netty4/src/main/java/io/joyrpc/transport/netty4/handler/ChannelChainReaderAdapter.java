@@ -21,51 +21,63 @@ package io.joyrpc.transport.netty4.handler;
  */
 
 import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.channel.ChannelChainReaderContext;
 import io.joyrpc.transport.channel.ChannelReader;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ThreadPoolExecutor;
+
 import static io.joyrpc.transport.netty4.channel.NettyContext.create;
 
 /**
  * 连接处理器，触发连接和断连事件
  */
-public class ChannelReaderAdapter extends ChannelInboundHandlerAdapter {
+public class ChannelChainReaderAdapter extends ChannelInboundHandlerAdapter {
 
-    protected final static Logger logger = LoggerFactory.getLogger(ChannelReaderAdapter.class);
+    protected final static Logger logger = LoggerFactory.getLogger(ChannelChainReaderAdapter.class);
     /**
      * 处理器
      */
-    protected ChannelReader reader;
+    protected final ChannelReader[] readers;
     /**
      * 同道
      */
-    protected Channel channel;
+    protected final Channel channel;
+    /**
+     * 线程池
+     */
+    protected final ThreadPoolExecutor executor;
 
-    public ChannelReaderAdapter(ChannelReader reader, Channel channel) {
-        this.reader = reader;
+    public ChannelChainReaderAdapter(ChannelReader[] readers, Channel channel, ThreadPoolExecutor executor) {
+        this.readers = readers;
         this.channel = channel;
+        this.executor = executor;
     }
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        reader.active(create(channel, ctx));
+        ChannelChainReaderContext context = new ChannelChainReaderContext(channel, readers, create(channel, ctx));
+        context.fireChannelActive();
     }
 
     @Override
     public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
-        reader.inactive(create(channel, ctx));
+        ChannelChainReaderContext context = new ChannelChainReaderContext(channel, readers, create(channel, ctx));
+        context.fireChannelInactive();
     }
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
-        reader.received(create(channel, ctx), msg);
+        ChannelChainReaderContext context = new ChannelChainReaderContext(channel, readers, create(channel, ctx));
+        context.fireChannelRead(msg);
     }
 
     @Override
     public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
-        reader.caught(create(channel, ctx), cause);
+        ChannelChainReaderContext context = new ChannelChainReaderContext(channel, readers, create(channel, ctx));
+        context.fireExceptionCaught(cause);
     }
 }

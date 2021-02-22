@@ -28,7 +28,6 @@ import io.joyrpc.transport.codec.LengthFieldFrameCodec.LengthFieldFrame;
 import io.joyrpc.transport.netty4.handler.LengthFieldMessageDecoder;
 import io.joyrpc.transport.netty4.handler.MessageEncoder;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * 基于长度字段的管道工厂
@@ -37,7 +36,7 @@ import io.netty.util.concurrent.EventExecutorGroup;
 public class LengthFieldFramePipelineFactory extends DefaultPipelineFactory {
 
     @Override
-    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel, final EventExecutorGroup group) {
+    public void build(final ChannelPipeline pipeline, final Codec codec, final Channel channel) {
         LengthFieldFrameCodec frameCodec = (LengthFieldFrameCodec) codec;
         LengthFieldFrame frame = frameCodec.getLengthFieldFrame();
         if (frame.getMaxFrameLength() <= 0) {

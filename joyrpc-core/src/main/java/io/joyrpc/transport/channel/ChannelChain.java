@@ -21,22 +21,22 @@ package io.joyrpc.transport.channel;
  */
 
 
+import java.util.Deque;
 import java.util.LinkedList;
-import java.util.List;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * 处理链
  */
 public class ChannelChain {
-
     /**
      * 处理器
      */
-    protected LinkedList<ChannelHandler> handlers = new LinkedList<>();
+    protected Deque<ChannelHandler> handlers = new ConcurrentLinkedDeque<>();
 
-    protected ChannelReader[] readers;
+    protected volatile ChannelReader[] readers;
 
-    protected ChannelWriter[] writers;
+    protected volatile ChannelWriter[] writers;
 
     public ChannelChain() {
     }
@@ -55,9 +55,11 @@ public class ChannelChain {
      * @param handler 处理器
      * @return 处理链
      */
-    public ChannelChain addFirst(final ChannelHandler handler) {
+    public synchronized ChannelChain addFirst(final ChannelHandler handler) {
         if (handler != null) {
             handlers.addFirst(handler);
+            readers = null;
+            writers = null;
         }
         return this;
     }
@@ -68,9 +70,11 @@ public class ChannelChain {
      * @param handler 处理器
      * @return 处理链
      */
-    public ChannelChain addLast(final ChannelHandler handler) {
+    public synchronized ChannelChain addLast(final ChannelHandler handler) {
         if (handler != null) {
             handlers.addLast(handler);
+            readers = null;
+            writers = null;
         }
         return this;
     }
@@ -81,39 +85,48 @@ public class ChannelChain {
      * @param handler 处理器
      * @return 处理链
      */
-    public ChannelChain remove(final ChannelHandler handler) {
+    public synchronized ChannelChain remove(final ChannelHandler handler) {
         if (handler != null) {
-            handlers.remove(handler);
+            if (handlers.remove(handler)) {
+                readers = null;
+                writers = null;
+            }
         }
         return this;
     }
 
-    public List<ChannelHandler> getHandlers() {
-        return handlers;
-    }
-
     public ChannelReader[] getReaders() {
         if (readers == null) {
-            LinkedList<ChannelReader> list = new LinkedList<>();
-            for (ChannelHandler handler : handlers) {
-                if (handler instanceof ChannelReader) {
-                    list.add((ChannelReader) handler);
+            //有并发访问
+            synchronized (this) {
+                if (readers == null) {
+                    LinkedList<ChannelReader> list = new LinkedList<>();
+                    for (ChannelHandler handler : handlers) {
+                        if (handler instanceof ChannelReader) {
+                            list.add((ChannelReader) handler);
+                        }
+                    }
+                    readers = list.toArray(new ChannelReader[0]);
                 }
             }
-            readers = list.toArray(new ChannelReader[0]);
         }
         return readers;
     }
 
     public ChannelWriter[] getWriters() {
         if (writers == null) {
-            LinkedList<ChannelWriter> list = new LinkedList<>();
-            for (ChannelHandler handler : handlers) {
-                if (handler instanceof ChannelWriter) {
-                    list.add((ChannelWriter) handler);
+            //有并发访问
+            synchronized (this) {
+                if (writers == null) {
+                    LinkedList<ChannelWriter> list = new LinkedList<>();
+                    for (ChannelHandler handler : handlers) {
+                        if (handler instanceof ChannelWriter) {
+                            list.add((ChannelWriter) handler);
+                        }
+                    }
+                    writers = list.toArray(new ChannelWriter[0]);
                 }
             }
-            writers = list.toArray(new ChannelWriter[0]);
         }
         return writers;
     }

@@ -97,13 +97,13 @@ public class GrpcClientHandler implements ChannelOperator {
         if (message instanceof RequestMessage) {
             RequestMessage<?> request = (RequestMessage<?>) message;
             try {
-                ctx.write(output(ctx.getChannel(), request));
+                ctx.wrote(output(ctx.getChannel(), request));
             } catch (Exception e) {
                 logger.error(String.format("Error occurs while write grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
                 throw new RpcException(request.getHeader(), e);
             }
         } else {
-            ctx.write(message);
+            ctx.wrote(message);
         }
     }
 

@@ -23,6 +23,8 @@ package io.joyrpc.transport.netty4.channel;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -76,14 +78,8 @@ public class NettyContext implements ChannelContext {
             result.complete(null);
         } else {
             try {
-                ctx.writeAndFlush(msg).addListener(future -> {
-                    if (future.isSuccess()) {
-                        result.complete(null);
-                    } else {
-                        result.completeExceptionally(future.cause());
-                    }
-                });
-            } catch (Exception e) {
+                ctx.writeAndFlush(msg).addListener(new WriteListener(result));
+            } catch (Throwable e) {
                 result.completeExceptionally(e);
             }
         }
@@ -92,5 +88,28 @@ public class NettyContext implements ChannelContext {
 
     public static NettyContext create(final Channel channel, final ChannelHandlerContext ctx) {
         return new NettyContext(channel, ctx);
+    }
+
+    /**
+     * 监听器
+     */
+    protected static class WriteListener implements GenericFutureListener<Future<Void>> {
+        /**
+         * 目标
+         */
+        protected final CompletableFuture<Void> target;
+
+        public WriteListener(CompletableFuture<Void> target) {
+            this.target = target;
+        }
+
+        @Override
+        public void operationComplete(Future<Void> future) throws Exception {
+            if (future.isSuccess()) {
+                target.complete(null);
+            } else {
+                target.completeExceptionally(future.cause());
+            }
+        }
     }
 }

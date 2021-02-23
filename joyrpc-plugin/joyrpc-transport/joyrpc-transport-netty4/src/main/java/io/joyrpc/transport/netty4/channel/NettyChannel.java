@@ -93,6 +93,7 @@ public class NettyChannel implements Channel {
         } else if (consumer != null) {
             try {
                 channel.writeAndFlush(object).addListener((future) -> {
+                    //TODO 要不要改成工作线程池来回调
                     if (future.isSuccess()) {
                         consumer.accept(new SendResult(true, this, object));
                     } else {

@@ -39,7 +39,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiConsumer;
 
 /**
  * 装饰客户端
@@ -104,11 +103,6 @@ public class DecoratorClient<T extends TransportClient> implements Client {
     @Override
     public CompletableFuture<Message> async(final Message message, final int timoutMillis) {
         return transport.async(message, timoutMillis);
-    }
-
-    @Override
-    public void async(final Message message, final BiConsumer<Message, Throwable> action, final int timoutMillis) {
-        transport.async(message, action, timoutMillis);
     }
 
     @Override

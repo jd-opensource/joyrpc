@@ -32,7 +32,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiConsumer;
 
 /**
  * 连接传输通道，用于定义发送消息和获取会话信息等接口
@@ -64,7 +63,7 @@ public interface ChannelTransport extends Transport {
     default Message sync(final Message message, final int timeoutMillis) throws RpcException, TimeoutException {
         try {
             int timeout = timeoutMillis <= 0 ? Constants.DEFAULT_TIMEOUT : timeoutMillis;
-            return message == null ? null : async(message, timeout).get((long) timeout, TimeUnit.MILLISECONDS);
+            return message == null ? null : async(message, timeout).get(timeout, TimeUnit.MILLISECONDS);
         } catch (TimeoutException | RpcException e) {
             throw e;
         } catch (ExecutionException e) {
@@ -82,20 +81,6 @@ public interface ChannelTransport extends Transport {
      * @return CompletableFuture
      */
     CompletableFuture<Message> async(Message message, int timeoutMillis);
-
-    /**
-     * 异步发送一个请求
-     *
-     * @param message       消息
-     * @param action        消费者
-     * @param timeoutMillis 超时毫秒数
-     */
-    default void async(final Message message, final BiConsumer<Message, Throwable> action, final int timeoutMillis) {
-        CompletableFuture<Message> future = async(message, timeoutMillis);
-        if (action != null) {
-            future.whenComplete(action);
-        }
-    }
 
     /**
      * 获取远程地址

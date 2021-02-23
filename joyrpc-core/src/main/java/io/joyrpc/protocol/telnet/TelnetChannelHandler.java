@@ -98,8 +98,8 @@ public class TelnetChannelHandler implements ChannelOperator {
     @Override
     public void caught(final ChannelContext context, final Throwable throwable) {
         logger.error("Error occurs while handling telnet command.", throwable);
-        context.getChannel().send(throwable.getMessage(), r -> {
-            if (!r.isSuccess()) {
+        context.wrote(throwable.getMessage()).whenComplete((v, error) -> {
+            if (error != null) {
                 logger.error(String.format("Error occurs while sending telnet command throwable message -- %s", throwable.getMessage()));
             }
         });

@@ -21,6 +21,7 @@ package io.joyrpc.transport;
  */
 
 
+import io.joyrpc.extension.URL;
 import io.joyrpc.util.IdGenerator;
 
 import java.net.InetSocketAddress;
@@ -30,6 +31,13 @@ import java.util.function.Supplier;
  * 传输通道
  */
 public interface Transport {
+
+    /**
+     * 获取URL
+     *
+     * @return url
+     */
+    URL getUrl();
 
     /**
      * 获取本地地址

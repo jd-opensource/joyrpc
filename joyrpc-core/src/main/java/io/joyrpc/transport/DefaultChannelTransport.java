@@ -80,6 +80,11 @@ public class DefaultChannelTransport implements ChannelTransport {
     }
 
     @Override
+    public URL getUrl() {
+        return url;
+    }
+
+    @Override
     public Channel getChannel() {
         return channel;
     }

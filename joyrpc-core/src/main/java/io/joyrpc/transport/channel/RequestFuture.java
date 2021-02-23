@@ -28,9 +28,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
 /**
- * 增强的CompletableFuture
+ * 请求消息Future
  */
-public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
+public class RequestFuture<I, M> extends CompletableFuture<M> {
     /**
      * 消息ID
      */
@@ -52,7 +52,7 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      */
     protected Object attr;
     /**
-     * 消费者
+     * 完成消费者
      */
     protected final BiConsumer<M, Throwable> consumer;
 
@@ -65,11 +65,11 @@ public class EnhanceCompletableFuture<I, M> extends CompletableFuture<M> {
      * @param requests  请求计数器
      * @param consumer  消费者
      */
-    public EnhanceCompletableFuture(final I messageId,
-                                    final Session session,
-                                    final Timeout timeout,
-                                    final AtomicInteger requests,
-                                    final BiConsumer<M, Throwable> consumer) {
+    public RequestFuture(final I messageId,
+                         final Session session,
+                         final Timeout timeout,
+                         final AtomicInteger requests,
+                         final BiConsumer<M, Throwable> consumer) {
         this.messageId = messageId;
         this.session = session;
         this.requests = requests;

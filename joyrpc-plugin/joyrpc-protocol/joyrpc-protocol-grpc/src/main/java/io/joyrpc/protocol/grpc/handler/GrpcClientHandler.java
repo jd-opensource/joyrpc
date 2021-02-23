@@ -38,7 +38,7 @@ import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.channel.ChannelOperator;
-import io.joyrpc.transport.channel.EnhanceCompletableFuture;
+import io.joyrpc.transport.channel.RequestFuture;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http2.DefaultHttp2Headers;
 import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
@@ -129,7 +129,7 @@ public class GrpcClientHandler implements ChannelOperator {
         Object grpcStatusVal = http2Msg.getEndHeaders().get(GRPC_STATUS_KEY);
         int grpcStatus = grpcStatusVal == null ? Code.UNKNOWN.value() : Integer.parseInt(grpcStatusVal.toString());
         if (grpcStatus == Code.OK.value()) {
-            EnhanceCompletableFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
+            RequestFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
             if (future != null) {
                 payload = decodePayload(http2Msg, (ClassWrapper) future.getAttr());
             } else {
@@ -219,7 +219,7 @@ public class GrpcClientHandler implements ChannelOperator {
         //包装payload
         Object payLoad = wrapPayload(invocation, grpcType);
         //将返回值类型放到 future 中
-        EnhanceCompletableFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
+        RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
         storeReturnType(invocation, grpcType, future);
 
         byte compressType = message.getHeader().getCompression();
@@ -309,7 +309,7 @@ public class GrpcClientHandler implements ChannelOperator {
      * @param future     future
      */
     protected void storeReturnType(final Invocation invocation, final GrpcType grpcType,
-                                   final EnhanceCompletableFuture<Long, Message> future) {
+                                   final RequestFuture<Long, Message> future) {
         ClassWrapper wrapper = grpcType.getResponse();
         if (wrapper != null) {
             future.setAttr(wrapper);

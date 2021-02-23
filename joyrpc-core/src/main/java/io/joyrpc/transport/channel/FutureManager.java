@@ -60,7 +60,7 @@ public class FutureManager<I, M> {
     /**
      * Future管理，有些连接并发很少不需要初始化
      */
-    protected Map<I, EnhanceCompletableFuture<I, M>> futures = new ConcurrentHashMap<>();
+    protected Map<I, RequestFuture<I, M>> futures = new ConcurrentHashMap<>();
 
     /**
      * 构造函数
@@ -82,9 +82,9 @@ public class FutureManager<I, M> {
      * @param afterRun      结束后执行
      * @return 完成状态
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId,
-                                                 final long timeoutMillis,
-                                                 final BiConsumer<M, Throwable> afterRun) {
+    public RequestFuture<I, M> create(final I messageId,
+                                      final long timeoutMillis,
+                                      final BiConsumer<M, Throwable> afterRun) {
         return create(messageId, timeoutMillis, null, null, afterRun);
     }
 
@@ -97,10 +97,10 @@ public class FutureManager<I, M> {
      * @param requests      正在处理的请求数
      * @return 完成状态
      */
-    public EnhanceCompletableFuture<I, M> create(final I messageId,
-                                                 final long timeoutMillis,
-                                                 final Session session,
-                                                 final AtomicInteger requests) {
+    public RequestFuture<I, M> create(final I messageId,
+                                      final long timeoutMillis,
+                                      final Session session,
+                                      final AtomicInteger requests) {
         return create(messageId, timeoutMillis, session, requests, null);
     }
 
@@ -114,17 +114,17 @@ public class FutureManager<I, M> {
      * @param afterRun      结束后执行
      * @return 完成状态
      */
-    protected EnhanceCompletableFuture<I, M> create(final I messageId,
-                                                    final long timeoutMillis,
-                                                    final Session session,
-                                                    final AtomicInteger requests,
-                                                    final BiConsumer<M, Throwable> afterRun) {
+    protected RequestFuture<I, M> create(final I messageId,
+                                         final long timeoutMillis,
+                                         final Session session,
+                                         final AtomicInteger requests,
+                                         final BiConsumer<M, Throwable> afterRun) {
         return futures.computeIfAbsent(messageId, o -> {
             //增加计数器
             counter.incrementAndGet();
             TimeTask task = new FutureTimeoutTask<>(messageId, SystemClock.now() + timeoutMillis, timeout);
             Timeout timeout = timer().add(task);
-            return new EnhanceCompletableFuture<>(o, session, timeout, requests, afterRun);
+            return new RequestFuture<>(o, session, timeout, requests, afterRun);
         });
     }
 
@@ -134,7 +134,7 @@ public class FutureManager<I, M> {
      * @param messageId 消息ID
      * @return 增强的CompletableFuture
      */
-    public EnhanceCompletableFuture<I, M> get(final I messageId) {
+    public RequestFuture<I, M> get(final I messageId) {
         return futures.get(messageId);
     }
 
@@ -169,7 +169,7 @@ public class FutureManager<I, M> {
      * @return 成功标识
      */
     protected boolean complete(final I messageId, final M message, final Throwable throwable) {
-        EnhanceCompletableFuture<I, M> result = futures.remove(messageId);
+        RequestFuture<I, M> result = futures.remove(messageId);
         if (result != null) {
             //减少计数器
             counter.decrementAndGet();
@@ -188,7 +188,7 @@ public class FutureManager<I, M> {
      * 清空
      */
     public void close() {
-        Map<I, EnhanceCompletableFuture<I, M>> futures = this.futures;
+        Map<I, RequestFuture<I, M>> futures = this.futures;
         this.futures = new ConcurrentHashMap<>();
         this.counter = new AtomicInteger();
         Exception exception = new ChannelClosedException("channel is inactive, address is " + channel.getRemoteAddress());

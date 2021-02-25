@@ -869,8 +869,16 @@ public class Cluster {
                 node.close();
                 logger.info(String.format("Close the unused node instance %s. because it is removed or updated. ", node.getName()));
             } else if (error == null) {
-                onConnected(node);
-                logger.info(String.format("Success connecting node %s.", node.getName()));
+                //这个时候可能节点已经断开了(open的线程和netty断链事件触发的线程不一样)，需要二次检查
+                switch (node.getState()) {
+                    case CONNECTED:
+                    case WEAK:
+                        onConnected(node);
+                        logger.info(String.format("Success connecting node %s.", node.getName()));
+                        break;
+                    default:
+                        logger.info(String.format("The node %s is not connected. discard this connected event.", node.getName()));
+                }
             } else {
                 if (error instanceof TransportException) {
                     logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));

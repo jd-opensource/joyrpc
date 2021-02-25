@@ -1,5 +1,13 @@
 # 版本说明
 
+## 1.4.7-SNAPSHOT
+
+### Enhancement
+
+- 重构线程池接口
+  
+- 重构网络模型接口
+
 ## 1.4.6-RELEASE(2021-02-19)
 
 ## Bugfixes

@@ -43,7 +43,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -197,7 +196,7 @@ public abstract class AbstractServer implements TransportServer {
     }
 
     @Override
-    public ExecutorService getWorkerPool() {
+    public ThreadPool getWorkerPool() {
         return this.workerPool;
     }
 

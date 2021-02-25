@@ -40,7 +40,6 @@ import io.joyrpc.permission.BlackList;
 import io.joyrpc.permission.SerializerBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
-import io.joyrpc.util.Resource;
 import io.joyrpc.util.Resource.Definition;
 
 import java.io.InputStream;

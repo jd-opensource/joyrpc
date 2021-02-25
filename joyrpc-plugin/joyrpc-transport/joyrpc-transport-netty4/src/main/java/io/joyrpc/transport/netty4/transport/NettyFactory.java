@@ -28,7 +28,6 @@ import io.joyrpc.transport.*;
 import io.joyrpc.transport.channel.Channel;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 

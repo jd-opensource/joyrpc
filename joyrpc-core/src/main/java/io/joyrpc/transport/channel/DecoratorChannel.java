@@ -29,7 +29,6 @@ import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 /**
  * 通道装饰器

@@ -22,9 +22,9 @@ package io.joyrpc.codec.serialization.generic;
 
 import io.joyrpc.Plugin;
 import io.joyrpc.codec.Base64;
+import io.joyrpc.codec.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.serialization.GenericSerializer;
 import io.joyrpc.codec.serialization.Json;
-import io.joyrpc.codec.UnsafeByteArrayInputStream;
 import io.joyrpc.exception.CodecException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.extension.Extension;

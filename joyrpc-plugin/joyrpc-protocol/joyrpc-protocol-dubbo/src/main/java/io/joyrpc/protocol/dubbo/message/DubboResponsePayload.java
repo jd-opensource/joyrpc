@@ -25,7 +25,6 @@ import io.joyrpc.codec.serialization.ObjectReader;
 import io.joyrpc.codec.serialization.ObjectWriter;
 import io.joyrpc.protocol.dubbo.DubboStatus;
 import io.joyrpc.protocol.message.ResponsePayload;
-import io.joyrpc.util.GenericType;
 
 import java.io.IOException;
 import java.lang.reflect.Type;

@@ -49,7 +49,6 @@ import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.ext.ExceptionMapper;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 import static io.joyrpc.constants.Constants.REST_ROOT;
 

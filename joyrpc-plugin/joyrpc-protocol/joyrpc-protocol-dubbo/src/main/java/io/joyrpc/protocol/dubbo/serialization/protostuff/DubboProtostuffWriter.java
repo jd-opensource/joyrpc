@@ -24,7 +24,6 @@ import io.joyrpc.codec.serialization.ObjectWriter;
 import io.protostuff.GraphIOUtil;
 import io.protostuff.LinkedBuffer;
 import io.protostuff.Schema;
-import io.protostuff.runtime.RuntimeSchema;
 import org.apache.dubbo.common.serialize.protostuff.Wrapper;
 
 import java.io.DataOutputStream;

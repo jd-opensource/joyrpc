@@ -20,8 +20,8 @@ package io.joyrpc.example.service.impl;
  * #L%
  */
 
-import io.joyrpc.context.RequestContext;
 import io.joyrpc.annotation.Provider;
+import io.joyrpc.context.RequestContext;
 import io.joyrpc.example.service.EchoService;
 
 import javax.annotation.Resource;

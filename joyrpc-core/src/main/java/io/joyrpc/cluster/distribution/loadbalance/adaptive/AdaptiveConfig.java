@@ -29,7 +29,8 @@ import java.util.Map;
 import java.util.Set;
 
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.util.StringUtils.*;
+import static io.joyrpc.util.StringUtils.SEMICOLON_COMMA_WHITESPACE;
+import static io.joyrpc.util.StringUtils.split;
 
 /**
  * 自适应配置

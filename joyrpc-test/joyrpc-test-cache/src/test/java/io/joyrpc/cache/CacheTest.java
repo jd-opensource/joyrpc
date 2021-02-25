@@ -20,8 +20,8 @@ package io.joyrpc.cache;
  * #L%
  */
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.List;

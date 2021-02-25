@@ -1,7 +1,6 @@
 package io.joyrpc.example.dubbo.provider;
 
 import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
-import org.apache.dubbo.config.spring.context.annotation.EnableDubbo;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -38,7 +38,6 @@ import io.joyrpc.util.State;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
 /**

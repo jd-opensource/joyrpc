@@ -25,7 +25,6 @@ import io.joyrpc.config.RegistryConfig;
 import io.joyrpc.config.ServerConfig;
 import io.joyrpc.example.service.DemoService;
 import io.joyrpc.example.service.impl.DemoServiceImpl;
-import io.joyrpc.util.network.Ipv4;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

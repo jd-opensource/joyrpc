@@ -26,7 +26,6 @@ import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.netty4.handler.MessageDecoder;
 import io.joyrpc.transport.netty4.handler.MessageEncoder;
 import io.netty.channel.ChannelPipeline;
-import io.netty.util.concurrent.EventExecutorGroup;
 
 /**
  * 默认管道工厂

@@ -74,10 +74,10 @@ import io.joyrpc.thread.ThreadPoolFactory;
 import io.joyrpc.trace.TraceFactory;
 import io.joyrpc.transaction.TransactionFactory;
 import io.joyrpc.transport.EndpointFactory;
+import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.transport.http.HttpClient;
 import io.joyrpc.transport.telnet.TelnetHandler;
-import io.joyrpc.transport.TransportFactory;
 
 /**
  * @date: 23/1/2019

@@ -1,6 +1,5 @@
 package io.joyrpc.invoker;
 
-import io.joyrpc.Invoker;
 import io.joyrpc.event.Event;
 
 /**

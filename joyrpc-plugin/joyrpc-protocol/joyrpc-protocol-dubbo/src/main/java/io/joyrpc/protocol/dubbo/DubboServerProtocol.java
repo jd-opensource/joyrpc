@@ -21,7 +21,6 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.extension.Extension;
-import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.ServerProtocol;
 
 import static io.joyrpc.protocol.Protocol.DUBBO_ORDER;

@@ -21,8 +21,8 @@ package io.joyrpc.util.network;
  */
 
 import io.joyrpc.extension.URL;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class Ipv4Test {
 

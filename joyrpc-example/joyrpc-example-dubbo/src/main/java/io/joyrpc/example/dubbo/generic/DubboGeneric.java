@@ -1,6 +1,5 @@
 package io.joyrpc.example.dubbo.generic;
 
-import io.joyrpc.example.dubbo.consumer.DubboClient;
 import org.apache.dubbo.config.annotation.Reference;
 import org.apache.dubbo.config.spring.context.annotation.DubboComponentScan;
 import org.apache.dubbo.config.spring.context.annotation.EnableDubboConfig;
@@ -11,7 +10,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 @SpringBootApplication
 @EnableDubboConfig

@@ -32,7 +32,6 @@ import io.joyrpc.protocol.message.Invocation;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Map;
-import java.util.function.Consumer;
 
 import static com.fasterxml.jackson.core.JsonToken.END_ARRAY;
 import static io.joyrpc.protocol.message.Invocation.*;

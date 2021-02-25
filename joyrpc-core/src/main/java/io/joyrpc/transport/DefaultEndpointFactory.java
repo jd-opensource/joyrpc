@@ -24,7 +24,6 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.thread.ThreadPool;
 
-import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.TRANSPORT_FACTORY;

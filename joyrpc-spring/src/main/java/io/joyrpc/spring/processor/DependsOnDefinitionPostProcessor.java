@@ -1,6 +1,9 @@
 package io.joyrpc.spring.processor;
 
-import io.joyrpc.spring.*;
+import io.joyrpc.spring.ConsumerBean;
+import io.joyrpc.spring.ConsumerGroupBean;
+import io.joyrpc.spring.GlobalParameterBean;
+import io.joyrpc.spring.ProviderBean;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;

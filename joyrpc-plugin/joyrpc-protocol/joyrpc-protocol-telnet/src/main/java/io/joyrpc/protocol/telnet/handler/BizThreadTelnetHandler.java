@@ -33,6 +33,7 @@ import org.apache.commons.cli.Options;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import static io.joyrpc.Plugin.JSON;
@@ -74,7 +75,7 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
             return new TelnetResponse(help());
         } else if (cmd.getOptions().length == 0) {
             Map<String, Object> result = new HashMap<>(100);
-            export(CALLBACK, ServiceManager.getCallbackThreadPool(), result);
+            export(CALLBACK, ServiceManager.getCallbackPool(), result);
             export(ServiceManager.getServers(), result);
             return new TelnetResponse(JSON.get().toJSONString(result));
         } else {
@@ -87,7 +88,7 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
                 return new TelnetResponse("ERROR:count must between 1 and 60");
             }
 
-            ThreadPoolExecutor pool = getThreadPool(port);
+            ExecutorService pool = getWorkerPool(port);
             if (pool != null) {
                 HashMap<String, Map<String, Object>> map = new HashMap<>(1);
                 StringBuilder builder = new StringBuilder(100);
@@ -127,14 +128,14 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
      * @param name
      * @return
      */
-    protected ThreadPoolExecutor getThreadPool(final String name) {
+    protected ExecutorService getWorkerPool(final String name) {
         if (name == null) {
             return null;
         } else if (Character.isDigit(name.charAt(0))) {
             Server server = ServiceManager.getServer(Integer.parseInt(name));
-            return server == null ? null : server.getBizThreadPool();
+            return server == null ? null : server.getWorkerPool();
         } else if (CALLBACK.equalsIgnoreCase(name)) {
-            return ServiceManager.getCallbackThreadPool();
+            return ServiceManager.getCallbackPool();
         }
         return null;
     }
@@ -154,31 +155,34 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
      * @param result
      */
     protected void export(final Server server, final Map<String, Object> result) {
-        export(String.valueOf(server.getLocalAddress().getPort()), server.getBizThreadPool(), result);
+        export(String.valueOf(server.getLocalAddress().getPort()), server.getWorkerPool(), result);
     }
 
     /**
      * 线程池信息
-     * @param name
-     * @param executor
-     * @param result
+     * @param name 名称
+     * @param executor 线程池
+     * @param result 结果
      */
-    protected void export(final String name, final ThreadPoolExecutor executor, final Map<String, Object> result) {
+    protected void export(final String name, final ExecutorService executor, final Map<String, Object> result) {
         result.put(name, export(executor));
     }
 
     /**
      * 线程池信息
      * @param executor
-     * @return
+     * @return 参数信息
      */
-    protected Map<String, Object> export(final ThreadPoolExecutor executor) {
+    protected Map<String, Object> export(final ExecutorService executor) {
         Map<String, Object> result = new HashMap(10);
-        result.put("min", executor.getCorePoolSize());
-        result.put("max", executor.getMaximumPoolSize());
-        result.put("current", executor.getPoolSize());
-        result.put("active", executor.getActiveCount());
-        result.put("queue", executor.getQueue().size());
+        if (executor instanceof ThreadPoolExecutor) {
+            ThreadPoolExecutor pool = (ThreadPoolExecutor) executor;
+            result.put("min", pool.getCorePoolSize());
+            result.put("max", pool.getMaximumPoolSize());
+            result.put("current", pool.getPoolSize());
+            result.put("active", pool.getActiveCount());
+            result.put("queue", pool.getQueue().size());
+        }
         return result;
     }
 }

@@ -23,6 +23,7 @@ package io.joyrpc.transport;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.TRANSPORT_FACTORY;
@@ -46,8 +47,8 @@ public class DefaultEndpointFactory implements EndpointFactory {
     }
 
     @Override
-    public Server createServer(final URL url) {
-        return create(url, factory -> new DecoratorServer(url, factory.createServer(url)));
+    public Server createServer(final URL url, final ExecutorService workerPool) {
+        return create(url, factory -> new DecoratorServer(url, factory.createServer(url, workerPool)));
     }
 
     /**

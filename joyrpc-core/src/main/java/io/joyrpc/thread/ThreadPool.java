@@ -53,9 +53,9 @@ public interface ThreadPool {
      *
      * @param url           URL
      * @param threadFactory 线程工厂类
-     * @return
+     * @return 线程池
      */
-    default ThreadPoolExecutor get(final URL url, final ThreadFactory threadFactory) {
+    default ExecutorService get(final URL url, final ThreadFactory threadFactory) {
         return get(url, threadFactory, o -> QUEUE_FUNCTION.apply(url.getInteger(QUEUES_OPTION), !url.getString(QUEUE_TYPE_OPTION).equals(QUEUE_TYPE_OPTION.getValue())));
     }
 
@@ -65,8 +65,8 @@ public interface ThreadPool {
      * @param url           URL
      * @param threadFactory 线程工厂类
      * @param function      队列
-     * @return
+     * @return 线程池
      */
-    ThreadPoolExecutor get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function);
+    ExecutorService get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function);
 
 }

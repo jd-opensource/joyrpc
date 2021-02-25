@@ -26,6 +26,8 @@ import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.DecoratorServer;
+import io.joyrpc.transport.TransportFactory;
+import io.joyrpc.transport.TransportServer;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
@@ -33,8 +35,6 @@ import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
 import io.joyrpc.transport.resteasy.mapper.ApplicationExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.ClientErrorExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.IllegalArgumentExceptionMapper;
-import io.joyrpc.transport.TransportServer;
-import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.util.Futures;
 import org.jboss.resteasy.core.SynchronousDispatcher;
 import org.jboss.resteasy.plugins.server.netty.RequestDispatcher;
@@ -48,6 +48,7 @@ import javax.ws.rs.ClientErrorException;
 import javax.ws.rs.ext.ExceptionMapper;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import static io.joyrpc.constants.Constants.REST_ROOT;
 
@@ -64,12 +65,13 @@ public class RestServer extends DecoratorServer<TransportServer> implements Conf
     /**
      * 构造函数
      *
-     * @param url
-     * @param factory
+     * @param url        url
+     * @param factory    传输通道工程
+     * @param workerPool 业务线程池
      */
-    public RestServer(final URL url, final TransportFactory factory) {
+    public RestServer(final URL url, final TransportFactory factory, final ExecutorService workerPool) {
         super(url, null);
-        this.transport = factory.createServer(url, this::beforeOpen, this::afterClose);
+        this.transport = factory.createServer(url, workerPool, this::beforeOpen, this::afterClose);
         this.deployment = new ResteasyDeployment();
     }
 

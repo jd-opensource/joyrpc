@@ -47,13 +47,13 @@ import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.handler.DefaultProtocolDeduction;
 import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.ShareServer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.InactiveEvent;
 import io.joyrpc.transport.message.Message;
-import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.util.Close;
 import io.joyrpc.util.Futures;
 import io.joyrpc.util.Shutdown;
@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -348,7 +349,7 @@ public class ServiceManager {
      *
      * @return
      */
-    public static ThreadPoolExecutor getCallbackThreadPool() {
+    public static ExecutorService getCallbackPool() {
         return INSTANCE.callbackManager.getThreadPool();
     }
 
@@ -373,28 +374,32 @@ public class ServiceManager {
     /**
      * 修改线程池
      *
-     * @param executor
-     * @param name
-     * @param parametric
-     * @param coreKey
-     * @param maxKey
+     * @param executor   线程池
+     * @param name       名称
+     * @param parametric 参数
+     * @param coreKey    核心线程数键
+     * @param maxKey     最大线程数键
      */
-    public static void updateThreadPool(final ThreadPoolExecutor executor, final String name, final Parametric parametric,
-                                        final String coreKey, final String maxKey) {
-        if (executor == null) {
+    public static void updateThreadPool(final ExecutorService executor,
+                                        final String name,
+                                        final Parametric parametric,
+                                        final String coreKey,
+                                        final String maxKey) {
+        if (!(executor instanceof ThreadPoolExecutor)) {
             return;
         }
+        ThreadPoolExecutor pool = (ThreadPoolExecutor) executor;
         Integer core = parametric.getInteger(coreKey);
-        if (core != null && core > 0 && core != executor.getCorePoolSize()) {
+        if (core != null && core > 0 && core != pool.getCorePoolSize()) {
             logger.info(String.format("Core pool size of %s is changed from %d to %d",
-                    name, executor.getCorePoolSize(), core));
-            executor.setCorePoolSize(core);
+                    name, pool.getCorePoolSize(), core));
+            pool.setCorePoolSize(core);
         }
         Integer max = parametric.getInteger(maxKey);
-        if (max != null && max > 0 && max != executor.getMaximumPoolSize()) {
+        if (max != null && max > 0 && max != pool.getMaximumPoolSize()) {
             logger.info(String.format("Maximum pool size of %s is changed from %d to %d",
-                    name, executor.getMaximumPoolSize(), max));
-            executor.setMaximumPoolSize(max);
+                    name, pool.getMaximumPoolSize(), max));
+            pool.setMaximumPoolSize(max);
         }
     }
 
@@ -581,7 +586,8 @@ public class ServiceManager {
     protected Server getServer(final URL url) {
         return servers.computeIfAbsent(url.getPort(), port -> {
             EndpointFactory factory = ENDPOINT_FACTORY.getOrDefault(url.getString(ENDPOINT_FACTORY_OPTION));
-            Server server = factory.createServer(url);
+            //每个server独立的线程池
+            Server server = factory.createServer(url, getWorkerPool(url));
             server.setDeduction(new DefaultProtocolDeduction());
             server.addEventHandler(event -> {
                 //连接通道关闭事件
@@ -592,8 +598,6 @@ public class ServiceManager {
                     callbackManager.getProducer().removeCallback(transport);
                 }
             });
-            //每个server独立的线程池
-            server.setBizThreadPool(getBizThreadPool(url));
             return new ShareServer(server, v -> servers.remove(v.getUrl().getPort()));
         });
     }
@@ -604,7 +608,7 @@ public class ServiceManager {
      * @param url url
      * @return 线程池
      */
-    protected ThreadPoolExecutor getBizThreadPool(final URL url) {
+    protected ExecutorService getWorkerPool(final URL url) {
         ThreadPool pool = THREAD_POOL.getOrDefault(url.getString(THREADPOOL_OPTION));
         NamedThreadFactory threadFactory = new NamedThreadFactory("RPC-BZ-" + url.getPort(), true);
         return pool.get(url, threadFactory);
@@ -651,7 +655,7 @@ public class ServiceManager {
                     refers = new ConcurrentHashMap<>();
                     callbackManager.close();
                     //关闭服务
-                    servers.forEach((o, r) -> whenComplete(r.close(), () -> Close.close(r.getBizThreadPool(), 0)));
+                    servers.forEach((o, r) -> whenComplete(r.close(), () -> Close.close(r.getWorkerPool(), 0)));
                     servers = new ConcurrentHashMap<>();
                     //关闭系统内容消费者（如：注册中心消费者）
                     systems.forEach((o, r) -> r.close());

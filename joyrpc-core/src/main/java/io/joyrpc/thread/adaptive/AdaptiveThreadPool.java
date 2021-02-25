@@ -43,7 +43,7 @@ public class AdaptiveThreadPool implements ThreadPool {
     private static final Logger logger = LoggerFactory.getLogger(AdaptiveThreadPool.class);
 
     @Override
-    public ThreadPoolExecutor get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function) {
+    public ExecutorService get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function) {
         Integer maxSize = url.getPositiveInt(MAX_SIZE_OPTION);
         Integer coreSize = url.getPositive(CORE_SIZE_OPTION.getName(), maxSize);
         Integer keepAliveTime = url.getPositive(KEEP_ALIVE_TIME_OPTION.getName(), (Integer) null);

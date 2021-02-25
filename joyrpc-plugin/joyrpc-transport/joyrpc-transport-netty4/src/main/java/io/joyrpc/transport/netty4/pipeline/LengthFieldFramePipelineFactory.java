@@ -40,7 +40,7 @@ public class LengthFieldFramePipelineFactory extends DefaultPipelineFactory {
         LengthFieldFrameCodec frameCodec = (LengthFieldFrameCodec) codec;
         LengthFieldFrame frame = frameCodec.getLengthFieldFrame();
         if (frame.getMaxFrameLength() <= 0) {
-            frame.setMaxFrameLength(channel.getAttribute(Channel.PAYLOAD));
+            frame.setMaxFrameLength(channel.getPayloadSize());
         }
         pipeline.addLast(DECODER, new LengthFieldMessageDecoder(
                 frame.getMaxFrameLength(), frame.getLengthFieldOffset(),

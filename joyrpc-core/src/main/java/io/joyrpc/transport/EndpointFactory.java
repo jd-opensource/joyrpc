@@ -23,6 +23,7 @@ package io.joyrpc.transport;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 /**
@@ -51,8 +52,9 @@ public interface EndpointFactory {
     /**
      * 创建服务端
      *
-     * @param url url
+     * @param url        url
+     * @param workerPool 线程池
      * @return 服务端
      */
-    Server createServer(URL url);
+    Server createServer(URL url, ExecutorService workerPool);
 }

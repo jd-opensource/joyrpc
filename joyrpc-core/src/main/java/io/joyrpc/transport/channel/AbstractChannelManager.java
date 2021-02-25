@@ -175,11 +175,9 @@ public abstract class AbstractChannelManager implements ChannelManager {
          */
         protected CompletableFuture<Channel> doConnect(final PoolChannelController controller) {
             CompletableFuture<Channel> future = new CompletableFuture<>();
-            connector.connect().whenComplete((ch, error) -> {
+            connector.connect(name, publisher).whenComplete((ch, error) -> {
                 if (error == null) {
                     channel = ch;
-                    ch.setAttribute(CHANNEL_KEY, name);
-                    ch.setAttribute(EVENT_PUBLISHER, publisher);
                     ch.getFutureManager().open();
                     publisher.start();
                     trigger = strategy == null || strategy.getHeartbeat() == null ? null :
@@ -204,7 +202,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
         }
 
         @Override
-        public CompletableFuture<Void> send(Object object) {
+        public CompletableFuture<Void> send(final Object object) {
             if (stateMachine.isOpened()) {
                 return super.send(object);
             } else {
@@ -213,7 +211,6 @@ public abstract class AbstractChannelManager implements ChannelManager {
                                 Channel.toString(this), object.toString()));
                 return Futures.completeExceptionally(throwable);
             }
-
         }
 
         @Override
@@ -251,6 +248,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
                 future.complete(ch);
             });
         }
+
     }
 
     /**

@@ -20,14 +20,17 @@ package io.joyrpc.transport.netty4.channel;
  * #L%
  */
 
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.TransportException;
 import io.joyrpc.transport.channel.Channel;
+import io.joyrpc.transport.event.TransportEvent;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.concurrent.Future;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -43,17 +46,14 @@ public class NettyServerChannel extends NettyChannel {
      */
     protected EventLoopGroup workerGroup;
 
-    /**
-     * 构造函数
-     *
-     * @param channel     Netty连接通道
-     * @param bossGroup   主线程池
-     * @param workerGroup 工作线程池
-     */
-    public NettyServerChannel(final io.netty.channel.Channel channel,
+    public NettyServerChannel(final String name,
+                              final io.netty.channel.Channel channel,
+                              final ExecutorService workerPool,
+                              final Publisher<TransportEvent> publisher,
+                              final int payloadSize,
                               final EventLoopGroup bossGroup,
                               final EventLoopGroup workerGroup) {
-        super(channel, true);
+        super(name, channel, workerPool, publisher, payloadSize, true);
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
     }

@@ -21,7 +21,9 @@ package io.joyrpc.transport.channel;
  */
 
 
+import io.joyrpc.event.Publisher;
 import io.joyrpc.transport.buffer.ChannelBuffer;
+import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.SessionManager;
@@ -29,6 +31,7 @@ import io.joyrpc.transport.session.SessionManager;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -44,13 +47,21 @@ public interface Channel {
 
     String CHANNEL_TRANSPORT = "CHANNEL_TRANSPORT";
 
-    String CHANNEL_KEY = "CHANNEL_KEY";
-
     String PROTOCOL = "PROTOCOL";
 
-    String PAYLOAD = "PAYLOAD";
+    /**
+     * 获取名称
+     *
+     * @return 名称
+     */
+    String getName();
 
-    String EVENT_PUBLISHER = "EVENT_PUBLISHER";
+    /**
+     * 关闭
+     *
+     * @return CompletableFuture
+     */
+    CompletableFuture<Channel> close();
 
     /**
      * 连接通道转字符串
@@ -99,13 +110,6 @@ public interface Channel {
             send(object);
         }
     }
-
-    /**
-     * 关闭channel
-     *
-     * @return
-     */
-    CompletableFuture<Channel> close();
 
     /**
      * 获取本地地址
@@ -217,35 +221,56 @@ public interface Channel {
     FutureManager<Long, Message> getFutureManager();
 
     /**
-     * 申请一个ChannelBuffer
+     * 获取会话管理器
      *
-     * @return ChannelBuffer
+     * @return 会话管理器
+     */
+    SessionManager getSessionManager();
+
+    /**
+     * 获取事件发布器
+     *
+     * @return 事件发布器
+     */
+    Publisher<TransportEvent> getPublisher();
+
+    /**
+     * 获取业务线程池
+     *
+     * @return 线程池
+     */
+    ExecutorService getWorkerPool();
+
+    /**
+     * 获取数据包大小
+     *
+     * @return 数据包大小
+     */
+    int getPayloadSize();
+
+    /**
+     * 申请一个缓冲区
+     *
+     * @return 缓冲区
      */
     ChannelBuffer buffer();
 
     /**
-     * 申请一个ChannelBuffer
+     * 申请一个缓冲区
      *
      * @param initialCapacity 初始长度
-     * @return ChannelBuffer
+     * @return 缓冲区
      */
     ChannelBuffer buffer(int initialCapacity);
 
     /**
-     * 申请一个ChannelBuffer
+     * 申请一个缓冲区
      *
      * @param initialCapacity 初始长度
      * @param maxCapacity     最大长度
-     * @return ChannelBuffer
+     * @return 缓冲区
      */
     ChannelBuffer buffer(int initialCapacity, int maxCapacity);
-
-    /**
-     * 获取session管理器
-     *
-     * @return SessionManager
-     */
-    SessionManager getSessionManager();
 
     /**
      * 是否是服务端
@@ -318,6 +343,5 @@ public interface Channel {
      * @param caught 异常
      */
     void fireCaught(Throwable caught);
-
 
 }

@@ -277,7 +277,7 @@ public class Exporter extends AbstractService {
         if (server != null) {
             server.close().whenComplete((v, e) -> {
                 //在这里安全关闭外部线程池
-                Close.close(server.getBizThreadPool(), 0);
+                Close.close(server.getWorkerPool(), 0);
                 future3.complete(null);
             });
         } else {

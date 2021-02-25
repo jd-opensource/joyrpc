@@ -21,18 +21,20 @@ package io.joyrpc.transport.netty4.transport;
  */
 
 import io.joyrpc.constants.Constants;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.SslException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.transport.AbstractClient;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
+import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy.HeartbeatMode;
-import io.joyrpc.transport.netty4.pipeline.PipelineFactory;
 import io.joyrpc.transport.netty4.channel.NettyClientChannel;
 import io.joyrpc.transport.netty4.handler.ConnectionHandler;
 import io.joyrpc.transport.netty4.handler.IdleHeartbeatHandler;
+import io.joyrpc.transport.netty4.pipeline.PipelineFactory;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
-import io.joyrpc.transport.AbstractClient;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollSocketChannel;
@@ -69,8 +71,12 @@ public class NettyClient extends AbstractClient {
 
     /**
      * 创建channel
+     *
+     * @param name      名称
+     * @param publisher 事件发布器
      */
-    protected CompletableFuture<Channel> connect() {
+    protected CompletableFuture<Channel> connect(final String name,
+                                                 final Publisher<TransportEvent> publisher) {
         CompletableFuture<Channel> future = new CompletableFuture<>();
         //consumer不会为空
         if (codec == null) {
@@ -83,7 +89,7 @@ public class NettyClient extends AbstractClient {
                 //获取SSL上下文
                 SslContext sslContext = SslContextManager.getClientSslContext(url);
                 //TODO 考虑根据不同的参数，创建不同的连接
-                Bootstrap bootstrap = configure(new Bootstrap(), ioGroups[0], channels, sslContext);
+                Bootstrap bootstrap = configure(name, publisher, new Bootstrap(), ioGroups[0], channels, sslContext);
                 // Bind and start to accept incoming connections.
                 bootstrap.connect(url.getHost(), url.getPort()).addListener((ChannelFutureListener) f -> {
                     if (f.isSuccess()) {
@@ -107,12 +113,16 @@ public class NettyClient extends AbstractClient {
     /**
      * 配置
      *
+     * @param name       名称
+     * @param publisher  事件发布器
      * @param bootstrap  bootstrap
      * @param ioGroup    线程池
      * @param channels   通道
      * @param sslContext ssl上下文
      */
-    protected Bootstrap configure(final Bootstrap bootstrap,
+    protected Bootstrap configure(final String name,
+                                  final Publisher<TransportEvent> publisher,
+                                  final Bootstrap bootstrap,
                                   final EventLoopGroup ioGroup,
                                   final Channel[] channels,
                                   final SslContext sslContext) {
@@ -132,13 +142,9 @@ public class NettyClient extends AbstractClient {
                     @Override
                     protected void initChannel(final SocketChannel ch) {
                         //及时发送 与 缓存发送
-                        channels[0] = new NettyClientChannel(ch, ioGroup);
-                        //设置
-                        channels[0].
-                                setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
-                                setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null);
+                        channels[0] = new NettyClientChannel(name, ch, workerPool, publisher, url.getPositiveInt(Constants.PAYLOAD), ioGroup);
                         //添加连接事件监听
-                        ch.pipeline().addLast("connection", new ConnectionHandler(channels[0], publisher));
+                        ch.pipeline().addLast("connection", new ConnectionHandler(channels[0]));
                         //添加编解码和处理链
                         PipelineFactory factory = PIPELINE_FACTORY.get(codec.pipeline());
                         factory.build(ch.pipeline(), codec, chain, channels[0]);

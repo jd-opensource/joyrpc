@@ -30,7 +30,7 @@ import io.joyrpc.util.State;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 端点，客户端和服务端的基础接口
@@ -118,18 +118,11 @@ public interface Endpoint<M> {
     }
 
     /**
-     * 设置业务线程池
-     *
-     * @param bizThreadPool 线程池
-     */
-    void setBizThreadPool(ThreadPoolExecutor bizThreadPool);
-
-    /**
-     * 获取当前配置的线程池
+     * 获取业务线程池
      *
      * @return 线程池
      */
-    ThreadPoolExecutor getBizThreadPool();
+    ExecutorService getWorkerPool();
 
     /**
      * 线程池异步执行
@@ -138,7 +131,7 @@ public interface Endpoint<M> {
      */
     default void runAsync(final Runnable runnable) {
         if (runnable != null) {
-            ThreadPoolExecutor executor = getBizThreadPool();
+            ExecutorService executor = getWorkerPool();
             if (executor != null) {
                 executor.execute(runnable);
             } else {

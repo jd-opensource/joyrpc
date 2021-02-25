@@ -20,11 +20,9 @@ package io.joyrpc.transport.netty4.handler;
  * #L%
  */
 
-import io.joyrpc.event.Publisher;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.ActiveEvent;
 import io.joyrpc.transport.event.InactiveEvent;
-import io.joyrpc.transport.event.TransportEvent;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
@@ -40,20 +38,14 @@ public class ConnectionHandler extends ChannelInboundHandlerAdapter {
      * 通道
      */
     protected Channel channel;
-    /**
-     * 事件发布器
-     */
-    protected Publisher<TransportEvent> publisher;
 
     /**
      * 构造函数
      *
-     * @param channel   连接通道
-     * @param publisher 事件发布器
+     * @param channel 连接通道
      */
-    public ConnectionHandler(Channel channel, Publisher<TransportEvent> publisher) {
+    public ConnectionHandler(Channel channel) {
         this.channel = channel;
-        this.publisher = publisher;
     }
 
     @Override
@@ -61,14 +53,14 @@ public class ConnectionHandler extends ChannelInboundHandlerAdapter {
         try {
             channel.getFutureManager().close();
         } finally {
-            publisher.offer(new InactiveEvent(channel));
+            channel.getPublisher().offer(new InactiveEvent(channel));
             ctx.fireChannelInactive();
         }
     }
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-        publisher.offer(new ActiveEvent(channel));
+        channel.getPublisher().offer(new ActiveEvent(channel));
         ctx.fireChannelActive();
     }
 }

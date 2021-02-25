@@ -21,13 +21,10 @@ package io.joyrpc.protocol.handler;
  */
 
 import io.joyrpc.cluster.event.OfflineEvent;
-import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
-import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.event.TransportEvent;
 
 /**
  * 下线请求处理器
@@ -36,8 +33,7 @@ public class OfflineReceiver extends AbstractReceiver {
 
     @Override
     public void handle(final ChannelContext context, final Message message) throws HandlerException {
-        Publisher<TransportEvent> publisher = context.getChannel().getAttribute(Channel.EVENT_PUBLISHER);
-        publisher.offer(new OfflineEvent(context.getChannel()));
+        context.publish(new OfflineEvent(context.getChannel()));
     }
 
     @Override

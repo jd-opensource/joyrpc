@@ -20,12 +20,15 @@ package io.joyrpc.transport.channel;
  * #L%
  */
 
+import io.joyrpc.event.Publisher;
 import io.joyrpc.transport.buffer.ChannelBuffer;
+import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 通道装饰器
@@ -39,13 +42,18 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
-    public CompletableFuture<Void> send(final Object object) {
-        return channel.send(object);
+    public String getName() {
+        return channel.getName();
     }
 
     @Override
     public CompletableFuture<Channel> close() {
         return channel.close();
+    }
+
+    @Override
+    public CompletableFuture<Void> send(final Object object) {
+        return channel.send(object);
     }
 
     @Override
@@ -89,6 +97,26 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
+    public SessionManager getSessionManager() {
+        return channel.getSessionManager();
+    }
+
+    @Override
+    public Publisher<TransportEvent> getPublisher() {
+        return channel.getPublisher();
+    }
+
+    @Override
+    public ExecutorService getWorkerPool() {
+        return channel.getWorkerPool();
+    }
+
+    @Override
+    public int getPayloadSize() {
+        return channel.getPayloadSize();
+    }
+
+    @Override
     public ChannelBuffer buffer() {
         return channel.buffer();
     }
@@ -101,11 +129,6 @@ public class DecoratorChannel implements Channel {
     @Override
     public ChannelBuffer buffer(int initialCapacity, int maxCapacity) {
         return channel.buffer(initialCapacity, maxCapacity);
-    }
-
-    @Override
-    public SessionManager getSessionManager() {
-        return channel.getSessionManager();
     }
 
     @Override

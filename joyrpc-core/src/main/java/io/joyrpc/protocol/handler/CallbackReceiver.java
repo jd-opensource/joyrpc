@@ -57,7 +57,7 @@ public class CallbackReceiver extends AbstractReceiver {
         String callbackInsId = (String) request.getHeader().getAttribute(HEAD_CALLBACK_INSID);
         Invoker invoker = ServiceManager.getConsumerCallback().getInvoker(callbackInsId);
         Channel channel = context.getChannel();
-        ServiceManager.getCallbackThreadPool().execute(() -> {
+        ServiceManager.getCallbackPool().execute(() -> {
             try {
                 //TODO 参数恢复
                 CompletableFuture<Result> future = invoker != null ? invoker.invoke(request) :

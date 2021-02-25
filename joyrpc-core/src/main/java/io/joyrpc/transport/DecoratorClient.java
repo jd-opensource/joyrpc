@@ -37,7 +37,7 @@ import io.joyrpc.util.State;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -136,13 +136,8 @@ public class DecoratorClient<T extends TransportClient> implements Client {
     }
 
     @Override
-    public void setBizThreadPool(final ThreadPoolExecutor threadPool) {
-        transport.setBizThreadPool(threadPool);
-    }
-
-    @Override
-    public ThreadPoolExecutor getBizThreadPool() {
-        return transport.getBizThreadPool();
+    public ExecutorService getWorkerPool() {
+        return transport.getWorkerPool();
     }
 
     @Override

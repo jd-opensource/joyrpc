@@ -58,7 +58,7 @@ public class GlobalConfigHandler implements ConfigEventHandler {
             newAttrs.putIfAbsent(SETTING_REGISTRY_HEARTBEAT_INTERVAL, "15000");
             newAttrs.putIfAbsent(SETTING_REGISTRY_CHECK_INTERVAL, "300000");
             //修改回调线程池
-            ServiceManager.updateThreadPool(ServiceManager.getCallbackThreadPool(), "callback",
+            ServiceManager.updateThreadPool(ServiceManager.getCallbackPool(), "callback",
                     new MapParametric(newAttrs),
                     SETTING_CALLBACK_POOL_CORE_SIZE,
                     SETTING_CALLBACK_POOL_MAX_SIZE);

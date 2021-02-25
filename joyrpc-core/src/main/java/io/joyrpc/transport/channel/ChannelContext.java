@@ -21,6 +21,9 @@ package io.joyrpc.transport.channel;
  */
 
 
+import io.joyrpc.event.Publisher;
+import io.joyrpc.transport.event.TransportEvent;
+
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -62,5 +65,15 @@ public interface ChannelContext {
      * @return CompletableFuture
      */
     CompletableFuture<Void> wrote(Object msg);
+
+    /**
+     * 发布事件
+     *
+     * @param event 事件
+     */
+    default void publish(final TransportEvent event) {
+        Publisher<TransportEvent> publisher = getChannel().getPublisher();
+        publisher.offer(event);
+    }
 
 }

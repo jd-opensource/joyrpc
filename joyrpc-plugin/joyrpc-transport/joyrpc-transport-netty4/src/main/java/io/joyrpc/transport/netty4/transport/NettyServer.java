@@ -24,6 +24,9 @@ import io.joyrpc.constants.Constants;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.transport.AbstractServer;
+import io.joyrpc.transport.ChannelTransport;
+import io.joyrpc.transport.TransportServer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.netty4.channel.NettyChannel;
@@ -32,9 +35,6 @@ import io.joyrpc.transport.netty4.codec.NettyDeductionContext;
 import io.joyrpc.transport.netty4.handler.ConnectionHandler;
 import io.joyrpc.transport.netty4.handler.ProtocolDeductionHandler;
 import io.joyrpc.transport.netty4.ssl.SslContextManager;
-import io.joyrpc.transport.AbstractServer;
-import io.joyrpc.transport.ChannelTransport;
-import io.joyrpc.transport.TransportServer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollServerSocketChannel;
@@ -44,6 +44,7 @@ import io.netty.handler.ssl.SslContext;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -67,12 +68,14 @@ public class NettyServer extends AbstractServer {
     /**
      * 构造函数
      *
-     * @param url      url
-     * @param function transport函数
+     * @param url        url
+     * @param workerPool 业务线程池
+     * @param function   transport函数
      */
     public NettyServer(final URL url,
+                       final ExecutorService workerPool,
                        final BiFunction<Channel, URL, ChannelTransport> function) {
-        super(url);
+        super(url, workerPool);
         this.function = function;
     }
 
@@ -80,15 +83,17 @@ public class NettyServer extends AbstractServer {
      * 构造函数
      *
      * @param url        url
+     * @param workerPool 业务线程池
      * @param beforeOpen 打开前
      * @param afterClose 打开后
      * @param function   transport函数
      */
     public NettyServer(final URL url,
+                       final ExecutorService workerPool,
                        final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                        final Function<TransportServer, CompletableFuture<Void>> afterClose,
                        final BiFunction<Channel, URL, ChannelTransport> function) {
-        super(url, beforeOpen, afterClose);
+        super(url, workerPool, beforeOpen, afterClose);
         this.function = function;
     }
 
@@ -105,9 +110,10 @@ public class NettyServer extends AbstractServer {
                 SslContext sslContext = SslContextManager.getServerSslContext(url);
                 EventLoopGroup bossGroup = EventLoopGroupFactory.getBossGroup(url);
                 EventLoopGroup workerGroup = EventLoopGroupFactory.getWorkerGroup(url);
-                ServerBootstrap bootstrap = configure(new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
+                String name = host + ":" + port;
+                ServerBootstrap bootstrap = configure(name, null, new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
                 bootstrap.bind(new InetSocketAddress(host, port)).addListener((ChannelFutureListener) f -> {
-                    NettyServerChannel channel = new NettyServerChannel(f.channel(), bossGroup, workerGroup);
+                    NettyServerChannel channel = new NettyServerChannel(name, f.channel(), workerPool, publisher, payloadSize, bossGroup, workerGroup);
                     if (f.isSuccess()) {
                         future.complete(channel);
                     } else {
@@ -128,16 +134,20 @@ public class NettyServer extends AbstractServer {
     /**
      * 配置
      *
+     * @param name       名称
+     * @param publisher  事件发布器
      * @param bootstrap  启动
      * @param sslContext ssl上下文
      */
-    protected ServerBootstrap configure(final ServerBootstrap bootstrap, final SslContext sslContext) {
+    protected ServerBootstrap configure(final String name,
+                                        final Publisher<TransportEvent> publisher,
+                                        final ServerBootstrap bootstrap, final SslContext sslContext) {
         //io.netty.bootstrap.Bootstrap - Unknown channel option 'SO_BACKLOG' for channel
         bootstrap.channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
-                        configure(ch, sslContext);
+                        configure(name, publisher, ch, sslContext);
                     }
                 })
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
@@ -160,22 +170,25 @@ public class NettyServer extends AbstractServer {
     /**
      * 配置Socket连接通道
      *
-     * @param ch         Socket连接通道
+     * @param name       名称
+     * @param publisher  事件发布器
+     * @param ch         客户端连接通道
      * @param sslContext ssl上下文
      * @throws Exception
      */
-    protected void configure(final SocketChannel ch, final SslContext sslContext) throws Exception {
+    protected void configure(final String name,
+                             final Publisher<TransportEvent> publisher,
+                             final SocketChannel ch,
+                             final SslContext sslContext) throws Exception {
         //及时发送 与 缓存发送
-        Channel channel = new NettyChannel(ch, true);
+        Channel channel = new NettyChannel(name, ch, workerPool, publisher, payloadSize, true);
         ChannelTransport transport = function.apply(channel, url);
         //设置payload,添加业务线程池到channel
-        channel.setAttribute(Channel.PAYLOAD, url.getPositiveInt(Constants.PAYLOAD)).
-                setAttribute(Channel.BIZ_THREAD_POOL, bizThreadPool, (k, v) -> v != null).
-                setAttribute(Channel.CHANNEL_TRANSPORT, transport);
+        channel.setAttribute(Channel.CHANNEL_TRANSPORT, transport);
         if (sslContext != null) {
             ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));
         }
-        ch.pipeline().addLast("connection", new ServerConnectionHandler(channel, publisher, inactive));
+        ch.pipeline().addLast("connection", new ServerConnectionHandler(channel, inactive));
         if (deduction != null) {
             ch.pipeline().addLast(PROTOCOL_DEDUCTION_HANDLER, new ProtocolDeductionHandler(deduction, channel));
         } else {
@@ -194,9 +207,8 @@ public class NettyServer extends AbstractServer {
         protected final Consumer<Channel> inactive;
 
         public ServerConnectionHandler(final Channel channel,
-                                       final Publisher<TransportEvent> publisher,
                                        final Consumer<Channel> inactive) {
-            super(channel, publisher);
+            super(channel);
             this.inactive = inactive;
         }
 

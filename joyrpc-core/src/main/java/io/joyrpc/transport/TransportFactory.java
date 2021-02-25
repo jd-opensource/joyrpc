@@ -24,6 +24,7 @@ import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 /**
@@ -43,20 +44,23 @@ public interface TransportFactory {
     /**
      * 构造传输通道服务端
      *
-     * @param url URL
+     * @param url        URL
+     * @param workerPool 业务线程池
      * @return 服务端传输通道
      */
-    TransportServer createServer(URL url);
+    TransportServer createServer(URL url, ExecutorService workerPool);
 
     /**
      * 构造传输通道服务端
      *
      * @param url        URL
+     * @param workerPool 业务线程池
      * @param beforeOpen 打开前
      * @param afterClose 打开后
      * @return 服务端传输通道
      */
     TransportServer createServer(URL url,
+                                 ExecutorService workerPool,
                                  Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                                  Function<TransportServer, CompletableFuture<Void>> afterClose);
 

@@ -214,7 +214,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler implements H
      */
     public static Http2ServerCodecHandler create(final Channel channel, final Http2Codec http2Codec) {
         Http2FrameLogger frameLogger = new Http2FrameLogger(LogLevel.DEBUG, Http2ServerCodecHandler.class);
-        int payload = channel.getAttribute(Channel.PAYLOAD);
+        int payload = channel.getPayloadSize();
 
         Http2HeadersDecoder headersDecoder = new DefaultHttp2HeadersDecoder(true, payload);
         Http2FrameReader frameReader = new Http2InboundFrameLogger(new DefaultHttp2FrameReader(headersDecoder), frameLogger);

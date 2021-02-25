@@ -20,12 +20,14 @@ package io.joyrpc.transport.netty4.channel;
  * #L%
  */
 
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.FutureManager;
+import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.joyrpc.transport.netty4.util.FutureAdapter;
@@ -35,6 +37,7 @@ import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -45,34 +48,63 @@ public class NettyChannel implements Channel {
     protected static final String SEND_REQUEST_TOO_FAST = "Send request exception, because sending request is too fast, causing channel is not writable. at %s : %s";
     protected static final String SEND_REQUEST_NOT_ACTIVE = "Send request exception, causing channel is not active. at  %s : %s";
     /**
+     * 名称
+     */
+    protected final String name;
+    /**
+     * 事件发布器
+     */
+    protected final Publisher<TransportEvent> publisher;
+    /**
      * 通道接口
      */
-    protected io.netty.channel.Channel channel;
+    protected final io.netty.channel.Channel channel;
+    /**
+     * 工作线程池
+     */
+    protected final ExecutorService workerPool;
+    /**
+     * 数据包大小
+     */
+    protected final int payloadSize;
     /**
      * 消息ID，默认采用int
      */
-    protected AtomicInteger idGenerator = new AtomicInteger(0);
+    protected final AtomicInteger idGenerator = new AtomicInteger(0);
     /**
      * Future管理器
      */
-    protected FutureManager<Long, Message> futureManager;
+    protected final FutureManager<Long, Message> futureManager;
     /**
      * 会话管理器
      */
-    protected SessionManager sessionManager;
+    protected final SessionManager sessionManager;
     /**
      * 是否是服务端
      */
-    protected boolean server;
+    protected final boolean server;
 
     /**
      * 构造函数
      *
-     * @param channel 通道
-     * @param server  服务端标识
+     * @param name        名称
+     * @param channel     通道
+     * @param workerPool  业务线程池
+     * @param publisher   事件发布器
+     * @param payloadSize 数据包大小
+     * @param server      服务端标识
      */
-    public NettyChannel(io.netty.channel.Channel channel, boolean server) {
+    public NettyChannel(final String name,
+                        final io.netty.channel.Channel channel,
+                        final ExecutorService workerPool,
+                        final Publisher<TransportEvent> publisher,
+                        final int payloadSize,
+                        final boolean server) {
+        this.name = name;
         this.channel = channel;
+        this.publisher = publisher;
+        this.workerPool = workerPool;
+        this.payloadSize = payloadSize;
         this.server = server;
         this.futureManager = new FutureManager<>(this, () -> (long) idGenerator.incrementAndGet());
         this.sessionManager = new SessionManager(server);
@@ -97,6 +129,11 @@ public class NettyChannel implements Channel {
             }
         }
         return future;
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 
     @Override
@@ -198,6 +235,21 @@ public class NettyChannel implements Channel {
     @Override
     public SessionManager getSessionManager() {
         return sessionManager;
+    }
+
+    @Override
+    public Publisher<TransportEvent> getPublisher() {
+        return publisher;
+    }
+
+    @Override
+    public ExecutorService getWorkerPool() {
+        return workerPool;
+    }
+
+    @Override
+    public int getPayloadSize() {
+        return payloadSize;
     }
 
     @Override

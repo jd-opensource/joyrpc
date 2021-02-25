@@ -27,6 +27,7 @@ import io.joyrpc.transport.*;
 import io.joyrpc.transport.channel.Channel;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -48,14 +49,15 @@ public class NettyFactory implements TransportFactory {
     }
 
     @Override
-    public TransportServer createServer(final URL url) {
-        return new NettyServer(url, CHANNEL_TRANSPORT_FUNCTION);
+    public TransportServer createServer(final URL url, final ExecutorService workerPool) {
+        return new NettyServer(url, workerPool, CHANNEL_TRANSPORT_FUNCTION);
     }
 
     @Override
     public TransportServer createServer(final URL url,
+                                        final ExecutorService workerPool,
                                         final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                                         final Function<TransportServer, CompletableFuture<Void>> afterClose) {
-        return new NettyServer(url, beforeOpen, afterClose, CHANNEL_TRANSPORT_FUNCTION);
+        return new NettyServer(url, workerPool, beforeOpen, afterClose, CHANNEL_TRANSPORT_FUNCTION);
     }
 }

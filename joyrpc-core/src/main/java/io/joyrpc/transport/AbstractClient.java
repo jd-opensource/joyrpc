@@ -33,13 +33,12 @@ import io.joyrpc.transport.channel.ChannelManagerFactory;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
-import io.joyrpc.util.Futures;
 import io.joyrpc.util.State;
 import io.joyrpc.util.StateController;
 import io.joyrpc.util.StateMachine.IntStateMachine;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.CHANNEL_MANAGER_FACTORY;
@@ -71,7 +70,7 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
     /**
      * 业务线程池
      */
-    protected ThreadPoolExecutor bizThreadPool;
+    protected ExecutorService workerPool;
     /**
      * 名称
      */
@@ -186,13 +185,8 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
     }
 
     @Override
-    public void setBizThreadPool(final ThreadPoolExecutor bizThreadPool) {
-        this.bizThreadPool = bizThreadPool;
-    }
-
-    @Override
-    public ThreadPoolExecutor getBizThreadPool() {
-        return this.bizThreadPool;
+    public ExecutorService getWorkerPool() {
+        return this.workerPool;
     }
 
     @Override

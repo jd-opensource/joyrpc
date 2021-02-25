@@ -42,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
@@ -60,7 +60,36 @@ public abstract class AbstractServer implements TransportServer {
     /**
      * 计数器
      */
-    protected static AtomicLong COUNTER = new AtomicLong(0);
+    protected final static AtomicLong COUNTER = new AtomicLong(0);
+    /**
+     * 服务URL参数
+     */
+    protected final URL url;
+    /**
+     * 业务线程池
+     */
+    protected final ExecutorService workerPool;
+    /**
+     * 事件发布器
+     */
+    protected final Publisher<TransportEvent> publisher;
+    /**
+     * 监听的IP
+     */
+    protected final String host;
+    /**
+     * 数据包大小
+     */
+    protected final int payloadSize;
+    /**
+     * 打开
+     */
+    protected Function<TransportServer, CompletableFuture<Void>> beforeOpen;
+    /**
+     * 关闭
+     */
+    protected Function<TransportServer, CompletableFuture<Void>> afterClose;
+
     /**
      * 编码
      */
@@ -73,14 +102,7 @@ public abstract class AbstractServer implements TransportServer {
      * 处理链
      */
     protected ChannelChain chain;
-    /**
-     * 服务URL参数
-     */
-    protected URL url;
-    /**
-     * 监听的IP
-     */
-    protected String host;
+
     /**
      * 服务通道
      */
@@ -88,23 +110,7 @@ public abstract class AbstractServer implements TransportServer {
     /**
      * 上下文
      */
-    protected Map<Channel, ChannelTransport> transports = new ConcurrentHashMap<>();
-    /**
-     * 业务线程池
-     */
-    protected ThreadPoolExecutor bizThreadPool;
-    /**
-     * 事件发布器
-     */
-    protected Publisher<TransportEvent> publisher;
-    /**
-     * 打开
-     */
-    protected Function<TransportServer, CompletableFuture<Void>> beforeOpen;
-    /**
-     * 关闭
-     */
-    protected Function<TransportServer, CompletableFuture<Void>> afterClose;
+    protected final Map<Channel, ChannelTransport> transports = new ConcurrentHashMap<>();
     /**
      * ID
      */
@@ -118,17 +124,20 @@ public abstract class AbstractServer implements TransportServer {
                     () -> beforeOpen == null ? null : beforeOpen.apply(AbstractServer.this),
                     () -> afterClose == null ? null : afterClose.apply(AbstractServer.this)));
 
-    public AbstractServer(URL url) {
-        this(url, null, null);
+    public AbstractServer(final URL url, final ExecutorService workerPool) {
+        this(url, workerPool, null, null);
     }
 
     public AbstractServer(final URL url,
+                          final ExecutorService workerPool,
                           final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                           final Function<TransportServer, CompletableFuture<Void>> afterClose) {
         this.url = url;
+        this.workerPool = workerPool;
         this.host = url.getString(Constants.BIND_IP_KEY, url.getHost());
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_SERVER_NAME,
                 String.valueOf(COUNTER.incrementAndGet()), EVENT_PUBLISHER_TRANSPORT_CONF);
+        this.payloadSize = url.getPositiveInt(Constants.PAYLOAD);
         this.beforeOpen = beforeOpen;
         this.afterClose = afterClose;
     }
@@ -187,13 +196,8 @@ public abstract class AbstractServer implements TransportServer {
     }
 
     @Override
-    public void setBizThreadPool(final ThreadPoolExecutor bizThreadPool) {
-        this.bizThreadPool = bizThreadPool;
-    }
-
-    @Override
-    public ThreadPoolExecutor getBizThreadPool() {
-        return this.bizThreadPool;
+    public ExecutorService getWorkerPool() {
+        return this.workerPool;
     }
 
     @Override

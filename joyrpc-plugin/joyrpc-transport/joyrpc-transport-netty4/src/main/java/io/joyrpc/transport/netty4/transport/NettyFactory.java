@@ -44,8 +44,8 @@ public class NettyFactory implements TransportFactory {
     protected static final BiFunction<Channel, URL, ChannelTransport> CHANNEL_TRANSPORT_FUNCTION = (channel, url) -> new DefaultChannelTransport(channel, url);
 
     @Override
-    public TransportClient createClient(final URL url) {
-        return new NettyClient(url);
+    public TransportClient createClient(final URL url, final ExecutorService workerPool) {
+        return new NettyClient(url, workerPool);
     }
 
     @Override

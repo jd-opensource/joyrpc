@@ -52,6 +52,22 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
 
     protected static final Function<String, Throwable> THROWABLE_FUNCTION = error -> new ConnectionException(error);
     /**
+     * 业务线程池
+     */
+    protected final ExecutorService workerPool;
+    /**
+     * 名称
+     */
+    protected final String name;
+    /**
+     * 事件发布器
+     */
+    protected final Publisher<TransportEvent> publisher;
+    /**
+     * Channel管理器
+     */
+    protected final ChannelManager channelManager;
+    /**
      * 编解码
      */
     protected Codec codec;
@@ -60,25 +76,9 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
      */
     protected ChannelChain chain;
     /**
-     * Channel管理器
-     */
-    protected ChannelManager channelManager;
-    /**
      * 心跳策略
      */
     protected HeartbeatStrategy heartbeatStrategy;
-    /**
-     * 业务线程池
-     */
-    protected ExecutorService workerPool;
-    /**
-     * 名称
-     */
-    protected String name;
-    /**
-     * 事件发布器
-     */
-    protected Publisher<TransportEvent> publisher;
     /**
      * 客户端协议
      */
@@ -112,14 +112,16 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
     /**
      * 构造函数
      *
-     * @param url
+     * @param url        url
+     * @param workerPool 业务线程池
      */
-    public AbstractClient(URL url) {
+    public AbstractClient(URL url, ExecutorService workerPool) {
         super(url);
         ChannelManagerFactory factory = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION));
         this.channelManager = factory.getChannelManager(url);
-        this.name = channelManager.getChannelKey(this);
+        this.name = channelManager.getName(this);
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLIENT_NAME, name, EVENT_PUBLISHER_TRANSPORT_CONF);
+        this.workerPool = workerPool;
     }
 
     @Override

@@ -46,6 +46,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.constants.Constants.*;
@@ -55,13 +56,9 @@ import static io.joyrpc.transport.netty4.Plugin.PIPELINE_FACTORY;
  * Netty客户端连接
  */
 public class NettyClient extends AbstractClient {
-    /**
-     * 构造函数
-     *
-     * @param url
-     */
-    public NettyClient(URL url) {
-        super(url);
+
+    public NettyClient(URL url, ExecutorService workerPool) {
+        super(url, workerPool);
     }
 
     @Override

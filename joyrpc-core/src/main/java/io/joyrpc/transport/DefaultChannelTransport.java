@@ -46,15 +46,16 @@ public class DefaultChannelTransport implements ChannelTransport {
     /**
      * URL
      */
-    protected URL url;
+    protected final URL url;
+    /**
+     * 通道ID
+     */
+    protected final int transportId;
     /**
      * 连接通道
      */
     protected Channel channel;
-    /**
-     * 通道ID
-     */
-    protected int transportId;
+
     /**
      * 上次访问时间
      */

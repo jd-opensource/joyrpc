@@ -46,6 +46,7 @@ import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.DecoratorClient;
 import io.joyrpc.transport.EndpointFactory;
+import io.joyrpc.transport.TransportClient;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.HeartbeatEvent;
 import io.joyrpc.transport.event.InactiveEvent;
@@ -54,7 +55,6 @@ import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 import io.joyrpc.transport.message.Header;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.TransportClient;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.*;
 import org.slf4j.Logger;
@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
@@ -86,31 +87,31 @@ public class Node implements Shard {
     /**
      * 集群URL
      */
-    protected URL clusterUrl;
+    protected final URL clusterUrl;
     /**
      * 集群名称
      */
-    protected String clusterName;
+    protected final String clusterName;
     /**
      * 分片
      */
-    protected Shard shard;
+    protected final Shard shard;
     /**
-     * 心跳连续失败就断连的次数
+     * 集群业务线程池
      */
-    protected int disconnectWhenHeartbeatFails;
+    protected final ExecutorService workerPool;
     /**
      * 节点事件监听器
      */
-    protected NodeHandler nodeHandler;
+    protected final NodeHandler nodeHandler;
     /**
      * 统计指标事件发布器
      */
-    protected Publisher<MetricEvent> publisher;
+    protected final Publisher<MetricEvent> publisher;
     /**
      * 客户端工厂类
      */
-    protected EndpointFactory factory;
+    protected final EndpointFactory factory;
     /**
      * 分片的URL
      */
@@ -118,19 +119,59 @@ public class Node implements Shard {
     /**
      * 身份认证提供者
      */
-    protected Function<URL, Message> authentication;
+    protected final Function<URL, Message> authentication;
     /**
      * 仪表盘
      */
-    protected Dashboard dashboard;
+    protected final Dashboard dashboard;
+    /**
+     * 会话心跳间隔
+     */
+    protected final long sessionbeatInterval;
+    /**
+     * 超时时间
+     */
+    protected final long sessionTimeout;
+    /**
+     * 心跳连续失败就断连的次数
+     */
+    protected final int disconnectWhenHeartbeatFails;
+    /**
+     * 是否启用ssl
+     */
+    protected final boolean sslEnable;
+    /**
+     * 服务网格标识
+     */
+    protected final boolean mesh;
     /**
      * 原始权重
      */
-    protected int originWeight;
+    protected final int originWeight;
     /**
      * 预热启动权重
      */
-    protected int warmupWeight;
+    protected final int warmupWeight;
+    /**
+     * 预热加载时间
+     */
+    protected final int warmupDuration;
+    /**
+     * 别名
+     */
+    protected final String alias;
+    /**
+     * 重试信息
+     */
+    protected final Retry retry = new Retry();
+    /**
+     * 客户端协议
+     */
+    protected final ClientProtocol clientProtocol;
+    /**
+     * 状态机
+     */
+    protected final StateMachine<Client, ShardStateTransition, NodeController> stateMachine;
     /**
      * 当前节点启动的时间戳
      */
@@ -140,19 +181,6 @@ public class Node implements Shard {
      */
     protected int weight;
     /**
-     * 会话心跳间隔
-     */
-    protected long sessionbeatInterval;
-    /**
-     * 超时时间
-     */
-    protected long sessionTimeout;
-
-    /**
-     * 预热加载时间
-     */
-    protected int warmupDuration;
-    /**
      * 指标事件处理器
      */
     protected EventHandler<MetricEvent> handler;
@@ -161,31 +189,9 @@ public class Node implements Shard {
      */
     protected CompletableFuture<Void> precondition;
     /**
-     * 是否启用ssl
-     */
-    protected boolean sslEnable;
-    /**
-     * 别名
-     */
-    protected String alias;
-    /**
-     * 服务网格标识
-     */
-    protected boolean mesh;
-    /**
-     * 重试信息
-     */
-    protected Retry retry = new Retry();
-    /**
-     * 客户端协议
-     */
-    protected ClientProtocol clientProtocol;
-    /**
      * 客户端
      */
     protected Client client;
-
-    protected StateMachine<Client, ShardStateTransition, NodeController> stateMachine;
 
     /**
      * 构造函数
@@ -195,7 +201,7 @@ public class Node implements Shard {
      * @param shard       分片
      */
     public Node(final String clusterName, final URL clusterUrl, final Shard shard) {
-        this(clusterName, clusterUrl, shard, ENDPOINT_FACTORY.get(), null, null, null, null);
+        this(clusterName, clusterUrl, shard, ENDPOINT_FACTORY.get(), null, null, null, null, null);
     }
 
     /**
@@ -210,9 +216,11 @@ public class Node implements Shard {
      * @param dashboard      当前节点指标面板
      * @param publisher      额外的指标事件监听器
      */
-    public Node(final String clusterName, final URL clusterUrl,
+    public Node(final String clusterName,
+                final URL clusterUrl,
                 final Shard shard,
                 final EndpointFactory factory,
+                final ExecutorService workerPool,
                 final Function<URL, Message> authentication,
                 final NodeHandler nodeHandler,
                 final Dashboard dashboard,
@@ -221,16 +229,18 @@ public class Node implements Shard {
         Objects.requireNonNull(shard, "shard can not be null.");
         Objects.requireNonNull(factory, "factory can not be null.");
         //会话超时时间最低60s
-        this.sessionTimeout = clusterUrl.getPositiveLong(SESSION_TIMEOUT_OPTION);
-        if (sessionTimeout < 60000) {
-            sessionTimeout = 60000;
+        long timeout = clusterUrl.getPositiveLong(SESSION_TIMEOUT_OPTION);
+        if (timeout < 60000) {
+            this.sessionTimeout = 60000;
             this.clusterUrl = clusterUrl.add(SESSION_TIMEOUT_OPTION.getName(), 60000);
         } else {
+            this.sessionTimeout = timeout;
             this.clusterUrl = clusterUrl;
         }
         this.clusterName = clusterName;
         this.shard = shard;
         this.factory = factory;
+        this.workerPool = workerPool;
         this.authentication = authentication;
         this.nodeHandler = nodeHandler;
         //仪表盘
@@ -426,7 +436,7 @@ public class Node implements Shard {
      * @return 客户端
      */
     protected Client newClient(final EventHandler<TransportEvent> handler) {
-        Client client = factory.createClient(url, t -> publisher == null ?
+        Client client = factory.createClient(url,workerPool, t -> publisher == null ?
                 new NodeClient(url, t, handler) :
                 new MetricClient(url, t, handler, this));
         if (client != null) {

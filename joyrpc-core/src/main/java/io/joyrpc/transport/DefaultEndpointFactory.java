@@ -36,9 +36,11 @@ import static io.joyrpc.constants.Constants.TRANSPORT_FACTORY_OPTION;
 public class DefaultEndpointFactory implements EndpointFactory {
 
     @Override
-    public Client createClient(URL url, Function<TransportClient, Client> function) {
-        return create(url, factory -> function == null ? new DecoratorClient(url, factory.createClient(url)) :
-                function.apply(factory.createClient(url)));
+    public Client createClient(final URL url, final ExecutorService workerPool, Function<TransportClient, Client> function) {
+        return create(url,
+                factory -> function == null ?
+                        new DecoratorClient(url, factory.createClient(url, workerPool)) :
+                        function.apply(factory.createClient(url, workerPool)));
     }
 
     @Override

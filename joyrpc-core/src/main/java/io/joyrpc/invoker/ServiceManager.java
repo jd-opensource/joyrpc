@@ -466,8 +466,10 @@ public class ServiceManager {
             //面板工厂
             DashboardFactory dashboardFactory = buildDashboardFactory(url, loadBalance);
             //集群的名字是服务名称+别名+配置变更计数器，确保相同接口引用的集群名称不一样
-            final Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
-            final Cluster cluster = new Cluster(clusterName, url, registry, null, null, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
+            Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
+            //TODO 是否要设置业务线程池处理应答消息
+            ExecutorService workerPool = null;
+            Cluster cluster = new Cluster(clusterName, url, registry, null, null, workerPool, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
             //判断是否有回调，如果注册成功，说明有回调方法，需要往Cluster注册事件，监听节点断开事件
             serializationRegister(config.getProxyClass());
             //refer的名称和key保持一致，便于删除

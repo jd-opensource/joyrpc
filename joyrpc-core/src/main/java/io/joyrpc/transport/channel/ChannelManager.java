@@ -42,12 +42,12 @@ public interface ChannelManager {
     CompletableFuture<Channel> connect(TransportClient client, Connector connector);
 
     /**
-     * 获取存储channel的key
+     * 获取名称
      *
      * @param transport 通道
      * @return key
      */
-    String getChannelKey(TransportClient transport);
+    String getName(TransportClient transport);
 
     /**
      * 连接器

@@ -35,11 +35,12 @@ public interface EndpointFactory {
     /**
      * 创建客户端
      *
-     * @param url      URL
-     * @param function 自定义客户端函数
+     * @param url        URL
+     * @param workerPool 线程池
+     * @param function   客户端函数
      * @return 客户端
      */
-    Client createClient(URL url, Function<TransportClient, Client> function);
+    Client createClient(URL url, ExecutorService workerPool, Function<TransportClient, Client> function);
 
     /**
      * 创建服务端

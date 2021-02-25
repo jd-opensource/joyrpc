@@ -87,7 +87,7 @@ public abstract class AbstractChannelManager implements ChannelManager {
     }
 
     @Override
-    public abstract String getChannelKey(TransportClient transport);
+    public abstract String getName(TransportClient transport);
 
     /**
      * 池化的通道

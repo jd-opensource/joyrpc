@@ -84,31 +84,35 @@ public class Cluster {
     /**
      * 名称
      */
-    protected String name;
+    protected final String name;
     /**
      * URL
      */
-    protected URL url;
+    protected final URL url;
     /**
      * 目录服务
      */
-    protected Registar registar;
+    protected final Registar registar;
     /**
      * 选择算法
      */
-    protected Candidature candidature;
+    protected final Candidature candidature;
     /**
      * 客户端工厂类
      */
-    protected EndpointFactory factory;
+    protected final EndpointFactory factory;
+    /**
+     * 集群业务线程池
+     */
+    protected final ExecutorService workerPool;
     /**
      * 身份认证提供者
      */
-    protected Function<URL, Message> authentication;
+    protected final Function<URL, Message> authentication;
     /**
      * 仪表盘提供者
      */
-    protected DashboardFactory dashboardFactory;
+    protected final DashboardFactory dashboardFactory;
     /**
      * 集群指标通知器
      */
@@ -116,62 +120,67 @@ public class Cluster {
     /**
      * 集群节点事件通知器
      */
-    protected Publisher<NodeEvent> clusterPublisher;
+    protected final Publisher<NodeEvent> clusterPublisher;
+    /**
+     * 当前集群的指标
+     */
+    protected final Dashboard dashboard;
     /**
      * 重连时间间隔
      */
-    protected long reconnectInterval;
+    protected final long reconnectInterval;
     /**
      * 选择的最小分片数量
      */
-    protected int minSize;
+    protected final int minSize;
     /**
      * 达到初始化建连的数量则自动起来
      */
-    protected int initSize;
+    protected final int initSize;
     /**
      * 初始化超时时间
      */
-    protected long initTimeout;
+    protected final long initTimeout;
     /**
      * 初始化连接超时时间
      */
-    protected long initConnectTimeout;
+    protected final long initConnectTimeout;
+    /**
+     * 是否启用SSL
+     */
+    protected final boolean sslEnable;
     /**
      * 当初始化超时的时候，是否验证必须要有连接
      */
     protected boolean check;
     /**
-     * 是否启用SSL
-     */
-    protected boolean sslEnable;
-    /**
-     * 当前集群的指标
-     */
-    protected Dashboard dashboard;
-    /**
      * 状态机
      */
-    protected IntStateMachine<Void, ClusterController> stateMachine = new IntStateMachine<>(() -> new ClusterController(this), THROWABLE_FUNCTION);
+    protected final IntStateMachine<Void, ClusterController> stateMachine = new IntStateMachine<>(() -> new ClusterController(this), THROWABLE_FUNCTION);
 
     public Cluster(final URL url) {
-        this(null, url, null, null, null, null, null, null, null);
+        this(null, url, null, null, null, null, null, null, null, null);
     }
 
     public Cluster(final URL url, final Registar registar) {
-        this(null, url, registar, null, null, null, null, null, null);
+        this(null, url, registar, null, null, null, null, null, null, null);
     }
 
     public Cluster(final String name, final URL url) {
-        this(name, url, null, null, null, null, null, null, null);
+        this(name, url, null, null, null, null, null, null, null, null);
     }
 
     public Cluster(final String name, final URL url, final Registar registar) {
-        this(name, url, registar, null, null, null, null, null, null);
+        this(name, url, registar, null, null, null, null, null, null, null);
     }
 
-    public Cluster(final String name, final URL url, final Registar registar, final Candidature candidature,
-                   final EndpointFactory factory, final Function<URL, Message> authentication,
+    public Cluster(final String name,
+                   final URL url,
+                   final Registar registar,
+                   final Candidature candidature,
+                   final EndpointFactory factory,
+                   final ExecutorService workerPool,
+                   final Function<URL, Message> authentication,
                    final DashboardFactory dashboardFactory,
                    final Iterable<? extends MetricHandler> metricHandlers,
                    final Publisher<NodeEvent> clusterPublisher) {
@@ -182,6 +191,7 @@ public class Cluster {
         this.registar = Objects.requireNonNull(registar == null ? REGISTAR.get(url.getString("registar", url.getProtocol())) : registar, "registar can not be null.");
         this.candidature = candidature != null ? candidature : CANDIDATURE.get(url.getString(CANDIDATURE_OPTION), CANDIDATURE_OPTION.getValue());
         this.factory = factory != null ? factory : ENDPOINT_FACTORY.getOrDefault(url.getString("endpointFactory"));
+        this.workerPool = workerPool;
         this.authentication = authentication;
         this.initSize = url.getInteger(Constants.INIT_SIZE_OPTION);
         this.minSize = url.getInteger(Constants.MIN_SIZE_OPTION);
@@ -330,6 +340,7 @@ public class Cluster {
     protected Node createNode(final Shard shard, final NodeHandler handler) {
         return new Node(name, url, shard,
                 factory,
+                workerPool,
                 authentication,
                 handler,
                 dashboardFactory == null ? null : dashboardFactory.create(url, DashboardType.Node),

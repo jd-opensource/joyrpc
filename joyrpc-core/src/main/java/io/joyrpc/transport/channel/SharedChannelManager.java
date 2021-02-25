@@ -34,7 +34,7 @@ public class SharedChannelManager extends AbstractChannelManager implements Chan
     }
 
     @Override
-    public String getChannelKey(final TransportClient transport) {
+    public String getName(final TransportClient transport) {
         return transport == null ? null : transport.getUrl().toString(false, false);
     }
 

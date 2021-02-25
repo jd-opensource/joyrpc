@@ -36,10 +36,11 @@ public interface TransportFactory {
     /**
      * 构造传输通道客户端
      *
-     * @param url URL
+     * @param url        URL
+     * @param workerPool 业务线程池
      * @return 客户端传输通道
      */
-    TransportClient createClient(URL url);
+    TransportClient createClient(URL url, ExecutorService workerPool);
 
     /**
      * 构造传输通道服务端

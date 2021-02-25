@@ -36,7 +36,7 @@ public class UnsharedChannelManager extends AbstractChannelManager implements Ch
     }
 
     @Override
-    public String getChannelKey(final TransportClient transport) {
+    public String getName(final TransportClient transport) {
         return transport == null ? null : transport.getUrl().add(TRANSPORT_ID, transport.getTransportId()).toString(false, false, TRANSPORT_ID);
     }
 

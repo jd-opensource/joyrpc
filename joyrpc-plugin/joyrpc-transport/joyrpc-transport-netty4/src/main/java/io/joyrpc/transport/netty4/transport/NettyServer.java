@@ -21,14 +21,12 @@ package io.joyrpc.transport.netty4.transport;
  */
 
 import io.joyrpc.constants.Constants;
-import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.transport.AbstractServer;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.TransportServer;
 import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.netty4.channel.NettyChannel;
 import io.joyrpc.transport.netty4.channel.NettyServerChannel;
 import io.joyrpc.transport.netty4.codec.NettyDeductionContext;
@@ -111,7 +109,7 @@ public class NettyServer extends AbstractServer {
                 EventLoopGroup bossGroup = EventLoopGroupFactory.getBossGroup(url);
                 EventLoopGroup workerGroup = EventLoopGroupFactory.getWorkerGroup(url);
                 String name = host + ":" + port;
-                ServerBootstrap bootstrap = configure(name, null, new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
+                ServerBootstrap bootstrap = configure(name, new ServerBootstrap().group(bossGroup, workerGroup), sslContext);
                 bootstrap.bind(new InetSocketAddress(host, port)).addListener((ChannelFutureListener) f -> {
                     NettyServerChannel channel = new NettyServerChannel(name, f.channel(), workerPool, publisher, payloadSize, bossGroup, workerGroup);
                     if (f.isSuccess()) {
@@ -135,19 +133,16 @@ public class NettyServer extends AbstractServer {
      * 配置
      *
      * @param name       名称
-     * @param publisher  事件发布器
      * @param bootstrap  启动
      * @param sslContext ssl上下文
      */
-    protected ServerBootstrap configure(final String name,
-                                        final Publisher<TransportEvent> publisher,
-                                        final ServerBootstrap bootstrap, final SslContext sslContext) {
+    protected ServerBootstrap configure(final String name, final ServerBootstrap bootstrap, final SslContext sslContext) {
         //io.netty.bootstrap.Bootstrap - Unknown channel option 'SO_BACKLOG' for channel
         bootstrap.channel(Constants.isUseEpoll(url) ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
-                        configure(name, publisher, ch, sslContext);
+                        configure(name, ch, sslContext);
                     }
                 })
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, url.getPositiveInt(Constants.CONNECT_TIMEOUT_OPTION))
@@ -171,19 +166,13 @@ public class NettyServer extends AbstractServer {
      * 配置Socket连接通道
      *
      * @param name       名称
-     * @param publisher  事件发布器
      * @param ch         客户端连接通道
      * @param sslContext ssl上下文
      * @throws Exception
      */
-    protected void configure(final String name,
-                             final Publisher<TransportEvent> publisher,
-                             final SocketChannel ch,
-                             final SslContext sslContext) throws Exception {
-        //及时发送 与 缓存发送
+    protected void configure(final String name, final SocketChannel ch, final SslContext sslContext) throws Exception {
         Channel channel = new NettyChannel(name, ch, workerPool, publisher, payloadSize, true);
         ChannelTransport transport = function.apply(channel, url);
-        //设置payload,添加业务线程池到channel
         channel.setAttribute(Channel.CHANNEL_TRANSPORT, transport);
         if (sslContext != null) {
             ch.pipeline().addFirst("ssl", sslContext.newHandler(ch.alloc()));

@@ -53,7 +53,7 @@ public interface EndpointFactory {
      * 创建服务端
      *
      * @param url        url
-     * @param workerPool 线程池
+     * @param workerPool 业务线程池
      * @return 服务端
      */
     Server createServer(URL url, ExecutorService workerPool);

@@ -29,8 +29,6 @@ import io.joyrpc.transport.netty4.handler.ChannelChainReaderAdapter;
 import io.joyrpc.transport.netty4.handler.ChannelChainWriterAdapter;
 import io.netty.channel.ChannelPipeline;
 
-import java.util.concurrent.ThreadPoolExecutor;
-
 /**
  * 抽象的管道工程
  */
@@ -54,29 +52,27 @@ public abstract class AbstractPipelineFactory implements PipelineFactory {
      * @param pipeline 管道
      * @param chain    处理链
      * @param channel  连接通道
-     * @param executor 线程池
      */
-    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel, final ThreadPoolExecutor executor) {
+    protected void build(final ChannelPipeline pipeline, final ChannelChain chain, final Channel channel) {
         //处理链
         if (chain != null) {
             ChannelReader[] readers = chain.getReaders();
             ChannelWriter[] writers = chain.getWriters();
             if (readers != null && readers.length > 0) {
-                pipeline.addLast(CHANNEL_CHAIN_READER, new ChannelChainReaderAdapter(readers, channel, executor));
+                pipeline.addLast(CHANNEL_CHAIN_READER, new ChannelChainReaderAdapter(readers, channel));
             }
             if (writers != null && writers.length > 0) {
-                pipeline.addLast(CHANNEL_CHAIN_WRITER, new ChannelChainWriterAdapter(writers, channel, executor));
+                pipeline.addLast(CHANNEL_CHAIN_WRITER, new ChannelChainWriterAdapter(writers, channel));
             }
         }
     }
 
     @Override
     public void build(final ChannelPipeline pipeline, final Codec codec, final ChannelChain chain, final Channel channel) {
-        ThreadPoolExecutor executor = channel.getAttribute(Channel.BIZ_THREAD_POOL);
         if (codec != null) {
             //解码器
             build(pipeline, codec, channel);
         }
-        build(pipeline, chain, channel, executor);
+        build(pipeline, chain, channel);
     }
 }

@@ -29,7 +29,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 
 import static io.joyrpc.transport.netty4.channel.NettyContext.create;
 
@@ -50,12 +50,12 @@ public class ChannelChainReaderAdapter extends ChannelInboundHandlerAdapter {
     /**
      * 线程池
      */
-    protected final ThreadPoolExecutor executor;
+    protected final ExecutorService workerPool;
 
-    public ChannelChainReaderAdapter(final ChannelReader[] readers, final Channel channel, final ThreadPoolExecutor executor) {
+    public ChannelChainReaderAdapter(final ChannelReader[] readers, final Channel channel) {
         this.readers = readers;
         this.channel = channel;
-        this.executor = executor;
+        this.workerPool = channel.getWorkerPool();
     }
 
     @Override
@@ -73,9 +73,9 @@ public class ChannelChainReaderAdapter extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         ChannelChainReaderContext context = new ChannelChainReaderContext(channel, readers, create(channel, ctx));
-        if (executor != null) {
+        if (workerPool != null) {
             try {
-                executor.execute(new ReceiveJob(context, msg));
+                workerPool.execute(new ReceiveJob(context, msg));
             } catch (Throwable e) {
                 //可能抛出RejectedExecutionException
                 context.fireExceptionCaught(e);

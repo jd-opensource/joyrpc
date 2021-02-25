@@ -29,7 +29,7 @@ import io.netty.channel.ChannelPromise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.ExecutorService;
 
 import static io.joyrpc.transport.netty4.channel.NettyContext.create;
 
@@ -50,12 +50,12 @@ public class ChannelChainWriterAdapter extends ChannelOutboundHandlerAdapter {
     /**
      * 线程池
      */
-    protected final ThreadPoolExecutor executor;
+    protected final ExecutorService workerPool;
 
-    public ChannelChainWriterAdapter(final ChannelWriter[] writers, final Channel channel, final ThreadPoolExecutor executor) {
+    public ChannelChainWriterAdapter(final ChannelWriter[] writers, final Channel channel) {
         this.writers = writers;
         this.channel = channel;
-        this.executor = executor;
+        this.workerPool = channel.getWorkerPool();
     }
 
     @Override

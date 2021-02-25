@@ -41,8 +41,6 @@ import java.util.function.Function;
  */
 public interface Channel {
 
-    String BIZ_THREAD_POOL = "bizThreadPool";
-
     String IDLE_HEARTBEAT_TRIGGER = "idleHeartbeatTrigger";
 
     String CHANNEL_TRANSPORT = "CHANNEL_TRANSPORT";

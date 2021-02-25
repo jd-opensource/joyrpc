@@ -35,14 +35,6 @@ public interface EndpointFactory {
     /**
      * 创建客户端
      *
-     * @param url URL
-     * @return 客户端
-     */
-    Client createClient(URL url);
-
-    /**
-     * 创建客户端
-     *
      * @param url      URL
      * @param function 自定义客户端函数
      * @return 客户端

@@ -26,9 +26,9 @@ import io.joyrpc.exception.OverloadException;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.FutureManager;
-import io.joyrpc.transport.channel.SendResult;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
+import io.joyrpc.transport.netty4.util.FutureAdapter;
 import io.joyrpc.transport.session.SessionManager;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -36,7 +36,6 @@ import io.netty.util.AttributeKey;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -80,45 +79,31 @@ public class NettyChannel implements Channel {
     }
 
     @Override
-    public void send(final Object object, final Consumer<SendResult> consumer) {
-        if (!isWritable()) {
-            LafException throwable = isActive() ?
+    public CompletableFuture<Void> send(final Object object) {
+        CompletableFuture<Void> future = new CompletableFuture<>();
+        if (object == null) {
+            future.complete(null);
+        } else if (!channel.isWritable()) {
+            LafException throwable = channel.isActive() ?
                     new OverloadException(String.format(SEND_REQUEST_TOO_FAST, Channel.toString(this), object.toString()), 0, isServer()) :
                     new ChannelClosedException(String.format(SEND_REQUEST_NOT_ACTIVE, Channel.toString(this), object.toString()));
-            if (consumer != null) {
-                consumer.accept(new SendResult(throwable, this));
-            } else {
-                throw throwable;
-            }
-        } else if (consumer != null) {
-            try {
-                channel.writeAndFlush(object).addListener((future) -> {
-                    //TODO 要不要改成工作线程池来回调
-                    if (future.isSuccess()) {
-                        consumer.accept(new SendResult(true, this, object));
-                    } else {
-                        consumer.accept(new SendResult(future.cause(), this, object));
-                    }
-                });
-            } catch (Throwable e) {
-                consumer.accept(new SendResult(e, this));
-            }
+            future.completeExceptionally(throwable);
         } else {
-            channel.writeAndFlush(object, channel.voidPromise());
+            try {
+                //TODO 要不要改成工作线程池来回调
+                channel.writeAndFlush(object).addListener(new FutureAdapter<>(future));
+            } catch (Throwable e) {
+                future.completeExceptionally(e);
+            }
         }
+        return future;
     }
 
     @Override
     public CompletableFuture<Channel> close() {
         CompletableFuture<Channel> future = new CompletableFuture();
         try {
-            channel.close().addListener(f -> {
-                if (f.isSuccess()) {
-                    future.complete(this);
-                } else {
-                    future.completeExceptionally(f.cause());
-                }
-            });
+            channel.close().addListener(new FutureAdapter<>(future, this));
         } catch (Throwable e) {
             future.completeExceptionally(e);
         }
@@ -224,4 +209,5 @@ public class NettyChannel implements Channel {
     public void fireCaught(Throwable cause) {
         channel.pipeline().fireExceptionCaught(cause);
     }
+
 }

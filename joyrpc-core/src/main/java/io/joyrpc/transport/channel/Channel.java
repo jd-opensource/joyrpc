@@ -29,8 +29,8 @@ import io.joyrpc.transport.session.SessionManager;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -84,17 +84,21 @@ public interface Channel {
      *
      * @param object 对象
      */
-    default void send(Object object) {
-        send(object, null);
-    }
+    CompletableFuture<Void> send(Object object);
 
     /**
-     * 发送一个object信息
+     * 发送消息
      *
      * @param object   对象
      * @param consumer 消费者
      */
-    void send(Object object, Consumer<SendResult> consumer);
+    default void send(final Object object, final BiConsumer<Void, Throwable> consumer) {
+        if (consumer != null) {
+            send(object).whenComplete(consumer);
+        } else {
+            send(object);
+        }
+    }
 
     /**
      * 关闭channel

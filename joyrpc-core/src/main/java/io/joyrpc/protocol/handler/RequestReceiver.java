@@ -35,11 +35,11 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
- * 请求消息处理器
+ * 读取数据通道中的请求消息，并调用相应的处理器进行处理
  */
-public class RequestChannelHandler<T extends MessageHandler> implements ChannelReader {
+public class RequestReceiver<T extends MessageHandler> implements ChannelReader {
 
-    protected final static Logger logger = LoggerFactory.getLogger(RequestChannelHandler.class);
+    protected final static Logger logger = LoggerFactory.getLogger(RequestReceiver.class);
 
     /**
      * 插件选择器，采用选择器是为了可以采用数组结构来存储插件，优化性能
@@ -56,8 +56,8 @@ public class RequestChannelHandler<T extends MessageHandler> implements ChannelR
      * @param selector          插件选择器
      * @param throwableConsumer 异常提供者
      */
-    public RequestChannelHandler(final ExtensionSelector<T, Integer, Integer, T> selector,
-                                 final BiConsumer<ChannelContext, Throwable> throwableConsumer) {
+    public RequestReceiver(final ExtensionSelector<T, Integer, Integer, T> selector,
+                           final BiConsumer<ChannelContext, Throwable> throwableConsumer) {
         Objects.requireNonNull(selector);
         this.selector = selector;
         this.throwableConsumer = throwableConsumer;

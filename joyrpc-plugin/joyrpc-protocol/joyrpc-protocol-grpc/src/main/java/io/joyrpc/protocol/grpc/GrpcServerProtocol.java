@@ -24,11 +24,10 @@ import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.protocol.AbstractProtocol;
-import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.grpc.handler.GrpcServerHandler;
-import io.joyrpc.protocol.handler.RequestChannelHandler;
-import io.joyrpc.protocol.handler.ResponseChannelHandler;
+import io.joyrpc.protocol.handler.RequestReceiver;
+import io.joyrpc.protocol.handler.ResponseReceiver;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
@@ -60,8 +59,8 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
         if (chain == null) {
             chain = new ChannelChain()
                     .addLast(new GrpcServerHandler())
-                    .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
-                    .addLast(new ResponseChannelHandler());
+                    .addLast(new RequestReceiver<>(MESSAGE_HANDLER_SELECTOR, this::onException))
+                    .addLast(new ResponseReceiver());
         }
 
         return chain;
@@ -83,12 +82,7 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
         int msgId = (int) header.getMsgId();
         Http2Headers endHeaders = Headers.build(cause);
         Http2ResponseMessage message = new DefaultHttp2ResponseMessage(streamId, msgId, null, null, endHeaders);
-        channel.send(message, (event -> {
-            if (!event.isSuccess()) {
-                String address = Channel.toString(channel.getRemoteAddress()) + "->" + Channel.toString(channel.getLocalAddress());
-                logger.error("Error occurs while sending " + MsgType.valueOf(header.getMsgType()) + " message to " + address, cause.getMessage());
-            }
-        }));
+        ackException(channel, header, cause, message);
     }
 
 }

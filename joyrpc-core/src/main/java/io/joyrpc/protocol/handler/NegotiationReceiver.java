@@ -26,18 +26,17 @@ import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.Converts;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.ServiceManager;
-import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.message.Message;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.negotiation.AbstractNegotiation;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
+import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
 import io.joyrpc.transport.session.DefaultSession;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.transport.ChannelTransport;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
@@ -47,9 +46,9 @@ import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.transport.session.Session.REMOTE_START_TIMESTAMP;
 
 /**
- * @date: 2019/3/18
+ * 协商请求处理器
  */
-public class NegotiationReqHandler extends AbstractNegotiationHandler<Message> implements MessageHandler {
+public class NegotiationReceiver extends AbstractNegotiationHandler {
 
     @Override
     protected Message createResponseMessage(final Message request, final NegotiationResponse negotiation) {

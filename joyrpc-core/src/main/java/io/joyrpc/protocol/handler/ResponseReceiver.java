@@ -31,11 +31,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 应答处理器
+ * 读取数据通道中的应答消息，并调用相应的处理器进行处理
  */
-public class ResponseChannelHandler implements ChannelReader {
+public class ResponseReceiver implements ChannelReader {
 
-    protected static final Logger logger = LoggerFactory.getLogger(ResponseChannelHandler.class);
+    protected static final Logger logger = LoggerFactory.getLogger(ResponseReceiver.class);
 
     @Override
     public void received(final ChannelContext context, final Object message) throws Exception {

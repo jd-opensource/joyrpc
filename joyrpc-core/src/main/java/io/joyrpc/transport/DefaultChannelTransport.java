@@ -98,12 +98,12 @@ public class DefaultChannelTransport implements ChannelTransport {
             message.setSessionId(transportId);
             message.setSession(session);
             try {
-                channel.send(message, r -> {
+                channel.send(message).whenComplete((v, error) -> {
                     requests.decrementAndGet();
-                    if (r.isSuccess()) {
+                    if (error == null) {
                         result.complete(null);
                     } else {
-                        result.completeExceptionally(r.getThrowable());
+                        result.completeExceptionally(error);
                     }
                 });
             } catch (Throwable e) {
@@ -140,12 +140,9 @@ public class DefaultChannelTransport implements ChannelTransport {
             //创建 future
             future = futureManager.create(message.getMsgId(), timeout, session, requests);
             try {
-                channel.send(message, r -> {
-                    //异步收到应答消息后会自动调用future的完成
-                    if (!r.isSuccess()) {
-                        Throwable throwable = r.getThrowable() == null
-                                ? new ChannelSendException("unknown exception.")
-                                : new ChannelSendException(r.getThrowable());
+                channel.send(message).whenComplete((v, error) -> {
+                    if (error != null) {
+                        Throwable throwable = new ChannelSendException(error);
                         futureManager.completeExceptionally(message.getMsgId(), throwable);
                         logger.error("Failed sending message. caused by " + throwable.getMessage(), throwable);
                     } else {

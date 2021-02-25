@@ -22,8 +22,8 @@ package io.joyrpc.protocol;
 
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.protocol.handler.RequestChannelHandler;
-import io.joyrpc.protocol.handler.ResponseChannelHandler;
+import io.joyrpc.protocol.handler.RequestReceiver;
+import io.joyrpc.protocol.handler.ResponseReceiver;
 import io.joyrpc.protocol.message.MessageHeader;
 import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
@@ -155,8 +155,20 @@ public abstract class AbstractProtocol implements Protocol {
      * @param cause   异常
      */
     protected void ackException(final Channel channel, final MessageHeader header, final RpcException cause) {
-        channel.send(new ResponseMessage<>(header, new ResponsePayload(cause)), result -> {
-            if (!result.isSuccess()) {
+        ackException(channel, header, cause, new ResponseMessage<>(header, new ResponsePayload(cause)));
+    }
+
+    /**
+     * 发送应答
+     *
+     * @param channel  连接通道
+     * @param header   消息头
+     * @param cause    异常原因
+     * @param response 应答
+     */
+    protected void ackException(final Channel channel, final MessageHeader header, final RpcException cause, final Object response) {
+        channel.send(response).whenComplete((v, error) -> {
+            if (error != null) {
                 String address = Channel.toString(channel.getRemoteAddress()) + "->" + Channel.toString(channel.getLocalAddress());
                 logger.error("Error occurs while sending " + MsgType.valueOf(header.getMsgType()) + " message to " + address, cause.getMessage());
             }
@@ -167,8 +179,8 @@ public abstract class AbstractProtocol implements Protocol {
     public ChannelChain buildChain() {
         if (chain == null) {
             chain = new ChannelChain()
-                    .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
-                    .addLast(new ResponseChannelHandler());
+                    .addLast(new RequestReceiver<>(MESSAGE_HANDLER_SELECTOR, this::onException))
+                    .addLast(new ResponseReceiver());
         }
         return chain;
     }

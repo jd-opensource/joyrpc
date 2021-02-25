@@ -20,33 +20,28 @@ package io.joyrpc.protocol.handler;
  * #L%
  */
 
+import io.joyrpc.cluster.event.OfflineEvent;
+import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.HandlerException;
-import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
+import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.joyrpc.transport.event.TransportEvent;
 
 /**
- * 会话心跳请求处理器
+ * 下线请求处理器
  */
-public class SessionbeatReqHandler implements MessageHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(SessionbeatReqHandler.class);
+public class OfflineReceiver extends AbstractReceiver {
 
     @Override
-    public void handle(ChannelContext context, Message message) throws HandlerException {
-        //sessionbeat是oneway发送，不需要应答
-        boolean res = context.getChannel().beatSession(message.getSessionId());
-        //session心跳不成功，说明session已经被清理，断开连接重新协商
-        if (!res) {
-            logger.warn(String.format("The session %s has expired when receiving sessionbeat message.", message.getSessionId()));
-        }
+    public void handle(final ChannelContext context, final Message message) throws HandlerException {
+        Publisher<TransportEvent> publisher = context.getChannel().getAttribute(Channel.EVENT_PUBLISHER);
+        publisher.offer(new OfflineEvent(context.getChannel()));
     }
 
     @Override
     public Integer type() {
-        return (int) MsgType.SessionbeatReq.getType();
+        return (int) MsgType.OfflineReq.getType();
     }
 }

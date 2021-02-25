@@ -23,11 +23,10 @@ package io.joyrpc.protocol.handler;
 import io.joyrpc.codec.CodecType;
 import io.joyrpc.exception.HandlerException;
 import io.joyrpc.extension.ExtensionPoint;
+import io.joyrpc.protocol.message.Message;
 import io.joyrpc.protocol.message.negotiation.AbstractNegotiation;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
-import io.joyrpc.transport.MessageHandler;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.message.Message;
 import io.joyrpc.util.Shutdown;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,56 +39,50 @@ import static io.joyrpc.Plugin.*;
 /**
  * 抽象的协商处理器
  */
-public abstract class AbstractNegotiationHandler<T extends Message> implements MessageHandler<T> {
+public abstract class AbstractNegotiationHandler extends AbstractReceiver {
 
     protected final static Logger logger = LoggerFactory.getLogger(AbstractNegotiationHandler.class);
 
     @Override
-    public void handle(final ChannelContext context, final T message) throws HandlerException {
-        if (message.isRequest()) {
-            NegotiationResponse negotiation;
-            //协商
-            Object payLoad = message.getPayLoad();
-            AbstractNegotiation request = payLoad instanceof AbstractNegotiation ? (AbstractNegotiation) payLoad : null;
-            if (request == null) {
-                if (payLoad instanceof Throwable) {
-                    negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, ((Throwable) payLoad).getMessage());
-                } else {
-                    negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Unkown Error.");
-                }
-            } else if (Shutdown.isShutdown()) {
-                negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Server is shutdown.");
+    public void handle(final ChannelContext context, final Message message) throws HandlerException {
+        NegotiationResponse negotiation;
+        //协商
+        Object payLoad = message.getPayLoad();
+        AbstractNegotiation request = payLoad instanceof AbstractNegotiation ? (AbstractNegotiation) payLoad : null;
+        if (request == null) {
+            if (payLoad instanceof Throwable) {
+                negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, ((Throwable) payLoad).getMessage());
             } else {
-                //先由服务端推荐默认设置，创建新的协商应答返回
-                negotiation = negotiate(recommendRequest(request));
-                //协商成功，创建并保存session
-                if (negotiation.isSuccess()) {
-                    //复制一份，可用于修改应答的压缩等协议
-                    NegotiationResponse clone = negotiation.clone();
-                    //重置为请求的扩展信息
-                    clone.setAttributes(request.getAttributes());
-                    //构建并保存session
-                    session(context, message.getSessionId(), recommendResponse(clone));
-                }
+                negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Unknown Error.");
             }
-            //响应
-            Message response = createResponseMessage(message, negotiation);
-            context.getChannel().send(response, (event) -> {
-                if (!event.isSuccess()) {
-                    logger.error("Negotiation response error, messge : {}", message.toString());
-                }
-            });
+        } else if (Shutdown.isShutdown()) {
+            negotiation = new NegotiationResponse(NegotiationResponse.NOT_SUPPORT, "Server is shutdown.");
+        } else {
+            //先由服务端推荐默认设置，创建新的协商应答返回
+            negotiation = negotiate(recommendRequest(request));
+            //协商成功，创建并保存session
+            if (negotiation.isSuccess()) {
+                //复制一份，可用于修改应答的压缩等协议
+                NegotiationResponse clone = negotiation.clone();
+                //重置为请求的扩展信息
+                clone.setAttributes(request.getAttributes());
+                //构建并保存session
+                session(context, message.getSessionId(), recommendResponse(clone));
+            }
         }
+        //响应
+        Message response = createResponseMessage(message, negotiation);
+        acknowledge(context, message, response, logger);
     }
 
     /**
      * 构建应答消息
      *
-     * @param request 请求
+     * @param request     请求
      * @param negotiation 协商应答
      * @return
      */
-    protected abstract T createResponseMessage(final T request, final NegotiationResponse negotiation);
+    protected abstract Message createResponseMessage(final Message request, final NegotiationResponse negotiation);
 
     /**
      * 进行协商
@@ -121,7 +114,7 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 推荐应答的协议
      *
-     * @param negotiation  协商
+     * @param negotiation 协商
      * @return 协商
      */
     protected AbstractNegotiation recommendResponse(final AbstractNegotiation negotiation) {
@@ -131,8 +124,8 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
     /**
      * 构造并保存session
      *
-     * @param context 上下文
-     * @param sessionId 会话ID
+     * @param context     上下文
+     * @param sessionId   会话ID
      * @param negotiation 协商
      */
     protected void session(final ChannelContext context, final int sessionId, final AbstractNegotiation negotiation) {
@@ -176,7 +169,7 @@ public abstract class AbstractNegotiationHandler<T extends Message> implements M
      * 是否包含该插件
      *
      * @param extension 扩展点
-     * @param name 名称
+     * @param name      名称
      * @return 包含标识
      */
     protected boolean include(final ExtensionPoint<? extends CodecType, String> extension, final String name) {

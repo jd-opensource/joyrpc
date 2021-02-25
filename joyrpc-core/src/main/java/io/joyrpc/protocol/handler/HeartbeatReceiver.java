@@ -33,21 +33,16 @@ import org.slf4j.LoggerFactory;
 /**
  * 心跳请求处理器
  */
-public class HeartbeatReqHandler extends AbstractReqHandler {
+public class HeartbeatReceiver extends AbstractReceiver {
 
-    private final static Logger logger = LoggerFactory.getLogger(HeartbeatReqHandler.class);
-
-    @Override
-    protected Logger getLogger() {
-        return logger;
-    }
+    private final static Logger logger = LoggerFactory.getLogger(HeartbeatReceiver.class);
 
     @Override
     public void handle(final ChannelContext context, final Message message) throws HandlerException {
         //支持插件进行判断
         ResponseMessage response = ResponseMessage.build(message, MsgType.HbResp.getType(),
                 new DefaultHeartbeatResponse(HealthProbe.getInstance().getState()));
-        context.getChannel().send(response, sendFailed);
+        acknowledge(context, message, response, logger);
     }
 
     @Override

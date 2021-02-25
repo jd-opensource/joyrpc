@@ -29,13 +29,11 @@ import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.exception.*;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.ServiceManager;
-import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.SendResult;
 import io.joyrpc.transport.session.Session;
 import io.joyrpc.transport.session.Session.ServerSession;
 import io.joyrpc.util.GenericMethod;
@@ -46,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.RESPONSE_INJECTION;
@@ -55,11 +52,11 @@ import static io.joyrpc.constants.ExceptionCode.PROVIDER_TASK_SESSION_EXPIRED;
 import static io.joyrpc.util.StringUtils.isEmpty;
 
 /**
- * 业务处理
+ * 业务请求处理
  */
-public class BizReqHandler extends AbstractReqHandler implements MessageHandler {
+public class BizReceiver extends AbstractReceiver {
 
-    private final static Logger logger = LoggerFactory.getLogger(BizReqHandler.class);
+    private final static Logger logger = LoggerFactory.getLogger(BizReceiver.class);
 
     /**
      * 透传反向清理
@@ -70,18 +67,13 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
      */
     protected Iterable<RespInjection> injections = RESPONSE_INJECTION.extensions();
 
-    @Override
-    protected Logger getLogger() {
-        return logger;
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public void handle(final ChannelContext context, final Message message) throws HandlerException {
         if (!(message instanceof RequestMessage)) {
             return;
         }
-        BizReq bizReq = new BizReq((RequestMessage<Invocation>) message, context.getChannel(), transmits, injections, sendFailed);
+        BizReq bizReq = new BizReq(context, (RequestMessage<Invocation>) message, transmits, injections);
         if (!bizReq.discard()) {
             try {
                 //恢复调用信息和上下文
@@ -123,6 +115,10 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
          */
         protected Invocation invocation;
         /**
+         * 上下文
+         */
+        protected ChannelContext context;
+        /**
          * 通道
          */
         protected Channel channel;
@@ -135,26 +131,21 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
          */
         protected Iterable<RespInjection> injections;
         /**
-         * 发送消费者
-         */
-        protected Consumer<SendResult> sendFailed;
-        /**
          * Exporter
          */
         protected Exporter exporter;
 
-        public BizReq(RequestMessage<Invocation> request,
-                      Channel channel,
+        public BizReq(ChannelContext context,
+                      RequestMessage<Invocation> request,
                       Iterable<Transmit> transmits,
-                      Iterable<RespInjection> injections,
-                      Consumer<SendResult> sendFailed) {
+                      Iterable<RespInjection> injections) {
             this.request = request;
             this.session = (ServerSession) request.getSession();
             this.invocation = request.getPayLoad();
-            this.channel = channel;
+            this.context = context;
+            this.channel = context.getChannel();
             this.transmits = transmits;
             this.injections = injections;
-            this.sendFailed = sendFailed;
         }
 
         public RequestMessage<Invocation> getRequest() {
@@ -325,13 +316,13 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
                     ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
                         response.setPayLoad(new ResponsePayload(obj, th, type));
                         transmits.forEach(o -> o.onServerComplete(request, th != null ? new Result(request.getContext(), th) : new Result(request.getContext(), obj)));
-                        channel.send(response, sendFailed);
+                        acknowledge(context, request, response, BizReceiver.logger);
                     });
                 } else {
                     //同步调用
                     response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), type));
                     transmits.forEach(o -> o.onServerComplete(request, result));
-                    channel.send(response, sendFailed);
+                    acknowledge(context, request, response, BizReceiver.logger);
                 }
             }
         }
@@ -378,7 +369,7 @@ public class BizReqHandler extends AbstractReqHandler implements MessageHandler 
             for (RespInjection injection : injections) {
                 injection.inject(request, response, exporter);
             }
-            channel.send(response, sendFailed);
+            acknowledge(context, request, response, BizReceiver.logger);
         }
 
         /**

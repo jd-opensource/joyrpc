@@ -119,19 +119,7 @@ public class ChannelChainReaderContext implements ChannelContext {
 
     @Override
     public CompletableFuture<Void> wrote(final Object msg) {
-        CompletableFuture<Void> future = new CompletableFuture<>();
-        if (msg == null) {
-            future.complete(null);
-        } else {
-            channel.send(msg, result -> {
-                if (result.isSuccess()) {
-                    future.complete(null);
-                } else {
-                    future.completeExceptionally(result.getThrowable());
-                }
-            });
-        }
-        return future;
+        return channel.send(msg);
     }
 
 }

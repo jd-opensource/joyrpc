@@ -31,7 +31,6 @@ public class DefaultHttp2ResponseMessage implements Http2ResponseMessage {
     protected Http2Headers endHeaders;
     protected byte[] content;
 
-
     public DefaultHttp2ResponseMessage(int streamId, byte[] content) {
         this(streamId, null, content);
     }

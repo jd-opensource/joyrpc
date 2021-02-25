@@ -23,8 +23,8 @@ package io.joyrpc.protocol.http;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.ServerProtocol;
-import io.joyrpc.protocol.handler.RequestChannelHandler;
-import io.joyrpc.protocol.handler.ResponseChannelHandler;
+import io.joyrpc.protocol.handler.RequestReceiver;
+import io.joyrpc.protocol.handler.ResponseReceiver;
 import io.joyrpc.protocol.http.handler.HttpToJoyHandler;
 import io.joyrpc.protocol.http.handler.JoyToHttpHandler;
 import io.joyrpc.transport.buffer.ChannelBuffer;
@@ -64,9 +64,9 @@ public class HttpServerProtocol extends AbstractProtocol implements ServerProtoc
         if (chain == null) {
             chain = new ChannelChain()
                     .addLast(new HttpToJoyHandler())
-                    .addLast(new RequestChannelHandler<>(MESSAGE_HANDLER_SELECTOR, this::onException))
+                    .addLast(new RequestReceiver<>(MESSAGE_HANDLER_SELECTOR, this::onException))
                     .addLast(new JoyToHttpHandler())
-                    .addLast(new ResponseChannelHandler());
+                    .addLast(new ResponseReceiver());
         }
         return chain;
     }

@@ -96,12 +96,12 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
                 //创建future
                 futureManager.create(heartbeatMessage.getMsgId(), strategy.getTimeout(), afterRun);
                 //发送消息
-                channel.send(heartbeatMessage, r -> {
+                channel.send(heartbeatMessage).whenComplete((v, error) -> {
                     //心跳有应答消息，异步应答后会自动从futureManager删除
-                    if (!r.isSuccess()) {
-                        futureManager.completeExceptionally(heartbeatMessage.getMsgId(), r.getThrowable());
+                    if (error != null) {
+                        futureManager.completeExceptionally(heartbeatMessage.getMsgId(), error);
                         logger.error(String.format("Error occurs while sending heartbeat to %s, caused by:",
-                                Channel.toString(channel.getRemoteAddress())), r.getThrowable());
+                                Channel.toString(channel.getRemoteAddress())), error);
                     }
                 });
             } else {

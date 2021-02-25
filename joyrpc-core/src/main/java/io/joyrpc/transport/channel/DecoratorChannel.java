@@ -26,7 +26,6 @@ import io.joyrpc.transport.session.SessionManager;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
 
 /**
  * 通道装饰器
@@ -40,8 +39,8 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
-    public void send(final Object object, final Consumer<SendResult> consumer) {
-        channel.send(object, consumer);
+    public CompletableFuture<Void> send(final Object object) {
+        return channel.send(object);
     }
 
     @Override

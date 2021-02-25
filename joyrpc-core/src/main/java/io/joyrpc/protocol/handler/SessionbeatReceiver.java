@@ -21,33 +21,31 @@ package io.joyrpc.protocol.handler;
  */
 
 import io.joyrpc.exception.HandlerException;
-import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
-import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.transport.channel.ChannelContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 握手协议处理器
+ * 会话心跳请求处理器
  */
-public class ShakeHandReqHandler implements MessageHandler {
+public class SessionbeatReceiver extends AbstractReceiver {
 
-    private final static Logger logger = LoggerFactory.getLogger(ShakeHandReqHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(SessionbeatReceiver.class);
 
     @Override
-    public void handle(ChannelContext context, Message message) throws HandlerException {
-        ResponseMessage response = new ResponseMessage(MsgType.ShakeHandResp.getType(), message.getMsgId());
-        context.getChannel().send(response, (event) -> {
-            if (!event.isSuccess()) {
-                logger.error("Shake hand response error, message : {}", message.toString());
-            }
-        });
+    public void handle(final ChannelContext context, final Message message) throws HandlerException {
+        //sessionbeat是oneway发送，不需要应答
+        boolean res = context.getChannel().beatSession(message.getSessionId());
+        //session心跳不成功，说明session已经被清理，断开连接重新协商
+        if (!res) {
+            logger.warn(String.format("The session %s has expired when receiving sessionbeat message.", message.getSessionId()));
+        }
     }
 
     @Override
     public Integer type() {
-        return (int) MsgType.ShakeHandReq.getType();
+        return (int) MsgType.SessionbeatReq.getType();
     }
 }

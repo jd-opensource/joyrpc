@@ -22,6 +22,7 @@ package io.joyrpc.transport.telnet;
 
 import io.joyrpc.transport.channel.SendResult;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -38,7 +39,7 @@ public class TelnetResponse {
     /**
      * 发送应答消息后结果处理consumer
      */
-    private Consumer<SendResult> consumer;
+    private BiConsumer<Void,Throwable> consumer;
 
     public TelnetResponse(String response) {
         this(new StringBuilder(response == null ? "" : response), null);
@@ -48,11 +49,11 @@ public class TelnetResponse {
         this(builder, null);
     }
 
-    public TelnetResponse(String response, Consumer<SendResult> consumer) {
+    public TelnetResponse(String response, BiConsumer<Void,Throwable> consumer) {
         this(new StringBuilder(response == null ? "" : response), consumer);
     }
 
-    public TelnetResponse(StringBuilder builder, Consumer<SendResult> consumer) {
+    public TelnetResponse(StringBuilder builder, BiConsumer<Void,Throwable> consumer) {
         this.builder = builder;
         this.consumer = consumer;
     }
@@ -69,7 +70,7 @@ public class TelnetResponse {
         return builder;
     }
 
-    public Consumer<SendResult> getConsumer() {
+    public BiConsumer<Void,Throwable> getConsumer() {
         return consumer;
     }
 

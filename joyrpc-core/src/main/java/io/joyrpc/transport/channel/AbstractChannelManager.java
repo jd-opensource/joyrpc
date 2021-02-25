@@ -204,19 +204,16 @@ public abstract class AbstractChannelManager implements ChannelManager {
         }
 
         @Override
-        public void send(final Object object, final Consumer<SendResult> consumer) {
+        public CompletableFuture<Void> send(Object object) {
             if (stateMachine.isOpened()) {
-                super.send(object, consumer);
+                return super.send(object);
             } else {
                 LafException throwable = new ChannelClosedException(
                         String.format("Send request exception, causing channel is not opened. at  %s : %s",
                                 Channel.toString(this), object.toString()));
-                if (consumer != null) {
-                    consumer.accept(new SendResult(throwable, this));
-                } else {
-                    throw throwable;
-                }
+                return Futures.completeExceptionally(throwable);
             }
+
         }
 
         @Override

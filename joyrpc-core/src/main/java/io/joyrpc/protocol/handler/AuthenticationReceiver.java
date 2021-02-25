@@ -44,19 +44,14 @@ import static io.joyrpc.protocol.message.authentication.AuthenticationResponse.N
 import static io.joyrpc.protocol.message.authentication.AuthenticationResponse.PASS;
 
 /**
- * 认证处理器
+ * 认证请求处理器
  */
-public class AuthenticationReqHandler extends AbstractReqHandler implements MessageHandler {
+public class AuthenticationReceiver extends AbstractReceiver implements MessageHandler {
 
-    private final static Logger logger = LoggerFactory.getLogger(AuthenticationReqHandler.class);
-
-    @Override
-    protected Logger getLogger() {
-        return logger;
-    }
+    private final static Logger logger = LoggerFactory.getLogger(AuthenticationReceiver.class);
 
     @Override
-    public void handle(ChannelContext context, Message message) throws HandlerException {
+    public void handle(final ChannelContext context, final Message message) throws HandlerException {
         if (!(message instanceof RequestMessage)) {
             return;
         }
@@ -65,7 +60,7 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
 
         RpcSession session = (RpcSession) request.getSession();
         if (session == null) {
-            acknowledge(channel, request, "Session is not exists.");
+            acknowledge(context, request, "Session is not exists.");
             return;
         }
         AuthenticationRequest authReq = (AuthenticationRequest) request.getPayLoad();
@@ -76,7 +71,9 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         Exporter exporter = ServiceManager.getExporter(className, alias, port);
         if (exporter == null) {
             //抛出异常
-            acknowledge(channel, request, String.format("exporter is not exists. class=%s,alias=%s,port=%d", className, alias, port));
+            acknowledge(context, request,
+                    String.format("exporter is not exists. class=%s,alias=%s,port=%d",
+                            className, alias, port));
             return;
         }
         //判断认证算法是否一致
@@ -85,18 +82,19 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
         if (identification == null || authenticator == null) {
             //没有配置认证
             session.setAuthenticated(Session.AUTH_SESSION_SUCCESS);
-            acknowledge(channel, request, new AuthenticationResponse(PASS));
+            acknowledge(context, request, new AuthenticationResponse(PASS));
         } else if (!identification.type().equals(authReq.getType())) {
             //身份类型不对
-            acknowledge(channel, request, String.format("identification must be %s. class=%s,alias=%s,port=%d",
-                    identification.type(), className, alias, port));
+            acknowledge(context, request,
+                    String.format("identification must be %s. class=%s,alias=%s,port=%d",
+                            identification.type(), className, alias, port));
         } else {
             try {
                 AuthenticationResponse response = authenticator.authenticate(authReq);
                 session.setAuthenticated(response.isSuccess() ? Session.AUTH_SESSION_SUCCESS : Session.AUTH_SESSION_FAIL);
-                acknowledge(channel, request, response);
+                acknowledge(context, request, response);
             } catch (Exception e) {
-                acknowledge(channel, request, e.getMessage());
+                acknowledge(context, request, e.getMessage());
             }
         }
 
@@ -105,23 +103,23 @@ public class AuthenticationReqHandler extends AbstractReqHandler implements Mess
     /**
      * 应答消息
      *
-     * @param channel  连接通道
+     * @param context  连接通道
      * @param request  请求
      * @param response 应答
      */
-    protected void acknowledge(final Channel channel, final RequestMessage request, final AuthenticationResponse response) {
-        channel.send(build(request, AuthenticationResp.getType(), response), sendFailed);
+    protected void acknowledge(final ChannelContext context, final RequestMessage request, final AuthenticationResponse response) {
+        acknowledge(context, request, build(request, AuthenticationResp.getType(), response), logger);
     }
 
     /**
      * 应答消息
      *
-     * @param channel 连接通道
+     * @param context 连接通道
      * @param request 请求
      * @param error   错误
      */
-    protected void acknowledge(final Channel channel, final RequestMessage request, final String error) {
-        channel.send(build(request, AuthenticationResp.getType(), new AuthenticationResponse(NOT_PASS, error)), sendFailed);
+    protected void acknowledge(final ChannelContext context, final RequestMessage request, final String error) {
+        acknowledge(context, request, new AuthenticationResponse(NOT_PASS, error));
     }
 
     @Override

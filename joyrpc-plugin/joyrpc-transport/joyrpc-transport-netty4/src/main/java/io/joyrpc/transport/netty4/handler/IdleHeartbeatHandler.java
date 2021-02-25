@@ -22,8 +22,8 @@ package io.joyrpc.transport.netty4.handler;
 
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.heartbeat.HeartbeatTrigger;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
@@ -31,7 +31,7 @@ import io.netty.util.AttributeKey;
 /**
  * 心跳处理器
  */
-public class IdleHeartbeatHandler extends ChannelDuplexHandler {
+public class IdleHeartbeatHandler extends ChannelInboundHandlerAdapter {
 
     public static final AttributeKey<HeartbeatTrigger> HEARTBEAT_TRIGGER = AttributeKey.valueOf(Channel.IDLE_HEARTBEAT_TRIGGER);
     /**
@@ -50,8 +50,7 @@ public class IdleHeartbeatHandler extends ChannelDuplexHandler {
                 heartbeatTrigger.run();
             }
         } else {
-            super.userEventTriggered(ctx, evt);
+            ctx.fireUserEventTriggered(evt);
         }
-
     }
 }

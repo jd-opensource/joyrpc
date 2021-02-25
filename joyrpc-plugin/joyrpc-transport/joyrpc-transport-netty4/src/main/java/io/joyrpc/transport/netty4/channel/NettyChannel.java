@@ -24,6 +24,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.OverloadException;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.FutureManager;
@@ -37,7 +38,6 @@ import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -62,7 +62,7 @@ public class NettyChannel implements Channel {
     /**
      * 工作线程池
      */
-    protected final ExecutorService workerPool;
+    protected final ThreadPool workerPool;
     /**
      * 数据包大小
      */
@@ -96,7 +96,7 @@ public class NettyChannel implements Channel {
      */
     public NettyChannel(final String name,
                         final io.netty.channel.Channel channel,
-                        final ExecutorService workerPool,
+                        final ThreadPool workerPool,
                         final Publisher<TransportEvent> publisher,
                         final int payloadSize,
                         final boolean server) {
@@ -243,7 +243,7 @@ public class NettyChannel implements Channel {
     }
 
     @Override
-    public ExecutorService getWorkerPool() {
+    public ThreadPool getWorkerPool() {
         return workerPool;
     }
 

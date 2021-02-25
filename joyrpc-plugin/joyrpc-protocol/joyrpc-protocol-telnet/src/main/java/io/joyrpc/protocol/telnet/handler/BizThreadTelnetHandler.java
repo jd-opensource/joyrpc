@@ -24,6 +24,7 @@ package io.joyrpc.protocol.telnet.handler;
  */
 
 import io.joyrpc.invoker.ServiceManager;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;
@@ -33,13 +34,11 @@ import org.apache.commons.cli.Options;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
 
 import static io.joyrpc.Plugin.JSON;
 
 /**
- * @date: 2019/1/22
+ * 业务线程池处理器
  */
 public class BizThreadTelnetHandler extends AbstractTelnetHandler {
 
@@ -88,7 +87,7 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
                 return new TelnetResponse("ERROR:count must between 1 and 60");
             }
 
-            ExecutorService pool = getWorkerPool(port);
+            ThreadPool pool = getWorkerPool(port);
             if (pool != null) {
                 HashMap<String, Map<String, Object>> map = new HashMap<>(1);
                 StringBuilder builder = new StringBuilder(100);
@@ -106,7 +105,7 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
                         //通道被关闭了
                         return new TelnetResponse(LINE);
                     } else {
-                        map.put(port, export(pool));
+                        map.put(port, pool.dump());
                         if (i != count - 1) {
                             //最后一个由循环外输出
                             builder.setLength(0);
@@ -125,10 +124,10 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
 
     /**
      * 获取线程池
-     * @param name
-     * @return
+     * @param name 名称
+     * @return 线程池
      */
-    protected ExecutorService getWorkerPool(final String name) {
+    protected ThreadPool getWorkerPool(final String name) {
         if (name == null) {
             return null;
         } else if (Character.isDigit(name.charAt(0))) {
@@ -142,8 +141,8 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
 
     /**
      * 输出服务的线程池信息
-     * @param servers
-     * @param result
+     * @param servers 服务列表
+     * @param result 结果
      */
     protected void export(final List<Server> servers, final Map<String, Object> result) {
         servers.forEach(o -> export(o, result));
@@ -151,8 +150,8 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
 
     /**
      * 输出服务的线程池信息
-     * @param server
-     * @param result
+     * @param server 服务
+     * @param result 结果
      */
     protected void export(final Server server, final Map<String, Object> result) {
         export(String.valueOf(server.getLocalAddress().getPort()), server.getWorkerPool(), result);
@@ -164,25 +163,8 @@ public class BizThreadTelnetHandler extends AbstractTelnetHandler {
      * @param executor 线程池
      * @param result 结果
      */
-    protected void export(final String name, final ExecutorService executor, final Map<String, Object> result) {
-        result.put(name, export(executor));
+    protected void export(final String name, final ThreadPool executor, final Map<String, Object> result) {
+        result.put(name, executor.dump());
     }
 
-    /**
-     * 线程池信息
-     * @param executor
-     * @return 参数信息
-     */
-    protected Map<String, Object> export(final ExecutorService executor) {
-        Map<String, Object> result = new HashMap(10);
-        if (executor instanceof ThreadPoolExecutor) {
-            ThreadPoolExecutor pool = (ThreadPoolExecutor) executor;
-            result.put("min", pool.getCorePoolSize());
-            result.put("max", pool.getMaximumPoolSize());
-            result.put("current", pool.getPoolSize());
-            result.put("active", pool.getActiveCount());
-            result.put("queue", pool.getQueue().size());
-        }
-        return result;
-    }
 }

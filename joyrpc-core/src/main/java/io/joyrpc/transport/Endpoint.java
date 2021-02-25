@@ -23,6 +23,7 @@ package io.joyrpc.transport;
 
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;
@@ -122,7 +123,7 @@ public interface Endpoint<M> {
      *
      * @return 线程池
      */
-    ExecutorService getWorkerPool();
+    ThreadPool getWorkerPool();
 
     /**
      * 线程池异步执行

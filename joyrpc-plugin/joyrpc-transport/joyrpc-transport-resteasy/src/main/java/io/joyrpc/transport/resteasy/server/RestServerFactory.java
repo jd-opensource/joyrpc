@@ -23,9 +23,9 @@ package io.joyrpc.transport.resteasy.server;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.*;
 
-import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.TRANSPORT_FACTORY;
@@ -38,12 +38,12 @@ import static io.joyrpc.constants.Constants.TRANSPORT_FACTORY_OPTION;
 public class RestServerFactory implements EndpointFactory {
 
     @Override
-    public Client createClient(final URL url, final ExecutorService workerPool, final Function<TransportClient, Client> function) {
+    public Client createClient(final URL url, final ThreadPool workerPool, final Function<TransportClient, Client> function) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Server createServer(final URL url, final ExecutorService workerPool) {
+    public Server createServer(final URL url, final ThreadPool workerPool) {
         TransportFactory factory = TRANSPORT_FACTORY.getOrDefault(url.getString(TRANSPORT_FACTORY_OPTION));
         return new RestServer(url, factory, workerPool);
     }

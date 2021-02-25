@@ -25,6 +25,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.channel.ChannelManager;
@@ -38,7 +39,6 @@ import io.joyrpc.util.StateController;
 import io.joyrpc.util.StateMachine.IntStateMachine;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 
 import static io.joyrpc.Plugin.CHANNEL_MANAGER_FACTORY;
@@ -54,7 +54,7 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
     /**
      * 业务线程池
      */
-    protected final ExecutorService workerPool;
+    protected final ThreadPool workerPool;
     /**
      * 名称
      */
@@ -115,7 +115,7 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
      * @param url        url
      * @param workerPool 业务线程池
      */
-    public AbstractClient(URL url, ExecutorService workerPool) {
+    public AbstractClient(URL url, ThreadPool workerPool) {
         super(url);
         ChannelManagerFactory factory = CHANNEL_MANAGER_FACTORY.getOrDefault(url.getString(CHANNEL_MANAGER_FACTORY_OPTION));
         this.channelManager = factory.getChannelManager(url);
@@ -187,7 +187,7 @@ public abstract class AbstractClient extends DefaultChannelTransport implements 
     }
 
     @Override
-    public ExecutorService getWorkerPool() {
+    public ThreadPool getWorkerPool() {
         return this.workerPool;
     }
 

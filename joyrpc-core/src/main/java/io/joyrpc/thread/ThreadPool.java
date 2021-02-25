@@ -20,53 +20,27 @@ package io.joyrpc.thread;
  * #L%
  */
 
-import io.joyrpc.extension.Extensible;
-import io.joyrpc.extension.URL;
+import io.joyrpc.extension.Parametric;
 
-import java.util.concurrent.*;
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
-import static io.joyrpc.constants.Constants.QUEUES_OPTION;
-import static io.joyrpc.constants.Constants.QUEUE_TYPE_OPTION;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
 
 /**
  * 线程池
  */
-@Extensible("threadpool")
-@FunctionalInterface
-public interface ThreadPool {
+public interface ThreadPool extends ExecutorService {
 
     /**
-     * 构建队列
+     * 输出运行时信息
      *
-     * @param size
-     * @param isPriority
-     * @return
+     * @return 运行时信息
      */
-    BiFunction<Integer, Boolean, BlockingQueue> QUEUE_FUNCTION = (size, isPriority) -> size == 0 ? new SynchronousQueue<>() : (isPriority ?
-            (size < 0 ? new PriorityBlockingQueue<>() : new PriorityBlockingQueue<>(size)) :
-            (size < 0 ? new LinkedBlockingQueue<>() : new LinkedBlockingQueue<>(size)));
+    Map<String, Object> dump();
 
     /**
-     * 构建线程池
+     * 配置参数
      *
-     * @param url           URL
-     * @param threadFactory 线程工厂类
-     * @return 线程池
+     * @param parametric 参数
      */
-    default ExecutorService get(final URL url, final ThreadFactory threadFactory) {
-        return get(url, threadFactory, o -> QUEUE_FUNCTION.apply(url.getInteger(QUEUES_OPTION), !url.getString(QUEUE_TYPE_OPTION).equals(QUEUE_TYPE_OPTION.getValue())));
-    }
-
-    /**
-     * 构建线程池
-     *
-     * @param url           URL
-     * @param threadFactory 线程工厂类
-     * @param function      队列
-     * @return 线程池
-     */
-    ExecutorService get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function);
-
+    void configure(Parametric parametric);
 }

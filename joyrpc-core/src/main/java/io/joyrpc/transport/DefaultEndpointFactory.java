@@ -22,6 +22,7 @@ package io.joyrpc.transport;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
@@ -36,7 +37,7 @@ import static io.joyrpc.constants.Constants.TRANSPORT_FACTORY_OPTION;
 public class DefaultEndpointFactory implements EndpointFactory {
 
     @Override
-    public Client createClient(final URL url, final ExecutorService workerPool, Function<TransportClient, Client> function) {
+    public Client createClient(final URL url, final ThreadPool workerPool, Function<TransportClient, Client> function) {
         return create(url,
                 factory -> function == null ?
                         new DecoratorClient(url, factory.createClient(url, workerPool)) :
@@ -44,7 +45,7 @@ public class DefaultEndpointFactory implements EndpointFactory {
     }
 
     @Override
-    public Server createServer(final URL url, final ExecutorService workerPool) {
+    public Server createServer(final URL url, final ThreadPool workerPool) {
         return create(url, factory -> new DecoratorServer(url, factory.createServer(url, workerPool)));
     }
 

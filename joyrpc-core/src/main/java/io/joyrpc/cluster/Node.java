@@ -43,6 +43,7 @@ import io.joyrpc.protocol.message.Response;
 import io.joyrpc.protocol.message.SuccessResponse;
 import io.joyrpc.protocol.message.heartbeat.HeartbeatResponse;
 import io.joyrpc.protocol.message.negotiation.NegotiationResponse;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.Client;
 import io.joyrpc.transport.DecoratorClient;
 import io.joyrpc.transport.EndpointFactory;
@@ -99,7 +100,7 @@ public class Node implements Shard {
     /**
      * 集群业务线程池
      */
-    protected final ExecutorService workerPool;
+    protected final ThreadPool workerPool;
     /**
      * 节点事件监听器
      */
@@ -220,7 +221,7 @@ public class Node implements Shard {
                 final URL clusterUrl,
                 final Shard shard,
                 final EndpointFactory factory,
-                final ExecutorService workerPool,
+                final ThreadPool workerPool,
                 final Function<URL, Message> authentication,
                 final NodeHandler nodeHandler,
                 final Dashboard dashboard,

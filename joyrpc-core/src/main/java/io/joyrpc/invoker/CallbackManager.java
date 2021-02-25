@@ -36,6 +36,7 @@ import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.*;
 import io.joyrpc.thread.NamedThreadFactory;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.Transport;
 import io.joyrpc.transport.session.Session;
@@ -49,7 +50,6 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -58,7 +58,7 @@ import java.util.function.Function;
 import static io.joyrpc.Plugin.PROXY;
 import static io.joyrpc.Plugin.THREAD_POOL;
 import static io.joyrpc.constants.Constants.*;
-import static io.joyrpc.thread.ThreadPool.QUEUE_FUNCTION;
+import static io.joyrpc.thread.ThreadPoolFactory.QUEUE_FUNCTION;
 import static io.joyrpc.util.ClassUtils.getPublicMethod;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
@@ -97,7 +97,7 @@ public class CallbackManager implements Closeable {
     /**
      * 回调线程池
      */
-    protected ExecutorService callbackPool;
+    protected ThreadPool callbackPool;
 
     public CallbackContainer getConsumer() {
         return consumer;
@@ -112,7 +112,7 @@ public class CallbackManager implements Closeable {
      *
      * @return 回调线程池
      */
-    public ExecutorService getThreadPool() {
+    public ThreadPool getThreadPool() {
         if (callbackPool == null) {
             synchronized (this) {
                 if (callbackPool == null) {
@@ -127,8 +127,8 @@ public class CallbackManager implements Closeable {
                         put(Constants.MAX_SIZE_OPTION.getName(), String.valueOf(maxSize));
                     }});
 
-                    callbackPool = THREAD_POOL.get().get(url,
-                            new NamedThreadFactory("RPC-CB-", true),
+                    callbackPool = THREAD_POOL.get().get("RPC-CB", url,
+                            new NamedThreadFactory("RPC-CB", true),
                             o -> QUEUE_FUNCTION.apply(queueSize, false));
                 }
             }

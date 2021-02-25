@@ -23,6 +23,7 @@ package io.joyrpc.transport.netty4.transport;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.AbstractServer;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.TransportServer;
@@ -42,7 +43,6 @@ import io.netty.handler.ssl.SslContext;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -71,7 +71,7 @@ public class NettyServer extends AbstractServer {
      * @param function   transport函数
      */
     public NettyServer(final URL url,
-                       final ExecutorService workerPool,
+                       final ThreadPool workerPool,
                        final BiFunction<Channel, URL, ChannelTransport> function) {
         super(url, workerPool);
         this.function = function;
@@ -87,7 +87,7 @@ public class NettyServer extends AbstractServer {
      * @param function   transport函数
      */
     public NettyServer(final URL url,
-                       final ExecutorService workerPool,
+                       final ThreadPool workerPool,
                        final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                        final Function<TransportServer, CompletableFuture<Void>> afterClose,
                        final BiFunction<Channel, URL, ChannelTransport> function) {

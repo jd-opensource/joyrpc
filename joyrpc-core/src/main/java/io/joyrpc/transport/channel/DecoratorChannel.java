@@ -21,6 +21,7 @@ package io.joyrpc.transport.channel;
  */
 
 import io.joyrpc.event.Publisher;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
@@ -107,7 +108,7 @@ public class DecoratorChannel implements Channel {
     }
 
     @Override
-    public ExecutorService getWorkerPool() {
+    public ThreadPool getWorkerPool() {
         return channel.getWorkerPool();
     }
 

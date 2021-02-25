@@ -25,6 +25,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
@@ -136,7 +137,7 @@ public class DecoratorClient<T extends TransportClient> implements Client {
     }
 
     @Override
-    public ExecutorService getWorkerPool() {
+    public ThreadPool getWorkerPool() {
         return transport.getWorkerPool();
     }
 

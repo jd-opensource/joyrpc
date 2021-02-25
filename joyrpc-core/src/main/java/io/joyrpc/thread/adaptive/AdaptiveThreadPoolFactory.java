@@ -24,7 +24,9 @@ import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.DefaultThreadPool;
 import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.thread.ThreadPoolFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +40,12 @@ import static io.joyrpc.constants.Constants.*;
  * 自适应线程池
  */
 @Extension(value = "adaptive")
-public class AdaptiveThreadPool implements ThreadPool {
+public class AdaptiveThreadPoolFactory implements ThreadPoolFactory {
 
-    private static final Logger logger = LoggerFactory.getLogger(AdaptiveThreadPool.class);
+    private static final Logger logger = LoggerFactory.getLogger(AdaptiveThreadPoolFactory.class);
 
     @Override
-    public ExecutorService get(final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function) {
+    public ThreadPool get(final String name, final URL url, final ThreadFactory threadFactory, final Function<URL, BlockingQueue> function) {
         Integer maxSize = url.getPositiveInt(MAX_SIZE_OPTION);
         Integer coreSize = url.getPositive(CORE_SIZE_OPTION.getName(), maxSize);
         Integer keepAliveTime = url.getPositive(KEEP_ALIVE_TIME_OPTION.getName(), (Integer) null);
@@ -55,7 +57,7 @@ public class AdaptiveThreadPool implements ThreadPool {
         } else {
             keepAliveTime = keepAliveTime == null ? KEEP_ALIVE_TIME_OPTION.getValue() : keepAliveTime;
         }
-        return new ThreadPoolExecutor(coreSize, maxSize, keepAliveTime, TimeUnit.MILLISECONDS,
+        return new DefaultThreadPool(name, coreSize, maxSize, keepAliveTime, TimeUnit.MILLISECONDS,
                 function.apply(url),
                 threadFactory,
                 new RejectedExecutionHandler() {

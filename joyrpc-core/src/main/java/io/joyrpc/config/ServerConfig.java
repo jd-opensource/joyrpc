@@ -23,7 +23,7 @@ package io.joyrpc.config;
 
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.thread.ThreadPoolFactory;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.util.network.Ipv4;
@@ -74,7 +74,7 @@ public class ServerConfig extends AbstractIdConfig implements Serializable {
     /**
      * 业务线程池类型
      */
-    @ValidatePlugin(extensible = ThreadPool.class, name = "THREAD_POOL", defaultValue = DEFAULT_THREADPOOL)
+    @ValidatePlugin(extensible = ThreadPoolFactory.class, name = "THREAD_POOL", defaultValue = DEFAULT_THREADPOOL)
     protected String threadPool;
     /**
      * 业务线程池core大小

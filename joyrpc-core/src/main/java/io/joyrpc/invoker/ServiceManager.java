@@ -47,6 +47,7 @@ import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.handler.DefaultProtocolDeduction;
 import io.joyrpc.thread.NamedThreadFactory;
 import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.thread.ThreadPoolFactory;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.Server;
@@ -349,7 +350,7 @@ public class ServiceManager {
      *
      * @return
      */
-    public static ExecutorService getCallbackPool() {
+    public static ThreadPool getCallbackPool() {
         return INSTANCE.callbackManager.getThreadPool();
     }
 
@@ -369,38 +370,6 @@ public class ServiceManager {
      */
     public static CallbackContainer getProducerCallback() {
         return INSTANCE.callbackManager.getProducer();
-    }
-
-    /**
-     * 修改线程池
-     *
-     * @param executor   线程池
-     * @param name       名称
-     * @param parametric 参数
-     * @param coreKey    核心线程数键
-     * @param maxKey     最大线程数键
-     */
-    public static void updateThreadPool(final ExecutorService executor,
-                                        final String name,
-                                        final Parametric parametric,
-                                        final String coreKey,
-                                        final String maxKey) {
-        if (!(executor instanceof ThreadPoolExecutor)) {
-            return;
-        }
-        ThreadPoolExecutor pool = (ThreadPoolExecutor) executor;
-        Integer core = parametric.getInteger(coreKey);
-        if (core != null && core > 0 && core != pool.getCorePoolSize()) {
-            logger.info(String.format("Core pool size of %s is changed from %d to %d",
-                    name, pool.getCorePoolSize(), core));
-            pool.setCorePoolSize(core);
-        }
-        Integer max = parametric.getInteger(maxKey);
-        if (max != null && max > 0 && max != pool.getMaximumPoolSize()) {
-            logger.info(String.format("Maximum pool size of %s is changed from %d to %d",
-                    name, pool.getMaximumPoolSize(), max));
-            pool.setMaximumPoolSize(max);
-        }
     }
 
     /**
@@ -468,7 +437,7 @@ public class ServiceManager {
             //集群的名字是服务名称+别名+配置变更计数器，确保相同接口引用的集群名称不一样
             Publisher<NodeEvent> publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_CLUSTER, clusterName, EVENT_PUBLISHER_CLUSTER_CONF);
             //TODO 是否要设置业务线程池处理应答消息
-            ExecutorService workerPool = null;
+            ThreadPool workerPool = null;
             Cluster cluster = new Cluster(clusterName, url, registry, null, null, workerPool, null, dashboardFactory, METRIC_HANDLER.extensions(), publisher);
             //判断是否有回调，如果注册成功，说明有回调方法，需要往Cluster注册事件，监听节点断开事件
             serializationRegister(config.getProxyClass());
@@ -610,10 +579,11 @@ public class ServiceManager {
      * @param url url
      * @return 线程池
      */
-    protected ExecutorService getWorkerPool(final URL url) {
-        ThreadPool pool = THREAD_POOL.getOrDefault(url.getString(THREADPOOL_OPTION));
-        NamedThreadFactory threadFactory = new NamedThreadFactory("RPC-BZ-" + url.getPort(), true);
-        return pool.get(url, threadFactory);
+    protected ThreadPool getWorkerPool(final URL url) {
+        ThreadPoolFactory pool = THREAD_POOL.getOrDefault(url.getString(THREADPOOL_OPTION));
+        String name = "RPC-BZ-" + url.getPort();
+        NamedThreadFactory threadFactory = new NamedThreadFactory(name, true);
+        return pool.get(name, url, threadFactory);
     }
 
     /**

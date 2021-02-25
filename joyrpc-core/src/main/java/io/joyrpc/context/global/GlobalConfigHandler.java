@@ -27,11 +27,11 @@ import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.MapParametric;
-import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.permission.BlackList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -40,6 +40,7 @@ import static io.joyrpc.Plugin.JSON;
 import static io.joyrpc.Plugin.SERIALIZATION;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.ConfigEventHandler.GLOBAL_ORDER;
+import static io.joyrpc.invoker.ServiceManager.getCallbackPool;
 
 
 /**
@@ -58,12 +59,31 @@ public class GlobalConfigHandler implements ConfigEventHandler {
             newAttrs.putIfAbsent(SETTING_REGISTRY_HEARTBEAT_INTERVAL, "15000");
             newAttrs.putIfAbsent(SETTING_REGISTRY_CHECK_INTERVAL, "300000");
             //修改回调线程池
-            ServiceManager.updateThreadPool(ServiceManager.getCallbackPool(), "callback",
-                    new MapParametric(newAttrs),
-                    SETTING_CALLBACK_POOL_CORE_SIZE,
-                    SETTING_CALLBACK_POOL_MAX_SIZE);
+            updateCallbackThreadPool(newAttrs);
             updateSerializationBlackList(oldAttrs, newAttrs);
         }
+    }
+
+    /**
+     * 修改回调线程池参数
+     *
+     * @param newAttrs 新参数
+     */
+    protected void updateCallbackThreadPool(final Map<String, String> newAttrs) {
+        Map<String, String> config = new HashMap<>(5);
+        String coreSize = newAttrs.get(SETTING_CALLBACK_POOL_CORE_SIZE);
+        String maxSize = newAttrs.get(SETTING_CALLBACK_POOL_MAX_SIZE);
+        String keepAliveTime = newAttrs.get(SETTING_CALLBACK_POOL_KEEPALIVE);
+        if (coreSize != null) {
+            config.put(CORE_SIZE_OPTION.getName(), coreSize);
+        }
+        if (maxSize != null) {
+            config.put(MAX_SIZE_OPTION.getName(), maxSize);
+        }
+        if (keepAliveTime != null) {
+            config.put(KEEP_ALIVE_TIME_OPTION.getName(), keepAliveTime);
+        }
+        getCallbackPool().configure(new MapParametric<>(config));
     }
 
     /**

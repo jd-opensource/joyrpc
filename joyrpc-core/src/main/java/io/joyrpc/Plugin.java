@@ -70,7 +70,7 @@ import io.joyrpc.protocol.http.HeaderInjection;
 import io.joyrpc.proxy.GrpcFactory;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.ProxyFactory;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.thread.ThreadPoolFactory;
 import io.joyrpc.trace.TraceFactory;
 import io.joyrpc.transaction.TransactionFactory;
 import io.joyrpc.transport.EndpointFactory;
@@ -119,7 +119,7 @@ public interface Plugin {
     /**
      * 业务线程插件.
      */
-    ExtensionPoint<ThreadPool, String> THREAD_POOL = new ExtensionPointLazy<>(ThreadPool.class);
+    ExtensionPoint<ThreadPoolFactory, String> THREAD_POOL = new ExtensionPointLazy<>(ThreadPoolFactory.class);
 
     /**
      * 跟踪工厂

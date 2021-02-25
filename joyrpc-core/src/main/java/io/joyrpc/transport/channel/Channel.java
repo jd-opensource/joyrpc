@@ -22,6 +22,7 @@ package io.joyrpc.transport.channel;
 
 
 import io.joyrpc.event.Publisher;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;
@@ -31,7 +32,6 @@ import io.joyrpc.transport.session.SessionManager;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
@@ -237,7 +237,7 @@ public interface Channel {
      *
      * @return 线程池
      */
-    ExecutorService getWorkerPool();
+    ThreadPool getWorkerPool();
 
     /**
      * 获取数据包大小

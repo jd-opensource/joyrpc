@@ -42,6 +42,7 @@ import io.joyrpc.extension.URLOption;
 import io.joyrpc.metric.Dashboard;
 import io.joyrpc.metric.Dashboard.DashboardType;
 import io.joyrpc.metric.DashboardFactory;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.util.Close;
@@ -104,7 +105,7 @@ public class Cluster {
     /**
      * 集群业务线程池
      */
-    protected final ExecutorService workerPool;
+    protected final ThreadPool workerPool;
     /**
      * 身份认证提供者
      */
@@ -179,7 +180,7 @@ public class Cluster {
                    final Registar registar,
                    final Candidature candidature,
                    final EndpointFactory factory,
-                   final ExecutorService workerPool,
+                   final ThreadPool workerPool,
                    final Function<URL, Message> authentication,
                    final DashboardFactory dashboardFactory,
                    final Iterable<? extends MetricHandler> metricHandlers,

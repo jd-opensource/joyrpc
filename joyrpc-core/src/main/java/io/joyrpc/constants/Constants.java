@@ -288,6 +288,10 @@ public class Constants {
      */
     public static final String SETTING_CALLBACK_POOL_QUEUE = "callback.pool.queue";
     /**
+     * 自定义设置：callback的线程池队列
+     */
+    public static final String SETTING_CALLBACK_POOL_KEEPALIVE = "callback.pool.keepalive";
+    /**
      * 序列化黑白名单
      */
     public static final String SETTING_SERIALIZATION_BLACKLIST = "serialization.blacklist";

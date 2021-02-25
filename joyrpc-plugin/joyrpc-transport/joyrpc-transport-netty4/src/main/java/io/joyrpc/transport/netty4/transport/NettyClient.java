@@ -25,6 +25,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.SslException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.AbstractClient;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelManager.Connector;
@@ -46,7 +47,6 @@ import io.netty.handler.timeout.IdleStateHandler;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.constants.Constants.*;
@@ -57,7 +57,7 @@ import static io.joyrpc.transport.netty4.Plugin.PIPELINE_FACTORY;
  */
 public class NettyClient extends AbstractClient {
 
-    public NettyClient(URL url, ExecutorService workerPool) {
+    public NettyClient(URL url, ThreadPool workerPool) {
         super(url, workerPool);
     }
 

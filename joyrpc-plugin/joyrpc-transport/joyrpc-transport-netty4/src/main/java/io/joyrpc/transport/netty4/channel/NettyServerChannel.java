@@ -22,6 +22,7 @@ package io.joyrpc.transport.netty4.channel;
 
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.TransportException;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.TransportEvent;
 import io.netty.channel.EventLoopGroup;
@@ -30,7 +31,6 @@ import io.netty.util.concurrent.Future;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -48,7 +48,7 @@ public class NettyServerChannel extends NettyChannel {
 
     public NettyServerChannel(final String name,
                               final io.netty.channel.Channel channel,
-                              final ExecutorService workerPool,
+                              final ThreadPool workerPool,
                               final Publisher<TransportEvent> publisher,
                               final int payloadSize,
                               final EventLoopGroup bossGroup,

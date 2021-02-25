@@ -25,6 +25,7 @@ import io.joyrpc.config.ConfigAware;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.transport.TransportServer;
@@ -69,7 +70,7 @@ public class RestServer extends DecoratorServer<TransportServer> implements Conf
      * @param factory    传输通道工程
      * @param workerPool 业务线程池
      */
-    public RestServer(final URL url, final TransportFactory factory, final ExecutorService workerPool) {
+    public RestServer(final URL url, final TransportFactory factory, final ThreadPool workerPool) {
         super(url, null);
         this.transport = factory.createServer(url, workerPool, this::beforeOpen, this::afterClose);
         this.deployment = new ResteasyDeployment();

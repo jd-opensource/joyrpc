@@ -22,6 +22,7 @@ package io.joyrpc.transport;
 
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
@@ -31,7 +32,6 @@ import io.joyrpc.util.State;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 
 /**
  * 装饰服务
@@ -86,7 +86,7 @@ public class DecoratorServer<T extends TransportServer> implements Server {
     }
 
     @Override
-    public ExecutorService getWorkerPool() {
+    public ThreadPool getWorkerPool() {
         return transport.getWorkerPool();
     }
 

@@ -26,6 +26,7 @@ import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
@@ -68,7 +69,7 @@ public abstract class AbstractServer implements TransportServer {
     /**
      * 业务线程池
      */
-    protected final ExecutorService workerPool;
+    protected final ThreadPool workerPool;
     /**
      * 事件发布器
      */
@@ -124,12 +125,12 @@ public abstract class AbstractServer implements TransportServer {
                     () -> beforeOpen == null ? null : beforeOpen.apply(AbstractServer.this),
                     () -> afterClose == null ? null : afterClose.apply(AbstractServer.this)));
 
-    public AbstractServer(final URL url, final ExecutorService workerPool) {
+    public AbstractServer(final URL url, final ThreadPool workerPool) {
         this(url, workerPool, null, null);
     }
 
     public AbstractServer(final URL url,
-                          final ExecutorService workerPool,
+                          final ThreadPool workerPool,
                           final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                           final Function<TransportServer, CompletableFuture<Void>> afterClose) {
         this.url = url;

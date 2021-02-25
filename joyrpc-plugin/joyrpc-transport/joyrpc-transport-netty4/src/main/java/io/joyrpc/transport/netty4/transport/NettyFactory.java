@@ -23,6 +23,7 @@ package io.joyrpc.transport.netty4.transport;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
+import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.*;
 import io.joyrpc.transport.channel.Channel;
 
@@ -44,18 +45,18 @@ public class NettyFactory implements TransportFactory {
     protected static final BiFunction<Channel, URL, ChannelTransport> CHANNEL_TRANSPORT_FUNCTION = (channel, url) -> new DefaultChannelTransport(channel, url);
 
     @Override
-    public TransportClient createClient(final URL url, final ExecutorService workerPool) {
+    public TransportClient createClient(final URL url, final ThreadPool workerPool) {
         return new NettyClient(url, workerPool);
     }
 
     @Override
-    public TransportServer createServer(final URL url, final ExecutorService workerPool) {
+    public TransportServer createServer(final URL url, final ThreadPool workerPool) {
         return new NettyServer(url, workerPool, CHANNEL_TRANSPORT_FUNCTION);
     }
 
     @Override
     public TransportServer createServer(final URL url,
-                                        final ExecutorService workerPool,
+                                        final ThreadPool workerPool,
                                         final Function<TransportServer, CompletableFuture<Void>> beforeOpen,
                                         final Function<TransportServer, CompletableFuture<Void>> afterClose) {
         return new NettyServer(url, workerPool, beforeOpen, afterClose, CHANNEL_TRANSPORT_FUNCTION);

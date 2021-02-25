@@ -30,6 +30,7 @@ import io.joyrpc.transport.heartbeat.HeartbeatStrategy;
 /**
  * 传输通道客户端
  */
+//TODO Endpoint的泛型是否要改成TransportClient
 public interface TransportClient extends ChannelTransport, Endpoint<Channel> {
 
     /**

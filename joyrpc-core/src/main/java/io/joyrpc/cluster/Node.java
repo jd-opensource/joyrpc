@@ -436,7 +436,7 @@ public class Node implements Shard {
      * @return 客户端
      */
     protected Client newClient(final EventHandler<TransportEvent> handler) {
-        Client client = factory.createClient(url,workerPool, t -> publisher == null ?
+        Client client = factory.createClient(url, workerPool, t -> publisher == null ?
                 new NodeClient(url, t, handler) :
                 new MetricClient(url, t, handler, this));
         if (client != null) {
@@ -778,14 +778,17 @@ public class Node implements Shard {
          */
         protected void onOffline(final OfflineEvent event) {
             //优雅下线
-            disconnect(false).whenComplete((v, e) -> {
-                if (client.getRequests() == 0) {
-                    //下线的时候没有请求，则直接关闭连接，并广播断连事件
-                    offline();
-                } else {
-                    //优雅关闭，定时器检测没有请求后或超过2秒关闭
-                    node.sendEvent(EventType.OFFLINING, client);
-                    timer().add(new OfflineTask(node, this));
+            disconnect(false).whenComplete((v, error) -> {
+                //成功设置节点状态外断开连接
+                if (error == null) {
+                    if (client.getRequests() == 0) {
+                        //下线的时候没有请求，则直接关闭连接，并广播断连事件
+                        offline();
+                    } else {
+                        //优雅关闭，定时器检测没有请求后或超过2秒关闭
+                        node.sendEvent(EventType.OFFLINING, client);
+                        timer().add(new OfflineTask(node, this));
+                    }
                 }
             });
         }
@@ -827,7 +830,10 @@ public class Node implements Shard {
                 if (node.stateMachine.getState().tryDisconnect() == StateTransition.SUCCESS) {
                     if (autoClose) {
                         //抛出异常，这样触发cluster的自动重连
-                        client.close().whenComplete((v, e) -> node.sendEvent(EventType.DISCONNECT, client));
+                        client.close().whenComplete((v, e) -> {
+                            node.sendEvent(EventType.DISCONNECT, client);
+                            future.complete(null);
+                        });
                     } else {
                         //不自动关闭，5秒后触发关闭事件
                         future.complete(null);

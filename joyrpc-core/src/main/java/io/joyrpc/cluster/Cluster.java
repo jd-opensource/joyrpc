@@ -21,6 +21,7 @@ package io.joyrpc.cluster;
  */
 
 import io.joyrpc.cluster.Node.NodeHandler;
+import io.joyrpc.cluster.Shard.ShardState;
 import io.joyrpc.cluster.candidate.Candidature;
 import io.joyrpc.cluster.discovery.naming.ClusterHandler;
 import io.joyrpc.cluster.discovery.naming.Registar;
@@ -45,11 +46,9 @@ import io.joyrpc.metric.DashboardFactory;
 import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.message.Message;
-import io.joyrpc.util.Close;
-import io.joyrpc.util.StateController;
-import io.joyrpc.util.StateMachine.IntStateMachine;
-import io.joyrpc.util.SystemClock;
+import io.joyrpc.util.*;
 import io.joyrpc.util.Timer;
+import io.joyrpc.util.StateMachine.IntStateMachine;
 import io.joyrpc.util.network.Ping;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -440,11 +439,7 @@ public class Cluster {
         /**
          * 任务队列
          */
-        protected final Queue<Runnable> tasks = new ConcurrentLinkedQueue<>();
-        /**
-         * 任务执行的拥有者
-         */
-        protected final AtomicBoolean taskOwner = new AtomicBoolean();
+        protected final TimerQueue tasks;
         /**
          * 节点，集群关闭和定时器存在并发访问节点问题
          */
@@ -494,11 +489,13 @@ public class Cluster {
         public ClusterController(final Cluster cluster) {
             this.cluster = cluster;
             this.supplyTask = "SupplyTask-" + cluster.name;
+            this.tasks = new TimerQueue("ClusterTask-" + cluster.name);
         }
 
         @Override
         public CompletableFuture<Void> open() {
             CompletableFuture<Void> future = new CompletableFuture<>();
+            tasks.open();
             //启动事件监听器
             cluster.clusterPublisher.start();
             Optional.ofNullable(cluster.metricPublisher).ifPresent(Publisher::start);
@@ -525,37 +522,9 @@ public class Cluster {
             cluster.registar.unsubscribe(cluster.url, clusterHandler);
             Close.close(cluster.clusterPublisher);
             Close.close(cluster.metricPublisher);
+            Close.close(tasks);
             this.trigger = null;
             return CompletableFuture.completedFuture(null);
-        }
-
-        /***
-         * 添加任务，单线程顺序执行，避免并发锁
-         * @param task 任务
-         */
-        protected void offer(final Runnable task) {
-            if (task != null) {
-                tasks.offer(task);
-            }
-            if (isOpen() && !tasks.isEmpty() && taskOwner.compareAndSet(false, true)) {
-                //添加定时任务
-                timer().add("ClusterTask-" + cluster.name, SystemClock.now(), () -> {
-                    //遍历任务执行
-                    Runnable runnable;
-                    while ((runnable = tasks.poll()) != null && isOpen()) {
-                        //捕获异常，避免运行时
-                        try {
-                            runnable.run();
-                        } catch (Throwable e) {
-                            logger.error("Error occurs while running task . caused by " + e.getMessage(), e);
-                        }
-                    }
-                    //清空任务标识
-                    taskOwner.set(false);
-                    //再次进行判断，防止并发在清空标识之前放入了新的任务
-                    offer(null);
-                });
-            }
         }
 
         /**
@@ -572,17 +541,17 @@ public class Cluster {
             switch (type) {
                 case OFFLINING:
                     //收到服务端下线通知，正在优雅关闭连接中，需要提前从就绪节点列表中删除
-                    offer(() -> onOffline(node));
+                    tasks.offer(() -> onOfflining(node));
                     break;
                 case OFFLINE:
                     //服务端下线了，则进行关闭
                     logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    offer(() -> node.close().whenComplete((v, e) -> onDisconnect(node, cluster.getRetryTimeWhenOffline())));
+                    tasks.offer(() -> onOffline(node, cluster.getRetryTimeWhenOffline()));
                     break;
                 case DISCONNECT:
                     //连接断开了，则进行关闭
                     logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    offer(() -> node.close().whenComplete((v, e) -> onDisconnect(node, cluster.getRetryTime())));
+                    tasks.offer(() -> onOffline(node, cluster.getRetryTime()));
                     break;
             }
             cluster.clusterPublisher.offer(event);
@@ -601,7 +570,7 @@ public class Cluster {
                         this.cluster.name, this.cluster.stateMachine.getState().name()));
                 return;
             }
-            offer(() -> {
+            tasks.offer(() -> {
                 int add;
                 switch (event.getType()) {
                     case CLEAR:
@@ -839,14 +808,14 @@ public class Cluster {
             //把初始化状态改成候选状态
             node.getTransition().tryCandidate();
             //候选者状态进行连接，其它状态要么已经在连接节点里面，或者会触发事件通知
-            if (node.getState() == Shard.ShardState.CANDIDATE) {
+            if (node.getState() == ShardState.CANDIDATE) {
                 node.open().whenComplete((v, error) -> {
                     //已经关闭了
                     if (!isOpen() && error == null) {
                         node.close();
                     }
                     //异步处理
-                    offer(() -> onOpen(node, error));
+                    tasks.offer(() -> onOpen(node, error));
                     if (consumer != null) {
                         consumer.accept(node);
                     }
@@ -879,18 +848,20 @@ public class Cluster {
                     default:
                         logger.info(String.format("The node %s is not connected. discard this connected event.", node.getName()));
                 }
+            } else if (error instanceof TransportException) {
+                logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
+                onDisconnect(node, cluster.getRetryTime(error));
+            } else if (error instanceof ProtocolException) {
+                logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
+                onDisconnect(node, cluster.getRetryTime(error));
+            } else if (error instanceof AuthenticationException) {
+                logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
+                onDisconnect(node, cluster.getRetryTime(error));
             } else {
-                if (error instanceof TransportException) {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
-                } else if (error instanceof ProtocolException) {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
-                } else if (error instanceof AuthenticationException) {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), toSimpleString(error)));
-                } else {
-                    logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), error.getMessage()), error);
-                }
+                logger.error(String.format("Failed connecting node %s. caused by %s.", node.getName(), error.getMessage()), error);
                 onDisconnect(node, cluster.getRetryTime(error));
             }
+
         }
 
         /**
@@ -932,7 +903,7 @@ public class Cluster {
          */
         protected void supply(final Node node) {
             node.getTransition().tryInitial();
-            offer(() -> {
+            tasks.offer(() -> {
                 if (exists(node)) {
                     node.retry.incrementTimes();
                     connect(node);
@@ -970,21 +941,22 @@ public class Cluster {
          * @param retryTime 重连时间
          */
         protected void onDisconnect(final Node node, final long retryTime) {
-            //把它从连接节点里面删除
-            if (connects.remove(node.getName(), node)) {
-                readys = new ArrayList<>(connects.values());
-            }
-            //节点断开，这个时候有可能注册中心事件造成不存在了
-            if (exists(node)) {
-                //强制设置一下连接断开，避免在open失败没有正常设置好就触发了
-                node.getTransition().tryDisconnect();
-                //如果没有下线，则尝试重连
-                node.getRetry().setRetryTime(retryTime);
-                //把当前节点放回到后备节点
-                backups.offer(new DelayedNode(node));
-                //补充新节点
-                supplies.incrementAndGet();
-                supply(true);
+            //由于异步事件触发，有可能该节点已经被重新连接了，需要再次判断状态
+            if (node.getState() == ShardState.DISCONNECT) {
+                //把它从连接节点里面删除
+                if (connects.remove(node.getName(), node)) {
+                    readys = new ArrayList<>(connects.values());
+                }
+                //节点断开，这个时候有可能注册中心事件造成不存在了
+                if (exists(node)) {
+                    //如果没有下线，则尝试重连
+                    node.getRetry().setRetryTime(retryTime);
+                    //把当前节点放回到后备节点
+                    backups.offer(new DelayedNode(node));
+                    //补充新节点
+                    supplies.incrementAndGet();
+                    supply(true);
+                }
             }
         }
 
@@ -993,10 +965,27 @@ public class Cluster {
          *
          * @param node 节点
          */
-        protected void onOffline(final Node node) {
-            //把它从连接节点里面删除
-            if (connects.remove(node.getName(), node)) {
-                readys = new ArrayList<>(connects.values());
+        protected void onOfflining(final Node node) {
+            //事件异步触发，需要再次判断状态
+            if (node.getState() == ShardState.DISCONNECT) {
+                //用于优雅关闭，节点状态为断开,连接通道还没有断开，把它从连接节点里面删除
+                if (connects.remove(node.getName(), node)) {
+                    readys = new ArrayList<>(connects.values());
+                }
+            }
+        }
+
+        /**
+         * 节点下线通知
+         *
+         * @param node      节点
+         * @param retryTime 重试时间
+         */
+        protected void onOffline(final Node node, final long retryTime) {
+            //异步关闭结束，需要再次放在同步任务队列中执行
+            if (node.getState() == ShardState.DISCONNECT) {
+                //这个时候节点状态断开，已经没有请求，可以安全关闭连接
+                node.close().whenComplete((v, e) -> tasks.offer(() -> onDisconnect(node, retryTime)));
             }
         }
 
@@ -1309,7 +1298,7 @@ public class Cluster {
             this.windowTime = dashboard.getMetric().getWindowTime();
             this.time = lastSnapshotTime + windowTime;
             this.dashboard.setLastSnapshotTime(lastSnapshotTime);
-            this.name = this.getClass().getSimpleName() + " " + cluster.name;
+            this.name = this.getClass().getSimpleName() + "-" + cluster.name;
         }
 
         @Override
@@ -1327,7 +1316,9 @@ public class Cluster {
             IntStateMachine<Void, ClusterController> stateMachine = cluster.stateMachine;
             //启动的时候有可能在Opening状态
             if (stateMachine.isOpen(controller)) {
-                dashboard.snapshot();
+                if (stateMachine.isOpened(controller)) {
+                    dashboard.snapshot();
+                }
                 time = SystemClock.now() + windowTime;
                 timer().add(this);
             }

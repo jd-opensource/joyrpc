@@ -302,6 +302,7 @@ public class Node implements Shard {
     protected CompletableFuture<Void> close() {
         CompletableFuture<Void> future = new CompletableFuture<>();
         stateMachine.close(false).whenComplete((c, e) -> {
+            precondition = null;
             if (e != null) {
                 future.completeExceptionally(e);
             } else {
@@ -536,6 +537,7 @@ public class Node implements Shard {
         @Override
         public CompletableFuture<Client> open() {
             CompletableFuture<Client> future = new CompletableFuture<>();
+            node.precondition = null;
             successiveHeartbeatFails.set(0);
             //Cluster中确保调用该方法只有CONNECTING状态
             final Client cl = node.newClient(handler);
@@ -575,13 +577,6 @@ public class Node implements Shard {
                 });
             }
             return future;
-        }
-
-        @Override
-        public void fireClose() {
-            if (node.precondition != null) {
-                node.precondition.complete(null);
-            }
         }
 
         @Override

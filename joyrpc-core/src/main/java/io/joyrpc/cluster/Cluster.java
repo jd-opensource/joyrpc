@@ -497,12 +497,18 @@ public class Cluster {
         }
 
         @Override
-        public CompletableFuture<Void> close(boolean gracefully) {
+        public void fireClose() {
+            Optional.ofNullable(trigger).ifPresent(Trigger::close);
+        }
+
+        @Override
+        public CompletableFuture<Void> close(final boolean gracefully) {
             cluster.registar.unsubscribe(cluster.url, clusterHandler);
             Close.close(cluster.clusterPublisher);
             Close.close(cluster.metricPublisher);
             Close.close(tasks);
             this.trigger = null;
+            //TODO 要不要清理并关闭节点
             return CompletableFuture.completedFuture(null);
         }
 
@@ -641,9 +647,24 @@ public class Cluster {
             }
         }
 
-        @Override
-        public void fireClose() {
-            Optional.ofNullable(trigger).ifPresent(Trigger::close);
+        /**
+         * 关闭所有节点
+         *
+         * @return 关闭的Future
+         */
+        protected CompletableFuture<Cluster> closeNodes() {
+            final CompletableFuture<Cluster> result = new CompletableFuture<>();
+            List<Node> copy = new LinkedList<>(nodes.values());
+            final AtomicInteger counter = new AtomicInteger(copy.size());
+            for (Node node : copy) {
+                node.close().whenComplete((v, e) -> {
+                    if (counter.decrementAndGet() == 0) {
+                        result.complete(cluster);
+                    }
+                });
+            }
+            copy.clear();
+            return result;
         }
 
         protected boolean isOpen() {
@@ -658,26 +679,6 @@ public class Cluster {
          */
         protected boolean exists(final Node node) {
             return nodes.get(node.getName()) == node;
-        }
-
-        /**
-         * 关闭所有节点
-         *
-         * @return 关闭的Future
-         */
-        public CompletableFuture<Cluster> closeNodes() {
-            final CompletableFuture<Cluster> result = new CompletableFuture<>();
-            List<Node> copy = new LinkedList<>(nodes.values());
-            final AtomicInteger counter = new AtomicInteger(copy.size());
-            for (Node node : copy) {
-                node.close().whenComplete((v, e) -> {
-                    if (counter.decrementAndGet() == 0) {
-                        result.complete(cluster);
-                    }
-                });
-            }
-            copy.clear();
-            return result;
         }
 
         /**

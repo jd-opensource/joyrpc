@@ -507,8 +507,9 @@ public class Cluster {
             Close.close(cluster.clusterPublisher);
             Close.close(cluster.metricPublisher);
             Close.close(tasks);
-            this.trigger = null;
-            //TODO 要不要清理并关闭节点
+            trigger = null;
+            //关闭节点
+            closeNodes();
             return CompletableFuture.completedFuture(null);
         }
 

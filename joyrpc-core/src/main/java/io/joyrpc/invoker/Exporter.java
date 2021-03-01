@@ -223,6 +223,7 @@ public class Exporter extends AbstractService {
                                 result.completeExceptionally(new InitializationException(String.format("Error occurs while setup server : %s error", name), s));
                             } else {
                                 //注册服务
+                                //当多个接口使用同一的服务名称S进行注册，A接口注册后，B接口还没有准备好，客户端拿到服务S的地址，调用B的请求到达，B还没有就绪
                                 Futures.chain(doRegister(registries), result);
                             }
                         });
@@ -236,7 +237,7 @@ public class Exporter extends AbstractService {
     /**
      * 预热
      *
-     * @return
+     * @return CompletableFuture
      */
     protected CompletableFuture<Void> warmup() {
         return warmup == null ? CompletableFuture.completedFuture(null) : warmup.setup(config);
@@ -245,7 +246,7 @@ public class Exporter extends AbstractService {
     /**
      * 配置感知
      *
-     * @return
+     * @return CompletableFuture
      */
     protected CompletableFuture<Void> configAware() {
         if (server instanceof ConfigAware) {

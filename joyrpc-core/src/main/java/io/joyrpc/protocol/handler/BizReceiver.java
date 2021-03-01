@@ -205,10 +205,9 @@ public class BizReceiver extends AbstractReceiver {
             if (exporter == null) {
                 exporter = ServiceManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
                 if (exporter == null) {
-                    //TODO 目前有问题，新节点起来会收到Offline事件
-                    //System.out.println("444444444444444444444444");
-                    //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
-                    throw new ShutdownExecption(error(" exporter is not found"));
+                    //当多个接口使用同一的服务名称S进行注册，A接口注册后，B接口还没有准备好，客户端拿到服务S的地址，调用B的请求到达，B还没有就绪
+                    //把关机异常改成拒绝异常，客户端可以重试
+                    throw new RejectException(error(" exporter is not found"));
                 }
             }
             //构建请求

@@ -243,27 +243,6 @@ public class Cluster {
     }
 
     /**
-     * 判断协议支持的候选者，过滤掉SSL不匹配的节点
-     *
-     * @param nodes      节点
-     * @param candidates 候选者
-     * @param discards   不支持协议的节点
-     */
-    protected void filter(final Collection<Node> nodes, final List<Node> candidates, final List<Node> discards) {
-        //遍历节点，过滤掉协议不支持的节点
-        for (Node node : nodes) {
-            if (node.getClientProtocol() != null && sslEnable == node.isSslEnable()) {
-                candidates.add(node);
-            } else {
-                discards.add(node);
-            }
-        }
-        if (candidates.isEmpty() && !discards.isEmpty()) {
-            logger.warn("there is not any available provider. client protocol or ssl is not supported.");
-        }
-    }
-
-    /**
      * 是否发生变更
      *
      * @param shard    分片
@@ -570,52 +549,43 @@ public class Cluster {
                         this.cluster.name, this.cluster.stateMachine.getState().name()));
                 return;
             }
-            tasks.offer(() -> {
-                int add;
-                switch (event.getType()) {
-                    case CLEAR:
-                        //清理
-                        onClearEvent();
-                        break;
-                    case UPDATE:
-                        //增量更新
-                        add = onUpdateEvent(event.getDatum());
-                        if (add > 0) {
-                            //新增了节点，重新选举
-                            candidate();
-                        }
-                        break;
-                    case FULL:
-                        //全量更新
-                        add = onFullEvent(event.getDatum());
-                        if (add > 0) {
-                            //新增了节点，重新选举
-                            candidate();
-                        }
-                        //第一次全量事件，触发连接超时检测
-                        Optional.ofNullable(trigger).ifPresent(t -> t.onFull(add));
-                        break;
-                }
-            });
+            switch (event.getType()) {
+                case CLEAR:
+                    //清理
+                    tasks.offer(() -> onClearEvent(event));
+                    break;
+                case UPDATE:
+                    tasks.offer(() -> onUpdateEvent(event));
+                    break;
+                case FULL:
+                    //全量更新
+                    tasks.offer(() -> onFullEvent(event));
+                    break;
+            }
         }
+
 
         /**
          * 删除所有分片事件，如果注册中心权限认证失败会收到该事件
+         *
+         * @param event 事件
          */
-        protected void onClearEvent() {
+        protected void onClearEvent(final ClusterEvent event) {
             backups.clear();
             connects.clear();
             readys = new ArrayList<>(0);
             closeNodes();
+            nodes.clear();
         }
 
         /**
          * 全量更新事件
          *
-         * @param events 事件集
+         * @param event 事件
          */
-        protected int onFullEvent(final List<ShardEvent> events) {
+        protected void onFullEvent(final ClusterEvent event) {
             int add = 0;
+            List<ShardEvent> events = event.getDatum();
             if (events != null) {
                 //记录节点名称
                 Set<String> names = new HashSet<>();
@@ -633,17 +603,25 @@ public class Cluster {
                     }
                 }
             }
-            return add;
+            if (add > 0) {
+                //新增了节点，重新选举
+                candidate();
+            }
+            //第一次全量事件，触发连接超时检测
+            if (trigger != null) {
+                trigger.onFull(add);
+            }
         }
 
         /**
          * 增量更新集群事件
          *
-         * @param events 事件
-         * @return 更新的数量
+         * @param event 事件
          */
-        protected int onUpdateEvent(final List<ShardEvent> events) {
+        protected void onUpdateEvent(final ClusterEvent event) {
             int add = 0;
+            //增量更新
+            List<ShardEvent> events = event.getDatum();
             //增量更新
             if (events != null) {
                 for (ShardEvent e : events) {
@@ -657,7 +635,10 @@ public class Cluster {
                     }
                 }
             }
-            return add;
+            if (add > 0) {
+                //新增了节点，重新选举
+                candidate();
+            }
         }
 
         @Override
@@ -688,11 +669,13 @@ public class Cluster {
             final CompletableFuture<Cluster> result = new CompletableFuture<>();
             List<Node> copy = new LinkedList<>(nodes.values());
             final AtomicInteger counter = new AtomicInteger(copy.size());
-            copy.forEach(o -> o.close().whenComplete((v, e) -> {
-                if (counter.decrementAndGet() == 0) {
-                    result.complete(cluster);
-                }
-            }));
+            for (Node node : copy) {
+                node.close().whenComplete((v, e) -> {
+                    if (counter.decrementAndGet() == 0) {
+                        result.complete(cluster);
+                    }
+                });
+            }
             copy.clear();
             return result;
         }
@@ -706,8 +689,6 @@ public class Cluster {
             backups.clear();
             List<Node> candidates = new LinkedList<>();
             List<Node> discards = new LinkedList<>();
-            //过滤掉不支持的协议
-            cluster.filter(nodes.values(), candidates, discards);
             //用最新的参数进行更新
             Candidature.Result result = cluster.candidate(candidates);
             int size = result.getSize();

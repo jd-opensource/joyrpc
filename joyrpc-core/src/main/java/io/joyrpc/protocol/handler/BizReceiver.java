@@ -205,6 +205,8 @@ public class BizReceiver extends AbstractReceiver {
             if (exporter == null) {
                 exporter = ServiceManager.getExporter(invocation.getClassName(), invocation.getAlias(), channel.getLocalAddress().getPort());
                 if (exporter == null) {
+                    //TODO 目前有问题，新节点起来会收到Offline事件
+                    //System.out.println("444444444444444444444444");
                     //如果本地没有该服务，抛出ShutdownExecption，让消费者主动关闭连接
                     throw new ShutdownExecption(error(" exporter is not found"));
                 }

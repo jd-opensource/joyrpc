@@ -605,7 +605,6 @@ public class Node implements Shard {
                 //Channel心跳事件
                 onHeartbeat((HeartbeatEvent) event);
             } else if (event instanceof OfflineEvent) {
-                //TODO 目前有问题，新节点起来会收到Offline事件
                 OfflineEvent oe = (OfflineEvent) event;
                 Channel eChannel = oe.getChannel();
                 Channel cChannel = client.getChannel();

@@ -689,16 +689,12 @@ public class Cluster {
             //增加选举次数，正在重连的任务会自动放弃
             //冷备节点，已经在算法里面做了最优打散
             backups.clear();
-            List<Node> candidates = new LinkedList<>();
-            List<Node> discards = new LinkedList<>();
+            List<Node> candidates = new LinkedList<>(nodes.values());
             //用最新的参数进行更新
             Candidature.Result result = cluster.candidate(candidates);
             int size = result.getSize();
             if (size > 0) {
                 Optional.ofNullable(trigger).ifPresent(o -> o.adjustSemaphore(size));
-            }
-            if (!discards.isEmpty()) {
-                result.getDiscards().addAll(discards);
             }
             /*logger.info(String.format("cluster url:%s, candidate result, candidates:%d, standbys:%d, backups:%d, discards:%d",
                     cluster.url.toString(false, true, "alias", "initTimeout", "region", "datacenter"),

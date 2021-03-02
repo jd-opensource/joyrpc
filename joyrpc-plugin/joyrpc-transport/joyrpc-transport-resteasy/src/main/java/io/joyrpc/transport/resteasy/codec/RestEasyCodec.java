@@ -30,13 +30,13 @@ import org.jboss.resteasy.plugins.server.netty.RequestDispatcher;
 /**
  * Resteasy编解码
  */
-public class ResteasyCodec implements Codec {
+public class RestEasyCodec implements Codec {
 
     protected final String root;
 
     protected final RequestDispatcher dispatcher;
 
-    public ResteasyCodec(String root, RequestDispatcher dispatcher) {
+    public RestEasyCodec(String root, RequestDispatcher dispatcher) {
         this.root = root;
         this.dispatcher = dispatcher;
     }

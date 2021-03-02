@@ -27,7 +27,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.handler.codec.http.DefaultHttpResponse;
-import io.netty.handler.codec.http.HttpResponse;
 import org.jboss.resteasy.plugins.server.netty.NettyHttpRequest;
 import org.jboss.resteasy.plugins.server.netty.NettyHttpResponse;
 import org.jboss.resteasy.plugins.server.netty.RequestDispatcher;
@@ -44,48 +43,45 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 /**
  * Resteasy业务处理器
  */
-public class ResteasyBizHandler extends SimpleChannelInboundHandler {
+public class RestEasyDispatcher extends SimpleChannelInboundHandler {
 
-    private static final Logger logger = LoggerFactory.getLogger(ResteasyBizHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(RestEasyDispatcher.class);
 
+    /**
+     * 派发器
+     */
     protected RequestDispatcher dispatcher;
 
-    public ResteasyBizHandler(RequestDispatcher dispatcher) {
+    public RestEasyDispatcher(RequestDispatcher dispatcher) {
         this.dispatcher = dispatcher;
     }
 
     @Override
-    protected void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
+    protected void channelRead0(final ChannelHandlerContext ctx, final Object msg) throws Exception {
         if (msg instanceof NettyHttpRequest) {
-
             NettyHttpRequest request = (NettyHttpRequest) msg;
-
             if (request.getUri().getPath().endsWith("/favicon.ico")) {
-                HttpResponse response = new DefaultHttpResponse(HTTP_1_1, NOT_FOUND);
-                ctx.writeAndFlush(response);
+                ctx.writeAndFlush(new DefaultHttpResponse(HTTP_1_1, NOT_FOUND));
                 return;
             } else if (request.is100ContinueExpected()) {
-                HttpResponse response = new DefaultHttpResponse(HTTP_1_1, CONTINUE);
-                ctx.writeAndFlush(response);
+                ctx.writeAndFlush(new DefaultHttpResponse(HTTP_1_1, CONTINUE));
             }
 
             NettyHttpResponse response = request.getResponse();
             try {
                 // 获取远程ip 兼容nignx转发和vip等
-                RequestContext.getContext().setRemoteAddress(getRemoteAddress(request.getHttpHeaders(), ctx.channel()));
-                // 设置本地地址
-                RequestContext.getContext().setLocalAddress((InetSocketAddress) ctx.channel().localAddress());
-
+                RequestContext context = RequestContext.getContext();
+                context.setRemoteAddress(getRemoteAddress(request.getHttpHeaders(), ctx.channel()));
+                context.setLocalAddress((InetSocketAddress) ctx.channel().localAddress());
                 dispatcher.service(request, response, true);
-            } catch (Failure e1) {
+            } catch (Failure e) {
                 response.reset();
-                response.setStatus(e1.getErrorCode());
-            } catch (Exception ex) {
+                response.setStatus(e.getErrorCode());
+            } catch (Exception e) {
                 response.reset();
                 response.setStatus(500);
-                logger.error("Unexpected", ex);
+                logger.error("Unexpected", e);
             }
-
             if (!request.getAsyncContext().isSuspended()) {
                 response.finish();
                 ctx.flush();
@@ -96,8 +92,8 @@ public class ResteasyBizHandler extends SimpleChannelInboundHandler {
     /**
      * 获取远端地址
      *
-     * @param headers
-     * @param channel
+     * @param headers 头部
+     * @param channel 连接通道
      * @return
      */
     protected InetSocketAddress getRemoteAddress(final HttpHeaders headers, final Channel channel) {

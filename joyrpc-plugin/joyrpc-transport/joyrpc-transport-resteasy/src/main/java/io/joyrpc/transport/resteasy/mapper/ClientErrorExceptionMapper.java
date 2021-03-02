@@ -36,11 +36,7 @@ public class ClientErrorExceptionMapper implements ExceptionMapper {
 
     private final static Logger logger = Logger.getLogger(ClientErrorExceptionMapper.class);
 
-    public static ClientErrorExceptionMapper mapper = new ClientErrorExceptionMapper();
-
-    private ClientErrorExceptionMapper() {
-
-    }
+    public static final ClientErrorExceptionMapper mapper = new ClientErrorExceptionMapper();
 
     @Override
     public Response toResponse(Throwable throwable) {

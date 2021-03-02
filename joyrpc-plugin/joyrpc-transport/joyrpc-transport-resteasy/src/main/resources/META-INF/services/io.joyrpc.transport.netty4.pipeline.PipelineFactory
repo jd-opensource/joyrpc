@@ -1,1 +1,1 @@
-io.joyrpc.transport.resteasy.binder.ResteasyPipelineFactory
+io.joyrpc.transport.resteasy.pipeline.RestEasyPipelineFactory

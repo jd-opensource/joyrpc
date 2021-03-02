@@ -31,14 +31,11 @@ import io.netty.channel.ChannelPipeline;
  */
 @Extensible("pipeline")
 public interface PipelineFactory {
-
-    String HANDLER = "handler";
     String DECODER = "decoder";
     String ENCODER = "encoder";
     String CODEC = "codec";
     String HTTP_AGGREGATOR = "http-aggregator";
     String HTTP_REQUEST_NORMALIZER = "http-request-normalizer";
-    String HTTP_RESPONSE_CONVERTER = "http-response-converter";
     String HTTP_RESPONSE_NORMALIZER = "http-response-normalizer";
 
     /**

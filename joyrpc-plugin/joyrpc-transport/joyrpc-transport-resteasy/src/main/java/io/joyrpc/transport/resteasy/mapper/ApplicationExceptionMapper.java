@@ -34,17 +34,11 @@ public class ApplicationExceptionMapper implements ExceptionMapper {
 
     private final static Logger logger = Logger.getLogger(ApplicationExceptionMapper.class);
 
-    public static ApplicationExceptionMapper mapper = new ApplicationExceptionMapper();
-
-    private ApplicationExceptionMapper() {
-
-    }
+    public static final ApplicationExceptionMapper mapper = new ApplicationExceptionMapper();
 
     @Override
     public Response toResponse(Throwable throwable) {
-
         logger.error("Unexpected", throwable);
-
         String errorMsg = "{\"code\":500, \"message\":\"" + throwable.getMessage() + "\"}";
         Response response = Response.status(INTERNAL_SERVER_ERROR).entity(errorMsg).build();
         return response;

@@ -32,7 +32,7 @@ import io.joyrpc.transport.TransportServer;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.codec.ProtocolDeduction;
-import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
+import io.joyrpc.transport.resteasy.codec.RestEasyCodec;
 import io.joyrpc.transport.resteasy.mapper.ApplicationExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.ClientErrorExceptionMapper;
 import io.joyrpc.transport.resteasy.mapper.IllegalArgumentExceptionMapper;
@@ -83,17 +83,17 @@ public class RestServer extends DecoratorServer<TransportServer> implements Conf
      */
     protected CompletableFuture<Void> beforeOpen(final TransportServer transport) {
         CompletableFuture<Void> result = new CompletableFuture<>();
+        String root = url.getString(REST_ROOT);
+        root = REST_ROOT.getValue().equals(root) ? "" : root;
         try {
             deployment.start();
             ResteasyProviderFactory providerFactory = deployment.getProviderFactory();
-            String root = url.getString(REST_ROOT);
-            root = REST_ROOT.getValue().equals(root) ? "" : root;
+            SynchronousDispatcher dispatcher = (SynchronousDispatcher) deployment.getDispatcher();
             Map<Class<?>, ExceptionMapper> mapperMap = providerFactory.getExceptionMappers();
             mapperMap.put(ApplicationException.class, ApplicationExceptionMapper.mapper);
             mapperMap.put(ClientErrorException.class, ClientErrorExceptionMapper.mapper);
             mapperMap.put(IllegalArgumentException.class, IllegalArgumentExceptionMapper.mapper);
-            transport.setCodec(new ResteasyCodec(root,
-                    new RequestDispatcher((SynchronousDispatcher) deployment.getDispatcher(), providerFactory, null)));
+            transport.setCodec(new RestEasyCodec(root, new RequestDispatcher(dispatcher, providerFactory, null)));
             result.complete(null);
         } catch (Throwable e) {
             result.completeExceptionally(e);
@@ -104,8 +104,8 @@ public class RestServer extends DecoratorServer<TransportServer> implements Conf
     /**
      * 关闭后钩子
      *
-     * @param transport
-     * @return
+     * @param transport 传输通道服务
+     * @return CompletableFuture
      */
     protected CompletableFuture<Void> afterClose(final TransportServer transport) {
         CompletableFuture<Void> result = new CompletableFuture<>();
@@ -141,8 +141,7 @@ public class RestServer extends DecoratorServer<TransportServer> implements Conf
         } else {
             restful = GetRestful.getRootResourceClass(config.getInterfaceClass());
             if (restful == null) {
-                return Futures.completeExceptionally(new InitializationException(
-                        "there is not any @Path in " + config.getInterfaceClazz()));
+                return Futures.completeExceptionally(new InitializationException("there is not any @Path in " + config.getInterfaceClazz()));
             } else {
                 deployment.getRegistry().addSingletonResource(ref, "/");
                 return CompletableFuture.completedFuture(null);

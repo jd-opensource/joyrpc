@@ -1,4 +1,4 @@
-package io.joyrpc.transport.resteasy.binder;
+package io.joyrpc.transport.resteasy.pipeline;
 
 /*-
  * #%L
@@ -25,8 +25,8 @@ import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.netty4.pipeline.PipelineFactory;
-import io.joyrpc.transport.resteasy.codec.ResteasyCodec;
-import io.joyrpc.transport.resteasy.handler.ResteasyBizHandler;
+import io.joyrpc.transport.resteasy.codec.RestEasyCodec;
+import io.joyrpc.transport.resteasy.handler.RestEasyDispatcher;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpRequestDecoder;
@@ -39,7 +39,7 @@ import org.jboss.resteasy.plugins.server.netty.RestEasyHttpResponseEncoder;
  * ReastEasy处理器绑定
  */
 @Extension("resteasy")
-public class ResteasyPipelineFactory implements PipelineFactory {
+public class RestEasyPipelineFactory implements PipelineFactory {
 
     private static final String RESTEASY_HTTP_DECODER = "resteasy-http-decoder";
 
@@ -49,14 +49,14 @@ public class ResteasyPipelineFactory implements PipelineFactory {
 
     @Override
     public void build(ChannelPipeline pipeline, Codec codec, ChannelChain chain, Channel channel) {
-        ResteasyCodec resteasyCodec = (ResteasyCodec) codec;
+        RestEasyCodec resteasyCodec = (RestEasyCodec) codec;
         String root = resteasyCodec.getRoot();
         RequestDispatcher dispatcher = resteasyCodec.getDispatcher();
         pipeline.addLast(DECODER, new HttpRequestDecoder());
         pipeline.addLast(HTTP_AGGREGATOR, new HttpObjectAggregator(channel.getPayloadSize()));
-        pipeline.addLast(ENCODER, new HttpResponseEncoder());
         pipeline.addLast(RESTEASY_HTTP_DECODER, new RestEasyHttpRequestDecoder(dispatcher.getDispatcher(), root, RestEasyHttpRequestDecoder.Protocol.HTTP));
+        pipeline.addLast(RESTEASY_HTTP_DISPATCHER, new RestEasyDispatcher(dispatcher));
+        pipeline.addLast(ENCODER, new HttpResponseEncoder());
         pipeline.addLast(RESTEASY_HTTP_ENCODER, new RestEasyHttpResponseEncoder(dispatcher));
-        pipeline.addLast(RESTEASY_HTTP_DISPATCHER, new ResteasyBizHandler(dispatcher));
     }
 }

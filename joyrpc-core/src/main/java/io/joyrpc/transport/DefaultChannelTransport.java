@@ -95,7 +95,7 @@ public class DefaultChannelTransport implements ChannelTransport {
         requests.incrementAndGet();
         CompletableFuture<Void> result = new CompletableFuture<>();
         if (message != null) {
-            message.setMsgId(channel.getFutureManager().generateId());
+            message.setMsgId(channel.getFutureManager().nextMessageId());
             message.setSessionId(transportId);
             message.setSession(session);
             try {
@@ -135,7 +135,7 @@ public class DefaultChannelTransport implements ChannelTransport {
             int timeout = timeoutMillis <= 0 ? Constants.DEFAULT_TIMEOUT : timeoutMillis;
             FutureManager<Long, Message> futureManager = channel.getFutureManager();
             //设置id
-            message.setMsgId(futureManager.generateId());
+            message.setMsgId(futureManager.nextMessageId());
             message.setSessionId(transportId);
             message.setSession(session);
             //创建 future

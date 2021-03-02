@@ -48,7 +48,11 @@ public class FutureManager<I, M> {
     /**
      * ID生成器
      */
-    protected Supplier<I> idGenerator;
+    protected Supplier<I> msgIdGenerator;
+    /**
+     * streamID生成器
+     */
+    protected Supplier<Integer> streamIdGenerator;
     /**
      * 计数器
      */
@@ -65,12 +69,16 @@ public class FutureManager<I, M> {
     /**
      * 构造函数
      *
-     * @param channel     连接通道
-     * @param idGenerator id生成器
+     * @param channel           连接通道
+     * @param msgIdGenerator    消息ID生成器
+     * @param streamIdGenerator 流式ID生成器
      */
-    public FutureManager(final Channel channel, final Supplier<I> idGenerator) {
+    public FutureManager(final Channel channel,
+                         final Supplier<I> msgIdGenerator,
+                         final Supplier<Integer> streamIdGenerator) {
         this.channel = channel;
-        this.idGenerator = idGenerator;
+        this.msgIdGenerator = msgIdGenerator;
+        this.streamIdGenerator = streamIdGenerator;
         this.timeout = id -> complete(id, null, new TimeoutException("future is timeout."));
     }
 
@@ -201,8 +209,17 @@ public class FutureManager<I, M> {
      *
      * @return 消息ID
      */
-    public I generateId() {
-        return idGenerator.get();
+    public I nextMessageId() {
+        return msgIdGenerator.get();
+    }
+
+    /**
+     * 获取流式Id
+     *
+     * @return 流式ID
+     */
+    public Integer nextStreamId() {
+        return streamIdGenerator.get();
     }
 
     /**

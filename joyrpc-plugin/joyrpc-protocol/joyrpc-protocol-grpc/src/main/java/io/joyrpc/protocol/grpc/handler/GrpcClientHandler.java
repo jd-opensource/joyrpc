@@ -35,10 +35,7 @@ import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.HeaderMapping;
 import io.joyrpc.protocol.grpc.exception.GrpcBizException;
 import io.joyrpc.protocol.message.*;
-import io.joyrpc.transport.channel.Channel;
-import io.joyrpc.transport.channel.ChannelContext;
-import io.joyrpc.transport.channel.ChannelOperator;
-import io.joyrpc.transport.channel.RequestFuture;
+import io.joyrpc.transport.channel.*;
 import io.joyrpc.transport.http.HttpMethod;
 import io.joyrpc.transport.http2.DefaultHttp2Headers;
 import io.joyrpc.transport.http2.DefaultHttp2RequestMessage;
@@ -216,11 +213,13 @@ public class GrpcClientHandler implements ChannelOperator {
         //做grpc入参与返回值的类型转换，获取GrpcType
         InterfaceOption.MethodOption option = message.getOption();
         IDLMethodDesc methodDesc = option.getArgType().getIDLMethodDesc();
+        IDLType type = methodDesc.getResponse();
         //包装payload
         Object payLoad = wrapPayload(invocation, methodDesc);
         //将返回值类型放到 future 中
-        RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
-        storeReturnType(invocation, methodDesc, future);
+        FutureManager<Long, Message> futureManager = channel.getFutureManager();
+        RequestFuture<Long, Message> future = futureManager.get(message.getMsgId());
+        future.setAttr(type != null ? type : new IDLType(invocation.getMethod().getReturnType(), false));
 
         byte compressType = message.getHeader().getCompression();
         //设置content
@@ -252,6 +251,9 @@ public class GrpcClientHandler implements ChannelOperator {
         content[2] = (byte) (length >>> 16);
         content[3] = (byte) (length >>> 8);
         content[4] = (byte) length;
+        //TODO 修改streamId
+        //Stream IDs on the client MUST start at 1 and increment by 2 sequentially, such as 1, 3, 5, 7, etc.
+        //Stream IDs on the server MUST start at 2 and increment by 2 sequentially, such as 2, 4, 6, 8, etc.
         return new DefaultHttp2RequestMessage(0, message.getMsgId(), headers, content);
     }
 
@@ -299,24 +301,6 @@ public class GrpcClientHandler implements ChannelOperator {
         headers.set(GrpcUtil.MESSAGE_ACCEPT_ENCODING, acceptEncoding);
 
         return headers;
-    }
-
-    /**
-     * 存储返回类型
-     *
-     * @param invocation 调用请求
-     * @param methodDesc grpc类型
-     * @param future     future
-     */
-    protected void storeReturnType(final Invocation invocation, final IDLMethodDesc methodDesc,
-                                   final RequestFuture<Long, Message> future) {
-        IDLType wrapper = methodDesc.getResponse();
-        if (wrapper != null) {
-            future.setAttr(wrapper);
-        } else {
-            //调用的时候已经赋值了方法
-            future.setAttr(new IDLType(invocation.getMethod().getReturnType(), false));
-        }
     }
 
     /**

@@ -33,12 +33,16 @@ import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.joyrpc.transport.netty4.util.FutureAdapter;
 import io.joyrpc.transport.session.SessionManager;
+import io.joyrpc.util.IdGenerator;
+import io.joyrpc.util.IdGenerator.ClientStreamIdGenerator;
+import io.joyrpc.util.IdGenerator.IntToLongIdGenerator;
+import io.joyrpc.util.IdGenerator.ServerStreamIdGenerator;
+import io.joyrpc.util.IdGenerator.StreamIdGenerator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 /**
@@ -68,9 +72,13 @@ public class NettyChannel implements Channel {
      */
     protected final int payloadSize;
     /**
-     * 消息ID，默认采用int
+     * 消息ID
      */
-    protected final AtomicInteger idGenerator = new AtomicInteger(0);
+    protected final IdGenerator<Long> msgIdGenerator;
+    /**
+     * 消息ID
+     */
+    protected final StreamIdGenerator streamIdGenerator;
     /**
      * Future管理器
      */
@@ -106,7 +114,9 @@ public class NettyChannel implements Channel {
         this.workerPool = workerPool;
         this.payloadSize = payloadSize;
         this.server = server;
-        this.futureManager = new FutureManager<>(this, () -> (long) idGenerator.incrementAndGet());
+        this.msgIdGenerator = new IntToLongIdGenerator();
+        this.streamIdGenerator = server ? new ServerStreamIdGenerator() : new ClientStreamIdGenerator();
+        this.futureManager = new FutureManager<>(this, msgIdGenerator, streamIdGenerator);
         this.sessionManager = new SessionManager(server);
     }
 

@@ -92,7 +92,7 @@ public class DefaultHeartbeatTrigger implements HeartbeatTrigger {
             if (channel.isActive()) {
                 FutureManager<Long, Message> futureManager = channel.getFutureManager();
                 //设置id
-                heartbeatMessage.setMsgId(futureManager.generateId());
+                heartbeatMessage.setMsgId(futureManager.nextMessageId());
                 //创建future
                 futureManager.create(heartbeatMessage.getMsgId(), strategy.getTimeout(), afterRun);
                 //发送消息

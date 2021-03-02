@@ -39,7 +39,6 @@ public class DefaultHttp2RequestMessage implements Http2RequestMessage {
         this(streamId, 0, httpHeaders, content);
     }
 
-
     public DefaultHttp2RequestMessage(int streamId, long msgId, byte[] content) {
         this(streamId, msgId, null, content);
     }

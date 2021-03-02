@@ -1,4 +1,4 @@
-package io.joyrpc.proxy;
+package io.joyrpc.util;
 
 /*-
  * #%L
@@ -21,21 +21,40 @@ package io.joyrpc.proxy;
  */
 
 /**
- * 方法参数信息
+ * 方法的接口描述语言类型描述
  */
-public interface MethodArgs {
+public class IDLMethodDesc {
 
     /**
-     * 把字段转换成参数数组
-     *
-     * @return 方法参数
+     * 应答包装对象固定字段
      */
-    Object[] toArgs();
+    public static final String F_RESULT = "result";
+    /**
+     * 请求类型
+     */
+    protected IDLType request;
+    /**
+     * 应答类型
+     */
+    protected IDLType response;
 
     /**
-     * 根据参数设置字段
+     * 构造函数
      *
-     * @param args 参数
+     * @param request  请求包装
+     * @param response 应答包装
      */
-    void toFields(Object[] args);
+    public IDLMethodDesc(IDLType request, IDLType response) {
+        this.request = request;
+        this.response = response;
+    }
+
+    public IDLType getRequest() {
+        return request;
+    }
+
+    public IDLType getResponse() {
+        return response;
+    }
+
 }

@@ -96,7 +96,7 @@ public class Invocation implements Call {
     /**
      * grpc类型信息
      */
-    protected transient GrpcType grpcType;
+    protected transient IDLMethodDesc idlMethodDesc;
     /**
      * 所在的类，泛化调用的时候该对象可能为null
      */
@@ -356,12 +356,12 @@ public class Invocation implements Call {
         this.method = method;
     }
 
-    public GrpcType getGrpcType() {
-        return grpcType;
+    public IDLMethodDesc getIdlMethodDesc() {
+        return idlMethodDesc;
     }
 
-    public void setGrpcType(GrpcType grpcType) {
-        this.grpcType = grpcType;
+    public void setIdlMethodDesc(IDLMethodDesc idlMethodDesc) {
+        this.idlMethodDesc = idlMethodDesc;
     }
 
     @Override

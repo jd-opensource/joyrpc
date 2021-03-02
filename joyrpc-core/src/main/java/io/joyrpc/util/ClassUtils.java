@@ -23,8 +23,6 @@ package io.joyrpc.util;
 import io.joyrpc.exception.CreationException;
 import io.joyrpc.exception.MethodOverloadException;
 import io.joyrpc.exception.ReflectionException;
-import io.joyrpc.proxy.MethodArgs;
-import io.joyrpc.util.GrpcType.GrpcConversion;
 
 import java.io.File;
 import java.io.IOException;
@@ -222,17 +220,18 @@ public class ClassUtils {
     }
 
     /**
-     * 获取GRPC方法信息
+     * 获取IDL方法信息
      *
      * @param clazz      类
      * @param methodName 方法名
-     * @param function   GrpcType函数
-     * @return GRPC方法信息
+     * @param function   IDLType函数
+     * @return IDL方法信息
      * @throws NoSuchMethodException   如果找不到匹配的方法
      * @throws MethodOverloadException 有方法重载异常
      */
-    public static GrpcMethod getPublicMethod(final Class<?> clazz, final String methodName,
-                                             final BiFunction<Class<?>, Method, GrpcType> function)
+    public static IDLMethod getPublicMethod(final Class<?> clazz,
+                                            final String methodName,
+                                            final BiFunction<Class<?>, Method, IDLMethodDesc> function)
             throws NoSuchMethodException, MethodOverloadException {
         return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethodMeta().getMethod(methodName, function);
     }
@@ -795,13 +794,13 @@ public class ClassUtils {
     }
 
     /**
-     * 获取GRPC转换函数
+     * 获取IDL类型转换函数
      *
      * @param clazz 对象类
      * @return 对象实例
      * @throws CreationException 实例化异常
      */
-    public static GrpcConversion getGrpcConversion(final Class<?> clazz) throws CreationException {
+    public static IDLConverter getConversion(final Class<?> clazz) throws CreationException {
         ClassMeta meta = getClassMeta(clazz);
         return meta == null ? null : meta.getConversion();
     }
@@ -1290,7 +1289,7 @@ public class ClassUtils {
          */
         protected volatile Optional<String> codebase;
 
-        protected volatile GrpcConversion conversion;
+        protected volatile IDLConverter conversion;
 
         /**
          * 构造函数
@@ -1575,15 +1574,15 @@ public class ClassUtils {
         }
 
         /**
-         * 获取GRPC转换函数
+         * 获取IDL转换函数
          *
-         * @return GRPC转换函数
+         * @return IDL转换函数
          */
-        public GrpcConversion getConversion() {
+        public IDLConverter getConversion() {
             if (conversion == null) {
                 synchronized (this) {
                     if (conversion == null) {
-                        conversion = new GrpcConversion(this::toWrapper, this::toParameters);
+                        conversion = new IDLConverter(this::toWrapper, this::toParameters);
                     }
                 }
             }
@@ -1597,8 +1596,8 @@ public class ClassUtils {
          * @return 参数数组
          */
         protected Object[] toParameters(final Object target) {
-            if (target instanceof MethodArgs) {
-                return ((MethodArgs) target).toArgs();
+            if (target instanceof IDLConversion) {
+                return ((IDLConversion) target).toArgs();
             }
             List<Field> fields = getFields();
             Object[] result = new Object[fields.size()];
@@ -1619,8 +1618,8 @@ public class ClassUtils {
          */
         protected Object toWrapper(final Object[] args) {
             Object result = newInstance();
-            if (result instanceof MethodArgs) {
-                ((MethodArgs) result).toFields(args);
+            if (result instanceof IDLConversion) {
+                ((IDLConversion) result).toFields(args);
             } else {
                 List<Field> fields = getFields();
                 int i = 0;
@@ -1842,22 +1841,22 @@ public class ClassUtils {
         }
 
         /**
-         * 获取GRPC方法信息
+         * 获取IDL方法信息
          *
          * @param name     方法名称
-         * @param function GrpcType函数
+         * @param function IDLType函数
          * @return
          * @throws NoSuchMethodException
          * @throws MethodOverloadException
          */
-        public GrpcMethod getMethod(final String name, final BiFunction<Class<?>, Method, GrpcType> function) throws
+        public IDLMethod getMethod(final String name, final BiFunction<Class<?>, Method, IDLMethodDesc> function) throws
                 NoSuchMethodException, MethodOverloadException {
             OverloadMethod method = getOverloadMethod(name);
             if (method == null) {
                 throw new NoSuchMethodException(String.format("Method is not found. %s", name));
             }
             MethodInfo info = method.get();
-            return new GrpcMethod(type, method.getMethod(), () -> info.getGrpcType(function));
+            return new IDLMethod(type, method.getMethod(), () -> info.getIDLType(function));
         }
 
         /**
@@ -2064,9 +2063,9 @@ public class ClassUtils {
          */
         protected int sign;
         /**
-         * grpc类型
+         * IDL类型
          */
-        protected volatile GrpcType grpcType;
+        protected volatile IDLMethodDesc IDLType;
 
         /**
          * 构造函数
@@ -2097,20 +2096,20 @@ public class ClassUtils {
          * 获取方法类型
          *
          * @param function 函数
-         * @return grpc类型
+         * @return IDL类型
          */
-        public GrpcType getGrpcType(final BiFunction<Class<?>, Method, GrpcType> function) {
-            if (grpcType == null) {
+        public IDLMethodDesc getIDLType(final BiFunction<Class<?>, Method, IDLMethodDesc> function) {
+            if (IDLType == null) {
                 if (function == null) {
                     return null;
                 }
                 synchronized (this) {
-                    if (grpcType == null) {
-                        grpcType = function.apply(clazz, method);
+                    if (IDLType == null) {
+                        IDLType = function.apply(clazz, method);
                     }
                 }
             }
-            return grpcType;
+            return IDLType;
         }
     }
 

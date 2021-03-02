@@ -35,7 +35,7 @@ import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.ClassUtils;
 import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GrpcMethod;
+import io.joyrpc.util.IDLMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -126,11 +126,11 @@ public class InnerProviderOption extends AbstractInterfaceOption {
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
-        GrpcMethod grpcMethod = getMethod(parametric.getName());
-        Method method = grpcMethod == null ? null : grpcMethod.getMethod();
+        IDLMethod idlMethod = getMethod(parametric.getName());
+        Method method = idlMethod == null ? null : idlMethod.getMethod();
         EnableTrace enableTrace = method == null ? null : method.getAnnotation(EnableTrace.class);
         return new InnerProviderMethodOption(
-                grpcMethod,
+                idlMethod,
                 genericClass.get(method),
                 getImplicits(parametric.getName()),
                 parametric.getPositive(TIMEOUT_OPTION.getName(), timeout),
@@ -230,7 +230,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
          */
         protected MethodCaller caller;
 
-        public InnerProviderMethodOption(final GrpcMethod grpcMethod,
+        public InnerProviderMethodOption(final IDLMethod idlMethod,
                                          final GenericMethod genericMethod,
                                          final Map<String, ?> implicits,
                                          final int timeout,
@@ -246,7 +246,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
                                          final Supplier<IPPermission> iPPermission,
                                          final Supplier<ClassLimiter> limiter,
                                          final MethodCaller caller) {
-            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, transactionOption, token, async, trace, callback);
+            super(idlMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, transactionOption, token, async, trace, callback);
             this.methodBlackWhiteList = methodBlackWhiteList;
             this.iPPermission = iPPermission;
             this.limiter = limiter;

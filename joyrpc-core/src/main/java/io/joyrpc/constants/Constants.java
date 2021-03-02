@@ -26,7 +26,7 @@ import io.joyrpc.event.PublisherConfig;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLBiOption;
 import io.joyrpc.extension.URLOption;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.IDLMethodDesc;
 
 import java.lang.reflect.Method;
 import java.util.function.BiFunction;
@@ -938,7 +938,7 @@ public class Constants {
     /**
      * GrpcType函数
      */
-    public static final BiFunction<Class<?>, Method, GrpcType> GRPC_TYPE_FUNCTION = (c, m) -> GRPC_FACTORY.get().generate(c, m);
+    public static final BiFunction<Class<?>, Method, IDLMethodDesc> GRPC_TYPE_FUNCTION = (c, m) -> GRPC_FACTORY.get().build(c, m);
 
     /**
      * 是否启用epoll

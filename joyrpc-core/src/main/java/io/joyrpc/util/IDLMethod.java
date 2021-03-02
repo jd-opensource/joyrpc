@@ -24,9 +24,9 @@ import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 /**
- * Grpc方法信息
+ * 接口描述语言对应的方法信息
  */
-public class GrpcMethod {
+public class IDLMethod {
     /**
      * 类型
      */
@@ -38,14 +38,9 @@ public class GrpcMethod {
     /**
      * 类型提供者
      */
-    protected Supplier<GrpcType> supplier;
+    protected Supplier<IDLMethodDesc> supplier;
 
-    public GrpcMethod(Method method, Supplier<GrpcType> supplier) {
-        this.method = method;
-        this.supplier = supplier;
-    }
-
-    public GrpcMethod(Class<?> clazz, Method method, Supplier<GrpcType> supplier) {
+    public IDLMethod(Class<?> clazz, Method method, Supplier<IDLMethodDesc> supplier) {
         this.clazz = clazz;
         this.method = method;
         this.supplier = supplier;
@@ -59,11 +54,11 @@ public class GrpcMethod {
         return method;
     }
 
-    public Supplier<GrpcType> getSupplier() {
+    public Supplier<IDLMethodDesc> getSupplier() {
         return supplier;
     }
 
-    public GrpcType getType() {
+    public IDLMethodDesc getType() {
         return supplier.get();
     }
 }

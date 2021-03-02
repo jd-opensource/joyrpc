@@ -31,9 +31,9 @@ import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.http.AbstractHttpDecoder;
 import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.util.GrpcMethod;
-import io.joyrpc.util.GrpcType;
-import io.joyrpc.util.GrpcType.ClassWrapper;
+import io.joyrpc.util.IDLMethod;
+import io.joyrpc.util.IDLMethodDesc;
+import io.joyrpc.util.IDLType;
 
 import java.io.IOException;
 import java.util.function.Supplier;
@@ -46,9 +46,9 @@ import static io.joyrpc.util.ClassUtils.getPublicMethod;
  */
 public class GrpcDecoder extends AbstractHttpDecoder {
     /**
-     * 方法grpc类型
+     * 方法描述
      */
-    protected GrpcType grpcType;
+    protected IDLMethodDesc methodDesc;
     /**
      * 消息ID
      */
@@ -95,21 +95,21 @@ public class GrpcDecoder extends AbstractHttpDecoder {
 
     @Override
     protected void parseMethod() throws NoSuchMethodException, MethodOverloadException {
-        GrpcMethod grpcMethod = getPublicMethod(intfClass, methodName, GRPC_TYPE_FUNCTION);
+        IDLMethod grpcMethod = getPublicMethod(intfClass, methodName, GRPC_TYPE_FUNCTION);
         method = grpcMethod.getMethod();
-        grpcType = grpcMethod.getType();
+        methodDesc = grpcMethod.getType();
         genericMethod = genericClass.get(method);
     }
 
     @Override
     protected void build(final Invocation invocation) {
-        invocation.setGrpcType(grpcType);
+        invocation.setIdlMethodDesc(methodDesc);
     }
 
     @Override
     protected void parseArg(final Invocation invocation) throws Exception {
-        //获取 grpcType
-        GrpcType grpcType = invocation.getGrpcType();
+        //获取接口方法描述
+        IDLMethodDesc methodDesc = invocation.getIdlMethodDesc();
         //构造消息输入流
         UnsafeByteArrayInputStream in = new UnsafeByteArrayInputStream(body);
         int compressed = in.read();
@@ -117,7 +117,7 @@ public class GrpcDecoder extends AbstractHttpDecoder {
             throw new IOException(String.format("request data is not full. id=%d", messageId));
         }
         Object[] args;
-        ClassWrapper wrapper = grpcType.getRequest();
+        IDLType wrapper = methodDesc.getRequest();
         //如果方法没有参数，则返回null
         if (wrapper != null) {
             //获取反序列化插件

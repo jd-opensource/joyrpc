@@ -46,8 +46,8 @@ import io.joyrpc.transport.http2.Http2Headers;
 import io.joyrpc.transport.http2.Http2ResponseMessage;
 import io.joyrpc.transport.message.Message;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.util.GrpcType;
-import io.joyrpc.util.GrpcType.ClassWrapper;
+import io.joyrpc.util.IDLMethodDesc;
+import io.joyrpc.util.IDLType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,7 +131,7 @@ public class GrpcClientHandler implements ChannelOperator {
         if (grpcStatus == Code.OK.value()) {
             RequestFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
             if (future != null) {
-                payload = decodePayload(http2Msg, (ClassWrapper) future.getAttr());
+                payload = decodePayload(http2Msg, (IDLType) future.getAttr());
             } else {
                 payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", http2Msg.getMsgId())));
             }
@@ -151,7 +151,7 @@ public class GrpcClientHandler implements ChannelOperator {
      * @return 应答
      * @throws IOException
      */
-    protected ResponsePayload decodePayload(final Http2ResponseMessage message, final ClassWrapper wrapper) throws IOException {
+    protected ResponsePayload decodePayload(final Http2ResponseMessage message, final IDLType wrapper) throws IOException {
         Http2Headers headers = message.headers();
         InputStream in = new UnsafeByteArrayInputStream(message.content());
         //读压缩位标识
@@ -215,12 +215,12 @@ public class GrpcClientHandler implements ChannelOperator {
         Http2Headers headers = buildHeaders(invocation, session, channel);
         //做grpc入参与返回值的类型转换，获取GrpcType
         InterfaceOption.MethodOption option = message.getOption();
-        GrpcType grpcType = option.getArgType().getGrpcType();
+        IDLMethodDesc methodDesc = option.getArgType().getIDLMethodDesc();
         //包装payload
-        Object payLoad = wrapPayload(invocation, grpcType);
+        Object payLoad = wrapPayload(invocation, methodDesc);
         //将返回值类型放到 future 中
         RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
-        storeReturnType(invocation, grpcType, future);
+        storeReturnType(invocation, methodDesc, future);
 
         byte compressType = message.getHeader().getCompression();
         //设置content
@@ -305,17 +305,17 @@ public class GrpcClientHandler implements ChannelOperator {
      * 存储返回类型
      *
      * @param invocation 调用请求
-     * @param grpcType   grpc类型
+     * @param methodDesc grpc类型
      * @param future     future
      */
-    protected void storeReturnType(final Invocation invocation, final GrpcType grpcType,
+    protected void storeReturnType(final Invocation invocation, final IDLMethodDesc methodDesc,
                                    final RequestFuture<Long, Message> future) {
-        ClassWrapper wrapper = grpcType.getResponse();
+        IDLType wrapper = methodDesc.getResponse();
         if (wrapper != null) {
             future.setAttr(wrapper);
         } else {
             //调用的时候已经赋值了方法
-            future.setAttr(new ClassWrapper(invocation.getMethod().getReturnType(), false));
+            future.setAttr(new IDLType(invocation.getMethod().getReturnType(), false));
         }
     }
 
@@ -323,13 +323,13 @@ public class GrpcClientHandler implements ChannelOperator {
      * 包装载体，进行类型转换
      *
      * @param invocation 调用请求
-     * @param grpcType   类型
+     * @param methodDesc 类型
      * @return 包装的对象
      */
-    protected Object wrapPayload(final Invocation invocation, final GrpcType grpcType) {
+    protected Object wrapPayload(final Invocation invocation, final IDLMethodDesc methodDesc) {
         Object payLoad;
         Object[] args = invocation.getArgs();
-        ClassWrapper wrapper = grpcType.getRequest();
+        IDLType wrapper = methodDesc.getRequest();
         if (wrapper == null) {
             //不需要转换
             payLoad = (args == null || args.length == 0) ? null : args[0];

@@ -22,9 +22,9 @@ package io.joyrpc.proxy.javassist;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-import io.joyrpc.proxy.AbstractGrpcFactory;
-import io.joyrpc.proxy.MethodArgs;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.proxy.AbstractIDLFactory;
+import io.joyrpc.util.IDLConversion;
+import io.joyrpc.util.IDLMethodDesc;
 import javassist.*;
 
 import java.io.Serializable;
@@ -32,11 +32,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 
-import static io.joyrpc.proxy.GrpcFactory.ORDER_JAVASSIST;
+import static io.joyrpc.proxy.IDLFactory.ORDER_JAVASSIST;
 
 @Extension(value = "javassist", order = ORDER_JAVASSIST)
 @ConditionalOnClass("javassist.ClassPool")
-public class JavassistGrpcFactory extends AbstractGrpcFactory {
+public class JavassistIDLFactory extends AbstractIDLFactory {
 
     @Override
     protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Naming naming) throws Exception {
@@ -44,7 +44,7 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
         CtClass ctClass = pool.makeClass(naming.getFullName());
-        ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(MethodArgs.class.getName())});
+        ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(IDLConversion.class.getName())});
         //添加字段
         CtField ctField;
         String name;
@@ -83,10 +83,10 @@ public class JavassistGrpcFactory extends AbstractGrpcFactory {
         ClassPool pool = ClassPool.getDefault();
         //通过ClassPool生成一个public新类
         CtClass ctClass = pool.makeClass(naming.getFullName());
-        ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(MethodArgs.class.getName())});
+        ctClass.setInterfaces(new CtClass[]{pool.getCtClass(Serializable.class.getName()), pool.getCtClass(IDLConversion.class.getName())});
         Type type = method.getGenericReturnType();
         String typeName = type.getTypeName();
-        String field = GrpcType.F_RESULT;
+        String field = IDLMethodDesc.F_RESULT;
         String upperField = field.substring(0, 1).toUpperCase() + field.substring(1);
         CtField ctField = new CtField(pool.getCtClass(typeName), field, ctClass);
         ctField.setModifiers(Modifier.PRIVATE);

@@ -22,22 +22,22 @@ package io.joyrpc.proxy.jdk;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-import io.joyrpc.proxy.AbstractGrpcFactory;
-import io.joyrpc.proxy.GrpcFactory;
-import io.joyrpc.proxy.MethodArgs;
+import io.joyrpc.proxy.AbstractIDLFactory;
+import io.joyrpc.proxy.IDLFactory;
+import io.joyrpc.util.IDLConversion;
 import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.IDLMethodDesc;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
 /**
- * JDK的GrpcType工厂
+ * JDK的接口描述语言方法工厂
  */
-@Extension(value = "jdk", order = GrpcFactory.ORDER_JDK)
+@Extension(value = "jdk", order = IDLFactory.ORDER_JDK)
 @ConditionalOnClass("javax.tools.ToolProvider")
-public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable {
+public class JdkIDLFactory extends AbstractIDLFactory implements Serializable {
 
     protected JdkCompiler compiler = new JdkCompiler();
 
@@ -46,11 +46,11 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String simpleName = naming.getSimpleName();
         String fullName = naming.getFullName();
         String typeName = method.getGenericReturnType().getTypeName();
-        String field = GrpcType.F_RESULT;
+        String field = IDLMethodDesc.F_RESULT;
         String upperField = field.substring(0, 1).toUpperCase() + field.substring(1);
         StringBuilder builder = new StringBuilder(200).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
-                append("public class ").append(simpleName).append(" implements java.io.Serializable,").append(MethodArgs.class.getName()).append("{\n").
+                append("public class ").append(simpleName).append(" implements java.io.Serializable,").append(IDLConversion.class.getName()).append("{\n").
                 append("\t").append("private ").append(typeName).append(' ').append(field).append(";\n").
                 append("\t").append("public ").append(typeName).append(" get").append(upperField).append("(){\n").
                 append("\t\t").append("return ").append(field).append(";").append("\n").
@@ -79,7 +79,7 @@ public class JdkGrpcFactory extends AbstractGrpcFactory implements Serializable 
         String fullName = naming.getFullName();
         StringBuilder builder = new StringBuilder(1024).
                 append("package ").append(clz.getPackage().getName()).append(";\n").
-                append("public class ").append(simpleName).append(" implements java.io.Serializable,").append(MethodArgs.class.getName()).append("{\n");
+                append("public class ").append(simpleName).append(" implements java.io.Serializable,").append(IDLConversion.class.getName()).append("{\n");
         //添加字段
         Parameter[] parameters = method.getParameters();
         String[] typeNames = new String[parameters.length];

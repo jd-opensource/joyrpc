@@ -22,8 +22,8 @@ package io.joyrpc.proxy.bytebuddy;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-import io.joyrpc.proxy.AbstractGrpcFactory;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.proxy.AbstractIDLFactory;
+import io.joyrpc.util.IDLMethodDesc;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
 
@@ -31,11 +31,11 @@ import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 
-import static io.joyrpc.proxy.GrpcFactory.ORDER_BYTE_BUDDY;
+import static io.joyrpc.proxy.IDLFactory.ORDER_BYTE_BUDDY;
 
 @Extension(value = "bytebuddy", order = ORDER_BYTE_BUDDY)
 @ConditionalOnClass({"net.bytebuddy.ByteBuddy"})
-public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
+public class ByteBuddyIDLFactory extends AbstractIDLFactory {
 
     @Override
     protected Class<?> buildRequestClass(final Class<?> clz, final Method method, final Naming naming) {
@@ -56,7 +56,7 @@ public class ByteBuddyGrpcFactory extends AbstractGrpcFactory {
                 with(new SimpleNamingStrategy(naming.getFullName())).
                 subclass(Object.class).
                 implement(Serializable.class).
-                defineProperty(GrpcType.F_RESULT, method.getGenericReturnType());
+                defineProperty(IDLMethodDesc.F_RESULT, method.getGenericReturnType());
         return builder.make().load(Thread.currentThread().getContextClassLoader()).getLoaded();
     }
 

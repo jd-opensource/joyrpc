@@ -47,8 +47,8 @@ import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
 import io.joyrpc.transport.http2.Http2Headers;
 import io.joyrpc.transport.http2.Http2RequestMessage;
 import io.joyrpc.transport.http2.Http2ResponseMessage;
-import io.joyrpc.util.GrpcType;
-import io.joyrpc.util.GrpcType.ClassWrapper;
+import io.joyrpc.util.IDLMethodDesc;
+import io.joyrpc.util.IDLType;
 import io.joyrpc.util.SystemClock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -150,7 +150,7 @@ public class GrpcServerHandler implements ChannelOperator {
         RequestMessage<Invocation> reqMessage = RequestMessage.build(header, invocation, channel, parametric, receiveTime);
         reqMessage.setResponseSupplier(() -> {
             MessageHeader respHeader = header.response(MsgType.BizResp.getType(), Compression.NONE, header.getAttributes());
-            return new GrpcResponseMessage<>(respHeader, invocation.getGrpcType());
+            return new GrpcResponseMessage<>(respHeader, invocation.getIdlMethodDesc());
         });
         return reqMessage;
     }
@@ -171,8 +171,8 @@ public class GrpcServerHandler implements ChannelOperator {
         }
         //http2 header
         Http2Headers headers = Headers.build(false);
-        GrpcType grpcType = message.getGrpcType();
-        Object respObj = wrapPayload(responsePayload, grpcType);
+        IDLMethodDesc methodDesc = message.getMethodDesc();
+        Object respObj = wrapPayload(responsePayload, methodDesc);
         //设置content
         UnsafeByteArrayOutputStream baos = new UnsafeByteArrayOutputStream();
         //是否压缩
@@ -208,18 +208,18 @@ public class GrpcServerHandler implements ChannelOperator {
     /**
      * 包装载体，进行类型转换
      *
-     * @param payload  载体
-     * @param grpcType 类型
+     * @param payload    载体
+     * @param methodDesc 类型
      * @return 包装载体
      */
-    protected Object wrapPayload(final ResponsePayload payload, final GrpcType grpcType) {
-        //获取 grpcType
-        ClassWrapper wrapper = grpcType.getResponse();
+    protected Object wrapPayload(final ResponsePayload payload, final IDLMethodDesc methodDesc) {
+        //获取类型
+        IDLType type = methodDesc.getResponse();
         //设置反正值
         Object result;
-        if (wrapper.isWrapper()) {
+        if (type.isWrapper()) {
             //加快构建性能
-            result = wrapper.getConversion().getToWrapper().apply(new Object[]{payload.getResponse()});
+            result = type.getConversion().getToWrapper().apply(new Object[]{payload.getResponse()});
         } else {
             result = payload.getResponse();
         }

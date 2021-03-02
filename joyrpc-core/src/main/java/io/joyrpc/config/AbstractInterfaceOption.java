@@ -44,7 +44,7 @@ import io.joyrpc.transaction.TransactionFactory;
 import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GrpcMethod;
+import io.joyrpc.util.IDLMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 
 import javax.validation.Validation;
@@ -291,7 +291,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param methodName 方法名称
      * @return 回调方法对象
      */
-    protected GrpcMethod getMethod(final String methodName) {
+    protected IDLMethod getMethod(final String methodName) {
         if (generic) {
             return null;
         }
@@ -552,7 +552,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
         /**
          * 构造函数
          *
-         * @param grpcMethod    GRPC方法
+         * @param idlMethod    GRPC方法
          * @param genericMethod 泛型方法
          * @param implicits     隐式传参
          * @param timeout       超时时间
@@ -563,7 +563,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
          * @param async         判断方法是否是异步调用
          * @param callback      回调方法
          */
-        public InnerMethodOption(final GrpcMethod grpcMethod,
+        public InnerMethodOption(final IDLMethod idlMethod,
                                  final GenericMethod genericMethod,
                                  final Map<String, ?> implicits, int timeout,
                                  final Concurrency concurrency,
@@ -575,11 +575,11 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                                  final boolean trace,
                                  final CallbackMethod callback) {
             //只有泛化调用的时候没有设置grpMethod
-            this.method = grpcMethod == null ? null : grpcMethod.getMethod();
+            this.method = idlMethod == null ? null : idlMethod.getMethod();
             this.genericMethod = genericMethod;
             Class<?>[] types = method == null ? null : method.getParameterTypes();
             //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
-            this.argType = method == null ? null : new ArgType(types, getCanonicalNames(types), grpcMethod.getSupplier());
+            this.argType = method == null ? null : new ArgType(types, getCanonicalNames(types), idlMethod.getSupplier());
             this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
             this.timeout = timeout;
             this.concurrency = concurrency;
@@ -589,7 +589,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
             this.token = token;
             this.async = async;
             this.trace = trace;
-            this.traceSpanId = method == null ? null : getTraceSpanId(grpcMethod.getClazz().getName(), method.getName());
+            this.traceSpanId = method == null ? null : getTraceSpanId(idlMethod.getClazz().getName(), method.getName());
             this.callback = callback;
             this.description = getDesc(types);
             this.whiteList = getGlobalWhitelist();

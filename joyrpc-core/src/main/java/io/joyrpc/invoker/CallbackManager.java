@@ -40,7 +40,7 @@ import io.joyrpc.thread.ThreadPool;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.Transport;
 import io.joyrpc.transport.session.Session;
-import io.joyrpc.util.GrpcMethod;
+import io.joyrpc.util.IDLMethod;
 import io.joyrpc.util.network.Ipv4;
 
 import java.io.Closeable;
@@ -460,12 +460,12 @@ public class CallbackManager implements Closeable {
 
         @Override
         protected InnerMethodOption create(WrapperParametric parametric) {
-            GrpcMethod grpcMethod = null;
+            IDLMethod idlMethod = null;
             try {
-                grpcMethod = getPublicMethod(interfaceClass, parametric.getName(), GRPC_TYPE_FUNCTION);
+                idlMethod = getPublicMethod(interfaceClass, parametric.getName(), GRPC_TYPE_FUNCTION);
             } catch (NoSuchMethodException | MethodOverloadException e) {
             }
-            return new CallbackInnerMethodOption(grpcMethod);
+            return new CallbackInnerMethodOption(idlMethod);
         }
 
         /**
@@ -476,10 +476,10 @@ public class CallbackManager implements Closeable {
             /**
              * 构造函数
              *
-             * @param grpcMethod GRPC方法
+             * @param idlMethod IDL方法信息
              */
-            public CallbackInnerMethodOption(GrpcMethod grpcMethod) {
-                super(grpcMethod, null, null, 0, null, null,
+            public CallbackInnerMethodOption(IDLMethod idlMethod) {
+                super(idlMethod, null, null, 0, null, null,
                         null, null, null, false, false, null);
             }
         }

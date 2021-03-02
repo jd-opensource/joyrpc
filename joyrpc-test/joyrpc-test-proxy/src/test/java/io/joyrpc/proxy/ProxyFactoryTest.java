@@ -21,7 +21,7 @@ package io.joyrpc.proxy;
  */
 
 import io.joyrpc.Plugin;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.IDLMethodDesc;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -83,8 +83,8 @@ public class ProxyFactoryTest {
     public void testGrpType() throws NoSuchMethodException, NoSuchFieldException {
         Supplier<String> supplier = () -> String.valueOf(ThreadLocalRandom.current().nextInt(1000));
         Method method = HelloService.class.getMethod("sayHello", String.class);
-        for (GrpcFactory factory : Plugin.GRPC_FACTORY.extensions()) {
-            GrpcType type = factory.generate(HelloService.class, method, supplier);
+        for (IDLFactory factory : Plugin.GRPC_FACTORY.extensions()) {
+            IDLMethodDesc type = factory.build(HelloService.class, method, supplier);
             Class<?> clazz = type.getRequest().getClazz();
             Field[] fields = clazz.getDeclaredFields();
             Assertions.assertEquals(fields.length, 1);

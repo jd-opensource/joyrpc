@@ -36,8 +36,8 @@ import io.joyrpc.permission.SerializerWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.GrpcMethod;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.IDLMethod;
+import io.joyrpc.util.IDLMethodDesc;
 import io.joyrpc.util.SystemClock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -280,11 +280,11 @@ public class SerializationTest {
         serializer.serialize(baos, phoneNumber);
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
 
-        GrpcMethod grpcMethod = ClassUtils.getPublicMethod(HelloGrpc.class, "hello", (c, m) -> GRPC_FACTORY.get().generate(c, m));
-        Method method = grpcMethod.getMethod();
-        GrpcType grpcType = grpcMethod.getType();
-        Object obj = serializer.deserialize(bais, grpcType.getRequest().getClazz());
-        List<Field> fields = ClassUtils.getFields(grpcType.getRequest().getClazz());
+        IDLMethod idlMethod = ClassUtils.getPublicMethod(HelloGrpc.class, "hello", (c, m) -> GRPC_FACTORY.get().build(c, m));
+        Method method = idlMethod.getMethod();
+        IDLMethodDesc methodDesc = idlMethod.getType();
+        Object obj = serializer.deserialize(bais, methodDesc.getRequest().getClazz());
+        List<Field> fields = ClassUtils.getFields(methodDesc.getRequest().getClazz());
         fields.forEach(o -> o.setAccessible(true));
         Assertions.assertEquals(phoneNumber.getNumber(), fields.get(0).get(obj));
         Assertions.assertEquals(phoneNumber.getType(), fields.get(1).get(obj));

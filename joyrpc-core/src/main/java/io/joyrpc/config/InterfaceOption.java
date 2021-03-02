@@ -36,7 +36,7 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericMethod;
-import io.joyrpc.util.GrpcType;
+import io.joyrpc.util.IDLMethodDesc;
 
 import javax.validation.Validator;
 import java.lang.reflect.Method;
@@ -459,9 +459,9 @@ public interface InterfaceOption {
         /**
          * GrpcType提供者
          */
-        protected Supplier<GrpcType> supplier;
+        protected Supplier<IDLMethodDesc> supplier;
 
-        public ArgType(Class[] classes, String[] types, Supplier<GrpcType> supplier) {
+        public ArgType(Class[] classes, String[] types, Supplier<IDLMethodDesc> supplier) {
             this.classes = classes;
             this.types = types;
             this.supplier = supplier;
@@ -475,7 +475,7 @@ public interface InterfaceOption {
             return types;
         }
 
-        public GrpcType getGrpcType() {
+        public IDLMethodDesc getIDLMethodDesc() {
             return supplier.get();
         }
     }

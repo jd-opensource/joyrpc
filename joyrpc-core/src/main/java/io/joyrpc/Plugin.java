@@ -67,7 +67,7 @@ import io.joyrpc.protocol.MessageHandler;
 import io.joyrpc.protocol.Protocol.ProtocolVersion;
 import io.joyrpc.protocol.ServerProtocol;
 import io.joyrpc.protocol.http.HeaderInjection;
-import io.joyrpc.proxy.GrpcFactory;
+import io.joyrpc.proxy.IDLFactory;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.thread.ThreadPoolFactory;
@@ -326,7 +326,7 @@ public interface Plugin {
     /**
      * GRPC工厂插件
      */
-    ExtensionPoint<GrpcFactory, String> GRPC_FACTORY = new ExtensionPointLazy<>(GrpcFactory.class);
+    ExtensionPoint<IDLFactory, String> GRPC_FACTORY = new ExtensionPointLazy<>(IDLFactory.class);
 
     /**
      * 医生插件

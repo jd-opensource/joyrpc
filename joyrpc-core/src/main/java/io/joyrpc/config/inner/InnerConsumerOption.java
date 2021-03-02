@@ -268,7 +268,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
 
     @Override
     protected InnerMethodOption create(final WrapperParametric parametric) {
-        GrpcMethod grpcMethod = getMethod(parametric.getName());
+        IDLMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         EnableTrace enableTrace = method == null ? null : method.getAnnotation(EnableTrace.class);
         Map<String, Map<String, Object>> methodMocks = mockConfig == null ? null : mockConfig.get();
@@ -450,7 +450,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
          */
         protected volatile Map<String, Object> mock;
 
-        public InnerConsumerMethodOption(final GrpcMethod grpcMethod,
+        public InnerConsumerMethodOption(final IDLMethod grpcMethod,
                                          final GenericMethod genericMethod,
                                          final Map<String, ?> implicits,
                                          final int timeout,

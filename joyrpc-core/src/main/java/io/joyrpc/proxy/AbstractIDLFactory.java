@@ -21,8 +21,8 @@ package io.joyrpc.proxy;
  */
 
 import io.joyrpc.exception.ProxyException;
-import io.joyrpc.util.GrpcType;
-import io.joyrpc.util.GrpcType.ClassWrapper;
+import io.joyrpc.util.IDLMethodDesc;
+import io.joyrpc.util.IDLType;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -34,23 +34,23 @@ import java.util.function.Supplier;
 import static io.joyrpc.util.ClassUtils.isJavaClass;
 
 /**
- * 抽象的gRPC工厂类
+ * 抽象的IDL方法工厂类
  */
-public abstract class AbstractGrpcFactory implements GrpcFactory {
+public abstract class AbstractIDLFactory implements IDLFactory {
 
     public static final String REQUEST_SUFFIX = "Request";
     public static final String RESPONSE_SUFFIX = "Response";
 
     @Override
-    public GrpcType generate(final Class<?> clz, final Method method, final Supplier<String> suffix) throws ProxyException {
+    public IDLMethodDesc build(final Class<?> clz, final Method method, final Supplier<String> suffix) throws ProxyException {
         try {
-            ClassWrapper request = getRequestWrapper(clz, method, new Naming(clz, method, REQUEST_SUFFIX, suffix));
-            ClassWrapper response = getResponseWrapper(clz, method, new Naming(clz, method, RESPONSE_SUFFIX, suffix));
-            return new GrpcType(request, response);
+            IDLType request = getRequestType(clz, method, new Naming(clz, method, REQUEST_SUFFIX, suffix));
+            IDLType response = getResponseType(clz, method, new Naming(clz, method, RESPONSE_SUFFIX, suffix));
+            return new IDLMethodDesc(request, response);
         } catch (ProxyException e) {
             throw e;
         } catch (Throwable e) {
-            throw new ProxyException(String.format("Error occurs while building grpcType of %s.%s",
+            throw new ProxyException(String.format("Error occurs while building idlType of %s.%s",
                     clz.getName(), method.getName()), e);
         }
     }
@@ -64,7 +64,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      * @return
      * @throws Exception
      */
-    protected ClassWrapper getResponseWrapper(final Class<?> clz, final Method method, final Naming naming) throws Exception {
+    protected IDLType getResponseType(final Class<?> clz, final Method method, final Naming naming) throws Exception {
         Class clazz = method.getReturnType();
         if (CompletableFuture.class.isAssignableFrom(clz)) {
             //异步支持
@@ -80,15 +80,15 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
         if (clazz == void.class) {
             return null;
         } else if (clazz.isPrimitive()) {
-            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+            return new IDLType(buildResponseClass(clz, method, naming), true);
         } else if (clazz.isEnum()) {
-            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+            return new IDLType(buildResponseClass(clz, method, naming), true);
         } else if (clazz.isArray()) {
-            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+            return new IDLType(buildResponseClass(clz, method, naming), true);
         } else if (isPojo(clazz)) {
-            return new ClassWrapper(clazz, false);
+            return new IDLType(clazz, false);
         } else {
-            return new ClassWrapper(buildResponseClass(clz, method, naming), true);
+            return new IDLType(buildResponseClass(clz, method, naming), true);
         }
     }
 
@@ -111,7 +111,7 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
      * @return 包装的类
      * @throws Exception 异常
      */
-    protected ClassWrapper getRequestWrapper(final Class<?> clz, final Method method, final Naming naming) throws Exception {
+    protected IDLType getRequestType(final Class<?> clz, final Method method, final Naming naming) throws Exception {
         Parameter[] parameters = method.getParameters();
         switch (parameters.length) {
             case 0:
@@ -119,10 +119,10 @@ public abstract class AbstractGrpcFactory implements GrpcFactory {
             case 1:
                 Class<?> clazz = parameters[0].getType();
                 if (isPojo(clazz)) {
-                    return new ClassWrapper(clazz, false);
+                    return new IDLType(clazz, false);
                 }
             default:
-                return new ClassWrapper(buildRequestClass(clz, method, naming), true);
+                return new IDLType(buildRequestClass(clz, method, naming), true);
         }
     }
 

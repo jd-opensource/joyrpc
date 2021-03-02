@@ -1,4 +1,4 @@
-package io.joyrpc.protocol.grpc.message;
+package io.joyrpc.util;
 
 /*-
  * #%L
@@ -20,24 +20,22 @@ package io.joyrpc.protocol.grpc.message;
  * #L%
  */
 
-import io.joyrpc.protocol.message.MessageHeader;
-import io.joyrpc.protocol.message.ResponseMessage;
-import io.joyrpc.util.IDLMethodDesc;
-
 /**
- * grpc应答消息
+ * 接口描述语言参数转换接口
  */
-public class GrpcResponseMessage<T> extends ResponseMessage<T> {
+public interface IDLConversion {
 
-    protected final transient IDLMethodDesc methodDesc;
+    /**
+     * 把字段转换成参数数组
+     *
+     * @return 方法参数
+     */
+    Object[] toArgs();
 
-    public GrpcResponseMessage(MessageHeader header, IDLMethodDesc methodDesc) {
-        super(header);
-        this.methodDesc = methodDesc;
-    }
-
-    public IDLMethodDesc getMethodDesc() {
-        return methodDesc;
-    }
-
+    /**
+     * 根据参数设置字段
+     *
+     * @param args 参数
+     */
+    void toFields(Object[] args);
 }

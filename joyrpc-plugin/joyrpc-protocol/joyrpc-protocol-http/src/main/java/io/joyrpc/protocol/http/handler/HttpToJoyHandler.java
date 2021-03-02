@@ -86,7 +86,7 @@ public class HttpToJoyHandler implements ChannelReader {
             try {
                 HttpController controller = contentType == null || contentType.isEmpty() ? null : CONTENT_TYPE_HANDLER.get(contentType);
                 if (controller != null) {
-                    ctx.wrote(controller.execute(ctx, message, url, params));
+                    ctx.fireChannelRead(controller.execute(ctx, message, url, params));
                 } else {
                     // 根据路径调用插件
                     String path = url.getAbsolutePath();
@@ -94,9 +94,9 @@ public class HttpToJoyHandler implements ChannelReader {
                     //获取插件
                     controller = HTTP_CONTROLLER.get(pos > 0 ? path.substring(0, pos) : path);
                     if (controller != null) {
-                        ctx.wrote(controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params));
+                        ctx.fireChannelRead(controller.execute(ctx, message, !controller.relativePath() ? url : url.setPath(path.substring(pos + 1)), params));
                     } else {
-                        ctx.wrote(defController.execute(ctx, message, url, params));
+                        ctx.fireChannelRead(defController.execute(ctx, message, url, params));
                     }
                 }
             } catch (Throwable e) {

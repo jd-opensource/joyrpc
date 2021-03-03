@@ -81,7 +81,7 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
         int streamId = (Integer) header.getAttributes().get(HeaderMapping.STREAM_ID.getNum());
         int msgId = (int) header.getMsgId();
         Http2Headers endHeaders = Headers.build(cause);
-        Http2ResponseMessage message = new DefaultHttp2ResponseMessage(streamId, msgId, null, null, endHeaders);
+        Http2ResponseMessage message = new DefaultHttp2ResponseMessage(streamId, msgId, endHeaders, null, true);
         ackException(channel, header, cause, message);
     }
 

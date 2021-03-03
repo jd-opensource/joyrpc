@@ -20,73 +20,26 @@ package io.joyrpc.transport.http2;
  * #L%
  */
 
+import java.util.Map;
+
 /**
  * 默认http2应答消息
  */
-public class DefaultHttp2ResponseMessage implements Http2ResponseMessage {
-
-    protected int streamId;
-    protected long msgId;
-    protected Http2Headers headers;
-    protected Http2Headers endHeaders;
-    protected byte[] content;
-
-    public DefaultHttp2ResponseMessage(int streamId, byte[] content) {
-        this(streamId, null, content);
-    }
-
-    public DefaultHttp2ResponseMessage(int streamId, Http2Headers headers, byte[] content) {
-        this(streamId, 0, headers, content);
-    }
-
-    public DefaultHttp2ResponseMessage(int streamId, long msgId, byte[] content) {
-        this(streamId, msgId, null, content);
-    }
+public class DefaultHttp2ResponseMessage extends AbstractHttp2Message implements Http2ResponseMessage {
 
     public DefaultHttp2ResponseMessage(int streamId, long msgId, Http2Headers headers, byte[] content) {
-        this(streamId, msgId, headers, content, null);
+        super(streamId, msgId, headers, content);
     }
 
-    public DefaultHttp2ResponseMessage(int streamId, long msgId, Http2Headers headers, byte[] content, Http2Headers endHeaders) {
-        this.streamId = streamId;
-        this.msgId = msgId;
-        this.content = content;
-        this.headers = headers == null ? new DefaultHttp2Headers() : headers;
-        this.endHeaders = endHeaders;
+    public DefaultHttp2ResponseMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content) {
+        super(streamId, msgId, headers, content);
     }
 
-    @Override
-    public void setContent(byte[] bytes) {
-        this.content = bytes;
+    public DefaultHttp2ResponseMessage(int streamId, long msgId, Http2Headers headers, byte[] content, boolean end) {
+        super(streamId, msgId, headers, content, end);
     }
 
-    @Override
-    public int getStreamId() {
-        return this.streamId;
-    }
-
-    @Override
-    public long getMsgId() {
-        return msgId;
-    }
-
-    @Override
-    public Http2Headers headers() {
-        return this.headers;
-    }
-
-    @Override
-    public byte[] content() {
-        return content;
-    }
-
-    @Override
-    public Http2Headers getEndHeaders() {
-        return endHeaders;
-    }
-
-    @Override
-    public void setEndHeaders(Http2Headers endHeaders) {
-        this.endHeaders = endHeaders;
+    public DefaultHttp2ResponseMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content, boolean end) {
+        super(streamId, msgId, headers, content, end);
     }
 }

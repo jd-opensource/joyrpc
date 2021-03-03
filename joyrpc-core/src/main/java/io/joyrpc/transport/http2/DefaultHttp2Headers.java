@@ -22,8 +22,26 @@ package io.joyrpc.transport.http2;
 
 import io.joyrpc.transport.http.DefaultHttpHeaders;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.Map;
+
 /**
  * 默认Http2头
  */
 public class DefaultHttp2Headers extends DefaultHttpHeaders implements Http2Headers {
+
+    public DefaultHttp2Headers() {
+    }
+
+    public DefaultHttp2Headers(final Iterable<Map.Entry<CharSequence, CharSequence>> headers) {
+        if (headers != null) {
+            headers.forEach(t -> {
+                try {
+                    params.put(t.getKey().toString(), URLDecoder.decode(t.getValue().toString(), "UTF-8"));
+                } catch (UnsupportedEncodingException ignored) {
+                }
+            });
+        }
+    }
 }

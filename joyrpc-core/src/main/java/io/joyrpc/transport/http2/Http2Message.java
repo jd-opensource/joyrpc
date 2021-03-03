@@ -47,18 +47,11 @@ public interface Http2Message {
     Http2Headers headers();
 
     /**
-     * 获取结束头
+     * 获取结束标识
      *
-     * @return 结束头
+     * @return 结束标识
      */
-    Http2Headers getEndHeaders();
-
-    /**
-     * 设置结束头
-     *
-     * @param endHeaders 结束头
-     */
-    void setEndHeaders(Http2Headers endHeaders);
+    boolean isEnd();
 
     /**
      * 内容

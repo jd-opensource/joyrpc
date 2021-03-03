@@ -1,4 +1,4 @@
-package io.joyrpc.transport.http2;
+package io.joyrpc.transport.netty4.http2;
 
 /*-
  * #%L
@@ -20,9 +20,24 @@ package io.joyrpc.transport.http2;
  * #L%
  */
 
-/**
- * http2应答消息
- */
-public interface Http2ResponseMessage extends Http2Message {
+import io.netty.handler.codec.http2.DefaultHttp2Headers;
 
+import java.net.URLEncoder;
+import java.util.Map;
+
+/**
+ * Netty的Http2消息头
+ */
+public class Http2NettyHeaders extends DefaultHttp2Headers {
+
+    public Http2NettyHeaders(Map<CharSequence, Object> map) {
+        if (map != null) {
+            for (Map.Entry<CharSequence, Object> entry : map.entrySet()) {
+                try {
+                    add(entry.getKey(), URLEncoder.encode(entry.getValue().toString(), "UTF-8"));
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+    }
 }

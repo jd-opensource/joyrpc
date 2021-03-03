@@ -67,9 +67,9 @@ public class GrpcClientHandler implements ChannelOperator {
 
     private final static Logger logger = LoggerFactory.getLogger(GrpcClientHandler.class);
 
-    protected Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
+    protected final Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
 
-    protected Map<Integer, Http2ResponseMessage> http2ResponseNoEnds = new ConcurrentHashMap<>();
+    protected final Map<Integer, Http2ResponseMessage> http2ResponseNoEnds = new ConcurrentHashMap<>();
 
     @Override
     public void received(final ChannelContext ctx, final Object message) throws Exception {
@@ -123,7 +123,7 @@ public class GrpcClientHandler implements ChannelOperator {
         header.setMsgId(http2Msg.getMsgId());
         header.addAttribute(HeaderMapping.STREAM_ID.getNum(), http2Msg.getStreamId());
         ResponsePayload payload;
-        Object grpcStatusVal = http2Msg.getEndHeaders().get(GRPC_STATUS_KEY);
+        Object grpcStatusVal = http2Msg.headers().get(GRPC_STATUS_KEY);
         int grpcStatus = grpcStatusVal == null ? Code.UNKNOWN.value() : Integer.parseInt(grpcStatusVal.toString());
         if (grpcStatus == Code.OK.value()) {
             RequestFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
@@ -182,16 +182,11 @@ public class GrpcClientHandler implements ChannelOperator {
      */
     protected Http2ResponseMessage adjoin(final Http2ResponseMessage message) {
         Http2ResponseMessage http2Msg = null;
-        if (message.getEndHeaders() == null) {
+        if (!message.isEnd()) {
             http2ResponseNoEnds.put(message.getStreamId(), message);
             return null;
         } else {
             http2Msg = http2ResponseNoEnds.remove(message.getStreamId());
-            if (http2Msg != null) {
-                http2Msg.setEndHeaders(message.getEndHeaders());
-            } else {
-                http2Msg = message;
-            }
         }
         return http2Msg;
     }
@@ -251,7 +246,7 @@ public class GrpcClientHandler implements ChannelOperator {
         content[2] = (byte) (length >>> 16);
         content[3] = (byte) (length >>> 8);
         content[4] = (byte) length;
-        //TODO 修改streamId
+        //streamId会在后续的处理器中设置
         //Stream IDs on the client MUST start at 1 and increment by 2 sequentially, such as 1, 3, 5, 7, etc.
         //Stream IDs on the server MUST start at 2 and increment by 2 sequentially, such as 2, 4, 6, 8, etc.
         return new DefaultHttp2RequestMessage(0, message.getMsgId(), headers, content);

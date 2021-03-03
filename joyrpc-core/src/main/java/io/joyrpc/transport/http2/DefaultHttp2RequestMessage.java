@@ -20,68 +20,31 @@ package io.joyrpc.transport.http2;
  * #L%
  */
 
+import java.util.Map;
+
 /**
  * 默认http2请求消息
  */
-public class DefaultHttp2RequestMessage implements Http2RequestMessage {
+public class DefaultHttp2RequestMessage extends AbstractHttp2Message implements Http2RequestMessage {
 
-    protected int streamId;
-    protected long msgId;
-    protected Http2Headers httpHeaders;
-    protected Http2Headers endHeaders;
-    protected byte[] content;
-
-    public DefaultHttp2RequestMessage(int streamId, byte[] content) {
-        this(streamId, null, content);
+    public DefaultHttp2RequestMessage(int streamId, long msgId, Http2Headers headers, byte[] content) {
+        super(streamId, msgId, headers, content);
     }
 
-    public DefaultHttp2RequestMessage(int streamId, Http2Headers httpHeaders, byte[] content) {
-        this(streamId, 0, httpHeaders, content);
+    public DefaultHttp2RequestMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content) {
+        super(streamId, msgId, headers, content);
     }
 
-    public DefaultHttp2RequestMessage(int streamId, long msgId, byte[] content) {
-        this(streamId, msgId, null, content);
+    public DefaultHttp2RequestMessage(int streamId, long msgId, Http2Headers headers, byte[] content, boolean end) {
+        super(streamId, msgId, headers, content, end);
     }
 
-    public DefaultHttp2RequestMessage(int streamId, long msgId, Http2Headers httpHeaders, byte[] content) {
-        this.streamId = streamId;
-        this.msgId = msgId;
-        this.httpHeaders = httpHeaders == null ? new DefaultHttp2Headers() : httpHeaders;
-        this.content = content;
-    }
-
-    @Override
-    public int getStreamId() {
-        return streamId;
+    public DefaultHttp2RequestMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content, boolean end) {
+        super(streamId, msgId, headers, content, end);
     }
 
     @Override
     public void setStreamId(int streamId) {
         this.streamId = streamId;
-    }
-
-    @Override
-    public long getMsgId() {
-        return msgId;
-    }
-
-    @Override
-    public Http2Headers headers() {
-        return httpHeaders;
-    }
-
-    @Override
-    public byte[] content() {
-        return content;
-    }
-
-    @Override
-    public Http2Headers getEndHeaders() {
-        return endHeaders;
-    }
-
-    @Override
-    public void setEndHeaders(Http2Headers endHeaders) {
-        this.endHeaders = endHeaders;
     }
 }

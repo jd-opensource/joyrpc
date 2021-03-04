@@ -29,6 +29,7 @@ import io.joyrpc.protocol.grpc.handler.GrpcServerHandler;
 import io.joyrpc.protocol.handler.RequestReceiver;
 import io.joyrpc.protocol.handler.ResponseReceiver;
 import io.joyrpc.protocol.message.MessageHeader;
+import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
@@ -39,6 +40,7 @@ import io.joyrpc.transport.http2.Http2ResponseMessage;
 
 import static io.joyrpc.Plugin.MESSAGE_HANDLER_SELECTOR;
 import static io.joyrpc.protocol.Protocol.GRPC_ORDER;
+import static io.netty.util.CharsetUtil.UTF_8;
 
 /**
  * grpc服务端协议
@@ -52,10 +54,7 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
      */
     //在连接上，客户端首先发送一个magic八字节流，这主要适用于客户端从HTTP/1.1升级而来：0x505249202a20485454502f322e300d0a0d0a534d0d0a0d0a
     //解码成ASCII：PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n
-    public static final byte[] GRPC_MAGIC_CODE = new byte[]{
-            (byte) 0x50, (byte) 0x52, (byte) 0x49, (byte) 0x20, (byte) 0x2a,
-            (byte) 0x20, (byte) 0x48, (byte) 0x54, (byte) 0x54, (byte) 0x50,
-            (byte) 0x2f, (byte) 0x32, (byte) 0x2e, (byte) 0x30};
+    public static final byte[] GRPC_MAGIC_CODE = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8);
 
     public static final String GRPC_NAME = "grpc";
 
@@ -68,6 +67,11 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
                     .addLast(new ResponseReceiver());
         }
         return chain;
+    }
+
+    @Override
+    public boolean match(ChannelBuffer channelBuffer) {
+        return ServerProtocol.super.match(channelBuffer);
     }
 
     @Override

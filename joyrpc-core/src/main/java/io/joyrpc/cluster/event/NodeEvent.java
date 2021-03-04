@@ -74,13 +74,17 @@ public class NodeEvent implements Event {
          */
         HEARTBEAT(3, "heartbeat"),
         /**
-         * 收到服务端下线通知，正准备优雅关闭连接
+         * 正准备优雅关闭连接
          */
-        OFFLINING(4, "offlining"),
+        CLOSING(4, "closing"),
         /**
          * 服务端下线事件
          */
-        OFFLINE(5, "offline");
+        OFFLINE(5, "offline"),
+        /**
+         * 重连
+         */
+        RECONNECT(6, "reconnect");
 
         private int type;
         private String desc;

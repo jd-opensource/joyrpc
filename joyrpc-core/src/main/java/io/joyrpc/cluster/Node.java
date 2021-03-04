@@ -20,11 +20,8 @@ package io.joyrpc.cluster;
  * #L%
  */
 
-import io.joyrpc.cluster.event.MetricEvent;
-import io.joyrpc.cluster.event.NodeEvent;
+import io.joyrpc.cluster.event.*;
 import io.joyrpc.cluster.event.NodeEvent.EventType;
-import io.joyrpc.cluster.event.OfflineEvent;
-import io.joyrpc.cluster.event.SessionLostEvent;
 import io.joyrpc.codec.checksum.Checksum;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
@@ -599,28 +596,75 @@ public class Node implements Shard {
          */
         protected void onEvent(final TransportEvent event) {
             if (event instanceof InactiveEvent) {
-                //Channel断开了，需要关闭当前节点
-                disconnect(true);
+                onInactive((InactiveEvent) event);
             } else if (event instanceof HeartbeatEvent) {
-                //Channel心跳事件
                 onHeartbeat((HeartbeatEvent) event);
             } else if (event instanceof OfflineEvent) {
-                OfflineEvent oe = (OfflineEvent) event;
-                Channel eChannel = oe.getChannel();
-                Channel cChannel = client.getChannel();
-                if (oe.getClient() == client || (eChannel != null
-                        && (eChannel.getLocalAddress() == cChannel.getLocalAddress()
-                        && eChannel.getRemoteAddress() == cChannel.getRemoteAddress()))) {
-                    //服务节点下线通知，整个Channel及其上的client都需要关闭
-                    onOffline((OfflineEvent) event);
-                }
+                onOffline((OfflineEvent) event);
+            } else if (event instanceof ReconnectEvent) {
+                onReconnect((ReconnectEvent) event);
             } else if (event instanceof SessionLostEvent) {
-                SessionLostEvent sessionLostEvent = (SessionLostEvent) event;
-                if (sessionLostEvent.getClient() == client) {
-                    //会话丢失，该Client需要关闭。
-                    disconnect(true);
-                }
+                onSessionLost((SessionLostEvent) event);
             }
+        }
+
+        /**
+         * 断开连接事件
+         *
+         * @param event 事件
+         */
+        protected void onInactive(InactiveEvent event) {
+            //Channel断开了，需要关闭当前节点
+            disconnect(true);
+        }
+
+        /**
+         * 服务端下线事件
+         *
+         * @param event 事件
+         */
+        protected void onOffline(final OfflineEvent event) {
+            if (event.getClient() == client || isSame(event.getChannel(), client.getChannel())) {
+                //服务节点下线通知，整个Channel及其上的client都需要关闭
+                gracefullyClose(() -> close(EventType.OFFLINE));
+            }
+        }
+
+        /**
+         * 重连事件
+         *
+         * @param event 事件
+         */
+        protected void onReconnect(final ReconnectEvent event) {
+            if (isSame(event.getChannel(), client.getChannel())) {
+                //重连
+                gracefullyClose(() -> close(EventType.RECONNECT));
+            }
+        }
+
+        /**
+         * 会话丢失事件
+         *
+         * @param event 事件
+         */
+        protected void onSessionLost(final SessionLostEvent event) {
+            if (event.getClient() == client) {
+                //会话丢失，该Client需要关闭。
+                disconnect(true);
+            }
+        }
+
+        /**
+         * 判断连接通道是否相同
+         *
+         * @param source 源连接通道
+         * @param target 目标连接通道
+         * @return 相同标识
+         */
+        protected boolean isSame(final Channel source, final Channel target) {
+            return source != null && target != null
+                    && source.getLocalAddress() == target.getLocalAddress()
+                    && source.getRemoteAddress() == target.getRemoteAddress();
         }
 
         /**
@@ -767,34 +811,36 @@ public class Node implements Shard {
         }
 
         /**
-         * 下线事件
+         * 优雅关闭
          *
-         * @param event 事件
+         * @param runnable 关闭
          */
-        protected void onOffline(final OfflineEvent event) {
+        protected void gracefullyClose(final Runnable runnable) {
             //优雅下线
             disconnect(false).whenComplete((v, error) -> {
                 //成功设置节点状态外断开连接
                 if (error == null) {
                     if (client.getRequests() == 0) {
                         //下线的时候没有请求，则直接关闭连接，并广播断连事件
-                        offline();
+                        runnable.run();
                     } else {
                         //优雅关闭，定时器检测没有请求后或超过2秒关闭
-                        node.sendEvent(EventType.OFFLINING, client);
-                        timer().add(new OfflineTask(node, this));
+                        node.sendEvent(EventType.CLOSING, client);
+                        timer().add(new CloseTask(node, this, runnable));
                     }
                 }
             });
         }
 
         /**
-         * 服务端下线了，关闭连接，并广播事件，触发重连逻辑
+         * 关闭连接并发布事件
+         *
+         * @param type 事件类型
          */
-        protected void offline() {
+        protected void close(final EventType type) {
             client.close().whenComplete((v, e) -> {
                 if (node.stateMachine.test(state -> state.isDisconnect(), this)) {
-                    node.sendEvent(EventType.OFFLINE, client);
+                    node.sendEvent(type, client);
                 }
             });
         }
@@ -1279,21 +1325,27 @@ public class Node implements Shard {
     /**
      * 异步服务端优雅下线任务，等待所有请求结束或超时
      */
-    protected static class OfflineTask extends NodeTask {
+    protected static class CloseTask extends NodeTask {
+        /**
+         * 关闭事件
+         */
+        protected final Runnable runnable;
         /**
          * 起始时间
          */
-        protected long startTime;
+        protected final long startTime;
 
         /**
          * 构造函数
          *
          * @param node       节点
          * @param controller 控制器
+         * @param runnable   关闭
          */
-        public OfflineTask(final Node node, final NodeController controller) {
+        public CloseTask(final Node node, final NodeController controller, final Runnable runnable) {
             super(node, controller);
-            startTime = SystemClock.now();
+            this.runnable = runnable;
+            this.startTime = SystemClock.now();
         }
 
         @Override
@@ -1306,7 +1358,7 @@ public class Node implements Shard {
             if (node.stateMachine.test(state -> state.isDisconnect(), controller)) {
                 //最大2秒后关闭客户端
                 if (controller.client.getRequests() == 0 || SystemClock.now() - startTime > 2000L) {
-                    controller.offline();
+                    runnable.run();
                 } else {
                     //重新添加
                     timer().add(this);

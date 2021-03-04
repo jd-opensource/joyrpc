@@ -20,6 +20,8 @@ package io.joyrpc.transport.netty4.http2;
  * #L%
  */
 
+import io.joyrpc.cluster.event.ReconnectEvent;
+import io.joyrpc.exception.ChannelSendException;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.codec.Http2Codec;
 import io.joyrpc.transport.http2.DefaultHttp2ResponseMessage;
@@ -27,7 +29,6 @@ import io.joyrpc.transport.http2.Http2RequestMessage;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.joyrpc.transport.netty4.transport.NettyServer;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -37,8 +38,9 @@ import io.netty.handler.logging.LogLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import static io.netty.handler.codec.http2.DefaultHttp2LocalFlowController.DEFAULT_WINDOW_UPDATE_RATIO;
-import static io.netty.util.CharsetUtil.UTF_8;
 
 /**
  * http2 client端 编解码器
@@ -74,6 +76,10 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
      * 通道
      */
     protected final Channel channel;
+    /**
+     * 是否消耗完毕
+     */
+    protected final AtomicBoolean closed = new AtomicBoolean(false);
 
     /**
      * 构造函数
@@ -99,7 +105,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
         this.headerKey = connection.newKey();
         // Set the frame listener on the decoder.
         decoder.frameListener(new FrameListener(connection, msgIdKey, headerKey, codec, channel));
-        connection.addListener(new MyHttp2ConnectionAdapter());
+        connection.addListener(new MyHttp2ConnectionAdapter(channel, this::reconnect));
     }
 
     @Override
@@ -115,6 +121,9 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             int streamId = request.getStreamId();
             if (streamId <= 0) {
                 streamId = connection.local().incrementAndGetNextStreamId();
+                if (streamId <= 0) {
+                    exhausted();
+                }
                 request.setStreamId(streamId);
             }
             //保存消息ID
@@ -130,6 +139,24 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             }
         } else {
             super.write(ctx, msg, promise);
+        }
+    }
+
+    /**
+     * 流ID溢出
+     */
+    protected void exhausted() {
+        reconnect();
+        throw new ChannelSendException("Error occurs while sending message, caused by stream id<0");
+    }
+
+    /**
+     * 重连
+     */
+    protected void reconnect() {
+        if (closed.compareAndSet(false, true)) {
+            //超出最大范围，需要断开连接重连，发送重连事件
+            channel.getPublisher().offer(new ReconnectEvent(channel));
         }
     }
 
@@ -280,13 +307,24 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
      * 连接监听器
      */
     protected static class MyHttp2ConnectionAdapter extends Http2ConnectionAdapter {
+        /**
+         * 连接通道
+         */
+        protected Channel channel;
+        /**
+         * 关闭程序
+         */
+        protected Runnable goaway;
+
+        public MyHttp2ConnectionAdapter(Channel channel, Runnable goaway) {
+            this.channel = channel;
+            this.goaway = goaway;
+        }
 
         @Override
         public void onGoAwayReceived(final int lastStreamId, final long errorCode, final ByteBuf debugData) {
-            if (errorCode == Http2Error.ENHANCE_YOUR_CALM.code()) {
-                String data = new String(ByteBufUtil.getBytes(debugData), UTF_8);
-                logger.warn("Received GOAWAY with ENHANCE_YOUR_CALM. Debug data: {}", data);
-            }
+            logger.info(String.format("Received GOAWAY message from %s,reconnect", Channel.toString(channel.getRemoteAddress())));
+            goaway.run();
         }
     }
 }

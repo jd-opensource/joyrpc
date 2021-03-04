@@ -525,19 +525,24 @@ public class Cluster {
             Node node = event.getNode();
             NodeEvent.EventType type = event.getType();
             switch (type) {
-                case OFFLINING:
+                case CLOSING:
                     //收到服务端下线通知，正在优雅关闭连接中，需要提前从就绪节点列表中删除
-                    tasks.offer(() -> onOfflining(node));
+                    tasks.offer(() -> onClosing(node));
                     break;
                 case OFFLINE:
                     //服务端下线了，则进行关闭
                     logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    tasks.offer(() -> onOffline(node, cluster.getRetryTimeWhenOffline()));
+                    tasks.offer(() -> onClose(node, cluster.getRetryTimeWhenOffline()));
+                    break;
+                case RECONNECT:
+                    //重连
+                    logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
+                    tasks.offer(() -> onClose(node, 0));
                     break;
                 case DISCONNECT:
                     //连接断开了，则进行关闭
                     logger.info(String.format("%s node %s.", type.getDesc(), node.getName()));
-                    tasks.offer(() -> onOffline(node, cluster.getRetryTime()));
+                    tasks.offer(() -> onClose(node, cluster.getRetryTime()));
                     break;
             }
             cluster.clusterPublisher.offer(event);
@@ -944,7 +949,7 @@ public class Cluster {
          *
          * @param node 节点
          */
-        protected void onOfflining(final Node node) {
+        protected void onClosing(final Node node) {
             //事件异步触发，需要再次判断状态
             if (node.getState() == ShardState.DISCONNECT) {
                 //用于优雅关闭，节点状态为断开,连接通道还没有断开，把它从连接节点里面删除
@@ -955,12 +960,12 @@ public class Cluster {
         }
 
         /**
-         * 节点下线通知
+         * 节点关闭
          *
          * @param node      节点
          * @param retryTime 重试时间
          */
-        protected void onOffline(final Node node, final long retryTime) {
+        protected void onClose(final Node node, final long retryTime) {
             //异步关闭结束，需要再次放在同步任务队列中执行
             if (node.getState() == ShardState.DISCONNECT) {
                 //这个时候节点状态断开，已经没有请求，可以安全关闭连接

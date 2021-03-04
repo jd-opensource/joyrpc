@@ -132,10 +132,10 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
                         }
                 );
                 if (content != null) {
-                    encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), ctx.voidPromise());
+                    encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), promise);
                 }
             } else {
-                encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), ctx.voidPromise());
+                encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), promise);
             }
         } else {
             super.write(ctx, msg, promise);

@@ -118,28 +118,46 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             if (content == null && headers == null) {
                 return;
             }
-            int streamId = request.getStreamId();
-            if (streamId <= 0) {
-                streamId = connection.local().incrementAndGetNextStreamId();
-                if (streamId <= 0) {
-                    exhausted();
-                }
-                request.setStreamId(streamId);
-            }
+            int streamId = getStreamId(request);
             //保存消息ID
-            Http2Stream stream = connection.stream(streamId);
-            stream.setProperty(msgIdKey, request.getMsgId());
-            if (content == null) {
-                encoder.writeHeaders(ctx, streamId, headers, 0, request.isEnd(), promise);
-            } else {
-                if (headers != null) {
-                    encoder.writeHeaders(ctx, streamId, headers, 0, false, promise);
+            if (headers != null) {
+                encoder.writeHeaders(ctx, streamId, headers, 0, content == null ? request.isEnd() : false, promise).addListener(
+                        f -> {
+                            if (f.isSuccess()) {
+                                Http2Stream stream = connection().stream(streamId);
+                                if (stream != null) {
+                                    stream.setProperty(msgIdKey, request.getMsgId());
+                                }
+                            }
+                        }
+                );
+                if (content != null) {
+                    encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), ctx.voidPromise());
                 }
+            } else {
                 encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), ctx.voidPromise());
             }
         } else {
             super.write(ctx, msg, promise);
         }
+    }
+
+    /**
+     * 获取流ID
+     *
+     * @param request 请求
+     * @return 流ID
+     */
+    protected int getStreamId(final Http2RequestMessage request) {
+        int streamId = request.getStreamId();
+        if (streamId <= 0) {
+            streamId = connection.local().incrementAndGetNextStreamId();
+            if (streamId <= 0) {
+                exhausted();
+            }
+            request.setStreamId(streamId);
+        }
+        return streamId;
     }
 
     /**

@@ -50,9 +50,11 @@ public interface ServerProtocol extends Protocol {
             return false;
         }
         int readerIndex = channelBuffer.readerIndex();
+        byte aByte;
         for (int i = 0; i < length; i++) {
             //不移动位置
-            if (magicCodes[i] != (byte) channelBuffer.getUnsignedByte(readerIndex + i)) {
+            aByte = channelBuffer.getByte(readerIndex + i);
+            if (magicCodes[i] != aByte) {
                 return false;
             }
         }

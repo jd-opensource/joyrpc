@@ -48,6 +48,7 @@
         <module>joyrpc-test</module>
         <module>joyrpc-example</module>
         <module>joyrpc-all</module>
+        <module>joyrpc-example/joyrpc-example-grpc</module>
     </modules>
 
     <properties>

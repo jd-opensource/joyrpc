@@ -20,6 +20,13 @@ The Snappy in Java
 Please visit this web site for more information and read notice.md of this project:
   * https://github.com/dain/snappy
 
+This software includes code from concurrent-trees:
+
+The concurrent-trees
+=================
+Please visit this web site for more information and read notice.md of this project:
+  * https://github.com/npgall/concurrent-trees
+
 The Dubbo protocol implementation refers to Apache Dubbo:
 
 The Apache Dubbo

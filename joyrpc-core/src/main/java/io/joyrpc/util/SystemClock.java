@@ -83,8 +83,8 @@ public class SystemClock {
      * @return
      */
     public static long microTime() {
-        long microTime = now()*1000;
+        long microTime = now() * 1000;
         long nanoTime = System.nanoTime(); // 纳秒
-        return microTime + (nanoTime%1000000) / 1000;
+        return microTime + (nanoTime % 1000000) / 1000;
     }
 }

@@ -65,7 +65,7 @@ public class BootGrpcClient {
         private final DemoServiceGrpc.DemoServiceBlockingStub demoServiceStub;
 
         public DemoServiceClient(String host, int port) {
-            channel = ManagedChannelBuilder.forAddress(host, port).build();
+            channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
             demoServiceStub = DemoServiceGrpc.newBlockingStub(channel);
         }
 

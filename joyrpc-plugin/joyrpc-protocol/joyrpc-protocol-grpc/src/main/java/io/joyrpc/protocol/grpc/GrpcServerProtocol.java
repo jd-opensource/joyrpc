@@ -29,7 +29,6 @@ import io.joyrpc.protocol.grpc.handler.GrpcServerHandler;
 import io.joyrpc.protocol.handler.RequestReceiver;
 import io.joyrpc.protocol.handler.ResponseReceiver;
 import io.joyrpc.protocol.message.MessageHeader;
-import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
@@ -67,11 +66,6 @@ public class GrpcServerProtocol extends AbstractProtocol implements ServerProtoc
                     .addLast(new ResponseReceiver());
         }
         return chain;
-    }
-
-    @Override
-    public boolean match(ChannelBuffer channelBuffer) {
-        return ServerProtocol.super.match(channelBuffer);
     }
 
     @Override

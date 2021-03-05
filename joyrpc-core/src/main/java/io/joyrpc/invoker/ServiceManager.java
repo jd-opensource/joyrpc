@@ -276,6 +276,7 @@ public class ServiceManager {
      * @return
      */
     public static Exporter getExporter(final String className, final String alias, final int port) {
+        //TODO 如果别名为空，则获取该端口输出的该服务唯一的Exporter
         return getExporter(EXPORTER_NAME_FUNC.apply(className, alias), port);
     }
 

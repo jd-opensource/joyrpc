@@ -303,29 +303,52 @@ public class BizReceiver extends AbstractReceiver {
                 fail(throwable);
             } else {
                 //构造响应Msg
-                MessageHeader header = request.getHeader();
-                Session session = request.getSession();
-                Supplier<ResponseMessage<ResponsePayload>> supplier = request.getResponseSupplier();
-                ResponseMessage<ResponsePayload> response = supplier != null ? supplier.get() :
-                        new ResponseMessage<>(header.response(MsgType.BizResp.getType(),
-                                session == null ? Compression.NONE : session.getCompressionType()));
+                ResponseMessage<ResponsePayload> response = createResponseMessage();
                 GenericMethod genericMethod = invocation == null ? null : invocation.getGenericMethod();
                 GenericType returnType = genericMethod == null ? null : genericMethod.getReturnType();
                 Type type = returnType == null ? null : returnType.getGenericType();
-                if (result.getContext().isAsync() && !result.isException()) {
+                RequestContext context = result.getContext();
+                if (context.isAsync() && !result.isException()) {
                     //异步
-                    ((CompletableFuture<Object>) result.getValue()).whenComplete((obj, th) -> {
+                    CompletableFuture<Object> future = (CompletableFuture<Object>) result.getValue();
+                    future.whenComplete((obj, th) -> {
                         response.setPayLoad(new ResponsePayload(obj, th, type));
                         transmits.forEach(o -> o.onServerComplete(request, th != null ? new Result(request.getContext(), th) : new Result(request.getContext(), obj)));
-                        acknowledge(context, request, response, BizReceiver.logger);
+                        acknowledge(this.context, request, response, BizReceiver.logger);
                     });
                 } else {
                     //同步调用
                     response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), type));
                     transmits.forEach(o -> o.onServerComplete(request, result));
-                    acknowledge(context, request, response, BizReceiver.logger);
+                    acknowledge(this.context, request, response, BizReceiver.logger);
                 }
             }
+        }
+
+        /**
+         * 创建应答消息
+         *
+         * @return 应答消息
+         */
+        protected ResponseMessage<ResponsePayload> createResponseMessage() {
+            return createResponseMessage(null);
+        }
+
+        /**
+         * 创建应答消息
+         *
+         * @param compressType 压缩类型
+         * @return 应答消息
+         */
+        protected ResponseMessage<ResponsePayload> createResponseMessage(final Byte compressType) {
+            MessageHeader header = request.getHeader();
+            Session session = request.getSession();
+            Supplier<ResponseMessage<ResponsePayload>> supplier = request.getResponseSupplier();
+            ResponseMessage<ResponsePayload> response = supplier != null ? supplier.get() :
+                    new ResponseMessage<>(header.response(MsgType.BizResp.getType(),
+                            compressType != null ? compressType :
+                                    (session == null ? Compression.NONE : session.getCompressionType())));
+            return response;
         }
 
         /**
@@ -363,9 +386,8 @@ public class BizReceiver extends AbstractReceiver {
             //服务端结束
             transmits.forEach(o -> o.onServerComplete(request, new Result(request.getContext(), e)));
             //构建异常应答消息，不压缩
-            ResponseMessage<ResponsePayload> response = new ResponseMessage<>(
-                    request.getHeader().response(MsgType.BizResp.getType(), Compression.NONE),
-                    new ResponsePayload(e));
+            ResponseMessage<ResponsePayload> response = createResponseMessage(Compression.NONE);
+            response.setPayLoad(new ResponsePayload(e));
             //注入异常信息
             for (RespInjection injection : injections) {
                 injection.inject(request, response, exporter);

@@ -132,6 +132,8 @@ public class Exporter extends AbstractService {
      */
     protected Publisher<ExporterEvent> publisher;
 
+    protected Exporter() {
+    }
 
     /**
      * 构造函数

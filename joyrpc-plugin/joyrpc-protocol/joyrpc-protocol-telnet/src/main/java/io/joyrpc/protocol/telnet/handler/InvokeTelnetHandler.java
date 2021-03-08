@@ -54,7 +54,6 @@ import java.util.concurrent.TimeUnit;
 
 import static io.joyrpc.Plugin.ENCRYPTOR;
 import static io.joyrpc.Plugin.JSON;
-import static io.joyrpc.constants.Constants.ALIAS_EMPTY_OPTION;
 import static io.joyrpc.context.Variable.VARIABLE;
 import static io.joyrpc.util.StringUtils.isEmpty;
 
@@ -125,24 +124,24 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
                 return new TelnetResponse("Invalid parameters, format: service.method(args)");
             }
             // 解析密码
-            String interfaceId;
+            String className;
             String methodName;
             String serviceAndMethod = requestStr.substring(0, i).trim();
             String params = requestStr.substring(i + 1, requestStr.length() - 1).trim();
             i = serviceAndMethod.lastIndexOf(".");
             if (i >= 0) {
-                interfaceId = serviceAndMethod.substring(0, i).trim();
+                className = serviceAndMethod.substring(0, i).trim();
                 methodName = serviceAndMethod.substring(i + 1).trim();
             } else {
                 return new TelnetResponse("Invalid parameters, format: service.method(args)");
             }
             //认证
-            TelnetResponse validateRes = authenticate(interfaceId, password, isGlobal, channel);
+            TelnetResponse validateRes = authenticate(className, password, isGlobal, channel);
             if (validateRes != null) {
                 return validateRes;
             }
 
-            Exporter exporter = getExporter(interfaceId, alias == null ? "" : alias);
+            Exporter exporter = getExporter(className, alias, channel.getLocalAddress().getPort());
             if (exporter == null) {
                 return new TelnetResponse("Not found such exported service !");
             } else {
@@ -238,36 +237,35 @@ public class InvokeTelnetHandler extends AbstractTelnetHandler {
 
     /**
      * 获取Invoker对象
-     * @param interfaceId 接口
+     * @param className 接口
      * @param alias 分组
+     * @param port 端口
      * @return 服务
      */
-    protected Exporter getExporter(final String interfaceId, final String alias) {
-        Exporter exporter;
-        if (!isEmpty(alias) || VARIABLE.getBoolean(ALIAS_EMPTY_OPTION)) {
-            exporter = ServiceManager.getFirstExporter(interfaceId, alias == null ? "" : alias);
-        } else {
-            exporter = ServiceManager.getFirstExporterByInterface(interfaceId);
+    protected Exporter getExporter(final String className, final String alias, final int port) {
+        Exporter result = ServiceManager.getExporter(className, alias, port);
+        if (result == null) {
+            result = ServiceManager.getFirstExporter(className, alias);
         }
-        return exporter;
+        return result;
     }
 
     /**
      * 验证调用权限
-     * @param interfaceId 接口
+     * @param className 接口
      * @param password 密码
      * @param isGlobal 是否全局
      * @param channel 通道
      * @return 应答
      */
-    protected TelnetResponse authenticate(final String interfaceId, final String password, final boolean isGlobal, final Channel channel) {
+    protected TelnetResponse authenticate(final String className, final String password, final boolean isGlobal, final Channel channel) {
         InetSocketAddress address = channel.getRemoteAddress();
         String remoteIp = Ipv4.toIp(address);
         // 注册中心配的密码
         String token;
         if (!isGlobal) {
             //接口配置
-            token = GlobalContext.get(interfaceId, Constants.SETTING_INVOKE_TOKEN, "");
+            token = GlobalContext.get(className, Constants.SETTING_INVOKE_TOKEN, "");
             if (isEmpty(token)) {
                 //全局配置
                 token = VARIABLE.getString(Constants.SETTING_INVOKE_TOKEN);

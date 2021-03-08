@@ -23,7 +23,6 @@ package io.joyrpc.protocol.telnet.handler;
 import io.joyrpc.config.ConsumerConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
-import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.Refer;
 import io.joyrpc.invoker.ServiceManager;
 import io.joyrpc.transport.channel.Channel;
@@ -31,8 +30,6 @@ import io.joyrpc.transport.telnet.TelnetResponse;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
@@ -44,11 +41,6 @@ import static io.joyrpc.Plugin.JSON;
  * @date: 2019/1/22
  */
 public class ConfigTelnetHandler extends AbstractTelnetHandler {
-
-    /**
-     * slf4j Logger for this class
-     */
-    private final static Logger LOGGER = LoggerFactory.getLogger(ConfigTelnetHandler.class);
 
     public ConfigTelnetHandler() {
         options = new Options()
@@ -94,14 +86,11 @@ public class ConfigTelnetHandler extends AbstractTelnetHandler {
             String alias = ifaceAndAlias.length > 1 ? ifaceAndAlias[1] : null;
             //输出所有分组
             StringBuilder builder = new StringBuilder(1024);
-            Map<Integer, Exporter> exporters = ServiceManager.getExporter(ifaceAndAlias[0]);
-            if (exporters != null) {
-                exporters.values().forEach(exporter -> {
-                    if (alias == null || alias.equals(exporter.getAlias())) {
-                        builder.append(JSON.get().toJSONString(exporter.getConfig())).append(LINE);
-                    }
-                });
-            }
+            ServiceManager.exports(ifaceAndAlias[0], exporter -> {
+                if (alias == null || alias.equals(exporter.getAlias())) {
+                    builder.append(JSON.get().toJSONString(exporter.getConfig())).append(LINE);
+                }
+            });
             result = builder.toString();
         } else if (cmd.hasOption("c")) {
             String[] ifaceAndAlias = cmd.getOptionValues("c");

@@ -64,7 +64,6 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import static io.joyrpc.Plugin.*;
@@ -108,9 +107,9 @@ public class ServiceManager {
      */
     protected Map<String, Refer> systems = new ConcurrentHashMap<>();
     /**
-     * 业务服务输出,key为接口+别名，一个接口可以输出到不同的端口
+     * 业务服务输出
      */
-    protected Map<String, Map<Integer, Exporter>> exports = new ConcurrentHashMap<>();
+    protected ExporterManager exports = createExporterManager();
     /**
      * 共享的TCP服务
      */
@@ -130,6 +129,14 @@ public class ServiceManager {
         Shutdown.addHook(new Shutdown.HookAdapter((Shutdown.Hook) this::close, 0));
         this.publisher = EVENT_BUS.get().getPublisher(EVENT_PUBLISHER_GROUP, EVENT_PUBLISHER_NAME, EVENT_PUBLISHER_CONF);
         this.publisher.start();
+    }
+
+    /**
+     * 创建服务管理器
+     * @return 服务管理器
+     */
+    protected ExporterManager.MapExporterManager createExporterManager() {
+        return new ExporterManager.MapExporterManager();
     }
 
     /**
@@ -229,106 +236,46 @@ public class ServiceManager {
         return new ArrayList<>(INSTANCE.refers.values());
     }
 
+    /**
+     * 迭代服务
+     *
+     * @param consumer 消费者
+     */
+    public static void exports(final Consumer<Exporter> consumer) {
+        INSTANCE.exports.foreach(consumer);
+    }
 
     /**
-     * 获取输出服务
+     * 遍历服务
      *
-     * @param name
-     * @return
+     * @param className 接口名称
+     * @param consumer  消费者
      */
-    public static Map<Integer, Exporter> getExporter(final String name) {
-        return INSTANCE.exports.get(name);
+    public static void exports(final String className, final Consumer<Exporter> consumer) {
+        INSTANCE.exports.foreach(className, consumer);
     }
 
     /**
      * 获取输出服务
      *
-     * @param className
-     * @param alias
-     * @return
-     */
-    public static void getExporter(final String className, final String alias, BiConsumer<Integer, Exporter> consumer) {
-        Map<Integer, Exporter> exporters = getExporter(EXPORTER_NAME_FUNC.apply(className, alias));
-        if (null != exporters) {
-            exporters.forEach(consumer);
-        }
-    }
-
-
-    /**
-     * 获取输出服务
-     *
-     * @param name
-     * @param port
-     * @return
-     */
-    public static Exporter getExporter(final String name, final int port) {
-        Map<Integer, Exporter> ports = INSTANCE.exports.get(name);
-        return ports == null ? null : ports.get(port);
-    }
-
-    /**
-     * 获取输出服务
-     *
-     * @param className
-     * @param alias
-     * @param port
-     * @return
+     * @param className 接口名称
+     * @param alias     分组
+     * @param port      端口
+     * @return 输出服务
      */
     public static Exporter getExporter(final String className, final String alias, final int port) {
-        //TODO 如果别名为空，则获取该端口输出的该服务唯一的Exporter
-        return getExporter(EXPORTER_NAME_FUNC.apply(className, alias), port);
-    }
-
-    /**
-     * 获取输出服务
-     *
-     * @param name
-     * @return
-     */
-    public static Exporter getFirstExporter(final String name) {
-        Map<Integer, Exporter> ports = INSTANCE.exports.get(name);
-        return ports == null || ports.size() < 1 ? null : ports.values().iterator().next();
+        return INSTANCE.exports.get(className, alias, port);
     }
 
     /**
      * 根据接口名称获取输出服务
      *
-     * @param className
-     * @return
-     */
-    public static Exporter getFirstExporterByInterface(final String className) {
-        if (className != null && !className.isEmpty()) {
-            String prefix = className + "/";
-            for (Map.Entry<String, Map<Integer, Exporter>> entry : INSTANCE.exports.entrySet()) {
-                if (entry.getKey().startsWith(prefix)) {
-                    return entry.getValue().values().iterator().next();
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 获取输出服务
-     *
-     * @param className
-     * @param alias
-     * @return
+     * @param className 接口名称
+     * @param alias     分组
+     * @return 输出服务
      */
     public static Exporter getFirstExporter(final String className, final String alias) {
-        return getFirstExporter(EXPORTER_NAME_FUNC.apply(className, alias));
-    }
-
-    /**
-     * 迭代服务
-     *
-     * @param consumer
-     */
-    public static void exports(final Consumer<Exporter> consumer) {
-        if (consumer != null) {
-            INSTANCE.exports.forEach((k, v) -> v.forEach((t, o) -> consumer.accept(o)));
-        }
+        return INSTANCE.exports.getFirst(className, alias);
     }
 
     public static Server getServer(final int port) {
@@ -527,24 +474,17 @@ public class ServiceManager {
                                 final ConfigHandler configHandler) {
         //使用url.getPath获取真实接口名称
         final String name = EXPORTER_NAME_FUNC.apply(url.getPath(), config.getAlias());
-        Map<Integer, Exporter> ports = exports.get(name);
-        if (ports != null && ports.containsKey(url.getPort())) {
+        Exporter exists = getExporter(url.getPath(), config.getAlias(), url.getPort());
+        if (exists != null) {
             throw new IllegalConfigureException(
                     String.format("Duplicate provider config with key %s has been exported.", name),
                     PROVIDER_DUPLICATE_EXPORT);
         }
-        return exports.computeIfAbsent(name, o -> new ConcurrentHashMap<>()).computeIfAbsent(url.getPort(),
-                o -> {
-                    serializationRegister(config.getProxyClass());
-                    return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl,
-                            configHandler, getServer(url), callbackManager.getProducer(), publisher,
-                            c -> {
-                                Map<Integer, Exporter> map = exports.get(c.getName());
-                                if (map != null) {
-                                    map.remove(c.getPort());
-                                }
-                            });
-                });
+        return exports.add(url.getPath(), config.getAlias(), url.getPort(), () -> {
+            serializationRegister(config.getProxyClass());
+            return new Exporter(name, url, config, registries, registerUrls, configure, subscribeUrl, configHandler,
+                    getServer(url), callbackManager.getProducer(), publisher, c -> exports.remove(c));
+        });
     }
 
     /**
@@ -622,7 +562,7 @@ public class ServiceManager {
                 //关闭服务
                 closeInvoker(registries, gracefully).whenComplete((v, t) -> {
                     //安全关闭后，关闭集群
-                    exports = new ConcurrentHashMap<>();
+                    exports = createExporterManager();
                     refers = new ConcurrentHashMap<>();
                     callbackManager.close();
                     //关闭服务
@@ -681,10 +621,10 @@ public class ServiceManager {
     protected CompletableFuture<Void> closeInvoker(final Set<Registry> registries, final boolean gracefully) {
         List<CompletableFuture<Void>> futures = new LinkedList<>();
         //关闭消费者和服务提供者
-        exports.forEach((k, v) -> v.forEach((t, o) -> {
-            futures.add(o.getConfig().unexport(gracefully));
-            registries.addAll(o.getRegistries());
-        }));
+        exports(exporter -> {
+            futures.add(exporter.getConfig().unexport(gracefully));
+            registries.addAll(exporter.getRegistries());
+        });
         //非注册中心消费者
         refers.forEach((k, v) -> {
             futures.add(v.getConfig().unrefer(gracefully));
@@ -705,4 +645,5 @@ public class ServiceManager {
         registries.forEach(o -> futures.add(o.close()));
         return gracefully ? Futures.allOf(futures) : CompletableFuture.completedFuture(null);
     }
+
 }

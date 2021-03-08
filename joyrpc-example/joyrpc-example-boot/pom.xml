@@ -35,10 +35,6 @@
             <artifactId>hazelcast</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-consul-client</artifactId>
             <version>${vertx-consul-client}</version>

@@ -76,7 +76,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
@@ -194,7 +193,7 @@ public class Refer extends AbstractService {
                     final LoadBalance loadBalance,
                     final CallbackContainer container,
                     final Publisher<ExporterEvent> publisher,
-                    final Function<String, Exporter> localFunc,
+                    final BiFunction<String, String, Exporter> localFunc,
                     final BiConsumer<Refer, ? super Throwable> closing) {
         this.name = name;
         this.url = url;
@@ -249,7 +248,7 @@ public class Refer extends AbstractService {
         this.exceptionHandlers = EXCEPTION_HANDLER.extensions();
         this.publisher = publisher;
         this.publisher.addHandler(localHandler);
-        Exporter provider = localFunc.apply(exporterName);
+        Exporter provider = localFunc.apply(interfaceName, alias);
         if (provider != null) {
             local = provider;
             //有本地节点，不需要等到节点建连成功

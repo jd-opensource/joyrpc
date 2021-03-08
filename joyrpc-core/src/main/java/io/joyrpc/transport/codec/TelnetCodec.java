@@ -31,6 +31,8 @@ import io.joyrpc.transport.telnet.TelnetResponse;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import static io.joyrpc.transport.telnet.TelnetHandler.LINE;
+
 /**
  * Telnet编解码
  */
@@ -39,6 +41,7 @@ public class TelnetCodec implements Codec {
     protected static final String TELNET_INPUT = "TELNET_INPUT";
     protected static final String CHARSET = "charset";
     protected static final String PROMPT = ">";
+    public static final int MAX_LENGTH = 4096;
 
     protected String prompt = PROMPT;
 
@@ -87,7 +90,13 @@ public class TelnetCodec implements Codec {
         // 追加到当前缓冲器
         Charset charset = getCharset(channel);
         TelnetInput input = getTelnetInput(channel);
-        input.append(new String(bytes, charset));
+        String text = new String(bytes, charset).trim();
+        if (input.length() + text.length() > MAX_LENGTH) {
+            //过长，关闭连接，防止溢出
+            return new TelnetResponse(new StringBuilder(128).append(LINE).append("ERROR:")
+                    .append("the input max length is " + MAX_LENGTH + " bytes").append(LINE));
+        }
+        input.append(text);
         return null;
     }
 
@@ -123,9 +132,14 @@ public class TelnetCodec implements Codec {
         Charset charset = getCharset(channel);
         TelnetInput input = getTelnetInput(channel);
         // 回车
-        String temp = new String(bytes, charset).trim();
-        if (!temp.isEmpty()) {
-            input.append(temp);
+        String text = new String(bytes, charset).trim();
+        if (input.length() + text.length() > MAX_LENGTH) {
+            //过长，关闭连接，防止溢出
+            return new TelnetResponse(new StringBuilder(128).append(LINE).append("ERROR:")
+                    .append("the input max length is " + MAX_LENGTH + " bytes").append(LINE));
+        }
+        if (!text.isEmpty()) {
+            input.append(text);
         }
         if (input.isEmpty()) {
             return new TelnetResponse(prompt);

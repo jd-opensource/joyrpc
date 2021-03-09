@@ -51,7 +51,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
@@ -71,24 +70,24 @@ public class GrpcClientHandler implements ChannelOperator {
 
     protected final static int GRPC_OK = Code.OK.value();
     protected final static String HTTP_OK = "200";
-
     protected final Serialization serialization = SERIALIZATION_SELECTOR.select((byte) Serialization.PROTOBUF_ID);
-
-    protected final Map<Integer, Http2ResponseMessage> http2ResponseNoEnds = new ConcurrentHashMap<>();
-
 
     @Override
     public void received(final ChannelContext ctx, final Object message) throws Exception {
         if (message instanceof Http2ResponseMessage) {
             Http2ResponseMessage response = (Http2ResponseMessage) message;
-            try {
-                ctx.fireChannelRead(input(ctx.getChannel(), response));
-            } catch (Throwable e) {
-                logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(ctx.getChannel().getRemoteAddress())), e);
-                MessageHeader header = new MessageHeader((byte) Serialization.PROTOBUF_ID, MsgType.BizReq.getType(), (byte) Protocol.GRPC);
-                header.setMsgId(response.getMsgId());
-                header.addAttribute(STREAM_ID.getNum(), response.getStreamId());
-                throw new RpcException(header, e);
+            Channel channel = ctx.getChannel();
+            Object input = input(channel, response);
+            if (input != null) {
+                try {
+                    ctx.fireChannelRead(input);
+                } catch (Throwable e) {
+                    logger.error(String.format("Error occurs while parsing grpc request from %s", Channel.toString(channel.getRemoteAddress())), e);
+                    MessageHeader header = new MessageHeader((byte) Serialization.PROTOBUF_ID, MsgType.BizReq.getType(), (byte) Protocol.GRPC);
+                    header.setMsgId(response.getMsgId());
+                    header.addAttribute(STREAM_ID.getNum(), response.getStreamId());
+                    throw new RpcException(header, e);
+                }
             }
         } else {
             ctx.fireChannelRead(message);
@@ -118,28 +117,25 @@ public class GrpcClientHandler implements ChannelOperator {
      * @return 应答消息
      */
     protected Object input(final Channel channel, final Http2ResponseMessage message) throws IOException {
-        if (message.getStreamId() <= 0) {
+        if (message.getStreamId() <= 0 || message.content() == null) {
             return null;
         }
-        Http2ResponseMessage http2Msg = adjoin(message);
-        if (http2Msg == null) {
-            return null;
-        }
+
         MessageHeader header = new MessageHeader(serialization.getTypeId(), BizResp.getType(), (byte) Protocol.GRPC);
-        header.setMsgId(http2Msg.getMsgId());
-        header.addAttribute(STREAM_ID.getNum(), http2Msg.getStreamId());
+        header.setMsgId(message.getMsgId());
+        header.addAttribute(STREAM_ID.getNum(), message.getStreamId());
         ResponsePayload payload;
-        Http2Headers headers = http2Msg.headers();
+        Http2Headers headers = message.headers();
         String http2Status = (String) headers.get(STATUS.value());
         if (HTTP_OK.equals(http2Status)) {
             Object value = headers.get(GRPC_STATUS_KEY);
             int grpcStatus = value == null ? GRPC_OK : Integer.parseInt(value.toString());
             if (grpcStatus == GRPC_OK) {
-                RequestFuture<Long, Message> future = channel.getFutureManager().get(http2Msg.getMsgId());
+                RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
                 if (future != null) {
-                    payload = decodePayload(http2Msg, (IDLType) future.getAttr());
+                    payload = decodePayload(message, (IDLType) future.getAttr());
                 } else {
-                    payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", http2Msg.getMsgId())));
+                    payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", message.getMsgId())));
                 }
             } else {
                 Status status = Status.fromCodeValue(grpcStatus);
@@ -184,28 +180,6 @@ public class GrpcClientHandler implements ChannelOperator {
             response = parameters[0];
         }
         return new ResponsePayload(response);
-    }
-
-    /**
-     * 判断是否是结束消息
-     *
-     * @param message 消息
-     * @return 原始消息
-     */
-    protected Http2ResponseMessage adjoin(final Http2ResponseMessage message) {
-        //TODO 需要优化
-        Http2ResponseMessage http2Msg = null;
-        if (!message.isEnd()) {
-            http2ResponseNoEnds.put(message.getStreamId(), message);
-        } else {
-            http2Msg = http2ResponseNoEnds.remove(message.getStreamId());
-            if (http2Msg != null) {
-                http2Msg.setEnd(true);
-            } else {
-                http2Msg = message;
-            }
-        }
-        return http2Msg;
     }
 
     /**

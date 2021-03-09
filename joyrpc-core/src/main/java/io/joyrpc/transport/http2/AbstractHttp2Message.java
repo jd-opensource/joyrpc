@@ -91,9 +91,4 @@ public class AbstractHttp2Message implements Http2Message {
     public boolean isEnd() {
         return end;
     }
-
-    @Override
-    public void setEnd(boolean end) {
-        this.end = end;
-    }
 }

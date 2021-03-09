@@ -197,7 +197,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection, DEFAULT_WINDOW_UPDATE_RATIO, true));
 
         Http2HeadersDecoder headersDecoder = new DefaultHttp2HeadersDecoder(true);
-        Http2FrameLogger frameLogger = new Http2FrameLogger(LogLevel.INFO, DefaultHttp2ConnectionDecoder.class);
+        Http2FrameLogger frameLogger = new Http2FrameLogger(LogLevel.DEBUG, DefaultHttp2ConnectionDecoder.class);
         Http2FrameReader frameReader = new DefaultHttp2FrameReader(headersDecoder);
         Http2FrameWriter frameWriter = new DefaultHttp2FrameWriter();
         frameReader = new Http2InboundFrameLogger(frameReader, frameLogger);

@@ -22,7 +22,6 @@ package io.joyrpc.transport.netty4.http2;
 
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 
-import java.net.URLEncoder;
 import java.util.Map;
 
 /**
@@ -33,10 +32,7 @@ public class Http2NettyHeaders extends DefaultHttp2Headers {
     public Http2NettyHeaders(Map<CharSequence, Object> map) {
         if (map != null) {
             for (Map.Entry<CharSequence, Object> entry : map.entrySet()) {
-                try {
-                    add(entry.getKey(), URLEncoder.encode(entry.getValue().toString(), "UTF-8"));
-                } catch (Throwable ignored) {
-                }
+                add(entry.getKey(), entry.getValue().toString());
             }
         }
     }

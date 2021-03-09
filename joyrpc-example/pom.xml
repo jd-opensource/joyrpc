@@ -6,7 +6,7 @@
     <parent>
         <artifactId>joyrpc</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.4.6-RELEASE</version>
+        <version>1.4.7-RELEASE</version>
     </parent>
 
     <artifactId>joyrpc-example</artifactId>

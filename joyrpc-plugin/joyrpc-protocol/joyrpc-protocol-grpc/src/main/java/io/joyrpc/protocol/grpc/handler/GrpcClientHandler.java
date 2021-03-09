@@ -181,12 +181,17 @@ public class GrpcClientHandler implements ChannelOperator {
      * @return 原始消息
      */
     protected Http2ResponseMessage adjoin(final Http2ResponseMessage message) {
+        //TODO 需要优化
         Http2ResponseMessage http2Msg = null;
         if (!message.isEnd()) {
             http2ResponseNoEnds.put(message.getStreamId(), message);
-            return null;
         } else {
             http2Msg = http2ResponseNoEnds.remove(message.getStreamId());
+            if (http2Msg != null) {
+                http2Msg.setEnd(true);
+            } else {
+                http2Msg = message;
+            }
         }
         return http2Msg;
     }
@@ -249,7 +254,7 @@ public class GrpcClientHandler implements ChannelOperator {
         //streamId会在后续的处理器中设置
         //Stream IDs on the client MUST start at 1 and increment by 2 sequentially, such as 1, 3, 5, 7, etc.
         //Stream IDs on the server MUST start at 2 and increment by 2 sequentially, such as 2, 4, 6, 8, etc.
-        return new DefaultHttp2RequestMessage(0, message.getMsgId(), headers, content);
+        return new DefaultHttp2RequestMessage(0, message.getMsgId(), headers, content, true);
     }
 
     /**

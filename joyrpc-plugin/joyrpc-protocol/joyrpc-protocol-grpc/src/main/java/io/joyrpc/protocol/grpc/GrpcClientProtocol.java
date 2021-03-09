@@ -71,7 +71,7 @@ public class GrpcClientProtocol extends AbstractProtocol implements ClientProtoc
 
     @Override
     public ChannelChain buildChain() {
-        //GrpcClientConvertHandler 会有消息缓存，为防止streamId冲突，这里多个channel不能共用一个chain，每次重新build
+        //GrpcClientHandler 会有消息缓存，为防止streamId冲突，这里多个channel不能共用一个chain，每次重新build
         return new ChannelChain()
                 .addLast(new GrpcClientHandler())
                 .addLast(new RequestReceiver<>(MESSAGE_HANDLER_SELECTOR, this::onException))

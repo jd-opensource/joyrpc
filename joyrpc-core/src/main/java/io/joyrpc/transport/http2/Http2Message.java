@@ -54,6 +54,13 @@ public interface Http2Message {
     boolean isEnd();
 
     /**
+     * 设置结束标识
+     *
+     * @param end 结束标识
+     */
+    void setEnd(boolean end);
+
+    /**
      * 内容
      *
      * @return 内容

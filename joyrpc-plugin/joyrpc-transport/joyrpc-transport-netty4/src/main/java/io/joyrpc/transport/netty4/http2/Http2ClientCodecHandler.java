@@ -121,19 +121,23 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
             int streamId = getStreamId(request);
             //保存消息ID
             if (headers != null) {
-                encoder.writeHeaders(ctx, streamId, headers, 0, content == null ? request.isEnd() : false, promise).addListener(
+                encoder.writeHeaders(ctx, streamId, headers, 0, content == null ? request.isEnd() : false, ctx.voidPromise()).addListener(
                         f -> {
                             if (f.isSuccess()) {
                                 Http2Stream stream = connection().stream(streamId);
                                 if (stream != null) {
                                     stream.setProperty(msgIdKey, request.getMsgId());
                                 }
+                                if (content != null) {
+                                    encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), promise);
+                                } else {
+                                    promise.setSuccess();
+                                }
+                            } else {
+                                promise.setFailure(f.cause());
                             }
                         }
                 );
-                if (content != null) {
-                    encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), promise);
-                }
             } else {
                 encoder.writeData(ctx, streamId, Unpooled.wrappedBuffer(content), 0, request.isEnd(), promise);
             }
@@ -255,7 +259,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
                 Http2Headers headers = stream.getProperty(headerKey);
                 //获取server端响应body
                 byte[] content = data == null ? null : (byte[]) codec.decode(new Http2DecodeContext(channel), new NettyChannelBuffer(data));
-                ctx.fireChannelRead(new DefaultHttp2ResponseMessage(streamId, bizMsgId, headers, content));
+                ctx.fireChannelRead(new DefaultHttp2ResponseMessage(streamId, bizMsgId, headers, content,endOfStream));
             } catch (Exception e) {
                 throw Http2Exception.streamError(streamId, Http2Error.PROTOCOL_ERROR, e, "has error when codec");
             }

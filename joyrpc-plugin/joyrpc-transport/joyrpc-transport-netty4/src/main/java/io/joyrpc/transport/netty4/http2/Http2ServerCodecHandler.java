@@ -218,7 +218,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
                 //获取请求body
                 byte[] content = body != null ? (byte[]) codec.decode(new Http2DecodeContext(channel), new NettyChannelBuffer(body)) : null;
                 //server端收到消息，没有bizId，这里用streamId充当bizId
-                ctx.fireChannelRead(new DefaultHttp2RequestMessage(streamId, streamId, headers, content));
+                ctx.fireChannelRead(new DefaultHttp2RequestMessage(streamId, streamId, headers, content,true));
             } catch (Exception e) {
                 throw Http2Exception.streamError(streamId, Http2Error.PROTOCOL_ERROR, e, "has error when codec");
             }

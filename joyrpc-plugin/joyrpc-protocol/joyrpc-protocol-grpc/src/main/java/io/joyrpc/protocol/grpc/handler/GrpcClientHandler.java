@@ -145,6 +145,7 @@ public class GrpcClientHandler implements ChannelOperator {
         } else {
             payload = new ResponsePayload(new GrpcBizException(String.format("Http2 error code %s", http2Status)));
         }
+        //TODO 注入header
         return new ResponseMessage<>(header, payload);
     }
 
@@ -261,6 +262,7 @@ public class GrpcClientHandler implements ChannelOperator {
         //隐藏参数
         Map<String, Object> attachments = invocation.getAttachments();
         if (attachments != null) {
+            //TODO 编码header
             attachments.forEach((key, value) -> {
                 if (value != null) {
                     Class<?> clazz = value.getClass();

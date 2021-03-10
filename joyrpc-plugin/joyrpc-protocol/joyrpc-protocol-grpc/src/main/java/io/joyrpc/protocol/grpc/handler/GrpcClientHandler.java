@@ -126,9 +126,8 @@ public class GrpcClientHandler implements ChannelOperator {
         header.addAttribute(STREAM_ID.getNum(), message.getStreamId());
         ResponsePayload payload;
         Http2Headers headers = message.headers();
-        String http2Status = (String) headers.get(STATUS.value());
-        if (HTTP_OK.equals(http2Status)) {
-            Object value = headers.get(GRPC_STATUS_KEY);
+        Object value = headers.get(GRPC_STATUS_KEY);
+        if (value != null) {
             int grpcStatus = value == null ? GRPC_OK : Integer.parseInt(value.toString());
             if (grpcStatus == GRPC_OK) {
                 RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
@@ -143,7 +142,7 @@ public class GrpcClientHandler implements ChannelOperator {
                 payload = new ResponsePayload(new GrpcBizException(errMsg));
             }
         } else {
-            payload = new ResponsePayload(new GrpcBizException(String.format("Http2 error code %s", http2Status)));
+            payload = new ResponsePayload(new GrpcBizException(String.format("Http2 error code %s", headers.get(STATUS.value()))));
         }
         //TODO 注入header
         return new ResponseMessage<>(header, payload);

@@ -20,8 +20,6 @@ package io.joyrpc.transport.http2;
  * #L%
  */
 
-import java.util.Map;
-
 /**
  * 默认http2消息
  */
@@ -35,36 +33,29 @@ public class AbstractHttp2Message implements Http2Message {
      */
     protected long msgId;
     /**
-     * 头
+     * 开始头
      */
     protected Http2Headers headers;
-    /**
-     * 结束标识
-     */
-    protected boolean end;
     /**
      * 数据包
      */
     protected byte[] content;
+    /**
+     * 结束头
+     */
+    protected Http2Headers endHeaders;
+    /**
+     * 结束标识
+     */
+    protected boolean end;
 
-    public AbstractHttp2Message(int streamId, long msgId, Http2Headers headers, byte[] content) {
-        this(streamId, msgId, headers, content, false);
-    }
-
-    public AbstractHttp2Message(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content) {
-        this(streamId, msgId, new DefaultHttp2Headers(headers), content, false);
-    }
-
-    public AbstractHttp2Message(int streamId, long msgId, Http2Headers headers, byte[] content, boolean end) {
+    public AbstractHttp2Message(int streamId, long msgId, Http2Headers headers, byte[] content, Http2Headers endHeaders, boolean end) {
         this.streamId = streamId;
         this.msgId = msgId;
+        this.headers = headers;
         this.content = content;
-        this.headers = headers == null ? new DefaultHttp2Headers() : headers;
+        this.endHeaders = endHeaders;
         this.end = end;
-    }
-
-    public AbstractHttp2Message(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content, boolean end) {
-        this(streamId, msgId, new DefaultHttp2Headers(headers), content, end);
     }
 
     @Override
@@ -79,12 +70,17 @@ public class AbstractHttp2Message implements Http2Message {
 
     @Override
     public Http2Headers headers() {
-        return this.headers;
+        return headers;
     }
 
     @Override
     public byte[] content() {
         return content;
+    }
+
+    @Override
+    public Http2Headers endHeaders() {
+        return endHeaders;
     }
 
     @Override

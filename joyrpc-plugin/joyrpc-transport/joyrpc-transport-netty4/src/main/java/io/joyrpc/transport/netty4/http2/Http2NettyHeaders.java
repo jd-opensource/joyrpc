@@ -20,6 +20,7 @@ package io.joyrpc.transport.netty4.http2;
  * #L%
  */
 
+import io.joyrpc.transport.http2.Http2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 
 import java.util.Map;
@@ -29,10 +30,13 @@ import java.util.Map;
  */
 public class Http2NettyHeaders extends DefaultHttp2Headers {
 
-    public Http2NettyHeaders(Map<CharSequence, Object> map) {
-        if (map != null) {
-            for (Map.Entry<CharSequence, Object> entry : map.entrySet()) {
-                add(entry.getKey(), entry.getValue().toString());
+    public Http2NettyHeaders(Http2Headers headers) {
+        if (headers != null) {
+            Map<CharSequence, Object> map = headers.getAll();
+            if (map != null) {
+                for (Map.Entry<CharSequence, Object> entry : map.entrySet()) {
+                    add(entry.getKey(), entry.getValue().toString());
+                }
             }
         }
     }

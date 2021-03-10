@@ -167,7 +167,7 @@ public class GrpcServerHandler implements ChannelOperator {
         ResponsePayload responsePayload = (ResponsePayload) message.getPayLoad();
         if (responsePayload.isError()) {
             return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(),
-                    Headers.build(responsePayload.getException()), null, true);
+                    null, null, Headers.build(responsePayload.getException()), true);
         }
         //http2 header
         Http2Headers headers = Headers.build(true);
@@ -201,7 +201,7 @@ public class GrpcServerHandler implements ChannelOperator {
         content[2] = (byte) (length >>> 16);
         content[3] = (byte) (length >>> 8);
         content[4] = (byte) length;
-        return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(), headers, content, true);
+        return new DefaultHttp2ResponseMessage(streamId, header.getMsgId(), headers, content, Headers.build(true), true);
     }
 
     /**

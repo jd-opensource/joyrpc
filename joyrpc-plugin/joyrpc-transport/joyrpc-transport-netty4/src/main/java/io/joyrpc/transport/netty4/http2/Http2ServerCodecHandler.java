@@ -27,7 +27,6 @@ import io.joyrpc.transport.http2.Http2ResponseMessage;
 import io.joyrpc.transport.netty4.buffer.NettyChannelBuffer;
 import io.joyrpc.transport.netty4.transport.NettyServer;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.*;
@@ -35,6 +34,8 @@ import io.netty.handler.codec.http2.Http2Connection.PropertyKey;
 import io.netty.handler.logging.LogLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
  * http2 server端 编解码器
@@ -75,19 +76,29 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
     @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
         if (msg instanceof Http2ResponseMessage) {
-            //response对象
             Http2ResponseMessage response = (Http2ResponseMessage) msg;
-            //构建http2响应header
-            Http2Headers headers = response.headers() == null ? null : new Http2NettyHeaders(response.headers().getAll());
-            if (response.content() == null) {
-                if (headers != null) {
-                    encoder.writeHeaders(ctx, response.getStreamId(), headers, 0, response.isEnd(), promise);
+            Http2Headers headers = response.headers() == null ? null : new Http2NettyHeaders(response.headers());
+            Http2Headers endHeaders = response.endHeaders() == null ? null : new Http2NettyHeaders(response.endHeaders());
+            byte[] content = response.content();
+
+            if (headers != null) {
+                //开始头
+                encoder.writeHeaders(ctx, response.getStreamId(), headers, 0, false, endHeaders == null && content == null ? promise : ctx.voidPromise());
+            }
+            if (endHeaders == null) {
+                //没有结束头
+                if (content != null) {
+                    //有内容
+                    encoder.writeData(ctx, response.getStreamId(), wrappedBuffer(content), 0, response.isEnd(), promise);
                 }
             } else {
-                if (headers != null) {
-                    encoder.writeHeaders(ctx, response.getStreamId(), headers, 0, false, promise);
+                //有结束头
+                if (content != null) {
+                    //有内容
+                    encoder.writeData(ctx, response.getStreamId(), wrappedBuffer(content), 0, false, ctx.voidPromise());
                 }
-                encoder.writeData(ctx, response.getStreamId(), Unpooled.wrappedBuffer(response.content()), 0, response.isEnd(), ctx.voidPromise());
+                //结束头
+                encoder.writeHeaders(ctx, response.getStreamId(), endHeaders, 0, true, promise);
             }
         } else {
             super.write(ctx, msg, promise);
@@ -153,11 +164,9 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
         public int onDataRead(final ChannelHandlerContext ctx, final int streamId, final ByteBuf data,
                               final int padding, final boolean endOfStream) throws Http2Exception {
             int processed = data.readableBytes() + padding;
-            if (endOfStream) {
-                Http2Stream http2Stream = connection.stream(streamId);
-                Http2Headers headers = http2Stream.getProperty(headerKey);
-                dispatch(ctx, streamId, headers, data);
-            }
+            Http2Stream http2Stream = connection.stream(streamId);
+            Http2Headers headers = http2Stream.getProperty(headerKey);
+            dispatch(ctx, streamId, headers, data, null, endOfStream);
             return processed;
         }
 
@@ -168,7 +177,7 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
                 // 正常的请求（streamId==1 的是settings请求）
                 if (endStream) {
                     // 没有DATA帧的请求，可能是DATA
-                    dispatch(ctx, streamId, headers, null);
+                    dispatch(ctx, streamId, null, null, headers, true);
                 } else {
                     // 缓存起来
                     Http2Stream stream = connection.stream(streamId);
@@ -204,21 +213,27 @@ public class Http2ServerCodecHandler extends Http2ConnectionHandler {
         /**
          * 派发请求
          *
-         * @param ctx      上下文
-         * @param streamId 流ID
-         * @param headers  头
-         * @param body     数据
+         * @param ctx        上下文
+         * @param streamId   流ID
+         * @param headers    开始头
+         * @param body       数据
+         * @param endHeaders 结束头
+         * @param endStream  结束标识
          * @throws Http2Exception
          */
         protected void dispatch(final ChannelHandlerContext ctx,
                                 final int streamId,
                                 final Http2Headers headers,
-                                final ByteBuf body) throws Http2Exception {
+                                final ByteBuf body,
+                                final Http2Headers endHeaders,
+                                final boolean endStream) throws Http2Exception {
             try {
                 //获取请求body
                 byte[] content = body != null ? (byte[]) codec.decode(new Http2DecodeContext(channel), new NettyChannelBuffer(body)) : null;
                 //server端收到消息，没有bizId，这里用streamId充当bizId
-                ctx.fireChannelRead(new DefaultHttp2RequestMessage(streamId, streamId, headers, content,true));
+                ctx.fireChannelRead(new DefaultHttp2RequestMessage(streamId, streamId,
+                        headers == null ? null : new io.joyrpc.transport.http2.DefaultHttp2Headers(headers), content,
+                        endHeaders == null ? null : new io.joyrpc.transport.http2.DefaultHttp2Headers(endHeaders), endStream));
             } catch (Exception e) {
                 throw Http2Exception.streamError(streamId, Http2Error.PROTOCOL_ERROR, e, "has error when codec");
             }

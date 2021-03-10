@@ -20,26 +20,12 @@ package io.joyrpc.transport.http2;
  * #L%
  */
 
-import java.util.Map;
-
 /**
  * 默认http2应答消息
  */
 public class DefaultHttp2ResponseMessage extends AbstractHttp2Message implements Http2ResponseMessage {
 
-    public DefaultHttp2ResponseMessage(int streamId, long msgId, Http2Headers headers, byte[] content) {
-        super(streamId, msgId, headers, content);
-    }
-
-    public DefaultHttp2ResponseMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content) {
-        super(streamId, msgId, headers, content);
-    }
-
-    public DefaultHttp2ResponseMessage(int streamId, long msgId, Http2Headers headers, byte[] content, boolean end) {
-        super(streamId, msgId, headers, content, end);
-    }
-
-    public DefaultHttp2ResponseMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content, boolean end) {
-        super(streamId, msgId, headers, content, end);
+    public DefaultHttp2ResponseMessage(int streamId, long msgId, Http2Headers headers, byte[] content, Http2Headers endHeaders, boolean end) {
+        super(streamId, msgId, headers, content, endHeaders, end);
     }
 }

@@ -40,11 +40,18 @@ public interface Http2Message {
     long getMsgId();
 
     /**
-     * 头部
+     * 开始头
      *
      * @return 头部
      */
     Http2Headers headers();
+
+    /**
+     * 结束头
+     *
+     * @return 结束头
+     */
+    Http2Headers endHeaders();
 
     /**
      * 获取结束标识

@@ -20,27 +20,13 @@ package io.joyrpc.transport.http2;
  * #L%
  */
 
-import java.util.Map;
-
 /**
  * 默认http2请求消息
  */
 public class DefaultHttp2RequestMessage extends AbstractHttp2Message implements Http2RequestMessage {
 
-    public DefaultHttp2RequestMessage(int streamId, long msgId, Http2Headers headers, byte[] content) {
-        super(streamId, msgId, headers, content);
-    }
-
-    public DefaultHttp2RequestMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content) {
-        super(streamId, msgId, headers, content);
-    }
-
-    public DefaultHttp2RequestMessage(int streamId, long msgId, Http2Headers headers, byte[] content, boolean end) {
-        super(streamId, msgId, headers, content, end);
-    }
-
-    public DefaultHttp2RequestMessage(int streamId, long msgId, Iterable<Map.Entry<CharSequence, CharSequence>> headers, byte[] content, boolean end) {
-        super(streamId, msgId, headers, content, end);
+    public DefaultHttp2RequestMessage(int streamId, long msgId, Http2Headers headers, byte[] content, Http2Headers endHeaders, boolean end) {
+        super(streamId, msgId, headers, content, endHeaders, end);
     }
 
     @Override

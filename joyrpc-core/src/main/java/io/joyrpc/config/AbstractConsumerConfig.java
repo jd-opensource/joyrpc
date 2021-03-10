@@ -185,7 +185,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
     /**
      * 状态机
      */
-    protected transient volatile IntStateMachine<Void, ConsumerPilot> stateMachine = new IntStateMachine<>(()->create());
+    protected transient volatile IntStateMachine<Void, ConsumerPilot> stateMachine = new IntStateMachine<>(() -> create());
 
     public AbstractConsumerConfig() {
     }
@@ -782,22 +782,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
      */
     protected static class ConsumerInvocationHandler implements InvocationHandler {
         /**
-         * The Method name toString.
-         */
-        static String METHOD_NAME_TO_STRING = "toString";
-        /**
-         * The Method name hashcode.
-         */
-        static String METHOD_NAME_HASHCODE = "hashCode";
-        /**
-         * The Method name getClass.
-         */
-        static String METHOD_NAME_GET_CLASS = "getClass";
-        /**
-         * The Method name equals.
-         */
-        static String METHOD_NAME_EQUALS = "equals";
-        /**
          * The Invoker.
          */
         protected Invoker invoker;
@@ -821,10 +805,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
          * 默认方法处理器
          */
         protected Map<String, Optional<MethodHandle>> handles = new ConcurrentHashMap<>();
-        /**
-         * 透传插件
-         */
-        protected Iterable<Transmit> transmits = TRANSMIT.reverse();
+        protected MethodInvoker syncInvoker;
+        protected MethodInvoker asyncInvoker;
 
         /**
          * 构造函数
@@ -838,23 +820,25 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             this.iface = iface;
             this.async = serviceUrl.getBoolean(Constants.ASYNC_OPTION);
             this.generic = GENERIC.test(iface);
+            Iterable<Transmit> transmits = TRANSMIT.reverse();
+            syncInvoker = new MethodSyncInvoker(invoker, transmits);
+            asyncInvoker = new MethodAsyncInvoker(invoker, transmits);
         }
 
         @Override
         public Object invoke(final Object proxy, final Method method, final Object[] param) throws Throwable {
-            //Java8允许在接口上定义静态方法和默认方法（仅用与GenericService接口类及其子接口类）
-            if (generic && method.isDefault()) {
+            Class<?> declaringClass = method.getDeclaringClass();
+            int modifiers = method.getModifiers();
+            if (generic && ((modifiers & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC)) ==
+                    Modifier.PUBLIC) && declaringClass.isInterface()) {
+                //Java8允许在接口上定义静态方法和默认方法（仅用与GenericService接口类及其子接口类）
                 return invokeDefaultMethod(proxy, method, param);
-            }
-            //Java8允许在接口上定义静态方法
-            if (Modifier.isStatic(method.getModifiers())) {
-                //静态方法
+            } else if (Modifier.isStatic(modifiers)) {
+                //Java8允许在接口上定义静态方法
                 return method.invoke(proxy, param);
-            }
-            //处理toString，equals，hashcode等方法
-            Object obj = invokeObjectMethod(proxy, method, param);
-            if (obj != null) {
-                return obj;
+            } else if (declaringClass == Object.class) {
+                //处理toString，equals，hashcode等方法
+                return method.invoke(invoker, param);
             }
 
             boolean isReturnFuture = isReturnFuture(iface, method);
@@ -891,7 +875,8 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             //初始化请求，绑定方法选项
             invoker.setup(request);
             //调用
-            Object response = doInvoke(invoker, request, isAsync);
+            MethodInvoker methodInvoker = isAsync ? asyncInvoker : syncInvoker;
+            Object response = methodInvoker.invoke(request);
             try {
                 if (isAsync) {
                     if (isReturnFuture) {
@@ -900,6 +885,7 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                     } else {
                         //手动异步
                         context.setFuture((CompletableFuture<?>) response);
+                        //TODO 返回值是基本类型会报错，如int
                         return null;
                     }
                 } else {
@@ -910,37 +896,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 //重置异步标识，防止影响同一context下的provider业务逻辑以及其他consumer
                 context.setAsync(isAsyncBefore);
             }
-        }
-
-        /**
-         * 处理toString，equals，hashcode等方法
-         *
-         * @param proxy  代理
-         * @param method 方法
-         * @param param  参数
-         * @return 结果
-         */
-        protected Object invokeObjectMethod(final Object proxy, final Method method, final Object[] param) {
-            Object[] args = param;
-            String name = method.getName();
-            int count = args == null ? 0 : args.length;
-            if (generic && count == 2) {
-                //判断是$asyc和$invoke方法
-                args = (Object[]) param[2];
-                name = (String) param[0];
-            }
-            if (count == 0) {
-                if (METHOD_NAME_TO_STRING.equals(name)) {
-                    return proxy.getClass().getName() + "@" + Integer.toHexString(invoker.hashCode());
-                } else if (METHOD_NAME_HASHCODE.equals(name)) {
-                    return invoker.hashCode();
-                } else if (METHOD_NAME_GET_CLASS.equals(name)) {
-                    return proxy.getClass();
-                }
-            } else if (count == 1 && METHOD_NAME_EQUALS.equals(name)) {
-                return invoker.equals(args[0]);
-            }
-            return null;
         }
 
         /**
@@ -979,29 +934,43 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             }
             throw new UnsupportedOperationException();
         }
+    }
+
+    /**
+     * 方法调用
+     */
+    protected interface MethodInvoker {
 
         /**
-         * 这个方法用来做 Trace 追踪的增强点，不要随便修改
+         * 调用
          *
-         * @param invoker 调用器
          * @param request 请求
-         * @param async   异步标识
-         * @return 返回值
-         * @throws Throwable 异常
+         * @return 值
+         * @throws Throwable
          */
-        protected Object doInvoke(Invoker invoker, RequestMessage<Invocation> request, boolean async) throws Throwable {
-            return async ? asyncInvoke(invoker, request) : syncInvoke(invoker, request);
+        Object invoke(RequestMessage<Invocation> request) throws Throwable;
+    }
+
+    /**
+     * 同步调用
+     */
+    protected static class MethodSyncInvoker implements MethodInvoker {
+        /**
+         * The Invoker.
+         */
+        protected Invoker invoker;
+        /**
+         * 透传插件
+         */
+        protected Iterable<Transmit> transmits;
+
+        public MethodSyncInvoker(Invoker invoker, Iterable<Transmit> transmits) {
+            this.invoker = invoker;
+            this.transmits = transmits;
         }
 
-        /**
-         * 同步调用
-         *
-         * @param invoker 调用器
-         * @param request 请求
-         * @return 返回值
-         * @throws Throwable 异常
-         */
-        protected Object syncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) throws Throwable {
+        @Override
+        public Object invoke(final RequestMessage<Invocation> request) throws Throwable {
             try {
                 CompletableFuture<Result> future = invoker.invoke(request);
                 //正常同步返回，处理Java8的future.get内部先自循环造成的性能问题
@@ -1017,15 +986,28 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
                 transmits.forEach(o -> o.onReturn(request));
             }
         }
+    }
 
+    /**
+     * 异步调用
+     */
+    protected static class MethodAsyncInvoker implements MethodInvoker {
         /**
-         * 异步调用
-         *
-         * @param invoker 调用器
-         * @param request 请求
-         * @return 返回值
+         * The Invoker.
          */
-        protected Object asyncInvoke(final Invoker invoker, final RequestMessage<Invocation> request) {
+        protected Invoker invoker;
+        /**
+         * 透传插件
+         */
+        protected Iterable<Transmit> transmits;
+
+        public MethodAsyncInvoker(Invoker invoker, Iterable<Transmit> transmits) {
+            this.invoker = invoker;
+            this.transmits = transmits;
+        }
+
+        @Override
+        public Object invoke(final RequestMessage<Invocation> request) throws Throwable {
             //异步调用，业务逻辑执行完毕，不清理IO线程的上下文
             CompletableFuture<Object> response = new CompletableFuture<>();
             try {
@@ -1055,8 +1037,6 @@ public abstract class AbstractConsumerConfig<T> extends AbstractInterfaceConfig 
             }
             return response;
         }
-
     }
-
 
 }

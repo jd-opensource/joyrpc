@@ -113,7 +113,7 @@ public class Http2ClientCodecHandler extends Http2ConnectionHandler {
         if (msg instanceof Http2RequestMessage) {
             Http2RequestMessage request = (Http2RequestMessage) msg;
             Http2Headers headers = request.headers() == null ? null : new Http2NettyHeaders(request.headers());
-            Http2Headers endHeaders = request.headers() == null ? null : new Http2NettyHeaders(request.endHeaders());
+            Http2Headers endHeaders = request.endHeaders() == null ? null : new Http2NettyHeaders(request.endHeaders());
             byte[] content = request.content();
             if (content == null && headers == null && endHeaders == null) {
                 return;

@@ -127,24 +127,30 @@ public class GrpcClientHandler implements ChannelOperator {
         ResponsePayload payload;
         Http2Headers headers = message.headers();
         Object value = headers.get(GRPC_STATUS_KEY);
-        if (value != null) {
-            int grpcStatus = value == null ? GRPC_OK : Integer.parseInt(value.toString());
-            if (grpcStatus == GRPC_OK) {
-                RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
-                if (future != null) {
-                    payload = decodePayload(message, (IDLType) future.getAttr());
-                } else {
-                    payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", message.getMsgId())));
-                }
-            } else {
-                Status status = Status.fromCodeValue(grpcStatus);
-                String errMsg = String.format("%s [%d]: %s", status.getCode().name(), grpcStatus, headers.get(GRPC_MESSAGE_KEY));
-                payload = new ResponsePayload(new GrpcBizException(errMsg));
+        Object httpStatus = null;
+        int grpcStatus = -1;
+        if (value == null) {
+            httpStatus = headers.get(STATUS.value());
+            if (HTTP_OK.equals(httpStatus)) {
+                grpcStatus = GRPC_OK;
             }
         } else {
-            payload = new ResponsePayload(new GrpcBizException(String.format("Http2 error code %s", headers.get(STATUS.value()))));
+            grpcStatus = Integer.parseInt(value.toString());
         }
-        //TODO 注入header
+        if (grpcStatus == GRPC_OK) {
+            RequestFuture<Long, Message> future = channel.getFutureManager().get(message.getMsgId());
+            if (future != null) {
+                payload = decodePayload(message, (IDLType) future.getAttr());
+            } else {
+                payload = new ResponsePayload(new GrpcBizException(String.format("request is timeout. id=%d", message.getMsgId())));
+            }
+        } else if (grpcStatus > 0) {
+            Status status = Status.fromCodeValue(grpcStatus);
+            String errMsg = String.format("%s [%d]: %s", status.getCode().name(), grpcStatus, headers.get(GRPC_MESSAGE_KEY));
+            payload = new ResponsePayload(new GrpcBizException(errMsg));
+        } else {
+            payload = new ResponsePayload(new GrpcBizException(String.format("Http2 error code %s", httpStatus)));
+        }
         return new ResponseMessage<>(header, payload);
     }
 

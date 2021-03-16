@@ -22,9 +22,10 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.option.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
+import io.joyrpc.option.MethodOption;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.TraceFactory;
@@ -71,7 +72,7 @@ public abstract class AbstractTraceFilter extends AbstractFilter {
             return invoker.invoke(request);
         }
         Invocation invocation = request.getPayLoad();
-        InterfaceOption.MethodOption option = request.getOption();
+        MethodOption option = request.getOption();
         if (!option.isTrace()) {
             return invoker.invoke(request);
         }

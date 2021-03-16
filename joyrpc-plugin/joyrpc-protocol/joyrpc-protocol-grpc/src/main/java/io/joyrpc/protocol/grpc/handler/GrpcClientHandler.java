@@ -27,9 +27,9 @@ import io.joyrpc.codec.UnsafeByteArrayInputStream;
 import io.joyrpc.codec.UnsafeByteArrayOutputStream;
 import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.config.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.RpcException;
+import io.joyrpc.option.MethodOption;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.exception.GrpcBizException;
@@ -203,7 +203,7 @@ public class GrpcClientHandler implements ChannelOperator {
         Session session = message.getSession();
         Http2Headers headers = buildHeaders(invocation, session, channel);
         //做grpc入参与返回值的类型转换，获取GrpcType
-        InterfaceOption.MethodOption option = message.getOption();
+        MethodOption option = message.getOption();
         IDLMethodDesc methodDesc = option.getArgType().getIDLMethodDesc();
         IDLType type = methodDesc.getResponse();
         //包装payload

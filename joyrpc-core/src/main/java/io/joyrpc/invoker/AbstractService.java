@@ -24,7 +24,7 @@ import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.cluster.discovery.config.Configure;
-import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.option.InterfaceOption;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.context.injection.Transmits;
 import io.joyrpc.exception.RpcException;

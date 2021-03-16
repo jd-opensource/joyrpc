@@ -22,7 +22,7 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.option.InterfaceOption;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;

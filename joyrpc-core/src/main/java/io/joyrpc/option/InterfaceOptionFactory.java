@@ -1,4 +1,4 @@
-package io.joyrpc.config;
+package io.joyrpc.option;
 
 /*-
  * #%L

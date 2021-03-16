@@ -1,4 +1,4 @@
-package io.joyrpc.config.inner;
+package io.joyrpc.option.inner;
 
 /*-
  * #%L
@@ -21,28 +21,22 @@ package io.joyrpc.config.inner;
  */
 
 import io.joyrpc.annotation.EnableTrace;
-import io.joyrpc.config.AbstractInterfaceOption;
+import io.joyrpc.option.*;
 import io.joyrpc.context.IntfConfiguration;
 import io.joyrpc.context.auth.IPPermission;
 import io.joyrpc.context.limiter.LimiterConfiguration.ClassLimiter;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
-import io.joyrpc.invoker.CallbackMethod;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.StringBlackWhiteList;
 import io.joyrpc.proxy.JCompiler;
 import io.joyrpc.proxy.MethodCaller;
-import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.ClassUtils;
-import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.IDLMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.Validator;
 import java.lang.reflect.*;
-import java.util.Map;
-import java.util.function.Supplier;
 
 import static io.joyrpc.Plugin.COMPILER;
 import static io.joyrpc.constants.Constants.*;
@@ -125,7 +119,7 @@ public class InnerProviderOption extends AbstractInterfaceOption {
     }
 
     @Override
-    protected InnerMethodOption create(final WrapperParametric parametric) {
+    protected AbstractMethodOption create(final WrapperParametric parametric) {
         IDLMethod idlMethod = getMethod(parametric.getName());
         Method method = idlMethod == null ? null : idlMethod.getMethod();
         EnableTrace enableTrace = method == null ? null : method.getAnnotation(EnableTrace.class);
@@ -206,71 +200,6 @@ public class InnerProviderOption extends AbstractInterfaceOption {
             return (MethodCaller) constructors[0].newInstance(ref);
         } catch (IllegalAccessException | IllegalArgumentException | InstantiationException | InvocationTargetException e) {
             return null;
-        }
-    }
-
-    /**
-     * 方法选项
-     */
-    protected static class InnerProviderMethodOption extends InnerMethodOption implements ProviderMethodOption {
-        /**
-         * 方法的黑白名单
-         */
-        protected BlackWhiteList<String> methodBlackWhiteList;
-        /**
-         * IP限制
-         */
-        protected Supplier<IPPermission> iPPermission;
-        /**
-         * 限流
-         */
-        protected Supplier<ClassLimiter> limiter;
-        /**
-         * 动态生成的方法调用
-         */
-        protected MethodCaller caller;
-
-        public InnerProviderMethodOption(final IDLMethod idlMethod,
-                                         final GenericMethod genericMethod,
-                                         final Map<String, ?> implicits,
-                                         final int timeout,
-                                         final Concurrency concurrency,
-                                         final CachePolicy cachePolicy,
-                                         final Validator validator,
-                                         final TransactionOption transactionOption,
-                                         final String token,
-                                         final boolean async,
-                                         final boolean trace,
-                                         final CallbackMethod callback,
-                                         final BlackWhiteList<String> methodBlackWhiteList,
-                                         final Supplier<IPPermission> iPPermission,
-                                         final Supplier<ClassLimiter> limiter,
-                                         final MethodCaller caller) {
-            super(idlMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, transactionOption, token, async, trace, callback);
-            this.methodBlackWhiteList = methodBlackWhiteList;
-            this.iPPermission = iPPermission;
-            this.limiter = limiter;
-            this.caller = caller;
-        }
-
-        @Override
-        public BlackWhiteList<String> getMethodBlackWhiteList() {
-            return methodBlackWhiteList;
-        }
-
-        @Override
-        public IPPermission getIPPermission() {
-            return iPPermission.get();
-        }
-
-        @Override
-        public ClassLimiter getLimiter() {
-            return limiter.get();
-        }
-
-        @Override
-        public MethodCaller getCaller() {
-            return caller;
         }
     }
 

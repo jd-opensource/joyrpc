@@ -21,7 +21,7 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.config.InterfaceOption.MethodOption;
+import io.joyrpc.option.MethodOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.CallbackMethod;

@@ -23,8 +23,9 @@ package io.joyrpc.invoker;
 import io.joyrpc.CallbackListener;
 import io.joyrpc.Result;
 import io.joyrpc.codec.compression.Compression;
-import io.joyrpc.config.AbstractInterfaceOption;
-import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.option.AbstractInterfaceOption;
+import io.joyrpc.option.AbstractMethodOption;
+import io.joyrpc.option.InterfaceOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.MethodOverloadException;
@@ -459,26 +460,26 @@ public class CallbackManager implements Closeable {
         }
 
         @Override
-        protected InnerMethodOption create(WrapperParametric parametric) {
+        protected AbstractMethodOption create(WrapperParametric parametric) {
             IDLMethod idlMethod = null;
             try {
                 idlMethod = getPublicMethod(interfaceClass, parametric.getName(), GRPC_TYPE_FUNCTION);
             } catch (NoSuchMethodException | MethodOverloadException e) {
             }
-            return new CallbackInnerMethodOption(idlMethod);
+            return new CallbackMethodOption(idlMethod);
         }
 
         /**
          * 方法选项
          */
-        protected static class CallbackInnerMethodOption extends InnerMethodOption {
+        protected static class CallbackMethodOption extends AbstractMethodOption {
 
             /**
              * 构造函数
              *
              * @param idlMethod IDL方法信息
              */
-            public CallbackInnerMethodOption(IDLMethod idlMethod) {
+            public CallbackMethodOption(IDLMethod idlMethod) {
                 super(idlMethod, null, null, 0, null, null,
                         null, null, null, false, false, null);
             }

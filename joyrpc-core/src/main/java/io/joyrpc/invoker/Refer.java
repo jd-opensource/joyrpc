@@ -35,8 +35,9 @@ import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveScorer;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.config.ConsumerConfig;
-import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
+import io.joyrpc.option.ArgumentOption;
+import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.option.ConsumerMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
@@ -409,7 +410,7 @@ public class Refer extends AbstractService {
             request.setCreateTime(SystemClock.now());
         }
         //用缓存的信息设置参数类型，加快性能
-        InterfaceOption.ArgType argType = option.getArgType();
+        ArgumentOption argType = option.getArgType();
         //已经设置了class和method对象
         Invocation invocation = request.getPayLoad();
         invocation.setAlias(alias);

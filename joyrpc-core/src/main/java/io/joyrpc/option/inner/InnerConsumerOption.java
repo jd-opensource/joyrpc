@@ -1,4 +1,4 @@
-package io.joyrpc.config.inner;
+package io.joyrpc.option.inner;
 
 /*-
  * #%L
@@ -22,16 +22,16 @@ package io.joyrpc.config.inner;
 
 import io.joyrpc.annotation.EnableTrace;
 import io.joyrpc.cluster.Shard;
-import io.joyrpc.cluster.distribution.*;
+import io.joyrpc.cluster.distribution.ExceptionPolicy;
+import io.joyrpc.cluster.distribution.ExceptionPredication;
 import io.joyrpc.cluster.distribution.FailoverPolicy.DefaultFailoverPolicy;
-import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreaker;
+import io.joyrpc.cluster.distribution.Router;
+import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.cluster.distribution.circuitbreaker.McCircuitBreakerConfig;
 import io.joyrpc.cluster.distribution.circuitbreaker.McIntfCircuitBreakerConfig;
 import io.joyrpc.cluster.distribution.circuitbreaker.McMethodBreakerConfig;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
-import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptivePolicy;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.Judge;
-import io.joyrpc.config.AbstractInterfaceOption;
 import io.joyrpc.context.IntfConfiguration;
 import io.joyrpc.context.circuitbreaker.BreakerConfiguration;
 import io.joyrpc.exception.InitializationException;
@@ -39,18 +39,21 @@ import io.joyrpc.exception.OverloadException;
 import io.joyrpc.extension.ExtensionMeta;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.WrapperParametric;
-import io.joyrpc.invoker.CallbackMethod;
+import io.joyrpc.option.AbstractInterfaceOption;
+import io.joyrpc.option.AbstractMethodOption;
+import io.joyrpc.option.Concurrency;
+import io.joyrpc.option.MethodAdaptiveOption;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.transaction.TransactionOption;
+import io.joyrpc.util.ClassUtils;
+import io.joyrpc.util.IDLMethod;
+import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.Timer;
-import io.joyrpc.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.Validator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -227,7 +230,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
             //最后监听自适应负载均衡变化
             this.dynamicConfig = new IntfConfiguration<>(ADAPTIVE, interfaceName, config -> {
                 if (options != null) {
-                    options.forEach((method, op) -> ((InnerConsumerMethodOption) op).adaptiveConfig.setDynamicIntfConfig(config));
+                    options.forEach((method, op) -> ((InnerConsumerMethodOption) op).adaptiveConfig.setDynamicInterfaceConfig(config));
                 }
             });
             //定时计算评分阈值
@@ -245,7 +248,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                             InnerConsumerMethodOption cmo = ((InnerConsumerMethodOption) mo);
                             if (cmo.autoScore) {
                                 //过滤掉没有调用过的方法
-                                cmo.adaptiveConfig.setScore(scorer.apply(method, cmo.adaptiveConfig.config));
+                                cmo.adaptiveConfig.setScore(scorer.apply(method, cmo.adaptiveConfig.getConfig()));
                                 cmo.autoScore = false;
                             }
                         });
@@ -267,7 +270,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
     }
 
     @Override
-    protected InnerMethodOption create(final WrapperParametric parametric) {
+    protected AbstractMethodOption create(final WrapperParametric parametric) {
         IDLMethod grpcMethod = getMethod(parametric.getName());
         Method method = grpcMethod == null ? null : grpcMethod.getMethod();
         EnableTrace enableTrace = method == null ? null : method.getAnnotation(EnableTrace.class);
@@ -295,7 +298,7 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
                         new MyTimeoutPolicy(),
                         new MyExceptionPolicy(failoverBlackWhiteList, EXCEPTION_PREDICATION.get(failoverPredication)),
                         FAILOVER_SELECTOR.get(parametric.getString(FAILOVER_SELECTOR_OPTION.getName(), failoverSelector))),
-                scorer == null ? null : new MethodAdaptiveConfig(intfConfig, new AdaptiveConfig(parametric), dynamicConfig.get(), judges),
+                scorer == null ? null : new MethodAdaptiveOption(intfConfig, new AdaptiveConfig(parametric), dynamicConfig.get(), judges),
                 new McMethodBreakerConfig(parametric.getName(), breakerConfig, new McCircuitBreakerConfig(parametric)),
                 icbCfg == null ? null : icbCfg.getConfig(parametric.getName()),
                 methodMocks == null ? null : methodMocks.get(parametric.getName()));
@@ -402,134 +405,18 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
     }
 
     /**
-     * 方法选项
+     * 超时策略
      */
-    protected static class InnerConsumerMethodOption extends InnerMethodOption implements ConsumerMethodOption {
-        /**
-         * 并行度
-         */
-        protected int forks;
-        /**
-         * 节点选择器算法提供者
-         */
-        protected Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector;
-        /**
-         * 分发策略
-         */
-        protected Router router;
-        /**
-         * 重试策略
-         */
-        protected FailoverPolicy failoverPolicy;
-        /**
-         * 自适应负载均衡配置
-         */
-        protected MethodAdaptiveConfig adaptiveConfig;
-        /**
-         * 方法熔断静态配置
-         */
-        protected McMethodBreakerConfig staticBreakerConfig;
-        /**
-         * 方法熔断动态配置
-         */
-        protected McMethodBreakerConfig dynamicBreakerConfig;
-        /**
-         * 方法熔断合并后的配置
-         */
-        protected McCircuitBreakerConfig breakerConfig;
-        /**
-         * 熔断器提供者
-         */
-        protected volatile CircuitBreaker circuitBreaker;
-        /**
-         * 是否自动计算方法指标阈值
-         */
-        protected volatile boolean autoScore;
-        /**
-         * Mock数据
-         */
-        protected volatile Map<String, Object> mock;
+    protected static class MyTimeoutPolicy implements TimeoutPolicy {
 
-        public InnerConsumerMethodOption(final IDLMethod grpcMethod,
-                                         final GenericMethod genericMethod,
-                                         final Map<String, ?> implicits,
-                                         final int timeout,
-                                         final Concurrency concurrency,
-                                         final CachePolicy cachePolicy,
-                                         final Validator validator,
-                                         final TransactionOption transactionOption,
-                                         final String token,
-                                         final boolean async,
-                                         final boolean trace,
-                                         final CallbackMethod callback,
-                                         final int forks,
-                                         final Supplier<BiPredicate<Shard, RequestMessage<Invocation>>> selector,
-                                         final Router router,
-                                         final FailoverPolicy failoverPolicy,
-                                         final MethodAdaptiveConfig adaptiveConfig,
-                                         final McMethodBreakerConfig staticBreakerConfig,
-                                         final McMethodBreakerConfig dynamicBreakerConfig,
-                                         final Map<String, Object> mock) {
-            super(grpcMethod, genericMethod, implicits, timeout, concurrency, cachePolicy, validator, transactionOption, token, async, trace, callback);
-            this.forks = forks;
-            this.selector = selector;
-            this.router = router;
-            this.failoverPolicy = failoverPolicy;
-            this.adaptiveConfig = adaptiveConfig;
-            this.staticBreakerConfig = staticBreakerConfig;
-            update(dynamicBreakerConfig);
-            this.mock = mock;
-        }
-
-        protected void update(McMethodBreakerConfig dynamicConfig) {
-            this.dynamicBreakerConfig = dynamicConfig;
-            McCircuitBreakerConfig cfg = dynamicConfig == null ? staticBreakerConfig.compute(null) : dynamicConfig.compute(staticBreakerConfig);
-            if (!cfg.equals(breakerConfig)) {
-                breakerConfig = cfg;
-                circuitBreaker = cfg.getEnabled() != null && cfg.getEnabled() ? new McCircuitBreaker(cfg) : null;
-            }
+        @Override
+        public boolean test(final RequestMessage<Invocation> request) {
+            return request.isTimeout();
         }
 
         @Override
-        public int getForks() {
-            return forks;
-        }
-
-        @Override
-        public BiPredicate<Shard, RequestMessage<Invocation>> getSelector() {
-            return selector == null ? null : selector.get();
-        }
-
-        @Override
-        public Router getRouter() {
-            return router;
-        }
-
-        @Override
-        public FailoverPolicy getFailoverPolicy() {
-            return failoverPolicy;
-        }
-
-        @Override
-        public AdaptivePolicy getAdaptivePolicy() {
-            return adaptiveConfig.getPolicy();
-        }
-
-        @Override
-        public CircuitBreaker getCircuitBreaker() {
-            return circuitBreaker;
-        }
-
-        @Override
-        public Map<String, Object> getMock() {
-            return mock;
-        }
-
-        @Override
-        public void setAutoScore(final boolean autoScore) {
-            if (this.autoScore != autoScore) {
-                this.autoScore = autoScore;
-            }
+        public void decline(final RequestMessage<Invocation> request) {
+            request.decline();
         }
     }
 
@@ -562,90 +449,6 @@ public class InnerConsumerOption extends AbstractInterfaceOption {
         public boolean test(final Throwable throwable) {
             //暂时不需要增加动态配置支持，这些一般都需要提前测试配置好。
             return failoverBlackWhiteList.isValid(throwable.getClass()) || (exceptionPredication != null && exceptionPredication.test(throwable));
-        }
-    }
-
-    /**
-     * 方法自适应配置
-     */
-    protected static class MethodAdaptiveConfig {
-        /**
-         * 接口静态配置
-         */
-        protected final AdaptiveConfig intfConfig;
-        /**
-         * 接口动态配置
-         */
-        protected AdaptiveConfig dynamicIntfConfig;
-        /**
-         * 方法静态配置
-         */
-        protected final AdaptiveConfig methodConfig;
-        /**
-         * 裁决者
-         */
-        protected final List<Judge> judges;
-        /**
-         * 方法动态评分
-         */
-        protected AdaptiveConfig score;
-        /**
-         * 配置合并
-         */
-        protected volatile AdaptiveConfig config;
-        /**
-         * 最终配置，包括自动计算评分的结果
-         */
-        protected volatile AdaptivePolicy policy;
-
-        /**
-         * 构造函数
-         *
-         * @param intfConfig        接口静态配置
-         * @param methodConfig      方法静态配置
-         * @param dynamicIntfConfig 接口动态配置
-         * @param judges            裁判
-         */
-        public MethodAdaptiveConfig(final AdaptiveConfig intfConfig, final AdaptiveConfig methodConfig,
-                                    final AdaptiveConfig dynamicIntfConfig, final List<Judge> judges) {
-            this.intfConfig = intfConfig;
-            this.methodConfig = methodConfig;
-            this.dynamicIntfConfig = dynamicIntfConfig;
-            this.judges = judges;
-            this.policy = new AdaptivePolicy(intfConfig, judges);
-            update();
-        }
-
-        public void setDynamicIntfConfig(AdaptiveConfig dynamicIntfConfig) {
-            if (dynamicIntfConfig != this.dynamicIntfConfig) {
-                this.dynamicIntfConfig = dynamicIntfConfig;
-                update();
-            }
-        }
-
-        public void setScore(AdaptiveConfig score) {
-            if (score != this.score) {
-                this.score = score;
-                update();
-            }
-        }
-
-        public AdaptivePolicy getPolicy() {
-            return policy;
-        }
-
-        /**
-         * 更新
-         */
-        protected synchronized void update() {
-            AdaptiveConfig result = new AdaptiveConfig(intfConfig);
-            result.merge(dynamicIntfConfig);
-            result.merge(methodConfig);
-            //配置合并
-            config = new AdaptiveConfig(result);
-            //加上自动计算的评分
-            result.merge(score);
-            policy = new AdaptivePolicy(result, judges);
         }
     }
 

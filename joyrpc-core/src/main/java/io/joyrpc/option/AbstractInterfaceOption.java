@@ -1,4 +1,4 @@
-package io.joyrpc.config;
+package io.joyrpc.option;
 
 /*-
  * #%L
@@ -28,7 +28,6 @@ import io.joyrpc.cache.CacheConfig;
 import io.joyrpc.cache.CacheFactory;
 import io.joyrpc.cache.CacheKeyGenerator;
 import io.joyrpc.cache.CacheKeyGenerator.ExpressionGenerator;
-import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.exception.MethodOverloadException;
@@ -37,13 +36,8 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
 import io.joyrpc.extension.WrapperParametric;
 import io.joyrpc.invoker.CallbackMethod;
-import io.joyrpc.permission.SerializerWhiteList;
-import io.joyrpc.protocol.message.Invocation;
-import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transaction.TransactionFactory;
-import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericClass;
-import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.IDLMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
 
@@ -53,7 +47,6 @@ import javax.validation.metadata.BeanDescriptor;
 import javax.validation.metadata.MethodDescriptor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
@@ -62,7 +55,6 @@ import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.*;
 import static io.joyrpc.constants.Constants.*;
 import static io.joyrpc.context.Variable.VARIABLE;
-import static io.joyrpc.permission.SerializerWhiteList.getGlobalWhitelist;
 import static io.joyrpc.util.ClassUtils.*;
 
 /**
@@ -158,7 +150,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
     /**
      * 方法透传参数
      */
-    protected NameKeyOption<InnerMethodOption> options;
+    protected NameKeyOption<AbstractMethodOption> options;
     /**
      * 是否是泛型调用
      */
@@ -254,7 +246,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param method 方法
      * @return 方法选项
      */
-    protected InnerMethodOption create(final String method) {
+    protected AbstractMethodOption create(final String method) {
         final String prefix = URL_METHOD_PREX + method + ".";
         return create(new WrapperParametric(url, method, METHOD_KEY_FUNC, key -> key.startsWith(prefix)));
     }
@@ -265,7 +257,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param parametric 参数
      * @return 方法选项
      */
-    protected abstract InnerMethodOption create(final WrapperParametric parametric);
+    protected abstract AbstractMethodOption create(final WrapperParametric parametric);
 
     /**
      * 获取方法隐藏参数，合并了接口的隐藏参数
@@ -377,8 +369,8 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param parametric 参数
      * @return 缓存策略
      */
-    protected CachePolicy getCachePolicy(final WrapperParametric parametric) {
-        CachePolicy cachePolicy = null;
+    protected CacheOption getCachePolicy(final WrapperParametric parametric) {
+        CacheOption cachePolicy = null;
         //判断是否开启了缓存
         boolean enable = cacheFactory == null ? false : parametric.getBoolean(CACHE_OPTION.getName(), cacheEnable);
         if (enable) {
@@ -399,7 +391,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
                         expireAfterWrite(parametric.getInteger(CACHE_EXPIRE_TIME_OPTION.getName(), cacheExpireTime)).
                         build();
                 Cache<Object, Object> cache = cacheFactory.build(parametric.getName(), cacheConfig);
-                cachePolicy = new CachePolicy(cache, generator);
+                cachePolicy = new CacheOption(cache, generator);
             }
         }
         return cachePolicy;
@@ -421,7 +413,7 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param methodName 方法名称
      * @return 方法选项
      */
-    public InnerMethodOption getOption(final String methodName) {
+    public AbstractMethodOption getOption(final String methodName) {
         return options.get(methodName);
     }
 
@@ -471,240 +463,13 @@ public abstract class AbstractInterfaceOption implements InterfaceOption {
      * @param predicate 断言
      * @return 是否满足条件
      */
-    protected boolean predicate(final Predicate<InnerMethodOption> predicate) {
-        for (Map.Entry<String, InnerMethodOption> entry : options.getOptions().entrySet()) {
+    protected boolean predicate(final Predicate<AbstractMethodOption> predicate) {
+        for (Map.Entry<String, AbstractMethodOption> entry : options.getOptions().entrySet()) {
             if (predicate.test(entry.getValue())) {
                 return true;
             }
         }
         return false;
-    }
-
-    /**
-     * 方法选项
-     */
-    protected static abstract class InnerMethodOption implements MethodOption {
-        /**
-         * 方法
-         */
-        protected Method method;
-        /**
-         * 泛型方法
-         */
-        protected GenericMethod genericMethod;
-        /**
-         * 参数类型
-         */
-        protected ArgType argType;
-        /**
-         * 方法级别隐式传参，合并了接口的隐藏参数，只读
-         */
-        protected Map<String, ?> implicits;
-        /**
-         * 超时时间
-         */
-        protected int timeout;
-        /**
-         * 并发数配置
-         */
-        protected Concurrency concurrency;
-        /**
-         * 缓存策略
-         */
-        protected CachePolicy cachePolicy;
-        /**
-         * 方法参数验证器
-         */
-        protected Validator validator;
-        /**
-         * 事务选项
-         */
-        protected TransactionOption transactionOption;
-        /**
-         * 令牌
-         */
-        protected String token;
-        /**
-         * 是否异步调用
-         */
-        protected boolean async;
-        /**
-         * 是否开启跟踪
-         */
-        protected transient boolean trace;
-        /**
-         * 跟踪的span名称
-         */
-        protected String traceSpanId;
-        /**
-         * 回调方法
-         */
-        protected CallbackMethod callback;
-        /**
-         * 参数描述
-         */
-        protected String description;
-        /**
-         * 序列化白名单
-         */
-        protected SerializerWhiteList whiteList;
-
-        /**
-         * 构造函数
-         *
-         * @param idlMethod    GRPC方法
-         * @param genericMethod 泛型方法
-         * @param implicits     隐式传参
-         * @param timeout       超时时间
-         * @param concurrency   并发数配置
-         * @param cachePolicy   缓存策略
-         * @param validator     方法参数验证器
-         * @param token         令牌
-         * @param async         判断方法是否是异步调用
-         * @param callback      回调方法
-         */
-        public InnerMethodOption(final IDLMethod idlMethod,
-                                 final GenericMethod genericMethod,
-                                 final Map<String, ?> implicits, int timeout,
-                                 final Concurrency concurrency,
-                                 final CachePolicy cachePolicy,
-                                 final Validator validator,
-                                 final TransactionOption transactionOption,
-                                 final String token,
-                                 final boolean async,
-                                 final boolean trace,
-                                 final CallbackMethod callback) {
-            //只有泛化调用的时候没有设置grpMethod
-            this.method = idlMethod == null ? null : idlMethod.getMethod();
-            this.genericMethod = genericMethod;
-            Class<?>[] types = method == null ? null : method.getParameterTypes();
-            //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
-            this.argType = method == null ? null : new ArgType(types, getCanonicalNames(types), idlMethod.getSupplier());
-            this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
-            this.timeout = timeout;
-            this.concurrency = concurrency;
-            this.cachePolicy = cachePolicy;
-            this.validator = validator;
-            this.transactionOption = transactionOption;
-            this.token = token;
-            this.async = async;
-            this.trace = trace;
-            this.traceSpanId = method == null ? null : getTraceSpanId(idlMethod.getClazz().getName(), method.getName());
-            this.callback = callback;
-            this.description = getDesc(types);
-            this.whiteList = getGlobalWhitelist();
-        }
-
-        @Override
-        public Method getMethod() {
-            return method;
-        }
-
-        @Override
-        public GenericMethod getGenericMethod() {
-            return genericMethod;
-        }
-
-        @Override
-        public ArgType getArgType() {
-            return argType;
-        }
-
-        @Override
-        public String getDescription() {
-            return description;
-        }
-
-        @Override
-        public Map<String, ?> getImplicits() {
-            return implicits;
-        }
-
-        @Override
-        public int getTimeout() {
-            return timeout;
-        }
-
-        @Override
-        public Concurrency getConcurrency() {
-            return concurrency;
-        }
-
-        @Override
-        public CachePolicy getCachePolicy() {
-            return cachePolicy;
-        }
-
-        @Override
-        public Validator getValidator() {
-            return validator;
-        }
-
-        @Override
-        public TransactionOption getTransactionOption() {
-            return transactionOption;
-        }
-
-        @Override
-        public String getToken() {
-            return token;
-        }
-
-        @Override
-        public boolean isAsync() {
-            return async;
-        }
-
-        @Override
-        public boolean isTrace() {
-            return trace;
-        }
-
-        public void setTrace(boolean trace) {
-            this.trace = trace;
-        }
-
-        /**
-         * 获取跟踪ID
-         *
-         * @param className  类
-         * @param methodName 方法
-         * @return 跟踪ID
-         */
-        protected String getTraceSpanId(final String className, final String methodName) {
-            return className + "/" + methodName;
-        }
-
-        @Override
-        public String getTraceSpanId(final Invocation invocation) {
-            if (traceSpanId != null) {
-                return traceSpanId;
-            }
-            //泛化调用
-            return getTraceSpanId(invocation.getClassName(), invocation.getArgs()[0].toString());
-        }
-
-        @Override
-        public CallbackMethod getCallback() {
-            return callback;
-        }
-
-    }
-
-    /**
-     * 超时策略
-     */
-    public static class MyTimeoutPolicy implements TimeoutPolicy {
-
-        @Override
-        public boolean test(final RequestMessage<Invocation> request) {
-            return request.isTimeout();
-        }
-
-        @Override
-        public void decline(final RequestMessage<Invocation> request) {
-            request.decline();
-        }
     }
 
 

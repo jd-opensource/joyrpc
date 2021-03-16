@@ -40,7 +40,7 @@ import io.joyrpc.codec.crypto.Encryptor;
 import io.joyrpc.codec.crypto.Signature;
 import io.joyrpc.codec.digester.Digester;
 import io.joyrpc.codec.serialization.*;
-import io.joyrpc.config.InterfaceOptionFactory;
+import io.joyrpc.option.InterfaceOptionFactory;
 import io.joyrpc.config.validator.InterfaceValidator;
 import io.joyrpc.context.ConfigEventHandler;
 import io.joyrpc.context.Configurator;

@@ -23,8 +23,8 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOption.ProviderMethodOption;
+import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.option.ProviderMethodOption;
 import io.joyrpc.exception.AuthorizationException;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;

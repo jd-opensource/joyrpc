@@ -23,8 +23,8 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
 import io.joyrpc.cache.Cache;
-import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOption.CachePolicy;
+import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.option.CacheOption;
 import io.joyrpc.exception.CacheException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
@@ -44,7 +44,7 @@ public class AbstractCacheFilter extends AbstractFilter {
 
     @Override
     public CompletableFuture<Result> invoke(final Invoker invoker, final RequestMessage<Invocation> request) {
-        final CachePolicy policy = request.getOption().getCachePolicy();
+        final CacheOption policy = request.getOption().getCachePolicy();
         if (policy == null) {
             return invoker.invoke(request);
         }
@@ -90,7 +90,7 @@ public class AbstractCacheFilter extends AbstractFilter {
      * @param invocation 键
      * @return 缓存键
      */
-    protected Object getKey(CachePolicy policy, Invocation invocation) {
+    protected Object getKey(CacheOption policy, Invocation invocation) {
         try {
             return policy == null ? null : policy.getGenerator().generate(invocation);
         } catch (CacheException e) {

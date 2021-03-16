@@ -5,7 +5,7 @@ import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
 import io.joyrpc.config.AbstractConsumerConfig;
 import io.joyrpc.config.AbstractInterfaceConfig;
-import io.joyrpc.config.InterfaceOption;
+import io.joyrpc.option.InterfaceOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.extension.*;
 import io.joyrpc.filter.ConsumerFilter;

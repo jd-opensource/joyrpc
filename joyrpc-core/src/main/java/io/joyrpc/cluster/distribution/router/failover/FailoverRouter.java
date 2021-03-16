@@ -29,7 +29,7 @@ import io.joyrpc.cluster.distribution.FailoverSelector;
 import io.joyrpc.cluster.distribution.TimeoutPolicy;
 import io.joyrpc.cluster.distribution.router.AbstractRouter;
 import io.joyrpc.cluster.distribution.router.failover.simple.SimpleFailoverSelector;
-import io.joyrpc.config.InterfaceOption.ConsumerMethodOption;
+import io.joyrpc.option.ConsumerMethodOption;
 import io.joyrpc.exception.FailoverException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.extension.Extension;

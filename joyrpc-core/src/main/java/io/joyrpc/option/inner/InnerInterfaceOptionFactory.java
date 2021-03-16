@@ -1,4 +1,4 @@
-package io.joyrpc.config.inner;
+package io.joyrpc.option.inner;
 
 /*-
  * #%L
@@ -22,8 +22,8 @@ package io.joyrpc.config.inner;
 
 import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveConfig;
-import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOptionFactory;
+import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.option.InterfaceOptionFactory;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
 

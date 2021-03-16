@@ -22,8 +22,8 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.config.InterfaceOption;
-import io.joyrpc.config.InterfaceOption.Concurrency;
+import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.option.Concurrency;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;

@@ -27,6 +27,8 @@ import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.Transmit;
 import io.joyrpc.context.injection.Transmits;
 import io.joyrpc.extension.URL;
+import io.joyrpc.option.ArgumentOption;
+import io.joyrpc.option.MethodOption;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.util.SystemClock;
@@ -151,8 +153,9 @@ public class InvokerCaller implements InvocationHandler {
                 } else {
                     //手动异步
                     context.setFuture((CompletableFuture<?>) response);
-                    //TODO 返回值是基本类型会报错，如int
-                    return null;
+                    MethodOption option = request.getOption();
+                    ArgumentOption type = option.getArgType();
+                    return type.getDefaultValue();
                 }
             } else {
                 // 返回同步结果

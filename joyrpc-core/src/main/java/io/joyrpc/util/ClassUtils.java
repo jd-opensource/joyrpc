@@ -26,6 +26,7 @@ import io.joyrpc.exception.ReflectionException;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.*;
 import java.net.JarURLConnection;
 import java.net.URL;
@@ -246,6 +247,35 @@ public class ClassUtils {
      */
     public static Collection<Method> getPublicMethods(final Class<?> clazz, final String methodName) throws NoSuchMethodException {
         return clazz == null || methodName == null ? null : getClassMeta(clazz).getMethods(methodName);
+    }
+
+    /**
+     * 构建方法没有指定注解的对象集合
+     *
+     * @param iterable        迭代对象
+     * @param methodName      方法名称
+     * @param annotationClass 注解类
+     * @param <T>             对象类型
+     * @param <A>             注解
+     * @return 对象集合
+     */
+    public static <T, A extends Annotation> List<T> withoutAnnotation(final Iterable<T> iterable, final String methodName, final Class<A> annotationClass) {
+        List<T> result = null;
+        Method method;
+        for (T t : iterable) {
+            try {
+                method = getPublicMethod(t.getClass(), methodName);
+                A annotation = method.getAnnotation(annotationClass);
+                if (annotation == null) {
+                    if (result == null) {
+                        result = new ArrayList<>();
+                    }
+                    result.add(t);
+                }
+            } catch (NoSuchMethodException | MethodOverloadException e) {
+            }
+        }
+        return result;
     }
 
     /**

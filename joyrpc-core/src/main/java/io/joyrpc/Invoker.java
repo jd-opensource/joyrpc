@@ -31,8 +31,6 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * 调用器
- *
- * @date: 9/1/2019
  */
 @FunctionalInterface
 public interface Invoker {
@@ -41,7 +39,7 @@ public interface Invoker {
      * 调用
      *
      * @param request 请求
-     * @return
+     * @return CompletableFuture
      */
     CompletableFuture<Result> invoke(RequestMessage<Invocation> request);
 
@@ -57,7 +55,7 @@ public interface Invoker {
     /**
      * 关闭
      *
-     * @return
+     * @return CompletableFuture
      */
     default CompletableFuture<Void> close() {
         Parametric parametric = new MapParametric(GlobalContext.getContext());
@@ -68,7 +66,7 @@ public interface Invoker {
      * 关闭
      *
      * @param gracefully 是否优雅关闭
-     * @return
+     * @return CompletableFuture
      */
     default CompletableFuture<Void> close(boolean gracefully) {
         return CompletableFuture.completedFuture(null);
@@ -77,7 +75,7 @@ public interface Invoker {
     /**
      * 名称
      *
-     * @return
+     * @return 名称
      */
     default String getName() {
         return null;

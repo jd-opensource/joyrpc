@@ -423,7 +423,7 @@ public class Refer extends AbstractService {
         //方法透传参数，整合了接口级别的参数
         invocation.addAttachments(option.getImplicits());
         //透传处理
-        transmits.forEach(o -> o.inject(request));
+        transmit.inject(request);
         //超时时间放在后面，Invocation已经注入了请求上下文参数，隐藏参数等等
         if (request.getHeader().getTimeout() <= 0) {
             Parametric parametric = new MapParametric(invocation.getAttachments());
@@ -516,7 +516,7 @@ public class Refer extends AbstractService {
         newRequest.setContext(new RequestContext());
         newRequest.setSession(session);
         //透传处理
-        transmits.forEach(o -> o.onServerReceive(newRequest));
+        transmit.onServerReceive(newRequest);
         local.setup(newRequest);
 
         //产生本地调用的消息ID

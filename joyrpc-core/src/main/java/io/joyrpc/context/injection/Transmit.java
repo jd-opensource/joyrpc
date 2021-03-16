@@ -21,6 +21,7 @@ package io.joyrpc.context.injection;
  */
 
 import io.joyrpc.Result;
+import io.joyrpc.annotation.Ignore;
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
@@ -31,11 +32,20 @@ import io.joyrpc.protocol.message.RequestMessage;
 @Extensible("transmit")
 public interface Transmit extends ReqInjection {
 
+    String METHOD_ON_RETURN = "onReturn";
+
+    String METHOD_ON_COMPLETE = "onComplete";
+
+    String METHOD_ON_SERVER_RETURN = "onServerReturn";
+
+    String METHOD_ON_SERVER_COMPLETE = "onServerComplete";
+
     /**
      * 客户端方法调用结束
      *
      * @param request 请求
      */
+    @Ignore
     default void onReturn(final RequestMessage<Invocation> request) {
 
     }
@@ -46,6 +56,7 @@ public interface Transmit extends ReqInjection {
      * @param request 请求
      * @param result  结果
      */
+    @Ignore
     default void onComplete(final RequestMessage<Invocation> request, final Result result) {
 
     }
@@ -62,6 +73,7 @@ public interface Transmit extends ReqInjection {
      *
      * @param request 请求
      */
+    @Ignore
     default void onServerReturn(final RequestMessage<Invocation> request) {
 
     }
@@ -72,6 +84,7 @@ public interface Transmit extends ReqInjection {
      * @param request 请求
      * @param result  结果
      */
+    @Ignore
     default void onServerComplete(final RequestMessage<Invocation> request, final Result result) {
 
     }

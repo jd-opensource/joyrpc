@@ -26,6 +26,7 @@ import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.context.injection.RespInjection;
 import io.joyrpc.context.injection.Transmit;
+import io.joyrpc.context.injection.Transmits;
 import io.joyrpc.exception.*;
 import io.joyrpc.invoker.Exporter;
 import io.joyrpc.invoker.ServiceManager;
@@ -61,7 +62,7 @@ public class BizReceiver extends AbstractReceiver {
     /**
      * 透传反向清理
      */
-    protected Iterable<Transmit> transmits = TRANSMIT.reverse();
+    protected Transmit transmits = new Transmits(TRANSMIT.reverse());
     /**
      * 应答注入
      */
@@ -125,7 +126,7 @@ public class BizReceiver extends AbstractReceiver {
         /**
          * 透传反向清理
          */
-        protected Iterable<Transmit> transmits;
+        protected Transmit transmit;
         /**
          * 应答注入
          */
@@ -137,14 +138,14 @@ public class BizReceiver extends AbstractReceiver {
 
         public BizReq(ChannelContext context,
                       RequestMessage<Invocation> request,
-                      Iterable<Transmit> transmits,
+                      Transmit transmit,
                       Iterable<RespInjection> injections) {
             this.request = request;
             this.session = (ServerSession) request.getSession();
             this.invocation = request.getPayLoad();
             this.context = context;
             this.channel = context.getChannel();
-            this.transmits = transmits;
+            this.transmit = transmit;
             this.injections = injections;
         }
 
@@ -313,13 +314,13 @@ public class BizReceiver extends AbstractReceiver {
                     CompletableFuture<Object> future = (CompletableFuture<Object>) result.getValue();
                     future.whenComplete((obj, th) -> {
                         response.setPayLoad(new ResponsePayload(obj, th, type));
-                        transmits.forEach(o -> o.onServerComplete(request, th != null ? new Result(request.getContext(), th) : new Result(request.getContext(), obj)));
+                        transmit.onServerComplete(request, th != null ? new Result(request.getContext(), th) : new Result(request.getContext(), obj));
                         acknowledge(this.context, request, response, BizReceiver.logger);
                     });
                 } else {
                     //同步调用
                     response.setPayLoad(new ResponsePayload(result.getValue(), result.getException(), type));
-                    transmits.forEach(o -> o.onServerComplete(request, result));
+                    transmit.onServerComplete(request, result);
                     acknowledge(this.context, request, response, BizReceiver.logger);
                 }
             }
@@ -355,7 +356,7 @@ public class BizReceiver extends AbstractReceiver {
          * 执行结束退出，清理上下文
          */
         public void exit() {
-            transmits.forEach(o -> o.onServerReturn(request));
+            transmit.onServerReturn(request);
         }
 
         /**
@@ -384,7 +385,7 @@ public class BizReceiver extends AbstractReceiver {
          */
         public void fail(Throwable e) {
             //服务端结束
-            transmits.forEach(o -> o.onServerComplete(request, new Result(request.getContext(), e)));
+            transmit.onServerComplete(request, new Result(request.getContext(), e));
             //构建异常应答消息，不压缩
             ResponseMessage<ResponsePayload> response = createResponseMessage(Compression.NONE);
             response.setPayLoad(new ResponsePayload(e));

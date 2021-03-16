@@ -25,6 +25,7 @@ import io.joyrpc.cluster.discovery.registry.Registry;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
+import io.joyrpc.invoker.InvokerCaller;
 import io.joyrpc.invoker.Refer;
 import io.joyrpc.invoker.ServiceManager;
 
@@ -116,7 +117,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                     //打开
                     chain(refer.open(), future, s -> {
                         //构建调用器
-                        invocationHandler = new ConsumerInvocationHandler(refer, proxyClass, refer.getUrl());
+                        invocationHandler = new InvokerCaller(refer, proxyClass, refer.getUrl());
                         future.complete(null);
                     });
                 } catch (Throwable ex) {
@@ -172,7 +173,7 @@ public class ConsumerConfig<T> extends AbstractConsumerConfig<T> implements Seri
                     resubscribe(newSubscribeUrl, true);
                     serviceUrl = newUrl;
                     registerUrl = newRegisterUrl;
-                    invocationHandler = new ConsumerInvocationHandler(refer, proxyClass, newRefer.getUrl());
+                    invocationHandler = new InvokerCaller(refer, proxyClass, newRefer.getUrl());
                     refer = newRefer;
                     oldRefer.close(true);
                     //再次判断是否在关闭，防止前面复制的

@@ -22,6 +22,7 @@ package io.joyrpc.config;
 
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
+import io.joyrpc.invoker.InvokerCaller;
 import io.joyrpc.invoker.GroupInvoker;
 
 import java.io.Serializable;
@@ -139,7 +140,7 @@ public class ConsumerGroupConfig<T> extends AbstractConsumerConfig<T> implements
             route.setConfigFunction(config::createGroupConfig);
             route.setup();
             //创建桩
-            invocationHandler = new ConsumerInvocationHandler(route, config.getProxyClass(), serviceUrl);
+            invocationHandler = new InvokerCaller(route, config.getProxyClass(), serviceUrl);
             latch.countDown();
             config.proxy();
             //创建消费者

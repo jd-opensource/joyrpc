@@ -20,6 +20,7 @@ package io.joyrpc.context.injection;
  * #L%
  */
 
+import io.joyrpc.annotation.Ignore;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 
@@ -27,6 +28,8 @@ import io.joyrpc.protocol.message.RequestMessage;
  * 隐式参数配置
  */
 public interface ReqInjection {
+
+    String METHOD_REJECT = "reject";
 
     /**
      * 消费者调用，绑定上下文到调用对象
@@ -40,6 +43,7 @@ public interface ReqInjection {
      *
      * @param request 请求
      */
+    @Ignore
     default void reject(final RequestMessage<Invocation> request) {
 
     }

@@ -62,7 +62,7 @@ public class BizReceiver extends AbstractReceiver {
     /**
      * 透传反向清理
      */
-    protected Transmit transmits = new Transmits(TRANSMIT.reverse());
+    protected Transmit transmit = new Transmits(TRANSMIT.reverse());
     /**
      * 应答注入
      */
@@ -74,7 +74,7 @@ public class BizReceiver extends AbstractReceiver {
         if (!(message instanceof RequestMessage)) {
             return;
         }
-        BizReq bizReq = new BizReq(context, (RequestMessage<Invocation>) message, transmits, injections);
+        BizReq bizReq = new BizReq(context, (RequestMessage<Invocation>) message, transmit, injections);
         if (!bizReq.discard()) {
             try {
                 //恢复调用信息和上下文

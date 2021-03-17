@@ -20,7 +20,7 @@ package io.joyrpc.protocol.message;
  * #L%
  */
 
-import io.joyrpc.option.MethodOption;
+import io.joyrpc.invoker.option.MethodOption;
 import io.joyrpc.context.RequestContext;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;

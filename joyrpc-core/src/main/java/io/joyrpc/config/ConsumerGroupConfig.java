@@ -23,7 +23,7 @@ package io.joyrpc.config;
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.invoker.InvokerCaller;
-import io.joyrpc.invoker.GroupInvoker;
+import io.joyrpc.GroupInvoker;
 
 import java.io.Serializable;
 import java.util.Map;

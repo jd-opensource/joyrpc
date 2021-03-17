@@ -20,7 +20,7 @@ package io.joyrpc.transaction.seata;
  * #L%
  */
 
-import io.joyrpc.context.injection.Transmit;
+import io.joyrpc.invoker.injection.Transmit;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.extension.condition.ConditionalOnProperty;

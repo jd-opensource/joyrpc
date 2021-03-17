@@ -22,7 +22,7 @@ package io.joyrpc.metric.mc;
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.cluster.event.MetricEvent;
-import io.joyrpc.option.ConsumerMethodOption;
+import io.joyrpc.invoker.option.ConsumerMethodOption;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.Clock;
 import io.joyrpc.metric.Dashboard;

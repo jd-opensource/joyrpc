@@ -23,7 +23,7 @@ package io.joyrpc.filter;
 import io.joyrpc.Invoker;
 import io.joyrpc.InvokerAware;
 import io.joyrpc.Result;
-import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.invoker.option.InterfaceOption;
 import io.joyrpc.extension.Prototype;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;

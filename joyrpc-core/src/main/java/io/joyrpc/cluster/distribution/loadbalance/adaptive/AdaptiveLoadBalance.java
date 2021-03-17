@@ -26,7 +26,7 @@ import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.distribution.LoadBalance;
-import io.joyrpc.option.ConsumerMethodOption;
+import io.joyrpc.invoker.option.ConsumerMethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.metric.Dashboard;

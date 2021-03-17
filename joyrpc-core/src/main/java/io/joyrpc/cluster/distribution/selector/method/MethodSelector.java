@@ -24,7 +24,7 @@ import io.joyrpc.cluster.Candidate;
 import io.joyrpc.cluster.Node;
 import io.joyrpc.cluster.Shard;
 import io.joyrpc.cluster.distribution.NodeSelector;
-import io.joyrpc.option.ConsumerMethodOption;
+import io.joyrpc.invoker.option.ConsumerMethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;

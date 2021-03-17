@@ -35,13 +35,9 @@ import io.joyrpc.cluster.distribution.Router;
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.AdaptiveScorer;
 import io.joyrpc.cluster.event.NodeEvent;
 import io.joyrpc.config.ConsumerConfig;
-import io.joyrpc.option.ArgumentOption;
-import io.joyrpc.option.InterfaceOption;
-import io.joyrpc.option.ConsumerMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.context.RequestContext;
-import io.joyrpc.context.injection.NodeReqInjection;
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.NoAliveProviderException;
@@ -50,6 +46,15 @@ import io.joyrpc.exception.TransportException;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
 import io.joyrpc.extension.URL;
+import io.joyrpc.invoker.callback.CallbackContainer;
+import io.joyrpc.CallbackInvoker;
+import io.joyrpc.invoker.event.ExporterEvent;
+import io.joyrpc.invoker.exception.ExceptionHandler;
+import io.joyrpc.invoker.injection.NodeReqInjection;
+import io.joyrpc.invoker.option.ArgumentOption;
+import io.joyrpc.invoker.option.CallbackOption;
+import io.joyrpc.invoker.option.ConsumerMethodOption;
+import io.joyrpc.invoker.option.InterfaceOption;
 import io.joyrpc.protocol.ClientProtocol;
 import io.joyrpc.protocol.Protocol.MessageConverter;
 import io.joyrpc.protocol.message.Invocation;
@@ -344,7 +349,7 @@ public class Refer extends AbstractService {
      * @param client  客户端
      */
     protected void onException(final RequestMessage<Invocation> request, final Result result, final Client client) {
-        CallbackMethod callback = request.getOption().getCallback();
+        CallbackOption callback = request.getOption().getCallback();
         if (callback != null) {
             //失败注销callback
             MessageHeader header = request.getHeader();
@@ -648,7 +653,7 @@ public class Refer extends AbstractService {
      * @param event 事件
      */
     protected void onEvent(final ExporterEvent event) {
-        if (!event.name.equals(exporterName)) {
+        if (!event.getName().equals(exporterName)) {
             return;
         }
         switch (event.getType()) {

@@ -1,0 +1,3 @@
+io.joyrpc.invoker.injection.AliasInjection
+io.joyrpc.invoker.injection.ProtocolInjection
+io.joyrpc.invoker.injection.RetryInjection

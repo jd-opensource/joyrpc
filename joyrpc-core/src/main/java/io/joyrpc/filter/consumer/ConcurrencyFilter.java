@@ -21,7 +21,7 @@ package io.joyrpc.filter.consumer;
  */
 
 import io.joyrpc.Result;
-import io.joyrpc.option.Concurrency;
+import io.joyrpc.invoker.option.Concurrency;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.exception.OverloadException;
 import io.joyrpc.extension.Extension;

@@ -22,10 +22,10 @@ package io.joyrpc.filter;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.option.InterfaceOption;
+import io.joyrpc.invoker.option.InterfaceOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
-import io.joyrpc.option.MethodOption;
+import io.joyrpc.invoker.option.MethodOption;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.trace.TraceFactory;

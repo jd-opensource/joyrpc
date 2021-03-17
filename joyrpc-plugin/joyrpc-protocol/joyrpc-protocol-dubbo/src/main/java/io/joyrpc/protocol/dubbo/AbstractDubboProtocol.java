@@ -21,10 +21,10 @@ package io.joyrpc.protocol.dubbo;
  */
 
 import io.joyrpc.codec.serialization.Serialization;
-import io.joyrpc.option.MethodOption;
+import io.joyrpc.invoker.option.MethodOption;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.URL;
-import io.joyrpc.invoker.CallbackMethod;
+import io.joyrpc.invoker.option.CallbackOption;
 import io.joyrpc.protocol.AbstractProtocol;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.dubbo.codec.DubboCodec;
@@ -192,7 +192,7 @@ public abstract class AbstractDubboProtocol extends AbstractProtocol {
 
             switch (type) {
                 case BizReq: {
-                    CallbackMethod callbackMethod = option.getCallback();
+                    CallbackOption callbackMethod = option.getCallback();
                     if (callbackMethod != null) {
                         int paramIndex = callbackMethod.getIndex();
                         Object callbackInsId = message.getHeader().getAttribute(HEAD_CALLBACK_INSID);

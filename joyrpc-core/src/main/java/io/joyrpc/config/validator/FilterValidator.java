@@ -23,7 +23,7 @@ package io.joyrpc.config.validator;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.invoker.FilterChainFactory;
+import io.joyrpc.invoker.chain.FilterChainFactory;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;

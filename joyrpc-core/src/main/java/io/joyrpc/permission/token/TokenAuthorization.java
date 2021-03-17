@@ -1,7 +1,7 @@
 package io.joyrpc.permission.token;
 
 import io.joyrpc.InvokerAware;
-import io.joyrpc.option.MethodOption;
+import io.joyrpc.invoker.option.MethodOption;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.permission.Authorization;

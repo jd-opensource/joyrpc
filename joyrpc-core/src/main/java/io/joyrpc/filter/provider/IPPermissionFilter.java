@@ -22,7 +22,7 @@ package io.joyrpc.filter.provider;
 
 import io.joyrpc.Invoker;
 import io.joyrpc.Result;
-import io.joyrpc.option.ProviderMethodOption;
+import io.joyrpc.invoker.option.ProviderMethodOption;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.constants.ExceptionCode;
 import io.joyrpc.context.auth.IPPermission;

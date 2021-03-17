@@ -29,7 +29,7 @@ import io.joyrpc.codec.compression.Compression;
 import io.joyrpc.codec.serialization.Serialization;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.exception.RpcException;
-import io.joyrpc.option.MethodOption;
+import io.joyrpc.invoker.option.MethodOption;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.Protocol;
 import io.joyrpc.protocol.grpc.exception.GrpcBizException;

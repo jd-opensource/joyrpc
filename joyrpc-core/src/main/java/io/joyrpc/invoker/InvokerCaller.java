@@ -109,15 +109,34 @@ public class InvokerCaller implements InvocationHandler {
         } else if (declaringClass == Object.class) {
             //处理toString，equals，hashcode等方法
             return method.invoke(invoker, param);
+        } else {
+            boolean isReturnFuture = isReturnFuture(interfaceClass, method);
+            //请求上下文
+            RequestContext context = RequestContext.getContext();
+            //调用之前链路是否为异步
+            boolean isAsyncBefore = context.isAsync();
+            //上下文的异步必须设置成completeFuture
+            context.setAsync(isReturnFuture);
+            try {
+                RequestMessage<Invocation> request = createRequest(method, param, context);
+                //调用
+                return isReturnFuture ? doAsync(request) : (async ? doContextAsync(request) : doSync(request));
+            } finally {
+                //重置异步标识，防止影响同一context下的provider业务逻辑以及其他consumer
+                context.setAsync(isAsyncBefore);
+            }
         }
+    }
 
-        boolean isReturnFuture = isReturnFuture(interfaceClass, method);
-        //请求上下文
-        RequestContext context = RequestContext.getContext();
-        //调用之前链路是否为异步
-        boolean isAsyncBefore = context.isAsync();
-        //上下文的异步必须设置成completeFuture
-        context.setAsync(isReturnFuture);
+    /**
+     * 构建请求
+     *
+     * @param method  方法
+     * @param param   参数
+     * @param context 请求上下文
+     * @return 请求消息
+     */
+    protected RequestMessage<Invocation> createRequest(final Method method, final Object[] param, final RequestContext context) {
         //构造请求消息，参数类型放在Refer里面设置，使用缓存避免每次计算加快性能
         Invocation invocation = new Invocation(interfaceClass, null, method, param, generic);
         RequestMessage<Invocation> request = RequestMessage.build(invocation);
@@ -143,13 +162,7 @@ public class InvokerCaller implements InvocationHandler {
         }
         //初始化请求，绑定方法选项
         invoker.setup(request);
-        try {
-            //调用
-            return isReturnFuture ? doAsync(request) : (async ? doContextAsync(request) : doSync(request));
-        } finally {
-            //重置异步标识，防止影响同一context下的provider业务逻辑以及其他consumer
-            context.setAsync(isAsyncBefore);
-        }
+        return request;
     }
 
     /**

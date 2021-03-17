@@ -26,6 +26,8 @@ import io.joyrpc.util.ClassUtils;
 
 import java.lang.reflect.InvocationHandler;
 
+import static io.joyrpc.util.ClassUtils.getCurrentClassLoader;
+
 /**
  * The interface Proxy factory.
  */
@@ -42,7 +44,7 @@ public interface ProxyFactory {
      * @throws ProxyException
      */
     default <T> T getProxy(final Class<T> clz, final InvocationHandler invoker) throws ProxyException {
-        return getProxy(clz, invoker, ClassUtils.getCurrentClassLoader());
+        return getProxy(clz, invoker, getCurrentClassLoader());
     }
 
     /**

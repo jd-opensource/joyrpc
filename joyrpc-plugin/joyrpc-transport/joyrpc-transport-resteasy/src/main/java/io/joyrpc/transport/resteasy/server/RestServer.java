@@ -25,7 +25,7 @@ import io.joyrpc.config.ConfigAware;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.exception.InitializationException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.DecoratorServer;
 import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.transport.TransportServer;

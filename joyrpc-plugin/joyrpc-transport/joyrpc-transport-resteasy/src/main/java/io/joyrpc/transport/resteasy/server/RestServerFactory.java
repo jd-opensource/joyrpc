@@ -23,7 +23,7 @@ package io.joyrpc.transport.resteasy.server;
 
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.*;
 
 import java.util.function.Function;

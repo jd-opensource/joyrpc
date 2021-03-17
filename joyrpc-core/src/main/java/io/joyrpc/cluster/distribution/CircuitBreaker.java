@@ -20,7 +20,7 @@ package io.joyrpc.cluster.distribution;
  * #L%
  */
 
-import io.joyrpc.metric.TPWindow;
+import io.joyrpc.apm.metric.TPWindow;
 
 /**
  * 熔断器

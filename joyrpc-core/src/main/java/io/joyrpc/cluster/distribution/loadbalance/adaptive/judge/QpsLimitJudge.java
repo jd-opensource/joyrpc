@@ -21,7 +21,7 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive.judge;
  */
 
 import io.joyrpc.cluster.distribution.loadbalance.adaptive.*;
-import io.joyrpc.metric.TPMetric;
+import io.joyrpc.apm.metric.TPMetric;
 
 
 /**

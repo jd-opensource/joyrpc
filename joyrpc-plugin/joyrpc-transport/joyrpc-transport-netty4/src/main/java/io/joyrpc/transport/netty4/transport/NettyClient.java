@@ -25,7 +25,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.exception.SslException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.AbstractClient;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelManager.Connector;

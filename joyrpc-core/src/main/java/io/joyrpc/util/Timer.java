@@ -23,7 +23,7 @@ package io.joyrpc.util;
 import io.joyrpc.context.GlobalContext;
 import io.joyrpc.extension.MapParametric;
 import io.joyrpc.extension.Parametric;
-import io.joyrpc.thread.NamedThreadFactory;
+import io.joyrpc.util.thread.NamedThreadFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -21,7 +21,7 @@ package io.joyrpc.protocol.handler;
  */
 
 import io.joyrpc.exception.HandlerException;
-import io.joyrpc.health.HealthProbe;
+import io.joyrpc.apm.health.HealthProbe;
 import io.joyrpc.protocol.MsgType;
 import io.joyrpc.protocol.message.Message;
 import io.joyrpc.protocol.message.ResponseMessage;

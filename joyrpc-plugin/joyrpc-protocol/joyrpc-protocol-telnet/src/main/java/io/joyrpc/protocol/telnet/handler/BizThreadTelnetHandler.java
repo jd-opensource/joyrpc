@@ -24,7 +24,7 @@ package io.joyrpc.protocol.telnet.handler;
  */
 
 import io.joyrpc.invoker.ServiceManager;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.Server;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.telnet.TelnetResponse;

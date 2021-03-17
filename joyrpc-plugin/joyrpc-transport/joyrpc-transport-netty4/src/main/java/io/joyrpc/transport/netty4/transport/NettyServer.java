@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.transport;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.ConnectionException;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.AbstractServer;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.TransportServer;

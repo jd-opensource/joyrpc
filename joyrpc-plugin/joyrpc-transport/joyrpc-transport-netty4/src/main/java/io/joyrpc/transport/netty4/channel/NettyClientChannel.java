@@ -22,7 +22,7 @@ package io.joyrpc.transport.netty4.channel;
 
 import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.TransportException;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.event.TransportEvent;
 import io.netty.channel.EventLoopGroup;

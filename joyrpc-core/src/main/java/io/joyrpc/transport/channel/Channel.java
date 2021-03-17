@@ -22,7 +22,7 @@ package io.joyrpc.transport.channel;
 
 
 import io.joyrpc.event.Publisher;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.event.TransportEvent;
 import io.joyrpc.transport.message.Message;

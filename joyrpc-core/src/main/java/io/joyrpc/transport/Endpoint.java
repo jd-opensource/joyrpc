@@ -23,7 +23,7 @@ package io.joyrpc.transport;
 
 import io.joyrpc.event.EventHandler;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;
 import io.joyrpc.transport.event.TransportEvent;

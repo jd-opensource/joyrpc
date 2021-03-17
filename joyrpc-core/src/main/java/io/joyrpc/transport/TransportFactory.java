@@ -22,7 +22,7 @@ package io.joyrpc.transport;
 
 import io.joyrpc.extension.Extensible;
 import io.joyrpc.extension.URL;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;

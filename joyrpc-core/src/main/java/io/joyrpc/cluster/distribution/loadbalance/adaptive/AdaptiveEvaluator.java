@@ -23,9 +23,9 @@ package io.joyrpc.cluster.distribution.loadbalance.adaptive;
 
 import io.joyrpc.cluster.Cluster;
 import io.joyrpc.cluster.Node;
-import io.joyrpc.metric.TPMetric;
-import io.joyrpc.metric.TPSnapshot;
-import io.joyrpc.metric.TPWindow;
+import io.joyrpc.apm.metric.TPMetric;
+import io.joyrpc.apm.metric.TPSnapshot;
+import io.joyrpc.apm.metric.TPWindow;
 import io.joyrpc.util.MilliPeriod;
 
 import java.util.LinkedList;

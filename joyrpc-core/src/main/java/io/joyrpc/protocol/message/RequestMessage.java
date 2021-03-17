@@ -28,7 +28,7 @@ import io.joyrpc.permission.Authentication;
 import io.joyrpc.permission.Authorization;
 import io.joyrpc.permission.Identification;
 import io.joyrpc.protocol.MsgType;
-import io.joyrpc.trace.Tracer;
+import io.joyrpc.apm.trace.Tracer;
 import io.joyrpc.transaction.TransactionContext;
 import io.joyrpc.transport.ChannelTransport;
 import io.joyrpc.transport.channel.Channel;

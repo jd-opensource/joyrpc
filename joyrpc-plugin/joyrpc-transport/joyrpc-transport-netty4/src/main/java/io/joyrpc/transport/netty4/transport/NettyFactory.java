@@ -23,7 +23,7 @@ package io.joyrpc.transport.netty4.transport;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.condition.ConditionalOnClass;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.*;
 import io.joyrpc.transport.channel.Channel;
 

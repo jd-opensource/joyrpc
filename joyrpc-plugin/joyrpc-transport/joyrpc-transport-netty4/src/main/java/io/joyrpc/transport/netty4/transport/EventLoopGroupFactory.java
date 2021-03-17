@@ -22,7 +22,7 @@ package io.joyrpc.transport.netty4.transport;
 
 import io.joyrpc.extension.URL;
 import io.joyrpc.extension.URLOption;
-import io.joyrpc.thread.NamedThreadFactory;
+import io.joyrpc.util.thread.NamedThreadFactory;
 import io.netty.channel.*;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;

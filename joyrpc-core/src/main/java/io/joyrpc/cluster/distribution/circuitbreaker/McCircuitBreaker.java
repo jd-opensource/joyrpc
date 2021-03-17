@@ -22,8 +22,8 @@ package io.joyrpc.cluster.distribution.circuitbreaker;
 
 import io.joyrpc.cluster.distribution.CircuitBreaker;
 import io.joyrpc.exception.OverloadException;
-import io.joyrpc.metric.TPMetric;
-import io.joyrpc.metric.TPWindow;
+import io.joyrpc.apm.metric.TPMetric;
+import io.joyrpc.apm.metric.TPWindow;
 import io.joyrpc.permission.BlackWhiteList;
 import io.joyrpc.permission.ExceptionBlackWhiteList;
 import io.joyrpc.util.MilliPeriod;

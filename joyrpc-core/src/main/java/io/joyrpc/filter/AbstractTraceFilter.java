@@ -28,8 +28,8 @@ import io.joyrpc.extension.URL;
 import io.joyrpc.invoker.option.MethodOption;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
-import io.joyrpc.trace.TraceFactory;
-import io.joyrpc.trace.Tracer;
+import io.joyrpc.apm.trace.TraceFactory;
+import io.joyrpc.apm.trace.Tracer;
 
 import java.util.HashMap;
 import java.util.Map;

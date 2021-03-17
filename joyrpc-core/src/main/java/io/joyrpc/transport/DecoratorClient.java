@@ -25,7 +25,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.ClientProtocol;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.ChannelChain;
 import io.joyrpc.transport.codec.Codec;

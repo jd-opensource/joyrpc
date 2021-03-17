@@ -24,7 +24,7 @@ import io.joyrpc.event.Publisher;
 import io.joyrpc.exception.ChannelClosedException;
 import io.joyrpc.exception.LafException;
 import io.joyrpc.exception.OverloadException;
-import io.joyrpc.thread.ThreadPool;
+import io.joyrpc.util.thread.ThreadPool;
 import io.joyrpc.transport.buffer.ChannelBuffer;
 import io.joyrpc.transport.channel.Channel;
 import io.joyrpc.transport.channel.FutureManager;

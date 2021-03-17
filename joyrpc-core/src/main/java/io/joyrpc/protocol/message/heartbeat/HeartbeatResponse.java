@@ -20,7 +20,7 @@ package io.joyrpc.protocol.message.heartbeat;
  * #L%
  */
 
-import io.joyrpc.health.HealthState;
+import io.joyrpc.apm.health.HealthState;
 import io.joyrpc.protocol.message.Response;
 
 /**

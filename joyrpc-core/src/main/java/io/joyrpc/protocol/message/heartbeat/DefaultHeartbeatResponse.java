@@ -20,9 +20,9 @@ package io.joyrpc.protocol.message.heartbeat;
  * #L%
  */
 
-import io.joyrpc.health.HealthState;
+import io.joyrpc.apm.health.HealthState;
 
-import static io.joyrpc.health.HealthState.HEALTHY;
+import static io.joyrpc.apm.health.HealthState.HEALTHY;
 
 /**
  * 默认心跳应答

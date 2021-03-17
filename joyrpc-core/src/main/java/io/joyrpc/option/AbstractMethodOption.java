@@ -50,7 +50,7 @@ public abstract class AbstractMethodOption implements MethodOption {
     /**
      * 参数类型
      */
-    protected ArgumentOption argType;
+    protected ArgumentOption argumentOption;
     /**
      * 方法级别隐式传参，合并了接口的隐藏参数，只读
      */
@@ -133,8 +133,8 @@ public abstract class AbstractMethodOption implements MethodOption {
         this.method = idlMethod == null ? null : idlMethod.getMethod();
         this.genericMethod = genericMethod;
         //采用canonicalName是为了和泛化调用保持一致，可读性和可写行更好
-        this.argType = method == null ? null : new ArgumentOption(idlMethod);
-        this.description = getDesc(argType == null ? null : argType.getClasses());
+        this.argumentOption = method == null ? null : new ArgumentOption(idlMethod);
+        this.description = getDesc(argumentOption == null ? null : argumentOption.getClasses());
         this.implicits = implicits == null ? null : Collections.unmodifiableMap(implicits);
         this.timeout = timeout;
         this.concurrency = concurrency;
@@ -160,8 +160,8 @@ public abstract class AbstractMethodOption implements MethodOption {
     }
 
     @Override
-    public ArgumentOption getArgType() {
-        return argType;
+    public ArgumentOption getArgumentOption() {
+        return argumentOption;
     }
 
     @Override

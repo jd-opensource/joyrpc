@@ -116,7 +116,7 @@ public interface MethodOption {
      *
      * @return 参数信息
      */
-    ArgumentOption getArgType();
+    ArgumentOption getArgumentOption();
 
     /**
      * 获取参数描述信息

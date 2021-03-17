@@ -204,7 +204,7 @@ public class GrpcClientHandler implements ChannelOperator {
         Http2Headers headers = buildHeaders(invocation, session, channel);
         //做grpc入参与返回值的类型转换，获取GrpcType
         MethodOption option = message.getOption();
-        IDLMethodDesc methodDesc = option.getArgType().getIDLMethodDesc();
+        IDLMethodDesc methodDesc = option.getArgumentOption().getIDLMethodDesc();
         IDLType type = methodDesc.getResponse();
         //包装payload
         Object payLoad = wrapPayload(invocation, methodDesc);

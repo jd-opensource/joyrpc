@@ -45,6 +45,7 @@ import java.util.concurrent.*;
 
 import static io.joyrpc.GenericService.GENERIC;
 import static io.joyrpc.Plugin.TRANSMIT;
+import static io.joyrpc.util.ClassUtils.getInitialValue;
 import static io.joyrpc.util.ClassUtils.isReturnFuture;
 
 /**
@@ -111,7 +112,6 @@ public class InvokerCaller implements InvocationHandler {
         }
 
         boolean isReturnFuture = isReturnFuture(interfaceClass, method);
-        boolean isAsync = this.async || isReturnFuture;
         //请求上下文
         RequestContext context = RequestContext.getContext();
         //调用之前链路是否为异步
@@ -143,24 +143,9 @@ public class InvokerCaller implements InvocationHandler {
         }
         //初始化请求，绑定方法选项
         invoker.setup(request);
-        //调用
-        Object response = isAsync ? doAsync(request) : doSync(request);
         try {
-            if (isAsync) {
-                if (isReturnFuture) {
-                    //方法返回值为 future
-                    return response;
-                } else {
-                    //手动异步
-                    context.setFuture((CompletableFuture<?>) response);
-                    MethodOption option = request.getOption();
-                    ArgumentOption type = option.getArgType();
-                    return type.getDefaultValue();
-                }
-            } else {
-                // 返回同步结果
-                return response;
-            }
+            //调用
+            return isReturnFuture ? doAsync(request) : (async ? doContextAsync(request) : doSync(request));
         } finally {
             //重置异步标识，防止影响同一context下的provider业务逻辑以及其他consumer
             context.setAsync(isAsyncBefore);
@@ -235,7 +220,7 @@ public class InvokerCaller implements InvocationHandler {
      * @return 调用结果
      * @throws Throwable
      */
-    protected Object doAsync(final RequestMessage<Invocation> request) throws Throwable {
+    protected CompletableFuture<Object> doAsync(final RequestMessage<Invocation> request) throws Throwable {
         //异步调用，业务逻辑执行完毕，不清理IO线程的上下文
         CompletableFuture<Object> response = new CompletableFuture<>();
         try {
@@ -264,5 +249,27 @@ public class InvokerCaller implements InvocationHandler {
             transmit.onReturn(request);
         }
         return response;
+    }
+
+    /**
+     * 上下文异步调用
+     *
+     * @param request 请求
+     * @return 调用结果
+     * @throws Throwable
+     */
+    protected Object doContextAsync(final RequestMessage<Invocation> request) throws Throwable {
+        RequestContext context = request.getContext();
+        //设置CompletableFuture到上下文
+        context.setFuture(doAsync(request));
+        //返回默认值
+        MethodOption option = request.getOption();
+        if (option != null) {
+            ArgumentOption argumentOption = option.getArgumentOption();
+            if (argumentOption != null) {
+                return option.getArgumentOption();
+            }
+        }
+        return getInitialValue(request.getPayLoad().getMethod().getReturnType());
     }
 }

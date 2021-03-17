@@ -27,6 +27,7 @@ import java.lang.reflect.Method;
 import java.util.function.Supplier;
 
 import static io.joyrpc.util.ClassUtils.getCanonicalNames;
+import static io.joyrpc.util.ClassUtils.getInitialValue;
 
 /**
  * 方法参数类型
@@ -54,24 +55,7 @@ public class ArgumentOption {
         this.classes = method.getParameterTypes();
         this.types = getCanonicalNames(classes);
         this.supplier = idlMethod.getSupplier();
-        Class<?> returnType = method.getReturnType();
-        if (returnType == boolean.class) {
-            defaultValue = false;
-        } else if (returnType == char.class) {
-            defaultValue = '0';
-        } else if (returnType == byte.class) {
-            defaultValue = (byte) 0;
-        } else if (returnType == short.class) {
-            defaultValue = (short) 0;
-        } else if (returnType == int.class) {
-            defaultValue = 0;
-        } else if (returnType == long.class) {
-            defaultValue = 0L;
-        } else if (returnType == float.class) {
-            defaultValue = 0.0f;
-        } else if (returnType == double.class) {
-            defaultValue = 0.0d;
-        }
+        this.defaultValue = getInitialValue(method.getReturnType());
     }
 
     public Class[] getClasses() {

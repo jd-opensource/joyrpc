@@ -604,6 +604,33 @@ public class ClassUtils {
     }
 
     /**
+     * 获取初始值
+     *
+     * @param clazz 类型
+     * @return 初始值
+     */
+    public static Object getInitialValue(final Class<?> clazz) {
+        if (clazz == boolean.class) {
+            return Boolean.FALSE;
+        } else if (clazz == char.class) {
+            return (char) 0;
+        } else if (clazz == byte.class) {
+            return (byte) 0;
+        } else if (clazz == short.class) {
+            return (short) 0;
+        } else if (clazz == int.class) {
+            return 0;
+        } else if (clazz == long.class) {
+            return 0L;
+        } else if (clazz == float.class) {
+            return 0.0f;
+        } else if (clazz == double.class) {
+            return 0.0d;
+        }
+        return null;
+    }
+
+    /**
      * 获取值
      *
      * @param clazz  类
@@ -647,7 +674,8 @@ public class ClassUtils {
      * @return
      * @throws ReflectionException
      */
-    public static boolean setValue(final Class<?> clazz, final String name, final Object target, final Object value) throws ReflectionException {
+    public static boolean setValue(final Class<?> clazz, final String name,
+                                   final Object target, final Object value) throws ReflectionException {
         if (clazz == null || name == null) {
             return false;
         }
@@ -715,7 +743,8 @@ public class ClassUtils {
      * @param value  属性值
      * @throws ReflectionException 反射异常
      */
-    public static boolean setValue(final Class<?> clazz, final Field field, final Object target, final Object value) throws ReflectionException {
+    public static boolean setValue(final Class<?> clazz, final Field field,
+                                   final Object target, final Object value) throws ReflectionException {
         if (clazz == null || field == null) {
             return false;
         }

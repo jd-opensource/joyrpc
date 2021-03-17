@@ -410,7 +410,7 @@ public class Refer extends AbstractService {
             request.setCreateTime(SystemClock.now());
         }
         //用缓存的信息设置参数类型，加快性能
-        ArgumentOption argType = option.getArgType();
+        ArgumentOption argType = option.getArgumentOption();
         //已经设置了class和method对象
         Invocation invocation = request.getPayLoad();
         invocation.setAlias(alias);

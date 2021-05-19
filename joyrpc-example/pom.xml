@@ -18,6 +18,7 @@
         <module>joyrpc-example-interface</module>
         <module>joyrpc-example-boot</module>
         <module>joyrpc-example-dubbo</module>
+        <module>joyrpc-example-grpc</module>
     </modules>
 
     <build>

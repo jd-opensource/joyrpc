@@ -109,7 +109,7 @@
         <cache2k.version>1.2.4.Final</cache2k.version>
         <dubbo.version>2.7.6</dubbo.version>
         <protostuff.version>1.6.2</protostuff.version>
-        <nacos.version>1.4.1</nacos.version>
+        <nacos.version>2.0.1</nacos.version>
         <skywalking.version>8.3.0</skywalking.version>
         <jaeger.version>1.2.0</jaeger.version>
         <hmily.version>2.1.1</hmily.version>

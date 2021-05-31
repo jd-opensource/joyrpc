@@ -6,6 +6,12 @@
 
 - 修复对返回值为基本类型方法通过上下文设置异步后报错问题，根据基本类型返回其初始值。
 
+### Enhancement
+
+- Dependency
+
+  - 升级nacos-client为2.0.0版本
+
 ## 1.4.7-RELEASE(2021-03-09)
 
 ### Enhancement

@@ -20,6 +20,8 @@
 
   - 升级seata为1.4.2版本
 
+  - 升级jetcd为0.5.7版本
+
 ## 1.4.7-RELEASE(2021-03-09)
 
 ### Enhancement

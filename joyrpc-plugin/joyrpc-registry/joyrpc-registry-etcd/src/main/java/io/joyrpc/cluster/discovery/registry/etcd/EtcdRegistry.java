@@ -190,7 +190,7 @@ public class EtcdRegistry extends AbstractRegistry {
         @Override
         protected CompletableFuture<Void> doConnect() {
             CompletableFuture<Void> future = new CompletableFuture<>();
-            client = Client.builder().lazyInitialization(false).endpoints(registry.address).authority(registry.authority).build();
+            client = Client.builder().endpoints(registry.address).authority(registry.authority).build();
             //生成统一续约id，并启动续约task
             CompletableFuture<LeaseGrantResponse> grant = client.getLeaseClient().grant(registry.timeToLive / 1000);
             grant.whenComplete((res, err) -> {

@@ -12,7 +12,7 @@
     <artifactId>joyrpc-registry-etcd</artifactId>
     <packaging>jar</packaging>
     <properties>
-        <jetcd-core.version>0.3.0</jetcd-core.version>
+        <jetcd-core.version>0.5.7</jetcd-core.version>
     </properties>
 
     <dependencies>

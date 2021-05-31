@@ -85,7 +85,7 @@
         <jmh.version>1.26</jmh.version>
         <guava.version>29.0-jre</guava.version>
         <jackson.version>2.11.0</jackson.version>
-        <fastjson.version>1.2.75</fastjson.version>
+        <fastjson.version>1.2.76</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
         <commons-compress.version>1.20</commons-compress.version>
         <byte-buddy.version>1.10.20</byte-buddy.version>
@@ -105,10 +105,10 @@
         <license.path>license_config</license.path>
         <checker-qual.version>2.8.1</checker-qual.version>
         <objenesis.version>2.6</objenesis.version>
-        <caffeine.version>2.8.5</caffeine.version>
+        <caffeine.version>2.9.1</caffeine.version>
         <cache2k.version>1.2.4.Final</cache2k.version>
         <dubbo.version>2.7.6</dubbo.version>
-        <protostuff.version>1.6.2</protostuff.version>
+        <protostuff.version>1.7.4</protostuff.version>
         <nacos.version>2.0.1</nacos.version>
         <skywalking.version>8.3.0</skywalking.version>
         <jaeger.version>1.2.0</jaeger.version>

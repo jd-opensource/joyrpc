@@ -10,7 +10,13 @@
 
 - Dependency
 
-  - 升级nacos-client为2.0.0版本
+  - 升级nacos-client为2.0.1版本
+
+  - 升级protostuff为1.7.4版本
+
+  - 升级fastjson为1.2.76版本
+    
+  - 升级caffeine为2.9.1版本
 
 ## 1.4.7-RELEASE(2021-03-09)
 

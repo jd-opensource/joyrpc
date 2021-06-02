@@ -22,6 +22,8 @@
 
   - 升级jetcd为0.5.7版本
 
+  - 升级guava为30.0-jre版本
+
 ## 1.4.7-RELEASE(2021-03-09)
 
 ### Enhancement

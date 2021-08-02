@@ -87,7 +87,7 @@
         <jackson.version>2.11.0</jackson.version>
         <fastjson.version>1.2.76</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
-        <commons-compress.version>1.20</commons-compress.version>
+        <commons-compress.version>1.21</commons-compress.version>
         <byte-buddy.version>1.10.20</byte-buddy.version>
         <grpc.version>1.20.0</grpc.version>
         <netty.version>4.1.53.Final</netty.version>

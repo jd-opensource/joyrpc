@@ -72,7 +72,7 @@
         <!-- Build args -->
         <argline>-Xms512m -Xmx512m</argline>
         <!-- Common libs -->
-        <spring.version>5.2.9.RELEASE</spring.version>
+        <spring.version>5.3.20</spring.version>
         <spring-boot.version>2.2.10.RELEASE</spring-boot.version>
         <junit.version>5.7.0</junit.version>
         <junit-platform-runner.version>1.7.0</junit-platform-runner.version>
@@ -84,19 +84,19 @@
         <javax.el.version>3.0.1-b11</javax.el.version>
         <jmh.version>1.26</jmh.version>
         <guava.version>30.0-jre</guava.version>
-        <jackson.version>2.11.0</jackson.version>
-        <fastjson.version>1.2.76</fastjson.version>
+        <jackson.version>2.12.7.1</jackson.version>
+        <fastjson.version>1.2.83</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
         <commons-compress.version>1.21</commons-compress.version>
         <byte-buddy.version>1.10.20</byte-buddy.version>
         <grpc.version>1.20.0</grpc.version>
         <netty.version>4.1.53.Final</netty.version>
-        <hazelcast.version>4.1.1</hazelcast.version>
+        <hazelcast.version>5.1</hazelcast.version>
         <curator.version>4.3.0</curator.version>
         <zookeeper.version>3.5.7</zookeeper.version>
         <vertx-consul-client>3.9.5</vertx-consul-client>
-        <protobuf.version>3.7.1</protobuf.version>
-        <resteasy.version>3.0.21.Final</resteasy.version>
+        <protobuf.version>3.16.3</protobuf.version>
+        <resteasy.version>3.0.20.Final</resteasy.version>
         <commons-jexl3.version>3.1</commons-jexl3.version>
         <seata.version>1.4.2</seata.version>
 
@@ -107,7 +107,7 @@
         <objenesis.version>2.6</objenesis.version>
         <caffeine.version>2.9.1</caffeine.version>
         <cache2k.version>1.2.4.Final</cache2k.version>
-        <dubbo.version>2.7.13</dubbo.version>
+        <dubbo.version>2.7.18</dubbo.version>
         <protostuff.version>1.7.4</protostuff.version>
         <nacos.version>2.0.1</nacos.version>
         <skywalking.version>8.3.0</skywalking.version>

@@ -72,7 +72,7 @@
         <!-- Build args -->
         <argline>-Xms512m -Xmx512m</argline>
         <!-- Common libs -->
-        <spring.version>5.3.18</spring.version>
+        <spring.version>5.3.20</spring.version>
         <spring-boot.version>2.2.10.RELEASE</spring-boot.version>
         <junit.version>5.7.0</junit.version>
         <junit-platform-runner.version>1.7.0</junit-platform-runner.version>

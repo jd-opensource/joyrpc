@@ -551,6 +551,9 @@ public abstract class AbstractRegistry implements Registry, Configure {
         }
     }
 
+    /**
+     * 注册控制器接口
+     */
     protected interface RegistryPilot extends StateController<Void> {
 
         /**
@@ -599,7 +602,7 @@ public abstract class AbstractRegistry implements Registry, Configure {
     }
 
     /**
-     * 控制器
+     * 注册控制器基础类
      */
     protected static class RegistryController<R extends AbstractRegistry> implements RegistryPilot {
         /**

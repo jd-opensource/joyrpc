@@ -110,7 +110,7 @@ public class SpringLoader implements ExtensionLoader, PriorityOrdered, Applicati
         }
         if (clazz != null && !isEmpty(definition.getFactoryMethodName())) {
             //找到方法
-            Method[] methods = clazz.getMethods();
+            Method[] methods = clazz.getDeclaredMethods();
             for (Method method : methods) {
                 if (method.getName().equals(definition.getFactoryMethodName())) {
                     //获取方法的返回类型

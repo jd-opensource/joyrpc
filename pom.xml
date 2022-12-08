@@ -84,7 +84,7 @@
         <javax.el.version>3.0.1-b11</javax.el.version>
         <jmh.version>1.26</jmh.version>
         <guava.version>30.0-jre</guava.version>
-        <jackson.version>2.12.7.1</jackson.version>
+        <jackson.version>2.12.7</jackson.version>
         <fastjson.version>1.2.83</fastjson.version>
         <javassist.version>3.27.0-GA</javassist.version>
         <commons-compress.version>1.21</commons-compress.version>

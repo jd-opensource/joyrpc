@@ -21,9 +21,9 @@ package io.joyrpc.config.validator;
  */
 
 import io.joyrpc.context.RequestContext;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
 import java.util.Map;
 
 import static io.joyrpc.constants.Constants.INTERNAL_KEY_PREFIX;

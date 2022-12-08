@@ -28,24 +28,14 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashMap;
-import java.util.Map;
 
 public class LocalDateTimeSchema extends AbstractJava8Schema<LocalDateTime> {
 
     public static final LocalDateTimeSchema INSTANCE = new LocalDateTimeSchema();
     public static final String DATE = "date";
     public static final String TIME = "time";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(2);
-
     protected static Field FIELD_DATE = getWriteableField(LocalDateTime.class, DATE);
     protected static Field FIELD_TIME = getWriteableField(LocalDateTime.class, TIME);
-
-    static {
-        FIELD_MAP.put(DATE, 1);
-        FIELD_MAP.put(TIME, 2);
-    }
 
     public LocalDateTimeSchema() {
         super(LocalDateTime.class);
@@ -53,19 +43,20 @@ public class LocalDateTimeSchema extends AbstractJava8Schema<LocalDateTime> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return DATE;
-            case 2:
-                return TIME;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> DATE;
+            case 2 -> TIME;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case DATE -> 1;
+            case TIME -> 2;
+            default -> 0;
+        };
     }
 
     @Override

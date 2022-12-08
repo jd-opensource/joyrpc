@@ -23,10 +23,9 @@ package io.joyrpc.config.validator;
 import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ProviderConfig;
 import io.joyrpc.util.Pair;
-
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
-import javax.validation.ValidationException;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
+import jakarta.validation.ValidationException;
 
 import static io.joyrpc.Plugin.INTERFACE_VALIDATOR;
 import static io.joyrpc.constants.Constants.ENABLE_VALIDATOR_OPTION;

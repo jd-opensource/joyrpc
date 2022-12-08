@@ -85,6 +85,8 @@ public interface Serialization extends CodecType {
 
     int ORDER_FASTJSON = ORDER_DSLJSON + 10;
 
+    int ORDER_FASTJSON2 = ORDER_FASTJSON - 1;
+
     int ORDER_JACKSON = ORDER_FASTJSON + 10;
 
     int ORDER_JAVA = ORDER_JACKSON + 10;

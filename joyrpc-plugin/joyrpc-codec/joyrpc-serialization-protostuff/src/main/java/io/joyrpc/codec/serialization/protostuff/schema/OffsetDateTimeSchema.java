@@ -36,16 +36,8 @@ public class OffsetDateTimeSchema extends AbstractJava8Schema<OffsetDateTime> {
     public static final OffsetDateTimeSchema INSTANCE = new OffsetDateTimeSchema();
     public static final String DATE_TIME = "dateTime";
     public static final String OFFSET = "offset";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(2);
-
     protected static Field FIELD_DATE_TIME = getWriteableField(OffsetDateTime.class, DATE_TIME);
     protected static Field FIELD_ZONE_OFFSET = getWriteableField(OffsetDateTime.class, OFFSET);
-
-    static {
-        FIELD_MAP.put(DATE_TIME, 1);
-        FIELD_MAP.put(OFFSET, 2);
-    }
 
     public OffsetDateTimeSchema() {
         super(OffsetDateTime.class);
@@ -53,19 +45,20 @@ public class OffsetDateTimeSchema extends AbstractJava8Schema<OffsetDateTime> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return DATE_TIME;
-            case 2:
-                return OFFSET;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> DATE_TIME;
+            case 2 -> OFFSET;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case DATE_TIME -> 1;
+            case OFFSET -> 2;
+            default -> 0;
+        };
     }
 
     @Override

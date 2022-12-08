@@ -73,7 +73,7 @@ public class RestEasyDispatcher extends SimpleChannelInboundHandler {
                 RequestContext context = RequestContext.getContext();
                 context.setRemoteAddress(getRemoteAddress(request.getHttpHeaders(), ctx.channel()));
                 context.setLocalAddress((InetSocketAddress) ctx.channel().localAddress());
-                dispatcher.service(request, response, true);
+                dispatcher.service(ctx, request, response, true);
             } catch (Failure e) {
                 response.reset();
                 response.setStatus(e.getErrorCode());

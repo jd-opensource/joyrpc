@@ -32,8 +32,8 @@ import io.joyrpc.proxy.MethodCaller;
 import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.IDLMethod;
+import jakarta.validation.Validator;
 
-import javax.validation.Validator;
 import java.util.Map;
 import java.util.function.Supplier;
 

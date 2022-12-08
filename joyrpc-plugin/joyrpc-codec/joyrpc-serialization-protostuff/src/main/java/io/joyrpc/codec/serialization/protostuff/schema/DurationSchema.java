@@ -40,31 +40,26 @@ public class DurationSchema extends AbstractJava8Schema<Duration> {
     protected static Field FIELD_SECONDS = getWriteableField(Duration.class, SECONDS);
     protected static Field FIELD_NANOS = getWriteableField(Duration.class, NANOS);
 
-    static {
-        FIELD_MAP.put(SECONDS, 1);
-        FIELD_MAP.put(NANOS, 2);
-    }
-
-
     public DurationSchema() {
         super(Duration.class);
     }
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return SECONDS;
-            case 2:
-                return NANOS;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> SECONDS;
+            case 2 -> NANOS;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case SECONDS -> 1;
+            case NANOS -> 2;
+            default -> 0;
+        };
     }
 
     @Override

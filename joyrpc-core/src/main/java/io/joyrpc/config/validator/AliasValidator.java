@@ -24,9 +24,9 @@ import io.joyrpc.config.AbstractInterfaceConfig;
 import io.joyrpc.config.ConsumerGroupConfig;
 import io.joyrpc.constants.Constants;
 import io.joyrpc.util.StringUtils;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
 import java.util.regex.Pattern;
 
 import static io.joyrpc.constants.Constants.ALIAS_EMPTY_OPTION;

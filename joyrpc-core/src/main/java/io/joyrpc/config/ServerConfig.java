@@ -23,13 +23,13 @@ package io.joyrpc.config;
 
 import io.joyrpc.config.validator.ValidatePlugin;
 import io.joyrpc.constants.Constants;
-import io.joyrpc.util.thread.ThreadPoolFactory;
 import io.joyrpc.transport.EndpointFactory;
 import io.joyrpc.transport.TransportFactory;
 import io.joyrpc.util.network.Ipv4;
+import io.joyrpc.util.thread.ThreadPoolFactory;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;

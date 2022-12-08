@@ -26,8 +26,6 @@ import io.protostuff.Output;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.Period;
-import java.util.HashMap;
-import java.util.Map;
 
 public class PeriodSchema extends AbstractJava8Schema<Period> {
 
@@ -35,19 +33,9 @@ public class PeriodSchema extends AbstractJava8Schema<Period> {
     public static final String YEARS = "years";
     public static final String MONTHS = "months";
     public static final String DAYS = "days";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(3);
-
     protected static Field FIELD_YEARS = getWriteableField(Period.class, YEARS);
     protected static Field FIELD_MONTHS = getWriteableField(Period.class, MONTHS);
     protected static Field FIELD_DAYS = getWriteableField(Period.class, DAYS);
-
-    static {
-        FIELD_MAP.put(YEARS, 1);
-        FIELD_MAP.put(MONTHS, 2);
-        FIELD_MAP.put(DAYS, 3);
-    }
-
 
     public PeriodSchema() {
         super(Period.class);
@@ -55,21 +43,22 @@ public class PeriodSchema extends AbstractJava8Schema<Period> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return YEARS;
-            case 2:
-                return MONTHS;
-            case 3:
-                return DAYS;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> YEARS;
+            case 2 -> MONTHS;
+            case 3 -> DAYS;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case YEARS -> 1;
+            case MONTHS -> 2;
+            case DAYS -> 3;
+            default -> 0;
+        };
     }
 
     @Override

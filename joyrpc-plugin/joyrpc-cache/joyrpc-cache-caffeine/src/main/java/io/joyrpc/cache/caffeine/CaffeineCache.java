@@ -52,7 +52,11 @@ public class CaffeineCache<K, V> extends AbstractCache<K, V> {
 
     @Override
     protected CompletableFuture<Void> doPut(final K key, final V value) {
-        cache.put(key, new CacheObject<>(value));
+        if (value != null) {
+            cache.put(key, new CacheObject<>(value));
+        } else if (config.isNullable()) {
+            cache.put(key, CacheObject.NIL);
+        }
         return CompletableFuture.completedFuture(null);
     }
 

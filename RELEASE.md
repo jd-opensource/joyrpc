@@ -13,18 +13,33 @@
 - Dependency
 
   - 升级nacos-client为2.0.1版本
-
-  - 升级protostuff为1.7.4版本
-
-  - 升级fastjson为1.2.76版本
-    
-  - 升级caffeine为2.9.1版本
-
+  - 升级dubbo到2.7.18版本
+  - 升级protostuff为1.8.0版本
+  - 升级jackson为2.14.1版本
+  - 升级fastjson为1.2.83版本
+  - 升级caffeine为2.9.3版本
   - 升级seata为1.4.2版本
-
-  - 升级jetcd为0.5.7版本
-
-  - 升级guava为30.0-jre版本
+  - 升级jetcd为0.7.3版本
+  - 升级guava为31.1-jre版本
+  - 升级byte-buddy到1.12.19版本 
+  - 升级netty到4.1.85.Final版本
+  - 升级spring到5.3.24版本
+  - 升级spring-boot到2.7.6版本
+  - 升级hibernate-validator到8.0.0.Final版本
+  - 升级jmh到1.36版本
+  - 升级javassist到3.29.2-GA版本
+  - 升级commons-compress到1.22版本
+  - 升级curator到5.4.0版本
+  - 升级zookeeper到3.8.0版本
+  - 升级vertx-consul-client到4.3.5版本
+  - 升级到log4j2到2.19.0版本
+  - 升级cache2k到2.6.1.Final版本
+  - 升级resteasy到3.15.3.Final版本
+  - 升级commons-jexl3.version到3.2.1版本
+  - 升级hazelcast.version到5.2.1版本
+  - 升级kryo到5.3.0版本
+  - 升级fst到2.57版本
+  - 升级xz到1.9版本
 
 ## 1.4.7-RELEASE(2021-03-09)
 

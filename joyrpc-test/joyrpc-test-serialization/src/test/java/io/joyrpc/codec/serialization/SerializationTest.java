@@ -45,16 +45,12 @@ import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.Date;
-import java.sql.Time;
-import java.sql.Timestamp;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.function.BiConsumer;
 
 import static io.joyrpc.Plugin.*;
 
@@ -65,29 +61,32 @@ public class SerializationTest {
         SerializerWhiteList.getGlobalWhitelist().setEnabled(false);
     }
 
-    protected void serializeAndDeserialize(final Serialization serialization, final Object target,
-                                           final UnsafeByteArrayOutputStream baos,
-                                           final BiConsumer<Object, Object> consumer) {
+    protected <T> void serializeAndDeserialize(final Serialization serialization,
+                                               final T target,
+                                               final UnsafeByteArrayOutputStream baos,
+                                               final SerialConsumer<T> consumer) {
         Serializer serializer = serialization.getSerializer();
         serializer.serialize(baos, target);
         UnsafeByteArrayInputStream bais = new UnsafeByteArrayInputStream(baos.toByteArray());
-        Object data = serializer.deserialize(bais, target.getClass());
+        T data = serializer.deserialize(bais, target.getClass());
         if (consumer == null) {
             Assertions.assertEquals(data, target, serialization.getContentType());
         } else {
-            consumer.accept(data, target);
+            consumer.accept(data, target, serialization);
         }
     }
 
-    protected void serializeAndDeserialize(final Serialization serialization, final Object target, final UnsafeByteArrayOutputStream baos) {
+    protected <T> void serializeAndDeserialize(final Serialization serialization,
+                                               final T target,
+                                               final UnsafeByteArrayOutputStream baos) {
         serializeAndDeserialize(serialization, target, baos, null);
     }
 
-    protected void serializeAndDeserialize(final Object target) {
+    protected <T> void serializeAndDeserialize(final T target) {
         serializeAndDeserialize(target, null);
     }
 
-    protected void serializeAndDeserialize(final Object target, final BiConsumer<Object, Object> consumer) {
+    protected <T> void serializeAndDeserialize(final T target, final SerialConsumer<T> consumer) {
         List<String> types = SERIALIZATION.names();
         types.remove("xml");
 
@@ -100,7 +99,7 @@ public class SerializationTest {
         }
     }
 
-    protected void serializeAndDeserialize(final String type, final Object target) {
+    protected <T> void serializeAndDeserialize(final String type, final T target) {
         UnsafeByteArrayOutputStream baos = new UnsafeByteArrayOutputStream(1024);
         Serialization serialization = SERIALIZATION.get(type);
         serializeAndDeserialize(serialization, target, baos);
@@ -136,6 +135,9 @@ public class SerializationTest {
         datum.setClusters(clusters);
         datum.setConfigs(configs);
 
+        java.util.Date date=new java.util.Date();
+        System.out.println(JSON.get("json@jackson").toJSONString(date));
+        System.out.println(JSON.get("json@fastjson2").toJSONString(date));
         serializeAndDeserialize(datum);
     }
 
@@ -160,7 +162,7 @@ public class SerializationTest {
                 Period.of(0, 1, 1), YearMonth.of(0, 1), Year.of(2000),
                 ZonedDateTime.of(LocalDateTime.now(zoneId), zoneId), zoneId, ZoneOffset.ofTotalSeconds(0)
         };
-        Json fastJson = JSON.get("json@fastjson");
+        Json fastJson = JSON.get("json@fastjson2");
         Json jackson = JSON.get("json@jackson");
         for (Object time : times) {
             String value1 = fastJson.toJSONString(time);
@@ -176,22 +178,30 @@ public class SerializationTest {
     @Test
     public void testJsonThrowable() {
 
-        Json fastJson = JSON.get("json@fastjson");
+        //Json fastJson1 = JSON.get("json@fastjson2");
+        Json fastJson2 = JSON.get("json@fastjson2");
         Json jackson = JSON.get("json@jackson");
         try {
             Integer.parseInt("String");
         } catch (NumberFormatException e) {
             RuntimeException runtimeException = new RuntimeException(e);
             String serializedException = jackson.toJSONString(runtimeException);
-            System.out.println(serializedException);
-            Throwable throwable = fastJson.parseObject(serializedException, Throwable.class);
-            throwable.printStackTrace();
+            //Throwable throwable1 = fastJson1.parseObject(serializedException, Throwable.class);
+            //serializedException = fastJson1.toJSONString(throwable1);
+            Throwable throwable2 = fastJson2.parseObject(serializedException, Throwable.class);
+            System.out.printf(fastJson2.toJSONString(runtimeException));
+            //Assertions.assertEquals(runtimeException.getMessage(), throwable1.getMessage());
+            //Assertions.assertEquals(runtimeException.getClass(), throwable1.getClass());
+            //Assertions.assertEquals(runtimeException.getCause().getClass(), throwable1.getCause().getClass());
+            Assertions.assertEquals(runtimeException.getMessage(), throwable2.getMessage());
+            Assertions.assertEquals(runtimeException.getClass(), throwable2.getClass());
+            Assertions.assertEquals(runtimeException.getCause().getClass(), throwable2.getCause().getClass());
         }
     }
 
     @Test
     public void testJsonResponsePayload() {
-        Json fastJson = JSON.get("json@fastjson");
+        Json fastJson = JSON.get("json@fastjson2");
         Json jackson = JSON.get("json@jackson");
         ResponsePayload payload = new ResponsePayload();
         payload.setException(new NumberFormatException());
@@ -209,7 +219,7 @@ public class SerializationTest {
 
     @Test
     public void testInvocation() {
-        Json fastJson = JSON.get("json@fastjson");
+        Json fastJson = JSON.get("json@fastjson2");
         Json jackson = JSON.get("json@jackson");
         Invocation invocation = new Invocation();
         invocation.setClassName(HelloGrpc.class.getName());
@@ -225,7 +235,11 @@ public class SerializationTest {
 
     @Test
     public void testLocale() {
-        serializeAndDeserialize(new Locale("zh", "CN", ""));
+        serializeAndDeserialize(new Locale("zh", "CN", ""), (src, target, serial) -> {
+            Assertions.assertEquals(src.getLanguage(), target.getLanguage(), serial.getContentType());
+            Assertions.assertEquals(src.getCountry(), target.getCountry(), serial.getContentType());
+            Assertions.assertEquals(src.getVariant(), target.getVariant(), serial.getContentType());
+        });
     }
 
     @Test
@@ -242,7 +256,7 @@ public class SerializationTest {
     public void testTransient() {
         TransientObj t1 = new TransientObj(1, 1);
         TransientObj t2 = new TransientObj(1, 0);
-        serializeAndDeserialize(t1, (o1, o2) -> Assertions.assertEquals(o1, t2));
+        serializeAndDeserialize(t1, (src, target, serial) -> Assertions.assertEquals(src, t2, serial.getContentType()));
     }
 
     @Test
@@ -257,7 +271,7 @@ public class SerializationTest {
 
     @Test
     public void testLinkedHashMap() {
-        MapObj obj = new MapObj();
+        LinkedCollectionObj obj = new LinkedCollectionObj();
         LinkedHashSet<String> set = new LinkedHashSet<>();
         set.add("1");
         set.add("2");
@@ -374,119 +388,10 @@ public class SerializationTest {
         }
     }
 
-    protected static class SerializationSQlDate implements Serializable {
+    @FunctionalInterface
+    protected interface SerialConsumer<T> {
+        void accept(T src, T target, Serialization serialization);
 
-        protected java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
-        protected java.sql.Timestamp timestamp = new Timestamp(System.currentTimeMillis());
-        //Jackson用时间字符串序列化，会丢失日期，所以要统一时间单位，去掉日期
-        protected java.sql.Time time = new java.sql.Time(System.currentTimeMillis() % (24 * 3600 * 1000) / 1000 * 1000);
-
-        public Date getDate() {
-            return date;
-        }
-
-        public void setDate(Date date) {
-            this.date = date;
-        }
-
-        public Timestamp getTimestamp() {
-            return timestamp;
-        }
-
-        public void setTimestamp(Timestamp timestamp) {
-            this.timestamp = timestamp;
-        }
-
-        public Time getTime() {
-            return time;
-        }
-
-        public void setTime(Time time) {
-            this.time = time;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            SerializationSQlDate that = (SerializationSQlDate) o;
-
-            if (date != null ? !date.equals(that.date) : that.date != null) {
-                return false;
-            }
-            if (timestamp != null ? !timestamp.equals(that.timestamp) : that.timestamp != null) {
-                return false;
-            }
-            boolean result = time != null ? time.equals(that.time) : that.time == null;
-            return result;
-
-        }
-
-        @Override
-        public int hashCode() {
-            int result = date != null ? date.hashCode() : 0;
-            result = 31 * result + (timestamp != null ? timestamp.hashCode() : 0);
-            result = 31 * result + (time != null ? time.hashCode() : 0);
-            return result;
-        }
-    }
-
-    protected static class SerializationTime {
-        long encodeTime;
-        long decodeTime;
-        long size;
-    }
-
-    protected static class MapObj {
-
-        private LinkedHashMap<String, String> map;
-
-        private LinkedHashSet<String> set;
-
-        public LinkedHashMap<String, String> getMap() {
-            return map;
-        }
-
-        public void setMap(LinkedHashMap<String, String> map) {
-            this.map = map;
-        }
-
-        public LinkedHashSet<String> getSet() {
-            return set;
-        }
-
-        public void setSet(LinkedHashSet<String> set) {
-            this.set = set;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            MapObj mapObj = (MapObj) o;
-
-            if (map != null ? !map.equals(mapObj.map) : mapObj.map != null) {
-                return false;
-            }
-            return set != null ? set.equals(mapObj.set) : mapObj.set == null;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = map != null ? map.hashCode() : 0;
-            result = 31 * result + (set != null ? set.hashCode() : 0);
-            return result;
-        }
     }
 
 }

@@ -67,8 +67,11 @@ public class ProtostuffSerialization implements Serialization {
 
         protected static final ProtostuffSerializer INSTANCE = new ProtostuffSerializer();
 
-        protected static final DefaultIdStrategy STRATEGY = new DefaultIdStrategy(IdStrategy.DEFAULT_FLAGS |
-                IdStrategy.ALLOW_NULL_ARRAY_ELEMENT);
+        protected static final DefaultIdStrategy STRATEGY = new DefaultIdStrategy(IdStrategy.DEFAULT_FLAGS
+                | IdStrategy.PRESERVE_NULL_ELEMENTS
+                | IdStrategy.MORPH_COLLECTION_INTERFACES
+                | IdStrategy.MORPH_MAP_INTERFACES
+                | IdStrategy.MORPH_NON_FINAL_POJOS);
 
         static {
             STRATEGY.registerPojo(Duration.class, DurationSchema.INSTANCE);

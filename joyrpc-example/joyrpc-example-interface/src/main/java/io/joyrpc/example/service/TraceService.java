@@ -20,7 +20,7 @@ package io.joyrpc.example.service;
  * #L%
  */
 
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Trace service

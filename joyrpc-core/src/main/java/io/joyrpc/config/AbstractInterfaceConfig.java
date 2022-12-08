@@ -39,10 +39,10 @@ import io.joyrpc.proxy.ProxyFactory;
 import io.joyrpc.util.Shutdown;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.Valid;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;

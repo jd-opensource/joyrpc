@@ -21,9 +21,9 @@ package io.joyrpc.config.validator;
  */
 
 import io.joyrpc.extension.ExtensionPoint;
+import jakarta.validation.ConstraintValidator;
+import jakarta.validation.ConstraintValidatorContext;
 
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
 import java.lang.reflect.Field;
 
 import static io.joyrpc.util.StringUtils.isEmpty;

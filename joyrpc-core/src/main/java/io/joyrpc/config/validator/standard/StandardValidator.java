@@ -26,10 +26,10 @@ import io.joyrpc.util.GenericChecker;
 import io.joyrpc.util.GenericChecker.ClassInfo;
 import io.joyrpc.util.GenericChecker.Scope;
 import io.joyrpc.util.Resource.Definition;
+import jakarta.validation.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.ValidationException;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;

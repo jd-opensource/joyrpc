@@ -26,25 +26,14 @@ import io.protostuff.Output;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.MonthDay;
-import java.util.HashMap;
-import java.util.Map;
 
 public class MonthDaySchema extends AbstractJava8Schema<MonthDay> {
 
     public static final MonthDaySchema INSTANCE = new MonthDaySchema();
     public static final String MONTH = "month";
     public static final String DAY = "day";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(2);
-
     protected static Field FIELD_MONTH = getWriteableField(MonthDay.class, MONTH);
     protected static Field FIELD_DAY = getWriteableField(MonthDay.class, DAY);
-
-    static {
-        FIELD_MAP.put(MONTH, 1);
-        FIELD_MAP.put(DAY, 2);
-    }
-
 
     public MonthDaySchema() {
         super(MonthDay.class);
@@ -52,19 +41,20 @@ public class MonthDaySchema extends AbstractJava8Schema<MonthDay> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return MONTH;
-            case 2:
-                return DAY;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> MONTH;
+            case 2 -> DAY;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case MONTH -> 1;
+            case DAY -> 2;
+            default -> 0;
+        };
     }
 
     @Override

@@ -61,8 +61,11 @@ public class DubboProtostuffSerialization extends ProtostuffSerialization {
 
         protected static final DubboProtostuffSerializer INSTANCE = new DubboProtostuffSerializer();
 
-        protected static final DefaultIdStrategy STRATEGY = new DefaultIdStrategy(IdStrategy.DEFAULT_FLAGS |
-                IdStrategy.ALLOW_NULL_ARRAY_ELEMENT);
+        protected static final DefaultIdStrategy STRATEGY = new DefaultIdStrategy(IdStrategy.DEFAULT_FLAGS
+                | IdStrategy.PRESERVE_NULL_ELEMENTS
+                | IdStrategy.MORPH_COLLECTION_INTERFACES
+                | IdStrategy.MORPH_MAP_INTERFACES
+                | IdStrategy.MORPH_NON_FINAL_POJOS);
 
         static {
             STRATEGY.registerDelegate(new TimeDelegate());

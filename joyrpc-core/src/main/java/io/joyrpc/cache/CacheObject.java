@@ -28,6 +28,8 @@ import java.io.Serializable;
  * @param <V>
  */
 public class CacheObject<V> implements Serializable {
+
+    public static final CacheObject NIL = new CacheObject(null);
     /**
      * 结果值
      */

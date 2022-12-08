@@ -39,11 +39,11 @@ import io.joyrpc.transaction.TransactionFactory;
 import io.joyrpc.util.GenericClass;
 import io.joyrpc.util.IDLMethod;
 import io.joyrpc.util.MethodOption.NameKeyOption;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.metadata.BeanDescriptor;
+import jakarta.validation.metadata.MethodDescriptor;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
-import javax.validation.metadata.BeanDescriptor;
-import javax.validation.metadata.MethodDescriptor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Map;

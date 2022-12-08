@@ -27,7 +27,7 @@ import io.joyrpc.cache.CacheObject;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * GuavaCache
+ * Cache2kCache
  *
  * @param <K>
  * @param <V>
@@ -51,7 +51,11 @@ public class Cache2kCache<K, V> extends AbstractCache<K, V> {
 
     @Override
     protected CompletableFuture<Void> doPut(final K key, final V value) {
-        cache.put(key, new CacheObject<>(value));
+        if (value != null) {
+            cache.put(key, new CacheObject<>(value));
+        } else if (config.isNullable()) {
+            cache.put(key, CacheObject.NIL);
+        }
         return CompletableFuture.completedFuture(null);
     }
 

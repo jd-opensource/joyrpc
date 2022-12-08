@@ -15,8 +15,8 @@ import io.joyrpc.protocol.message.RequestMessage;
 import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericMethod;
 import io.joyrpc.util.IDLMethod;
+import jakarta.validation.Validator;
 
-import javax.validation.Validator;
 import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;

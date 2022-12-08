@@ -27,6 +27,7 @@ import io.joyrpc.cache.CacheObject;
 import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import org.cache2k.Cache2kBuilder;
+import org.cache2k.config.Cache2kConfig;
 
 import java.util.concurrent.TimeUnit;
 
@@ -40,14 +41,11 @@ import static io.joyrpc.cache.CacheFactory.CACHE2K_ORDER;
 public class Cache2kCacheFactory implements CacheFactory {
     @Override
     public <K, V> Cache<K, V> build(final String name, final CacheConfig<K, V> config) {
-        Cache2kBuilder<K, CacheObject<V>> builder = Cache2kBuilder.forUnknownTypes();
-        if (config.getKeyClass() != null) {
-            builder.keyType(config.getKeyClass());
-        }
-        builder.valueType(CacheObject.class);
-        builder.permitNullValues(config.isNullable());
-        builder.entryCapacity(config.getCapacity() > 0 ? config.getCapacity() : Long.MAX_VALUE);
-
+        Cache2kBuilder<K, CacheObject<V>> builder = Cache2kBuilder.of(new Cache2kConfig<>());
+        builder.keyType(config.getKeyClass())
+                .valueType(CacheObject.class)
+                .permitNullValues(config.isNullable())
+                .entryCapacity(config.getCapacity() > 0 ? config.getCapacity() : Long.MAX_VALUE);
         if (config.getExpireAfterWrite() > 0) {
             builder.expireAfterWrite(config.getExpireAfterWrite(), TimeUnit.MILLISECONDS);
         } else {

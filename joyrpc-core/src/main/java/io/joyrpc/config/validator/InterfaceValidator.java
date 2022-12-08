@@ -21,8 +21,8 @@ package io.joyrpc.config.validator;
  */
 
 import io.joyrpc.extension.Extensible;
+import jakarta.validation.ValidationException;
 
-import javax.validation.ValidationException;
 
 /**
  * 验证接口是否合法

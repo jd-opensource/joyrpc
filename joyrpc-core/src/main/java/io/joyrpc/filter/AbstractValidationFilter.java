@@ -28,9 +28,9 @@ import io.joyrpc.exception.RpcException;
 import io.joyrpc.extension.URL;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.protocol.message.RequestMessage;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 
-import javax.validation.ConstraintViolation;
-import javax.validation.Validator;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 

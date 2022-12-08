@@ -26,8 +26,6 @@ import io.protostuff.Output;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalTime;
-import java.util.HashMap;
-import java.util.Map;
 
 public class LocalTimeSchema extends AbstractJava8Schema<LocalTime> {
 
@@ -36,21 +34,10 @@ public class LocalTimeSchema extends AbstractJava8Schema<LocalTime> {
     public static final String MINUTE = "minute";
     public static final String SECOND = "second";
     public static final String NANO = "nano";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(4);
-
     protected static Field FIELD_HOUR = getWriteableField(LocalTime.class, HOUR);
     protected static Field FIELD_MINUTE = getWriteableField(LocalTime.class, MINUTE);
     protected static Field FIELD_SECOND = getWriteableField(LocalTime.class, SECOND);
     protected static Field FIELD_NANO = getWriteableField(LocalTime.class, NANO);
-
-    static {
-        FIELD_MAP.put(HOUR, 1);
-        FIELD_MAP.put(MINUTE, 2);
-        FIELD_MAP.put(SECOND, 3);
-        FIELD_MAP.put(NANO, 4);
-    }
-
 
     public LocalTimeSchema() {
         super(LocalTime.class);
@@ -58,23 +45,24 @@ public class LocalTimeSchema extends AbstractJava8Schema<LocalTime> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return HOUR;
-            case 2:
-                return MINUTE;
-            case 3:
-                return SECOND;
-            case 4:
-                return NANO;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> HOUR;
+            case 2 -> MINUTE;
+            case 3 -> SECOND;
+            case 4 -> NANO;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case HOUR -> 1;
+            case MINUTE -> 2;
+            case SECOND -> 3;
+            case NANO -> 4;
+            default -> 0;
+        };
     }
 
     @Override

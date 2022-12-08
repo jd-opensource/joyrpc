@@ -26,22 +26,14 @@ import io.protostuff.Output;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.Map;
 
 public class ZoneIdSchema extends AbstractJava8Schema<ZoneId> {
 
     public static final ZoneIdSchema INSTANCE = new ZoneIdSchema();
     public static final String ID = "id";
-
-    protected static final String[] FIELD_NAMES = new String[]{ID};
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(1);
-
     protected static Field FIELD_ID;
 
     static {
-        FIELD_MAP.put(ID, 1);
         ZoneId zoneId = ZoneId.systemDefault();
         FIELD_ID = getWriteableField(zoneId.getClass(), ID);
     }
@@ -52,17 +44,18 @@ public class ZoneIdSchema extends AbstractJava8Schema<ZoneId> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return ID;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> ID;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case ID -> 1;
+            default -> 0;
+        };
     }
 
     @Override

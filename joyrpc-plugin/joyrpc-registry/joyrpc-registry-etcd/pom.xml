@@ -5,15 +5,12 @@
     <parent>
         <artifactId>joyrpc-registry</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.4.8-SNAPSHOT</version>
+        <version>1.6.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>joyrpc-registry-etcd</artifactId>
     <packaging>jar</packaging>
-    <properties>
-        <jetcd-core.version>0.5.7</jetcd-core.version>
-    </properties>
 
     <dependencies>
         <dependency>

@@ -41,11 +41,11 @@ import io.joyrpc.util.StateFuture.ExStateFuture;
 import io.joyrpc.util.StateMachine.ExStateMachine;
 import io.joyrpc.util.SystemClock;
 import io.joyrpc.util.network.Ipv4;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.util.*;

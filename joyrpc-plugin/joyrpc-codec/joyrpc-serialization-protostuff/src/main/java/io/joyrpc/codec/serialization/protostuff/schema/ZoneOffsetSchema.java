@@ -26,21 +26,12 @@ import io.protostuff.Output;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.Map;
 
 public class ZoneOffsetSchema extends AbstractJava8Schema<ZoneOffset> {
 
     public static final ZoneOffsetSchema INSTANCE = new ZoneOffsetSchema();
     public static final String TOTAL_SECONDS = "totalSeconds";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(1);
-
     protected static Field FIELD_TOTAL_SECONDS = getWriteableField(ZoneOffset.class, TOTAL_SECONDS);
-
-    static {
-        FIELD_MAP.put(TOTAL_SECONDS, 1);
-    }
 
     public ZoneOffsetSchema() {
         super(ZoneOffset.class);
@@ -48,17 +39,18 @@ public class ZoneOffsetSchema extends AbstractJava8Schema<ZoneOffset> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return TOTAL_SECONDS;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> TOTAL_SECONDS;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case TOTAL_SECONDS -> 1;
+            default -> 0;
+        };
     }
 
     @Override

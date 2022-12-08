@@ -26,8 +26,6 @@ import io.protostuff.Output;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
 
 public class LocalDateSchema extends AbstractJava8Schema<LocalDate> {
 
@@ -35,18 +33,9 @@ public class LocalDateSchema extends AbstractJava8Schema<LocalDate> {
     public static final String YEAR = "year";
     public static final String MONTH = "month";
     public static final String DAY = "day";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(3);
-
     protected static Field FIELD_YEAR = getWriteableField(LocalDate.class, YEAR);
     protected static Field FIELD_MONTH = getWriteableField(LocalDate.class, MONTH);
     protected static Field FIELD_DAY = getWriteableField(LocalDate.class, DAY);
-
-    static {
-        FIELD_MAP.put(YEAR, 1);
-        FIELD_MAP.put(MONTH, 2);
-        FIELD_MAP.put(DAY, 2);
-    }
 
     public LocalDateSchema() {
         super(LocalDate.class);
@@ -54,21 +43,22 @@ public class LocalDateSchema extends AbstractJava8Schema<LocalDate> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return YEAR;
-            case 2:
-                return MONTH;
-            case 3:
-                return DAY;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> YEAR;
+            case 2 -> MONTH;
+            case 3 -> DAY;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case YEAR -> 1;
+            case MONTH -> 2;
+            case DAY -> 3;
+            default -> 0;
+        };
     }
 
     @Override

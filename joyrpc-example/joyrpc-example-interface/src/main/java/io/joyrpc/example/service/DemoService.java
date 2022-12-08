@@ -22,8 +22,7 @@ package io.joyrpc.example.service;
 
 import io.joyrpc.annotation.CallbackArg;
 import io.joyrpc.example.service.vo.*;
-
-import javax.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Demo service

@@ -9,9 +9,9 @@ package io.joyrpc.codec.serialization.protostuff.schema;
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,7 +31,6 @@ public abstract class AbstractSqlDateSchema<T extends Date> implements Schema<T>
 
     protected static final String TIME = "time";
     protected Class<T> clazz;
-
 
     public AbstractSqlDateSchema(Class<T> clazz) {
         this.clazz = clazz;
@@ -59,22 +58,18 @@ public abstract class AbstractSqlDateSchema<T extends Date> implements Schema<T>
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return TIME;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> TIME;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        switch (name) {
-            case TIME:
-                return 1;
-            default:
-                return 0;
-        }
+        return switch (name) {
+            case TIME -> 1;
+            default -> 0;
+        };
     }
 
     @Override

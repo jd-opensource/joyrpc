@@ -57,6 +57,6 @@ public class RestEasyPipelineFactory implements PipelineFactory {
         pipeline.addLast(RESTEASY_HTTP_DECODER, new RestEasyHttpRequestDecoder(dispatcher.getDispatcher(), root, RestEasyHttpRequestDecoder.Protocol.HTTP));
         pipeline.addLast(RESTEASY_HTTP_DISPATCHER, new RestEasyDispatcher(dispatcher));
         pipeline.addLast(ENCODER, new HttpResponseEncoder());
-        pipeline.addLast(RESTEASY_HTTP_ENCODER, new RestEasyHttpResponseEncoder(dispatcher));
+        pipeline.addLast(RESTEASY_HTTP_ENCODER, new RestEasyHttpResponseEncoder());
     }
 }

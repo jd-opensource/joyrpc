@@ -23,8 +23,8 @@ package io.joyrpc.invoker.option;
 import io.joyrpc.protocol.message.Invocation;
 import io.joyrpc.transaction.TransactionOption;
 import io.joyrpc.util.GenericMethod;
+import jakarta.validation.Validator;
 
-import javax.validation.Validator;
 import java.lang.reflect.Method;
 import java.util.Map;
 

@@ -22,29 +22,17 @@ package io.joyrpc.codec.serialization.protostuff.schema;
 
 import io.protostuff.Input;
 import io.protostuff.Output;
-import sun.util.locale.BaseLocale;
-import sun.util.locale.LocaleExtensions;
-import sun.util.locale.LocaleUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class LocaleSchema extends AbstractJava8Schema<Locale> {
 
     public static final LocaleSchema INSTANCE = new LocaleSchema();
     public static final String LOCALE = "locale";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap(3);
-
     protected static Field FIELD_BASE_LOCALE = getWriteableField(Locale.class, "baseLocale");
     protected static Field FIELD_LOCALE_EXTENSIONS = getWriteableField(Locale.class, "localeExtensions");
-
-    static {
-        FIELD_MAP.put(LOCALE, 1);
-    }
 
     public LocaleSchema() {
         super(Locale.class);
@@ -52,17 +40,18 @@ public class LocaleSchema extends AbstractJava8Schema<Locale> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return LOCALE;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> LOCALE;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name) {
+            case LOCALE -> 1;
+            default -> 0;
+        };
     }
 
     @Override
@@ -102,9 +91,9 @@ public class LocaleSchema extends AbstractJava8Schema<Locale> {
                     }
                     var = var == null ? "" : var;
                     country = country == null ? "" : country;
-                    setValue(FIELD_BASE_LOCALE, message, BaseLocale.getInstance(convertOldISOCodes(language), "", country, var));
-                    setValue(FIELD_LOCALE_EXTENSIONS, message, getCompatibilityExtensions(language, "", country, var));
-
+                    Locale locale = new Locale(language, country, var);
+                    setValue(FIELD_BASE_LOCALE, message, getValue(FIELD_BASE_LOCALE, locale));
+                    setValue(FIELD_LOCALE_EXTENSIONS, message, getValue(FIELD_LOCALE_EXTENSIONS, locale));
                     break;
                 default:
                     input.handleUnknownField(number, this);
@@ -115,42 +104,5 @@ public class LocaleSchema extends AbstractJava8Schema<Locale> {
     @Override
     public void writeTo(final Output output, final Locale message) throws IOException {
         output.writeString(1, message.toString(), false);
-    }
-
-    protected static String convertOldISOCodes(String language) {
-        // we accept both the old and the new ISO codes for the languages whose ISO
-        // codes have changed, but we always store the OLD code, for backward compatibility
-        language = LocaleUtils.toLowerString(language).intern();
-        if (language == "he") {
-            return "iw";
-        } else if (language == "yi") {
-            return "ji";
-        } else if (language == "id") {
-            return "in";
-        } else {
-            return language;
-        }
-    }
-
-    protected static LocaleExtensions getCompatibilityExtensions(String language,
-                                                                 String script,
-                                                                 String country,
-                                                                 String variant) {
-        LocaleExtensions extensions = null;
-        // Special cases for backward compatibility support
-        if (LocaleUtils.caseIgnoreMatch(language, "ja")
-                && script.length() == 0
-                && LocaleUtils.caseIgnoreMatch(country, "jp")
-                && "JP".equals(variant)) {
-            // ja_JP_JP -> u-ca-japanese (calendar = japanese)
-            extensions = LocaleExtensions.CALENDAR_JAPANESE;
-        } else if (LocaleUtils.caseIgnoreMatch(language, "th")
-                && script.length() == 0
-                && LocaleUtils.caseIgnoreMatch(country, "th")
-                && "TH".equals(variant)) {
-            // th_TH_TH -> u-nu-thai (numbersystem = thai)
-            extensions = LocaleExtensions.NUMBER_THAI;
-        }
-        return extensions;
     }
 }

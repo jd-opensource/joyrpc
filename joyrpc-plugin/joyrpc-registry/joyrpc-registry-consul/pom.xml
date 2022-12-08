@@ -5,7 +5,7 @@
     <parent>
         <artifactId>joyrpc-registry</artifactId>
         <groupId>io.joyrpc</groupId>
-        <version>1.4.8-SNAPSHOT</version>
+        <version>1.6.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -15,7 +15,7 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-consul-client</artifactId>
-            <version>${vertx-consul-client}</version>
+            <version>${vertx.version}</version>
         </dependency>
     </dependencies>
 

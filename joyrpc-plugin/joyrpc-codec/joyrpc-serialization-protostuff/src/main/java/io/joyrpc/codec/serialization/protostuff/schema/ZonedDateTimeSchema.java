@@ -38,18 +38,9 @@ public class ZonedDateTimeSchema extends AbstractJava8Schema<ZonedDateTime> {
     public static final String DATE_TIME = "dateTime";
     public static final String OFFSET = "offset";
     public static final String ZONE = "zone";
-
-    protected static final Map<String, Integer> FIELD_MAP = new HashMap();
-
     protected static Field FIELD_DATE_TIME = getWriteableField(ZonedDateTime.class, DATE_TIME);
     protected static Field FIELD_ZONE_OFFSET = getWriteableField(ZonedDateTime.class, OFFSET);
     protected static Field FIELD_ZONE_ID = getWriteableField(ZonedDateTime.class, ZONE);
-
-    static {
-        FIELD_MAP.put(DATE_TIME, 1);
-        FIELD_MAP.put(OFFSET, 2);
-        FIELD_MAP.put(ZONE, 3);
-    }
 
     public ZonedDateTimeSchema() {
         super(ZonedDateTime.class);
@@ -57,21 +48,22 @@ public class ZonedDateTimeSchema extends AbstractJava8Schema<ZonedDateTime> {
 
     @Override
     public String getFieldName(int number) {
-        switch (number) {
-            case 1:
-                return DATE_TIME;
-            case 2:
-                return OFFSET;
-            case 3:
-                return ZONE;
-            default:
-                return null;
-        }
+        return switch (number) {
+            case 1 -> DATE_TIME;
+            case 2 -> OFFSET;
+            case 3 -> ZONE;
+            default -> null;
+        };
     }
 
     @Override
     public int getFieldNumber(final String name) {
-        return FIELD_MAP.get(name);
+        return switch (name){
+            case DATE_TIME -> 1;
+            case OFFSET -> 2;
+            case ZONE -> 3;
+            default -> 0;
+        };
     }
 
     @Override

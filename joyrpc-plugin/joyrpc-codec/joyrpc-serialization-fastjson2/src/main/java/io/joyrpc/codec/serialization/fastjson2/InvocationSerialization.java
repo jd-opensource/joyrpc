@@ -45,70 +45,58 @@ import static io.joyrpc.protocol.message.Invocation.*;
  */
 public class InvocationSerialization extends AbstractSerialization<Invocation> {
 
-    protected String classNameKey = CLASS_NAME;
-    protected String aliasKey = ALIAS;
-    protected String methodNameKey = METHOD_NAME;
-    protected String argsTypeKey = ARGS_TYPE;
-    protected String argsKey = ARGS;
-    protected String attachmentsKey = ATTACHMENTS;
-
     public static final InvocationSerialization INSTANCE = new InvocationSerialization();
 
     @Override
-    protected void doWrite(final JSONWriter jsonWriter, final Object object, final Object fieldName, final Type fieldType, final long features) {
-        if (object == null) {
-            jsonWriter.writeNull();
-        }
-        Invocation call = (Invocation) object;
+    protected void doWrite(final JSONWriter jsonWriter, final Invocation object, final Object fieldName, final Type fieldType, final long features) {
         writeObjectBegin(jsonWriter);
         //1、class name
-        writeString(jsonWriter, classNameKey, call.getClassName(), true);
+        writeString(jsonWriter, CLASS_NAME, object.getClassName(), true);
         //2、alias
-        writeString(jsonWriter, aliasKey, call.getAlias(), true);
+        writeString(jsonWriter, ALIAS, object.getAlias(), true);
         //3、method name
-        writeString(jsonWriter, methodNameKey, call.getMethodName(), true);
+        writeString(jsonWriter, METHOD_NAME, object.getMethodName(), true);
         //4.argsType
         //TODO 应该根据泛型变量来决定是否要参数类型
-        if (call.isCallback()) {
+        if (object.isCallback()) {
             //回调需要写上实际的参数类型
-            writeObject(jsonWriter, argsTypeKey, call.computeArgsType(), false);
+            writeStringArray(jsonWriter, ARGS_TYPE, object.computeArgsType(), false);
         }
         //5、args
-        writeObject(jsonWriter, argsKey, call.getArgs(), true);
+        writeObjectArray(jsonWriter, ARGS, object.getArgs(), true);
         //7、attachments
-        writeObject(jsonWriter, attachmentsKey, call.getAttachments(), false);
+        writeObject(jsonWriter, ATTACHMENTS, object.getAttachments(), false);
         writeObjectEnd(jsonWriter);
     }
 
     @Override
     public Invocation doRead(final JSONReader jsonReader, final Type fieldType, final Object fieldName, final long features) {
+
         Invocation invocation = new Invocation();
+        String key;
         jsonReader.nextIfObjectStart();
-        while (!jsonReader.nextIfObjectEnd()) {
-            String key = jsonReader.readFieldName();
-            if (classNameKey.equals(key)) {
-                invocation.setClassName(readString(jsonReader, classNameKey, false));
-            } else if (aliasKey.equals(key)) {
-                invocation.setAlias(readString(jsonReader, aliasKey, true));
-            } else if (methodNameKey.equals(key)) {
-                invocation.setMethodName(readString(jsonReader, methodNameKey, false));
-            } else if (argsTypeKey.equals(key)) {
-                invocation.setArgsType(readStringArray(jsonReader, argsTypeKey, true));
-            } else if (argsKey.equals(key)) {
-                try {
-                    invocation.setArgs(readObjectArray(jsonReader, argsKey, invocation.computeTypes(), false));
-                } catch (ClassNotFoundException e) {
-                    throw new SerializerException("error occurs while parsing " + fieldName, e);
-                } catch (NoSuchMethodException e) {
-                    throw new SerializerException("error occurs while parsing " + fieldName, e);
-                } catch (MethodOverloadException e) {
-                    throw new SerializerException("error occurs while parsing " + fieldName, e);
+        while (!jsonReader.nextIfObjectEnd() && !jsonReader.isEnd()) {
+            key = jsonReader.readFieldName();
+            switch (key) {
+                case CLASS_NAME -> invocation.setClassName(readString(jsonReader, CLASS_NAME, false));
+                case ALIAS -> invocation.setAlias(readString(jsonReader, ALIAS, true));
+                case METHOD_NAME -> invocation.setMethodName(readString(jsonReader, METHOD_NAME, false));
+                case ARGS_TYPE -> invocation.setArgsType(readStringArray(jsonReader, ARGS_TYPE, true));
+                case ARGS -> {
+                    try {
+                        invocation.setArgs(readObjectArray(jsonReader, ARGS, invocation.computeTypes()));
+                    } catch (ClassNotFoundException e) {
+                        throw new SerializerException("error occurs while parsing " + fieldName, e);
+                    } catch (NoSuchMethodException e) {
+                        throw new SerializerException("error occurs while parsing " + fieldName, e);
+                    } catch (MethodOverloadException e) {
+                        throw new SerializerException("error occurs while parsing " + fieldName, e);
+                    }
                 }
-            } else if (attachmentsKey.equals(key)) {
-                invocation.addAttachments(readObject(jsonReader, attachmentsKey, true));
+                case ATTACHMENTS -> invocation.addAttachments(readObject(jsonReader, ATTACHMENTS, true));
+
             }
         }
-        jsonReader.nextIfObjectEnd();
         return invocation;
     }
 

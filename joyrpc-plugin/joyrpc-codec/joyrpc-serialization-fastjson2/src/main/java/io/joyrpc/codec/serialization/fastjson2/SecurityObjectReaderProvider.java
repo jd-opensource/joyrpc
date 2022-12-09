@@ -21,6 +21,9 @@ public class SecurityObjectReaderProvider extends ObjectReaderProvider {
 
     @Override
     public ObjectReader getObjectReader(final Type objectType, final boolean fieldBased) {
+        if (objectType instanceof Class<?> && Throwable.class.isAssignableFrom((Class<?>) objectType)) {
+            return ThrowableSerialization.INSTANCE;
+        }
         // 缓存，避免每次都过安全名单
         ObjectReader objectReader = whiteList.getObjectReader(objectType, fieldBased);
         if (objectReader != null) {

@@ -1,14 +1,19 @@
 
 # 版本说明
 
-## 1.4.8-SNAPSHOT
+## 1.6.0-SNAPSHOT
+
+JDK要求17
 
 ### Bugfixes
 
 - 修复对返回值为基本类型方法通过上下文设置异步后报错问题，根据基本类型返回其初始值。
 - 修复SpringLoader不能加载私有工厂方法问题
+- 修复了Jackson流式解析数组和对象的问题
 
 ### Enhancement
+
+- 增加了fastjson2的支持
 
 - Dependency
 

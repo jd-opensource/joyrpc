@@ -135,9 +135,18 @@ public class SerializationTest {
         datum.setClusters(clusters);
         datum.setConfigs(configs);
 
-        java.util.Date date=new java.util.Date();
-        System.out.println(JSON.get("json@jackson").toJSONString(date));
-        System.out.println(JSON.get("json@fastjson2").toJSONString(date));
+        Json fastJson = JSON.get("json@fastjson2");
+        Json jackson = JSON.get("json@jackson");
+        Duration time = Duration.ofMillis(10000L);
+        String value1 = fastJson.toJSONString(time);
+        String value2 = jackson.toJSONString(time);
+        System.out.println(time.getClass() + ":" + value1);
+        System.out.println(time.getClass() + ":" + value2);
+        Object time1 = jackson.parseObject(value1, time.getClass());
+        Object time2 = fastJson.parseObject(value2, time.getClass());
+        Assertions.assertEquals(time, time1);
+        Assertions.assertEquals(time, time2);
+
         serializeAndDeserialize(datum);
     }
 
@@ -184,18 +193,17 @@ public class SerializationTest {
         try {
             Integer.parseInt("String");
         } catch (NumberFormatException e) {
-            RuntimeException runtimeException = new RuntimeException(e);
-            String serializedException = jackson.toJSONString(runtimeException);
+            String serializedException = jackson.toJSONString(e);
+            System.out.println(serializedException);
             //Throwable throwable1 = fastJson1.parseObject(serializedException, Throwable.class);
             //serializedException = fastJson1.toJSONString(throwable1);
             Throwable throwable2 = fastJson2.parseObject(serializedException, Throwable.class);
-            System.out.printf(fastJson2.toJSONString(runtimeException));
+            System.out.printf(fastJson2.toJSONString(e));
             //Assertions.assertEquals(runtimeException.getMessage(), throwable1.getMessage());
             //Assertions.assertEquals(runtimeException.getClass(), throwable1.getClass());
             //Assertions.assertEquals(runtimeException.getCause().getClass(), throwable1.getCause().getClass());
-            Assertions.assertEquals(runtimeException.getMessage(), throwable2.getMessage());
-            Assertions.assertEquals(runtimeException.getClass(), throwable2.getClass());
-            Assertions.assertEquals(runtimeException.getCause().getClass(), throwable2.getCause().getClass());
+            Assertions.assertEquals(e.getMessage(), throwable2.getMessage());
+            Assertions.assertEquals(e.getClass(), throwable2.getClass());
         }
     }
 
@@ -206,7 +214,11 @@ public class SerializationTest {
         ResponsePayload payload = new ResponsePayload();
         payload.setException(new NumberFormatException());
         String value = fastJson.toJSONString(payload);
+        String value1 = jackson.toJSONString(payload);
+        System.out.println(value);
+        System.out.println(value1);
         ResponsePayload target = jackson.parseObject(value, ResponsePayload.class);
+        ResponsePayload target1 = fastJson.parseObject(value1, ResponsePayload.class);
         Assertions.assertNotNull(target.getException());
         Assertions.assertEquals(target.getException().getClass(), NumberFormatException.class);
         payload.setException(null);
@@ -219,18 +231,24 @@ public class SerializationTest {
 
     @Test
     public void testInvocation() {
-        Json fastJson = JSON.get("json@fastjson2");
-        Json jackson = JSON.get("json@jackson");
         Invocation invocation = new Invocation();
         invocation.setClassName(HelloGrpc.class.getName());
         invocation.setMethodName("hello");
         invocation.setAlias("test");
+        invocation.setArgsType(new String[]{String.class.getName(), PhoneType.class.getName()});
+        invocation.setCallback(true);
         invocation.setArgs(new Object[]{"111", PhoneType.HOME});
         invocation.addAttachment("test", Boolean.TRUE);
-        String value = fastJson.toJSONString(invocation);
-        Invocation target = jackson.parseObject(value, Invocation.class);
-        Assertions.assertNotNull(target.getArgs());
-        Assertions.assertArrayEquals(target.getArgs(), new Object[]{"111", PhoneType.HOME});
+        List<Json> jsons = allJson();
+        for (Json json : jsons) {
+            String value = json.toJSONString(invocation);
+            System.out.println(value);
+            for (Json json1 : jsons) {
+                Invocation target = json1.parseObject(value, Invocation.class);
+                Assertions.assertNotNull(target.getArgs());
+                Assertions.assertArrayEquals(target.getArgs(), new Object[]{"111", PhoneType.HOME});
+            }
+        }
     }
 
     @Test
@@ -240,6 +258,46 @@ public class SerializationTest {
             Assertions.assertEquals(src.getCountry(), target.getCountry(), serial.getContentType());
             Assertions.assertEquals(src.getVariant(), target.getVariant(), serial.getContentType());
         });
+    }
+
+    @Test
+    public void testArray() {
+        List<Employee> employees = new ArrayList<>();
+        employees.add(new Employee(0, "china", 20, 161, 65));
+        employees.add(new Employee(0, "hongkong", 20, 161, 65));
+        List<Json> jsons = allJson();
+        String value = jsons.get(0).toJSONString(employees);
+        System.out.println(value);
+        for (Json json : jsons) {
+            json.parseArray(value, o -> {
+                Object e = o.apply(Employee.class);
+                System.out.println(e.toString());
+                return true;
+            });
+        }
+    }
+
+    protected List<Json> allJson() {
+        List<Json> jsons = new ArrayList<>(5);
+        JSON.extensions().forEach(o -> jsons.add(o));
+        return jsons;
+    }
+
+    @Test
+    public void testCustomTypes() {
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("11111", new Employee(0, "china", 20, 161, 65));
+        map.put("11112", new Employee(0, "hongkong", 20, 161, 65));
+        List<Json> jsons = allJson();
+        String value = jsons.get(0).toJSONString(map);
+        System.out.println(value);
+        for (Json json : jsons) {
+            json.parseObject(value, (name, o) -> {
+                Object e = o.apply(Employee.class);
+                System.out.println(e.toString());
+                return true;
+            });
+        }
     }
 
     @Test
@@ -336,7 +394,7 @@ public class SerializationTest {
 
         Employee person = new Employee(0, "china", 20, 161, 65);
 
-        long count = 1000000;
+        long count = 100000;
         int threads = 4;
         ExecutorService service = Executors.newFixedThreadPool(threads);
         Future<SerializationTime>[] futures = new Future[threads];

@@ -38,19 +38,17 @@ import io.joyrpc.extension.Extension;
 import io.joyrpc.extension.condition.ConditionalOnClass;
 import io.joyrpc.permission.BlackList;
 import io.joyrpc.protocol.message.Invocation;
+import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.Resource.Definition;
 
 import java.io.*;
 import java.lang.reflect.Type;
 import java.time.*;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import static com.alibaba.fastjson2.JSONReader.Feature.IgnoreCheckClose;
 import static io.joyrpc.context.Variable.VARIABLE;
 
 /**
@@ -151,11 +149,33 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         protected JSONWriter.Feature[] serializerFeatures;
 
         protected JsonSerializer() {
-            objectWriterProvider = new ObjectWriterProvider();
+            objectWriterProvider = new ObjectWriterProvider() {
+                @Override
+                public ObjectWriter getObjectWriter(Type objectType, Class objectClass, boolean fieldBased) {
+                    if (Throwable.class.isAssignableFrom(objectClass)) {
+                        return ThrowableSerialization.INSTANCE;
+                    }
+                    return super.getObjectWriter(objectType, objectClass, fieldBased);
+                }
+            };
             regsiter(objectWriterProvider);
             writerContext = JSONFactory.createWriteContext(objectWriterProvider);
-            writerContext.setDateFormat("iso8601");
-            objectReaderProvider = new SecurityObjectReaderProvider(BLACK_WHITE_LIST);
+            //和原来兼容
+            writerContext.setDateFormat("millis");
+            objectReaderProvider = new ObjectReaderProvider() {
+                @Override
+                public ObjectReader getObjectReader(Type objectType, boolean fieldBased) {
+                    // 缓存，避免每次都过安全名单
+                    ObjectReader objectReader = BLACK_WHITE_LIST.getObjectReader(objectType, fieldBased);
+                    if (objectReader != null) {
+                        return objectReader;
+                    }
+                    if (objectType instanceof Class<?> && Throwable.class.isAssignableFrom((Class<?>) objectType)) {
+                        return ThrowableSerialization.INSTANCE;
+                    }
+                    return super.getObjectReader(objectType, fieldBased);
+                }
+            };
             regsiter(objectReaderProvider);
             readerContext = JSONFactory.createReadContext(objectReaderProvider);
             parserFeatures = createReaderFeatures();
@@ -170,13 +190,24 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         protected void regsiter(final ObjectReaderProvider provider) {
             provider.register(MonthDay.class, MonthDaySerialization.INSTANCE);
             provider.register(YearMonth.class, YearMonthSerialization.INSTANCE);
+            provider.register(Duration.class, DurationSerialization.INSTANCE);
             provider.register(Year.class, YearSerialization.INSTANCE);
+            provider.register(Instant.class, InstantSerialization.INSTANCE);
+            provider.register(LocalDateTime.class, LocalDateTimeSerialization.INSTANCE);
+            provider.register(LocalDate.class, LocalDateSerialization.INSTANCE);
+            provider.register(LocalTime.class, LocalTimeSerialization.INSTANCE);
+            provider.register(OffsetDateTime.class, OffsetDateTimeSerialization.INSTANCE);
+            provider.register(OffsetTime.class, OffsetTimeSerialization.INSTANCE);
+            provider.register(ZonedDateTime.class, ZonedDateTimeSerialization.INSTANCE);
+            provider.register(Period.class, PeriodSerialization.INSTANCE);
             provider.register(ZoneOffset.class, ZoneOffsetSerialization.INSTANCE);
             provider.register(ZoneId.class, ZoneIdSerialization.INSTANCE);
             provider.register(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             provider.register(Invocation.class, InvocationSerialization.INSTANCE);
             provider.register(ResponsePayload.class, ResponsePayloadSerialization.INSTANCE);
-            //provider.register(GregorianCalendar.class,Calendarcod)
+            provider.register(ResponseMessage.class, ResponseMessageSerialization.INSTANCE);
+            provider.register(Throwable.class, ThrowableSerialization.INSTANCE);
+            provider.register(GregorianCalendar.class, provider.getObjectReader(Calendar.class));
         }
 
         /**
@@ -187,12 +218,23 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
         protected void regsiter(final ObjectWriterProvider provider) {
             provider.register(MonthDay.class, MonthDaySerialization.INSTANCE);
             provider.register(YearMonth.class, YearMonthSerialization.INSTANCE);
+            provider.register(Duration.class, DurationSerialization.INSTANCE);
             provider.register(Year.class, YearSerialization.INSTANCE);
+            provider.register(Instant.class, InstantSerialization.INSTANCE);
+            provider.register(LocalDateTime.class, LocalDateTimeSerialization.INSTANCE);
+            provider.register(LocalDate.class, LocalDateSerialization.INSTANCE);
+            provider.register(LocalTime.class, LocalTimeSerialization.INSTANCE);
+            provider.register(OffsetDateTime.class, OffsetDateTimeSerialization.INSTANCE);
+            provider.register(OffsetTime.class, OffsetTimeSerialization.INSTANCE);
+            provider.register(ZonedDateTime.class, ZonedDateTimeSerialization.INSTANCE);
+            provider.register(Period.class, PeriodSerialization.INSTANCE);
             provider.register(ZoneOffset.class, ZoneOffsetSerialization.INSTANCE);
             provider.register(ZoneId.class, ZoneIdSerialization.INSTANCE);
             provider.register(ZoneId.systemDefault().getClass(), ZoneIdSerialization.INSTANCE);
             provider.register(Invocation.class, InvocationSerialization.INSTANCE);
-            //provider.register(ResponsePayload.class, ResponsePayloadCodec.INSTANCE);
+            provider.register(ResponsePayload.class, ResponsePayloadSerialization.INSTANCE);
+            provider.register(ResponseMessage.class, ResponseMessageSerialization.INSTANCE);
+            provider.register(Throwable.class, ThrowableSerialization.INSTANCE);
         }
 
         /**
@@ -310,12 +352,7 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
 
         protected <T> T parse(final JSONReader reader, final Type type) {
             ObjectReader<T> objectReader = reader.getObjectReader(type);
-
-            T object = objectReader.readObject(reader, null, null, 0);
-            if (!reader.isEnd() && (readerContext.getFeatures() & IgnoreCheckClose.mask) == 0) {
-                throw new JSONException(reader.info("input not end"));
-            }
-            return object;
+            return objectReader.readObject(reader, null, null, 0);
         }
 
         @Override
@@ -377,12 +414,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                     return null;
                 }
                 r.startArray();
-                while (!r.isEnd()) {
+                while (!r.nextIfMatch(']') && !r.isEnd()) {
                     if (!function.apply(o -> parse(r, o))) {
                         break;
                     }
                 }
-                r.endArray();
                 return null;
             });
         }
@@ -394,12 +430,11 @@ public class JsonSerialization implements Serialization, Json, BlackList.BlackLi
                     return null;
                 }
                 r.nextIfObjectStart();
-                while (!r.isEnd()) {
+                while (!r.nextIfObjectEnd() && !r.isEnd()) {
                     if (!function.apply(r.readFieldName(), type -> parse(r, type))) {
                         break;
                     }
                 }
-                r.nextIfObjectEnd();
                 return null;
             });
         }

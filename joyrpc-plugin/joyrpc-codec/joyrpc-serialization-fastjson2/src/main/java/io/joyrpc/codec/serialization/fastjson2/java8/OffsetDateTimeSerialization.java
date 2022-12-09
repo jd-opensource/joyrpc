@@ -25,22 +25,23 @@ import com.alibaba.fastjson2.JSONWriter;
 import io.joyrpc.codec.serialization.fastjson2.AbstractSerialization;
 
 import java.lang.reflect.Type;
-import java.time.ZoneId;
+import java.time.OffsetDateTime;
 
 /**
- * ZoneId序列化
+ * OffsetDateTime序列化
  */
-public class ZoneIdSerialization extends AbstractSerialization<ZoneId> {
+public class OffsetDateTimeSerialization extends AbstractSerialization<OffsetDateTime> {
 
-    public static final ZoneIdSerialization INSTANCE = new ZoneIdSerialization();
+    public static final OffsetDateTimeSerialization INSTANCE = new OffsetDateTimeSerialization();
 
     @Override
-    protected void doWrite(final JSONWriter jsonWriter, final ZoneId object, final Object fieldName, final Type fieldType, final long features) {
+    protected void doWrite(final JSONWriter jsonWriter, final OffsetDateTime object, final Object fieldName, final Type fieldType, final long features) {
         jsonWriter.writeString(object.toString());
     }
 
     @Override
-    protected ZoneId doRead(final JSONReader jsonReader, final Type fieldType, final Object fieldName, final long features) {
-        return ZoneId.of(jsonReader.readString());
+    protected OffsetDateTime doRead(final JSONReader jsonReader, final Type fieldType, final Object fieldName, final long features) {
+        return OffsetDateTime.parse(jsonReader.readString());
     }
+
 }

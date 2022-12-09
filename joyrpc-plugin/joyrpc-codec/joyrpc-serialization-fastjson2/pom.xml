@@ -10,20 +10,12 @@
     </parent>
 
     <artifactId>joyrpc-serialization-fastjson2</artifactId>
-    <properties>
-        <fastjson1.version>2.0.20</fastjson1.version>
-    </properties>
 
     <dependencies>
         <dependency>
             <groupId>com.alibaba.fastjson2</groupId>
             <artifactId>fastjson2</artifactId>
             <version>${fastjson2.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba</groupId>
-            <artifactId>fastjson</artifactId>
-            <version>${fastjson1.version}</version>
         </dependency>
     </dependencies>
 

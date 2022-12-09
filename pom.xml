@@ -404,30 +404,6 @@
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <compilerArgs>
                         <arg>-parameters</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.lang=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.io=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.util=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.util.concurrent=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.rmi/sun.rmi.transport=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.lang.reflect=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg> java.base/java.util=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.math=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.time=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.net=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.base/java.text=ALL-UNNAMED</arg>
-                        <arg>--add-opens</arg>
-                        <arg>java.sql/java.sql=ALL-UNNAMED</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

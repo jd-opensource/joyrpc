@@ -42,7 +42,7 @@ public class ThrowableSerializer extends JsonSerializer<Throwable> {
             gen.writeStartObject();
             gen.writeStringField(Constants.ANNOTATION_TYPE, throwable.getClass().getName());
             gen.writeStringField(Constants.FIELD_MESSAGE, throwable.getMessage());
-            if (throwable.getCause() != null) {
+            if (throwable.getCause() != null && throwable.getCause() != throwable) {
                 gen.writeObjectField(Constants.FIELD_CAUSE, throwable.getCause());
             }
             StackTraceElement[] traces = throwable.getStackTrace();

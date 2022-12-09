@@ -28,8 +28,7 @@ import io.joyrpc.protocol.message.ResponsePayload;
 import java.io.IOException;
 import java.lang.reflect.Type;
 
-import static io.joyrpc.protocol.message.ResponsePayload.RESPONSE;
-import static io.joyrpc.protocol.message.ResponsePayload.RES_CLASS;
+import static io.joyrpc.protocol.message.ResponsePayload.*;
 import static io.joyrpc.util.ClassUtils.getCanonicalName;
 
 /**
@@ -52,7 +51,7 @@ public class ResponsePayloadSerializer extends JsonSerializer<ResponsePayload> {
                 gen.writeObjectField(RESPONSE, response);
             } else if (exception != null) {
                 gen.writeStringField(RES_CLASS, getCanonicalName(exception.getClass()));
-                gen.writeObjectField(RESPONSE, exception);
+                gen.writeObjectField(EXCEPTION, exception);
             }
             gen.writeEndObject();
         }

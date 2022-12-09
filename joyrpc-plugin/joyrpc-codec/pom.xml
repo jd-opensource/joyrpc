@@ -13,7 +13,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>joyrpc-serialization-hessian</module>
-<!--        <module>joyrpc-serialization-fastjson</module>-->
+        <module>joyrpc-serialization-fastjson</module>
         <module>joyrpc-serialization-fst</module>
         <module>joyrpc-serialization-kryo</module>
         <module>joyrpc-serialization-protostuff</module>

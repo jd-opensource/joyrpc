@@ -44,8 +44,9 @@ public abstract class AbstractSerialization<T> implements ObjectWriter<T>, Objec
     public void write(final JSONWriter jsonWriter, final Object object, final Object fieldName, final Type fieldType, final long features) {
         if (object == null) {
             jsonWriter.writeNull();
+        } else {
+            doWrite(jsonWriter, (T) object, fieldName, fieldType, features);
         }
-        jsonWriter.writeString(object.toString());
     }
 
     /**
@@ -57,7 +58,7 @@ public abstract class AbstractSerialization<T> implements ObjectWriter<T>, Objec
      * @param fieldType  字段值
      * @param features   特性
      */
-    protected abstract void doWrite(JSONWriter jsonWriter, Object object, Object fieldName, Type fieldType, long features);
+    protected abstract void doWrite(JSONWriter jsonWriter, T object, Object fieldName, Type fieldType, long features);
 
     @Override
     public T readObject(final JSONReader jsonReader, final Type fieldType, final Object fieldName, final long features) {
@@ -119,13 +120,77 @@ public abstract class AbstractSerialization<T> implements ObjectWriter<T>, Objec
      */
     protected void writeObject(final JSONWriter jsonWriter, final String fieldName, final Object value, final boolean ignoreNull) {
         if (value != null || !ignoreNull) {
-            ObjectWriter objectWriter = jsonWriter.getObjectWriter(value.getClass());
             jsonWriter.writeName(fieldName);
             jsonWriter.writeColon();
             if (value == null) {
                 jsonWriter.writeNull();
             } else {
+                ObjectWriter objectWriter = jsonWriter.getObjectWriter(value.getClass());
                 objectWriter.write(jsonWriter, value);
+            }
+        }
+    }
+
+    /**
+     * 写值
+     *
+     * @param jsonWriter 写入器
+     * @param fieldName  字段
+     * @param values     值
+     * @param ignoreNull 是否忽略null值
+     */
+    protected void writeObjectArray(final JSONWriter jsonWriter, final String fieldName, final Object[] values, final boolean ignoreNull) {
+        if (values != null || !ignoreNull) {
+            jsonWriter.writeName(fieldName);
+            jsonWriter.writeColon();
+            if (values == null) {
+                jsonWriter.writeNull();
+            } else {
+                jsonWriter.startArray();
+                ObjectWriter objectWriter;
+                for (int i = 0; i < values.length; i++) {
+                    if (i != 0) {
+                        jsonWriter.writeComma();
+                    }
+                    if (values[i] == null) {
+                        jsonWriter.writeNull();
+                    } else {
+                        objectWriter = jsonWriter.getObjectWriter(values[i].getClass());
+                        objectWriter.write(jsonWriter, values[i]);
+                    }
+                }
+                jsonWriter.endArray();
+            }
+        }
+    }
+
+    /**
+     * 写值
+     *
+     * @param jsonWriter 写入器
+     * @param fieldName  字段
+     * @param values     值
+     * @param ignoreNull 是否忽略null值
+     */
+    protected void writeStringArray(final JSONWriter jsonWriter, final String fieldName, final String[] values, final boolean ignoreNull) {
+        if (values != null || !ignoreNull) {
+            jsonWriter.writeName(fieldName);
+            jsonWriter.writeColon();
+            if (values == null) {
+                jsonWriter.writeNull();
+            } else {
+                jsonWriter.startArray();
+                for (int i = 0; i < values.length; i++) {
+                    if (i != 0) {
+                        jsonWriter.writeComma();
+                    }
+                    if (values[i] == null) {
+                        jsonWriter.writeNull();
+                    } else {
+                        jsonWriter.writeString(values[i]);
+                    }
+                }
+                jsonWriter.endArray();
             }
         }
     }
@@ -158,8 +223,11 @@ public abstract class AbstractSerialization<T> implements ObjectWriter<T>, Objec
             if (!nullable) {
                 throw new SerializerException("syntax error: invalid " + fieldName);
             }
+            jsonReader.nextIfMatch(',');
             return null;
         }
+        jsonReader.nextIfMatch(']');
+        jsonReader.nextIfMatch(',');
         return result.toArray(new String[result.size()]);
     }
 
@@ -169,13 +237,14 @@ public abstract class AbstractSerialization<T> implements ObjectWriter<T>, Objec
      * @param jsonReader 读取器
      * @param fieldName  字段
      * @param types      类型
-     * @param nullable   是否可以null
      */
-    protected Object[] readObjectArray(final JSONReader jsonReader, final String fieldName, final Type[] types, final boolean nullable) {
+    protected Object[] readObjectArray(final JSONReader jsonReader, final String fieldName, final Type[] types) {
         Object[] result = jsonReader.readArray(types);
-        if (result == null && types.length != 0 && !nullable) {
+        if (result == null && (types != null && types.length != 0)) {
             throw new SerializerException("syntax error: invalid " + fieldName);
         }
+        jsonReader.nextIfMatch(']');
+        jsonReader.nextIfMatch(',');
         return result;
     }
 

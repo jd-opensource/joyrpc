@@ -35,7 +35,7 @@ public class YearMonthSerialization extends AbstractSerialization<YearMonth> {
     public static final YearMonthSerialization INSTANCE = new YearMonthSerialization();
 
     @Override
-    protected void doWrite(final JSONWriter jsonWriter, final Object object, final Object fieldName, final Type fieldType, final long features) {
+    protected void doWrite(final JSONWriter jsonWriter, final YearMonth object, final Object fieldName, final Type fieldType, final long features) {
         jsonWriter.writeString(object.toString());
     }
 

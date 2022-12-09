@@ -35,7 +35,7 @@ public class MonthDaySerialization extends AbstractSerialization<MonthDay> {
     public static final MonthDaySerialization INSTANCE = new MonthDaySerialization();
 
     @Override
-    protected void doWrite(final JSONWriter jsonWriter, final Object object, final Object fieldName, final Type fieldType, final long features) {
+    protected void doWrite(final JSONWriter jsonWriter, final MonthDay object, final Object fieldName, final Type fieldType, final long features) {
         jsonWriter.writeString(object.toString());
     }
 

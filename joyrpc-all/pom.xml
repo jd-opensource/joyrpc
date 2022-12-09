@@ -72,11 +72,11 @@
             <artifactId>joyrpc-serialization-jaxb</artifactId>
             <version>${project.version}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>io.joyrpc</groupId>-->
-<!--            <artifactId>joyrpc-serialization-fastjson</artifactId>-->
-<!--            <version>${project.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>io.joyrpc</groupId>
+            <artifactId>joyrpc-serialization-fastjson</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.joyrpc</groupId>
             <artifactId>joyrpc-serialization-fastjson2</artifactId>

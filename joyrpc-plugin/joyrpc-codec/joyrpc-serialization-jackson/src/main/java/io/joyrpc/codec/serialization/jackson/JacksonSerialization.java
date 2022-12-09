@@ -284,7 +284,7 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         @Override
         public void parseArray(final Reader reader, final Function<Function<Type, Object>, Boolean> function) throws SerializerException {
             try (JsonParser parser = mapper.createParser(reader)) {
-                // loop until token equal to "}"
+                parser.nextToken();
                 while (parser.nextToken() != JsonToken.END_ARRAY) {
                     if (!function.apply(o -> parseObject(parser, o))) {
                         break;
@@ -298,9 +298,12 @@ public class JacksonSerialization implements Serialization, Json, BlackList.Blac
         @Override
         public void parseObject(final Reader reader, final BiFunction<String, Function<Type, Object>, Boolean> function) throws SerializerException {
             try (JsonParser parser = mapper.createParser(reader);) {
-                // loop until token equal to "}"
-                while (parser.nextToken() != JsonToken.END_ARRAY) {
-                    if (!function.apply(parser.getCurrentName(), o -> parseObject(parser, o))) {
+                parser.nextToken();
+                String fieldName;
+                while (parser.nextToken() != JsonToken.END_OBJECT) {
+                    fieldName = parser.getCurrentName();
+                    parser.nextToken();
+                    if (!function.apply(fieldName, o -> parseObject(parser, o))) {
                         break;
                     }
                 }

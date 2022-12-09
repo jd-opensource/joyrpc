@@ -23,7 +23,6 @@ package io.joyrpc.codec.serialization.fastjson2;
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.JSONWriter;
 import io.joyrpc.exception.SerializerException;
-import io.joyrpc.protocol.message.ResponseMessage;
 import io.joyrpc.protocol.message.ResponsePayload;
 import io.joyrpc.util.ClassUtils;
 
@@ -41,19 +40,16 @@ public class ResponsePayloadSerialization extends AbstractSerialization<Response
     public static final ResponsePayloadSerialization INSTANCE = new ResponsePayloadSerialization();
 
     @Override
-    protected void doWrite(final JSONWriter jsonWriter, final Object object, final Object fieldName, final Type fieldType, final long features) {
+    protected void doWrite(final JSONWriter jsonWriter, final ResponsePayload object, final Object fieldName, final Type fieldType, final long features) {
         writeObjectBegin(jsonWriter);
-        ResponsePayload payload = (object instanceof ResponseMessage ? ((ResponseMessage<ResponsePayload>) object).getPayLoad() : (ResponsePayload) object);
-        if (payload != null) {
-            Throwable exception = payload.getException();
-            Object response = payload.getResponse();
-            if (response != null) {
-                writeString(jsonWriter, RES_CLASS, getTypeName(response, payload.getType()), false);
-                writeObject(jsonWriter, RESPONSE, response, false);
-            } else if (exception != null) {
-                writeString(jsonWriter, RES_CLASS, getCanonicalName(exception.getClass()), false);
-                writeObject(jsonWriter, EXCEPTION, exception, false);
-            }
+        Throwable exception = object.getException();
+        Object response = object.getResponse();
+        if (response != null) {
+            writeString(jsonWriter, RES_CLASS, getTypeName(response, object.getType()), false);
+            writeObject(jsonWriter, RESPONSE, response, false);
+        } else if (exception != null) {
+            writeString(jsonWriter, RES_CLASS, getCanonicalName(exception.getClass()), false);
+            writeObject(jsonWriter, EXCEPTION, exception, false);
         }
         writeObjectEnd(jsonWriter);
     }
@@ -65,14 +61,12 @@ public class ResponsePayloadSerialization extends AbstractSerialization<Response
         String typeName = null;
         try {
             jsonReader.nextIfObjectStart();
-            while (!jsonReader.isEnd() && !jsonReader.nextIfObjectEnd()) {
+            while (!jsonReader.nextIfObjectEnd() && !jsonReader.isEnd()) {
                 key = jsonReader.readFieldName();
-                if (RES_CLASS.equals(key)) {
-                    typeName = readString(jsonReader, RES_CLASS, false);
-                } else if (RESPONSE.equals(key)) {
-                    payload.setResponse(parseResponse(jsonReader, typeName));
-                } else if (EXCEPTION.equals(key)) {
-                    payload.setException((Throwable) jsonReader.read(getThrowableType(typeName)));
+                switch (key) {
+                    case RES_CLASS -> typeName = readString(jsonReader, RES_CLASS, false);
+                    case RESPONSE -> payload.setResponse(parseResponse(jsonReader, typeName));
+                    case EXCEPTION -> payload.setException((Throwable) jsonReader.read(getThrowableType(typeName)));
                 }
             }
             return payload;

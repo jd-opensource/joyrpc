@@ -25,12 +25,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.CreationException;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.util.ClassUtils;
 
 import java.io.IOException;
+
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * 异常解析
@@ -59,25 +60,23 @@ public class ThrowableDeserializer extends AbstractDeserializer<Throwable> {
      * @throws IOException
      */
     protected Throwable parse(final JsonParser parser) throws IOException {
-        String key;
         Class<?> clazz = null;
         Throwable cause = null;
         String message = null;
         StackTraceElement[] stackTrace = null;
         try {
             while (parser.nextToken() != JsonToken.END_OBJECT) {
-                key = parser.currentName();
-                if (Constants.ANNOTATION_TYPE.equals(key)) {
-                    String className = readString(parser, Constants.ANNOTATION_TYPE, true);
-                    if (className != null) {
-                        clazz = ClassUtils.forName(className);
+                switch (parser.currentName()) {
+                    case ANNOTATION_TYPE -> {
+                        String className = readString(parser, ANNOTATION_TYPE, true);
+                        if (className != null) {
+                            clazz = ClassUtils.forName(className);
+                        }
                     }
-                } else if (Constants.FIELD_CAUSE.equals(key)) {
-                    cause = parseCause(parser);
-                } else if (Constants.FIELD_MESSAGE.equals(key)) {
-                    message = readString(parser, Constants.FIELD_MESSAGE, true);
-                } else if (Constants.FIELD_STACKTRACE.equals(key)) {
-                    stackTrace = parseTrace(parser);
+                    case FIELD_CAUSE -> cause = parseCause(parser);
+                    case FIELD_MESSAGE -> message = readString(parser, FIELD_MESSAGE, true);
+                    case FIELD_LOCALIZE_MESSAGE -> readString(parser, FIELD_LOCALIZE_MESSAGE, true);
+                    case FIELD_STACKTRACE -> stackTrace = parseTrace(parser);
                 }
             }
             return ClassUtils.createException(clazz, message, cause, stackTrace);

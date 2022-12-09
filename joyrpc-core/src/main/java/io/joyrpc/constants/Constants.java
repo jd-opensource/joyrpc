@@ -374,6 +374,7 @@ public class Constants {
     public final static String FIELD_MESSAGE = "message";
     public final static String FIELD_CAUSE = "cause";
     public final static String FIELD_STACKTRACE = "stackTrace";
+    public final static String FIELD_LOCALIZE_MESSAGE = "localizedMessage";
     public final static String ANNOTATION_TYPE = "@type";
 
     /*======================= RPC Context Parameter Key name =======================*/

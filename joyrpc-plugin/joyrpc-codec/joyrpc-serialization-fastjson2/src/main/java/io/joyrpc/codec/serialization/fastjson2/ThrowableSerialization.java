@@ -23,12 +23,13 @@ package io.joyrpc.codec.serialization.fastjson2;
 import com.alibaba.fastjson2.JSONReader;
 import com.alibaba.fastjson2.JSONWriter;
 import com.alibaba.fastjson2.writer.ObjectWriter;
-import io.joyrpc.constants.Constants;
 import io.joyrpc.exception.SerializerException;
 import io.joyrpc.util.ClassUtils;
 
 import java.lang.reflect.Type;
 import java.util.List;
+
+import static io.joyrpc.constants.Constants.*;
 
 /**
  * Throwable序列化
@@ -40,14 +41,14 @@ public class ThrowableSerialization extends AbstractSerialization<Throwable> {
     @Override
     protected void doWrite(final JSONWriter jsonWriter, final Throwable object, final Object fieldName, final Type fieldType, final long features) {
         writeObjectBegin(jsonWriter);
-        writeString(jsonWriter, Constants.ANNOTATION_TYPE, object.getClass().getName(), false);
-        writeString(jsonWriter, Constants.FIELD_MESSAGE, object.getMessage(), false);
+        writeString(jsonWriter, ANNOTATION_TYPE, object.getClass().getName(), false);
+        writeString(jsonWriter, FIELD_MESSAGE, object.getMessage(), false);
         if (object.getCause() != object) {
-            writeObject(jsonWriter, Constants.FIELD_CAUSE, object.getCause(), true);
+            writeObject(jsonWriter, FIELD_CAUSE, object.getCause(), true);
         }
         StackTraceElement[] traces = object.getStackTrace();
         if (traces != null) {
-            jsonWriter.writeName(Constants.FIELD_STACKTRACE);
+            jsonWriter.writeName(FIELD_STACKTRACE);
             jsonWriter.writeColon();
             jsonWriter.startArray();
             ObjectWriter objectWriter = jsonWriter.getObjectWriter(StackTraceElement.class);
@@ -71,7 +72,7 @@ public class ThrowableSerialization extends AbstractSerialization<Throwable> {
         jsonReader.nextIfObjectStart();
         while (!jsonReader.nextIfObjectEnd() && !jsonReader.isEnd()) {
             switch (jsonReader.readFieldName()) {
-                case Constants.ANNOTATION_TYPE:
+                case ANNOTATION_TYPE -> {
                     String className = jsonReader.readString();
                     if (className != null) {
                         try {
@@ -79,17 +80,11 @@ public class ThrowableSerialization extends AbstractSerialization<Throwable> {
                         } catch (ClassNotFoundException e) {
                             throw new SerializerException("error occurs while parsing " + fieldName, e);
                         }
-                    }
-                    break;
-                case Constants.FIELD_MESSAGE:
-                    message = jsonReader.readString();
-                    break;
-                case Constants.FIELD_CAUSE:
-                    cause = jsonReader.read(Throwable.class);
-                    break;
-                case Constants.FIELD_STACKTRACE:
-                    stackTraces = jsonReader.readArray(StackTraceElement.class);
-                    break;
+                    }}
+                case FIELD_MESSAGE -> message = jsonReader.readString();
+                case FIELD_LOCALIZE_MESSAGE -> jsonReader.readString();
+                case FIELD_CAUSE -> cause = jsonReader.read(Throwable.class);
+                case FIELD_STACKTRACE -> stackTraces = jsonReader.readArray(StackTraceElement.class);
             }
         }
         return ClassUtils.createException(clazz, message, cause,

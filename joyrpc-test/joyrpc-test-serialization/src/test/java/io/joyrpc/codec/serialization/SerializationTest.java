@@ -135,18 +135,6 @@ public class SerializationTest {
         datum.setClusters(clusters);
         datum.setConfigs(configs);
 
-        Json fastJson = JSON.get("json@fastjson2");
-        Json jackson = JSON.get("json@jackson");
-        Duration time = Duration.ofMillis(10000L);
-        String value1 = fastJson.toJSONString(time);
-        String value2 = jackson.toJSONString(time);
-        System.out.println(time.getClass() + ":" + value1);
-        System.out.println(time.getClass() + ":" + value2);
-        Object time1 = jackson.parseObject(value1, time.getClass());
-        Object time2 = fastJson.parseObject(value2, time.getClass());
-        Assertions.assertEquals(time, time1);
-        Assertions.assertEquals(time, time2);
-
         serializeAndDeserialize(datum);
     }
 
@@ -171,62 +159,62 @@ public class SerializationTest {
                 Period.of(0, 1, 1), YearMonth.of(0, 1), Year.of(2000),
                 ZonedDateTime.of(LocalDateTime.now(zoneId), zoneId), zoneId, ZoneOffset.ofTotalSeconds(0)
         };
-        Json fastJson = JSON.get("json@fastjson2");
-        Json jackson = JSON.get("json@jackson");
+        List<Json> jsons = allJson();
         for (Object time : times) {
-            String value1 = fastJson.toJSONString(time);
-            String value2 = jackson.toJSONString(time);
-            System.out.println(time.getClass() + ":" + value1);
-            Object time1 = jackson.parseObject(value1, time.getClass());
-            Object time2 = fastJson.parseObject(value2, time.getClass());
-            Assertions.assertEquals(time, time1);
-            Assertions.assertEquals(time, time2);
+            for (Json json : jsons) {
+                String value = json.toJSONString(time);
+                System.out.println(time.getClass() + ":" + value);
+                for (Json json1 : jsons) {
+                    Object time1 = json1.parseObject(value, time.getClass());
+                    Assertions.assertEquals(time, time1);
+                }
+            }
         }
     }
 
     @Test
     public void testJsonThrowable() {
-
-        //Json fastJson1 = JSON.get("json@fastjson2");
-        Json fastJson2 = JSON.get("json@fastjson2");
-        Json jackson = JSON.get("json@jackson");
         try {
             Integer.parseInt("String");
         } catch (NumberFormatException e) {
-            String serializedException = jackson.toJSONString(e);
-            System.out.println(serializedException);
-            //Throwable throwable1 = fastJson1.parseObject(serializedException, Throwable.class);
-            //serializedException = fastJson1.toJSONString(throwable1);
-            Throwable throwable2 = fastJson2.parseObject(serializedException, Throwable.class);
-            System.out.printf(fastJson2.toJSONString(e));
-            //Assertions.assertEquals(runtimeException.getMessage(), throwable1.getMessage());
-            //Assertions.assertEquals(runtimeException.getClass(), throwable1.getClass());
-            //Assertions.assertEquals(runtimeException.getCause().getClass(), throwable1.getCause().getClass());
-            Assertions.assertEquals(e.getMessage(), throwable2.getMessage());
-            Assertions.assertEquals(e.getClass(), throwable2.getClass());
+            List<Json> jsons = allJson();
+            for (Json json : jsons) {
+                String value = json.toJSONString(e);
+                System.out.println(value);
+                for (Json json1 : jsons) {
+                    Throwable target = json1.parseObject(value, Throwable.class);
+                    Assertions.assertNotNull(target);
+                    Assertions.assertEquals(target.getClass(), NumberFormatException.class);
+                }
+            }
         }
     }
 
     @Test
     public void testJsonResponsePayload() {
-        Json fastJson = JSON.get("json@fastjson2");
-        Json jackson = JSON.get("json@jackson");
         ResponsePayload payload = new ResponsePayload();
         payload.setException(new NumberFormatException());
-        String value = fastJson.toJSONString(payload);
-        String value1 = jackson.toJSONString(payload);
-        System.out.println(value);
-        System.out.println(value1);
-        ResponsePayload target = jackson.parseObject(value, ResponsePayload.class);
-        ResponsePayload target1 = fastJson.parseObject(value1, ResponsePayload.class);
-        Assertions.assertNotNull(target.getException());
-        Assertions.assertEquals(target.getException().getClass(), NumberFormatException.class);
+        List<Json> jsons = allJson();
+        for (Json json : jsons) {
+            String value = json.toJSONString(payload);
+            System.out.println(value);
+            for (Json json1 : jsons) {
+                ResponsePayload target = json1.parseObject(value, ResponsePayload.class);
+                Assertions.assertNotNull(target.getException());
+                Assertions.assertEquals(target.getException().getClass(), NumberFormatException.class);
+            }
+        }
         payload.setException(null);
         payload.setResponse(new Apple());
-        value = fastJson.toJSONString(payload);
-        target = jackson.parseObject(value, ResponsePayload.class);
-        Assertions.assertNotNull(target.getResponse());
-        Assertions.assertEquals(target.getResponse().getClass(), Apple.class);
+        for (Json json : jsons) {
+            String value = json.toJSONString(payload);
+            System.out.println(value);
+            for (Json json1 : jsons) {
+                ResponsePayload target = json1.parseObject(value, ResponsePayload.class);
+                Assertions.assertNotNull(target.getResponse());
+                Assertions.assertEquals(target.getResponse().getClass(), Apple.class);
+            }
+        }
     }
 
     @Test
@@ -394,7 +382,7 @@ public class SerializationTest {
 
         Employee person = new Employee(0, "china", 20, 161, 65);
 
-        long count = 100000;
+        long count = 200000;
         int threads = 4;
         ExecutorService service = Executors.newFixedThreadPool(threads);
         Future<SerializationTime>[] futures = new Future[threads];

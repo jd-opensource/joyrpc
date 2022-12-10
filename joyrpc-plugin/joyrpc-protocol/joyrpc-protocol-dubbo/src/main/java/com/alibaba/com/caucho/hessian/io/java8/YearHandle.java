@@ -21,9 +21,8 @@ package com.alibaba.com.caucho.hessian.io.java8;
 import io.joyrpc.com.caucho.hessian.io.HessianHandle;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.time.Year;
 
-@SuppressWarnings("unchecked")
 public class YearHandle implements HessianHandle, Serializable {
     private static final long serialVersionUID = -6299552890287487926L;
 
@@ -33,24 +32,14 @@ public class YearHandle implements HessianHandle, Serializable {
     }
 
     public YearHandle(Object o) {
-        try {
-            Class c = Class.forName("java.time.Year");
-            Method m = c.getDeclaredMethod("getValue");
-            this.year = (Integer) m.invoke(o);
-        } catch (Throwable t) {
-            // ignore
-        }
-
+        this.year = ((Year) o).getValue();
     }
 
-    private Object readResolve() {
-        try {
-            Class c = Class.forName("java.time.Year");
-            Method m = c.getDeclaredMethod("of", int.class);
-            return m.invoke(null, year);
-        } catch (Throwable t) {
-            // ignore
-        }
-        return null;
+    protected Object readResolve() {
+        return Year.of(year);
+    }
+
+    public static HessianHandle create(Object o) {
+        return new YearHandle(o);
     }
 }

@@ -21,9 +21,8 @@ package com.alibaba.com.caucho.hessian.io.java8;
 import io.joyrpc.com.caucho.hessian.io.HessianHandle;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.time.ZoneId;
 
-@SuppressWarnings("unchecked")
 public class ZoneIdHandle implements HessianHandle, Serializable {
 
     private static final long serialVersionUID = 8789182864066905552L;
@@ -34,23 +33,14 @@ public class ZoneIdHandle implements HessianHandle, Serializable {
     }
 
     public ZoneIdHandle(Object o) {
-        try {
-            Class c = Class.forName("java.time.ZoneId");
-            Method m = c.getDeclaredMethod("getId");
-            this.zoneId = (String) m.invoke(o);
-        } catch (Throwable t) {
-            // ignore
-        }
+        this.zoneId = ((ZoneId) o).getId();
     }
 
-    private Object readResolve() {
-        try {
-            Class c = Class.forName("java.time.ZoneId");
-            Method m = c.getDeclaredMethod("of", String.class);
-            return m.invoke(null, this.zoneId);
-        } catch (Throwable t) {
-            // ignore
-        }
-        return null;
+    protected Object readResolve() {
+        return ZoneId.of(zoneId);
+    }
+
+    public static HessianHandle create(Object o) {
+        return new ZoneIdHandle(o);
     }
 }

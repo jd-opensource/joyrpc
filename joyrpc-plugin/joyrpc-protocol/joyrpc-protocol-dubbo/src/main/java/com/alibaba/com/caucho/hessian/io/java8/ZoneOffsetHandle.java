@@ -21,9 +21,8 @@ package com.alibaba.com.caucho.hessian.io.java8;
 import io.joyrpc.com.caucho.hessian.io.HessianHandle;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.time.ZoneOffset;
 
-@SuppressWarnings("unchecked")
 public class ZoneOffsetHandle implements HessianHandle, Serializable {
     private static final long serialVersionUID = 8841589723587858789L;
 
@@ -33,23 +32,14 @@ public class ZoneOffsetHandle implements HessianHandle, Serializable {
     }
 
     public ZoneOffsetHandle(Object o) {
-        try {
-            Class c = Class.forName("java.time.ZoneOffset");
-            Method m = c.getDeclaredMethod("getTotalSeconds");
-            this.seconds = (Integer) m.invoke(o);
-        } catch (Throwable t) {
-            // ignore
-        }
+        this.seconds = ((ZoneOffset) o).getTotalSeconds();
     }
 
-    private Object readResolve() {
-        try {
-            Class c = Class.forName("java.time.ZoneOffset");
-            Method m = c.getDeclaredMethod("ofTotalSeconds", int.class);
-            return m.invoke(null, seconds);
-        } catch (Throwable t) {
-            // ignore
-        }
-        return null;
+    protected Object readResolve() {
+        return ZoneOffset.ofTotalSeconds(seconds);
+    }
+
+    public static HessianHandle create(Object o) {
+        return new ZoneOffsetHandle(o);
     }
 }

@@ -17,13 +17,11 @@
 
 package com.alibaba.com.caucho.hessian.io.java8;
 
-
 import io.joyrpc.com.caucho.hessian.io.HessianHandle;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.time.LocalDate;
 
-@SuppressWarnings("unchecked")
 public class LocalDateHandle implements HessianHandle, Serializable {
     private static final long serialVersionUID = 166018689500019951L;
 
@@ -35,27 +33,17 @@ public class LocalDateHandle implements HessianHandle, Serializable {
     }
 
     public LocalDateHandle(Object o) {
-        try {
-            Class c = Class.forName("java.time.LocalDate");
-            Method m = c.getDeclaredMethod("getYear");
-            this.year = (Integer) m.invoke(o);
-            m = c.getDeclaredMethod("getMonthValue");
-            this.month = (Integer) m.invoke(o);
-            m = c.getDeclaredMethod("getDayOfMonth");
-            this.day = (Integer) m.invoke(o);
-        } catch (Throwable t) {
-            // ignore
-        }
+        LocalDate localDate = (LocalDate) o;
+        this.year = localDate.getYear();
+        this.month = localDate.getMonthValue();
+        this.day = localDate.getDayOfMonth();
     }
 
-    public Object readResolve() {
-        try {
-            Class c = Class.forName("java.time.LocalDate");
-            Method m = c.getDeclaredMethod("of", int.class, int.class, int.class);
-            return m.invoke(null, year, month, day);
-        } catch (Throwable t) {
-            // ignore
-        }
-        return null;
+    protected Object readResolve() {
+        return LocalDate.of(year, month, day);
+    }
+
+    public static HessianHandle create(Object o) {
+        return new LocalDateHandle(o);
     }
 }

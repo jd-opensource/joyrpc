@@ -42,21 +42,21 @@ public class DubboHessian2SerializerFactory extends AbstractSerializerFactory {
      * 构造函数
      */
     public DubboHessian2SerializerFactory() {
-        serializers.put(java.time.LocalTime.class, Java8TimeSerializer.create(LocalTimeHandle.class));
-        serializers.put(java.time.LocalDate.class, Java8TimeSerializer.create(LocalDateHandle.class));
-        serializers.put(java.time.LocalDateTime.class, Java8TimeSerializer.create(LocalDateTimeHandle.class));
-        serializers.put(java.time.Instant.class, Java8TimeSerializer.create(InstantHandle.class));
-        serializers.put(java.time.Duration.class, Java8TimeSerializer.create(DurationHandle.class));
-        serializers.put(java.time.Period.class, Java8TimeSerializer.create(PeriodHandle.class));
-        serializers.put(java.time.Year.class, Java8TimeSerializer.create(YearHandle.class));
-        serializers.put(java.time.YearMonth.class, Java8TimeSerializer.create(YearMonthHandle.class));
-        serializers.put(java.time.MonthDay.class, Java8TimeSerializer.create(MonthDayHandle.class));
-        serializers.put(java.time.OffsetTime.class, Java8TimeSerializer.create(OffsetTimeHandle.class));
-        serializers.put(java.time.ZoneOffset.class, Java8TimeSerializer.create(ZoneOffsetHandle.class));
-        serializers.put(java.time.OffsetDateTime.class, Java8TimeSerializer.create(OffsetDateTimeHandle.class));
-        serializers.put(java.time.ZonedDateTime.class, Java8TimeSerializer.create(ZonedDateTimeHandle.class));
-        serializers.put(ZoneId.class, ZoneIdSerializer.getInstance());
-        serializers.put(ZoneId.systemDefault().getClass(), ZoneIdSerializer.getInstance());
+        serializers.put(java.time.LocalTime.class, Java8TimeSerializer.create(LocalTimeHandle::create));
+        serializers.put(java.time.LocalDate.class, Java8TimeSerializer.create(LocalDateHandle::create));
+        serializers.put(java.time.LocalDateTime.class, Java8TimeSerializer.create(LocalDateTimeHandle::create));
+        serializers.put(java.time.Instant.class, Java8TimeSerializer.create(InstantHandle::create));
+        serializers.put(java.time.Duration.class, Java8TimeSerializer.create(DurationHandle::create));
+        serializers.put(java.time.Period.class, Java8TimeSerializer.create(PeriodHandle::create));
+        serializers.put(java.time.Year.class, Java8TimeSerializer.create(YearHandle::create));
+        serializers.put(java.time.YearMonth.class, Java8TimeSerializer.create(YearMonthHandle::create));
+        serializers.put(java.time.MonthDay.class, Java8TimeSerializer.create(MonthDayHandle::create));
+        serializers.put(java.time.OffsetTime.class, Java8TimeSerializer.create(OffsetTimeHandle::create));
+        serializers.put(java.time.ZoneOffset.class, Java8TimeSerializer.create(ZoneOffsetHandle::create));
+        serializers.put(java.time.OffsetDateTime.class, Java8TimeSerializer.create(OffsetDateTimeHandle::create));
+        serializers.put(java.time.ZonedDateTime.class, Java8TimeSerializer.create(ZonedDateTimeHandle::create));
+        serializers.put(ZoneId.class, Java8TimeSerializer.create(ZoneIdHandle::create));
+        serializers.put(ZoneId.systemDefault().getClass(), Java8TimeSerializer.create(ZoneIdHandle::create));
     }
 
     @Override

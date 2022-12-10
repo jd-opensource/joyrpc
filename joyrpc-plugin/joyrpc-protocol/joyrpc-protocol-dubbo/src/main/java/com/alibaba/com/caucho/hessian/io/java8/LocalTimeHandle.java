@@ -17,14 +17,11 @@
 
 package com.alibaba.com.caucho.hessian.io.java8;
 
-
-
 import io.joyrpc.com.caucho.hessian.io.HessianHandle;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.time.LocalTime;
 
-@SuppressWarnings("unchecked")
 public class LocalTimeHandle implements HessianHandle, Serializable {
     private static final long serialVersionUID = -5892919085390462315L;
 
@@ -37,29 +34,18 @@ public class LocalTimeHandle implements HessianHandle, Serializable {
     }
 
     public LocalTimeHandle(Object o) {
-        try {
-            Class c = Class.forName("java.time.LocalTime");
-            Method m = c.getDeclaredMethod("getHour");
-            this.hour = (Integer) m.invoke(o);
-            m = c.getDeclaredMethod("getMinute");
-            this.minute = (Integer) m.invoke(o);
-            m = c.getDeclaredMethod("getSecond");
-            this.second = (Integer) m.invoke(o);
-            m = c.getDeclaredMethod("getNano");
-            this.nano = (Integer) m.invoke(o);
-        } catch (Throwable t) {
-            // ignore
-        }
+        LocalTime localTime = (LocalTime) o;
+        this.hour = localTime.getHour();
+        this.minute = localTime.getMinute();
+        this.second = localTime.getSecond();
+        this.nano = localTime.getNano();
     }
 
-    private Object readResolve() {
-        try {
-            Class c = Class.forName("java.time.LocalTime");
-            Method m = c.getDeclaredMethod("of", int.class, int.class, int.class, int.class);
-            return m.invoke(null, hour, minute, second, nano);
-        } catch (Throwable t) {
-            // ignore
-        }
-        return null;
+    protected Object readResolve() {
+        return LocalTime.of(hour, minute, second, nano);
+    }
+
+    public static HessianHandle create(Object o) {
+        return new LocalTimeHandle(o);
     }
 }

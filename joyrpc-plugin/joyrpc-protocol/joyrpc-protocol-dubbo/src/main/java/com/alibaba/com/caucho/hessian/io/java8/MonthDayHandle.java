@@ -17,13 +17,11 @@
 
 package com.alibaba.com.caucho.hessian.io.java8;
 
-
 import io.joyrpc.com.caucho.hessian.io.HessianHandle;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
+import java.time.MonthDay;
 
-@SuppressWarnings("unchecked")
 public class MonthDayHandle implements HessianHandle, Serializable {
     private static final long serialVersionUID = 5288238558666577745L;
 
@@ -34,25 +32,16 @@ public class MonthDayHandle implements HessianHandle, Serializable {
     }
 
     public MonthDayHandle(Object o) {
-        try {
-            Class c = Class.forName("java.time.MonthDay");
-            Method m = c.getDeclaredMethod("getMonthValue");
-            this.month = (Integer) m.invoke(o);
-            m = c.getDeclaredMethod("getDayOfMonth");
-            this.day = (Integer) m.invoke(o);
-        } catch (Throwable t) {
-            // ignore
-        }
+        MonthDay monthDay = (MonthDay) o;
+        this.month = monthDay.getMonthValue();
+        this.day = monthDay.getDayOfMonth();
     }
 
-    private Object readResolve() {
-        try {
-            Class c = Class.forName("java.time.MonthDay");
-            Method m = c.getDeclaredMethod("of", int.class, int.class);
-            return m.invoke(null, month, day);
-        } catch (Throwable t) {
-            // ignore
-        }
-        return null;
+    protected Object readResolve() {
+        return MonthDay.of(month, day);
+    }
+
+    public static HessianHandle create(Object o) {
+        return new MonthDayHandle(o);
     }
 }

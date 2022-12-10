@@ -144,7 +144,7 @@ public class SerializationTest {
         Object[] times = new Object[]{Duration.ofMillis(1000), Instant.now(), LocalDateTime.now(),
                 LocalDate.now(), LocalTime.now(), MonthDay.now(), OffsetTime.now(),
                 Period.of(0, 1, 1), YearMonth.of(0, 1), Year.of(2000),
-                ZonedDateTime.of(LocalDateTime.now(zoneId), zoneId), zoneId, ZoneOffset.ofTotalSeconds(0)
+                ZonedDateTime.of(LocalDateTime.now(zoneId), zoneId), zoneId, ZoneId.systemDefault(), ZoneOffset.ofTotalSeconds(0)
         };
 
         serializeAndDeserialize(times);

@@ -107,7 +107,7 @@
         <objenesis.version>2.6</objenesis.version>
         <caffeine.version>2.9.1</caffeine.version>
         <cache2k.version>1.2.4.Final</cache2k.version>
-        <dubbo.version>2.7.18</dubbo.version>
+        <dubbo.version>2.7.21</dubbo.version>
         <protostuff.version>1.7.4</protostuff.version>
         <nacos.version>2.0.1</nacos.version>
         <skywalking.version>8.3.0</skywalking.version>
